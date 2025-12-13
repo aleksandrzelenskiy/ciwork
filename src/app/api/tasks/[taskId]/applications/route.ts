@@ -152,7 +152,7 @@ export async function POST(
 
     const runCreation = async (txnSession?: mongoose.ClientSession): Promise<CreationResult> => {
         const sessionOptions = txnSession ? { session: txnSession } : {};
-        let createdApp: mongoose.Document | null = null;
+        let createdAppId: mongoose.Types.ObjectId | undefined;
 
         const freshTaskQuery = TaskModel.findById(task._id);
         if (txnSession) freshTaskQuery.session(txnSession);
@@ -179,12 +179,15 @@ export async function POST(
                 ],
                 sessionOptions
             );
-            createdApp = newApplication;
+            createdAppId = newApplication._id as mongoose.Types.ObjectId;
+            if (!createdAppId) {
+                return { ok: false, code: 'UNKNOWN' };
+            }
 
             const debit = await debitForBid({
                 contractorId: toObjectId(user._id),
                 taskId: toObjectId(freshTask._id),
-                applicationId: toObjectId(newApplication._id),
+                applicationId: toObjectId(createdAppId),
                 session: txnSession,
             });
 
@@ -199,13 +202,13 @@ export async function POST(
                 sessionOptions
             );
 
-            applicationId = newApplication._id;
+            applicationId = createdAppId;
             applicationObj = newApplication.toObject() as unknown as Record<string, unknown>;
             return { ok: true };
         } catch (error) {
-            if (!txnSession && createdApp) {
+            if (!txnSession && createdAppId) {
                 try {
-                    await ApplicationModel.deleteOne({ _id: createdApp._id });
+                    await ApplicationModel.deleteOne({ _id: createdAppId });
                 } catch (cleanupErr) {
                     console.error('Failed to rollback application after error', cleanupErr);
                 }
@@ -234,8 +237,11 @@ export async function POST(
                     'Transactions unsupported by MongoDB, running application creation without a transaction'
                 );
                 creationResult = await runCreation();
-            } else if (!creationResult || creationResult.ok) {
-                creationResult = { ok: false, code: 'UNKNOWN', error };
+            } else {
+                const isCreationOk = (creationResult as CreationResult | null)?.ok;
+                if (!creationResult || isCreationOk) {
+                    creationResult = { ok: false, code: 'UNKNOWN', error };
+                }
             }
         }
     } finally {
