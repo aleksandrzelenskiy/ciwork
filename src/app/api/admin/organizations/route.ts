@@ -1,0 +1,89 @@
+// src/app/api/admin/organizations/route.ts
+import { NextResponse } from 'next/server';
+import dbConnect from '@/utils/mongoose';
+import Organization from '@/app/models/OrganizationModel';
+import Subscription from '@/app/models/SubscriptionModel';
+import { GetUserContext } from '@/server-actions/user-context';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+type SubStatus = 'active' | 'trial' | 'suspended' | 'past_due' | 'inactive';
+type Plan = 'basic' | 'pro' | 'business' | 'enterprise';
+
+type AdminOrganizationDTO = {
+    orgId: string;
+    name: string;
+    orgSlug: string;
+    ownerEmail?: string;
+    plan: Plan;
+    status: SubStatus;
+    seats?: number;
+    projectsLimit?: number;
+    publicTasksLimit?: number;
+    boostCredits?: number;
+    storageLimitGb?: number;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+    note?: string;
+    updatedAt?: string | null;
+    createdAt?: string | null;
+};
+
+type ResponsePayload = {
+    organizations: AdminOrganizationDTO[];
+};
+
+const toISOStringOrNull = (value?: Date | string | null): string | null => {
+    if (!value) return null;
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toISOString();
+};
+
+export async function GET(): Promise<NextResponse<ResponsePayload>> {
+    const userContext = await GetUserContext();
+    if (!userContext.success || !userContext.data?.isSuperAdmin) {
+        return NextResponse.json({ organizations: [] }, { status: 403 });
+    }
+
+    await dbConnect();
+    const organizations = await Organization.find({}, {
+        name: 1,
+        orgSlug: 1,
+        ownerEmail: 1,
+        createdAt: 1,
+    }).lean();
+    const orgIds = organizations.map((org) => org._id);
+    const subscriptions = await Subscription.find({ orgId: { $in: orgIds } }).lean();
+    const subscriptionMap = new Map<string, typeof subscriptions[number]>();
+    subscriptions.forEach((subscription) => {
+        if (subscription.orgId) {
+            subscriptionMap.set(String(subscription.orgId), subscription);
+        }
+    });
+
+    const result: AdminOrganizationDTO[] = organizations.map((org) => {
+        const subscription = subscriptionMap.get(String(org._id));
+        return {
+            orgId: String(org._id),
+            name: org.name,
+            orgSlug: org.orgSlug,
+            ownerEmail: org.ownerEmail,
+            plan: (subscription?.plan as Plan) ?? 'basic',
+            status: (subscription?.status as SubStatus) ?? 'inactive',
+            seats: subscription?.seats,
+            projectsLimit: subscription?.projectsLimit,
+            publicTasksLimit: subscription?.publicTasksLimit,
+            boostCredits: subscription?.boostCredits,
+            storageLimitGb: subscription?.storageLimitGb,
+            periodStart: toISOStringOrNull(subscription?.periodStart ?? null),
+            periodEnd: toISOStringOrNull(subscription?.periodEnd ?? null),
+            note: subscription?.note,
+            updatedAt: toISOStringOrNull(subscription?.updatedAt ?? subscription?.createdAt ?? null),
+            createdAt: toISOStringOrNull(org.createdAt ?? null),
+        };
+    });
+
+    return NextResponse.json({ organizations: result });
+}

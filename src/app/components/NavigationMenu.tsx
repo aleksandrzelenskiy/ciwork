@@ -24,6 +24,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import BusinessIcon from '@mui/icons-material/Business';
 import StoreIcon from '@mui/icons-material/Store';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { useClerk, useUser } from '@clerk/nextjs';
 import type { UserResource } from '@clerk/types';
 import {
@@ -292,6 +293,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
 
     const contextUser = userContext?.user as DbUserPayload | undefined;
     const effectiveRole = resolveRoleFromContext(userContext);
+    const isSuperAdminUser = Boolean(userContext?.isSuperAdmin);
     const profileType =
         userContext?.profileType ||
         (contextUser?.profileType as string | undefined) ||
@@ -378,8 +380,15 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
               }))
             : undefined;
     const navItems = React.useMemo<NavItem[]>(() => {
-        if (!profileType) return [];
+        if (!profileType && !isSuperAdminUser) return [];
         const items: NavItem[] = [...BASE_NAV_ITEMS];
+        if (isSuperAdminUser) {
+            items.push({
+                label: 'АДМИНИСТРИРОВАНИЕ',
+                path: '/admin/organizations',
+                icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />,
+            });
+        }
         if (isEmployerView && managerOrgPath) {
             items.push({
                 label: 'ОРГАНИЗАЦИЯ',
@@ -435,6 +444,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
         isEmployerView,
         isContractorView,
         profileType,
+        isSuperAdminUser,
         geoLabel,
     ]);
 
