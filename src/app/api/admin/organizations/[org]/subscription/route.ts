@@ -4,6 +4,7 @@ import { GetUserContext } from '@/server-actions/user-context';
 import dbConnect from '@/utils/mongoose';
 import Organization from '@/app/models/OrganizationModel';
 import Subscription from '@/app/models/SubscriptionModel';
+import { resolvePlanLimits } from '@/utils/billingLimits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -99,9 +100,33 @@ export async function PATCH(
         return NextResponse.json({ error: 'Организация не найдена' }, { status: 404 });
     }
 
+    const existingSubscription = await Subscription.findOne({ orgId: organization._id }).lean();
     const body = (await request.json().catch(() => ({}))) as PatchBody;
     const parsedPeriodStart = 'periodStart' in body ? parseDateOrNull(body.periodStart ?? null) : undefined;
     const parsedPeriodEnd = 'periodEnd' in body ? parseDateOrNull(body.periodEnd ?? null) : undefined;
+
+    const currentPlan = (existingSubscription?.plan as Plan | undefined) ?? 'basic';
+    const nextPlan = body.plan ?? currentPlan;
+    const planChanged = !existingSubscription || (body.plan ? body.plan !== currentPlan : false);
+
+    const limitOverrides = planChanged
+        ? {
+              seats: 'seats' in body ? body.seats : undefined,
+              projectsLimit: 'projectsLimit' in body ? body.projectsLimit : undefined,
+              publicTasksLimit: 'publicTasksLimit' in body ? body.publicTasksLimit : undefined,
+          }
+        : {
+              seats: 'seats' in body ? body.seats : existingSubscription?.seats,
+              projectsLimit: 'projectsLimit' in body ? body.projectsLimit : existingSubscription?.projectsLimit,
+              publicTasksLimit: 'publicTasksLimit' in body ? body.publicTasksLimit : existingSubscription?.publicTasksLimit,
+          };
+
+    const resolvedLimits = resolvePlanLimits(nextPlan, limitOverrides);
+    const shouldUpdateLimits =
+        planChanged ||
+        'seats' in body ||
+        'projectsLimit' in body ||
+        'publicTasksLimit' in body;
 
     const update: Partial<{
         plan: Plan;
@@ -117,11 +142,15 @@ export async function PATCH(
         updatedByEmail: string;
         updatedAt: Date;
     }> = {
-        ...('plan' in body ? { plan: body.plan } : {}),
+        ...('plan' in body || !existingSubscription ? { plan: nextPlan } : {}),
         ...('status' in body ? { status: body.status } : {}),
-        ...('seats' in body ? { seats: body.seats } : {}),
-        ...('projectsLimit' in body ? { projectsLimit: body.projectsLimit } : {}),
-        ...('publicTasksLimit' in body ? { publicTasksLimit: body.publicTasksLimit } : {}),
+        ...(shouldUpdateLimits
+            ? {
+                  seats: resolvedLimits.seats ?? undefined,
+                  projectsLimit: resolvedLimits.projects ?? undefined,
+                  publicTasksLimit: resolvedLimits.publications ?? undefined,
+              }
+            : {}),
         ...('boostCredits' in body ? { boostCredits: body.boostCredits } : {}),
         ...('storageLimitGb' in body ? { storageLimitGb: body.storageLimitGb } : {}),
         ...('periodStart' in body ? { periodStart: parsedPeriodStart ?? null } : {}),
