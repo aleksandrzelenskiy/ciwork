@@ -17,6 +17,7 @@ export interface Subscription extends Document {
     note?: string;             // номер счёта/комментарии
     updatedByEmail?: string;   // кто включил/изменил
     updatedAt: Date;
+    createdAt: Date;
 }
 
 const SubscriptionSchema = new Schema<Subscription>(
