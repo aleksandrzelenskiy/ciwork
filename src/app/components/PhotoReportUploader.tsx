@@ -219,7 +219,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                     resolve(false);
                 };
 
-                xhr.open('POST', '/api/upload/fixed', true);
+                xhr.open('POST', '/api/upload', true);
                 xhr.send(formData);
             }),
         [initiatorId, initiatorName, selectedBase, taskId, updateItem]
