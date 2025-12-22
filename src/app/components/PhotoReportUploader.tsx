@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import Image from 'next/image';
 import {
@@ -15,7 +17,10 @@ import {
     Stack,
     TextField,
     Typography,
+    IconButton,
+    useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
 import { useDropzone } from 'react-dropzone';
@@ -73,6 +78,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const [uploadError, setUploadError] = React.useState<string | null>(null);
     const [uploadSuccess, setUploadSuccess] = React.useState<string | null>(null);
     const [uploading, setUploading] = React.useState(false);
+
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     const cancelRef = React.useRef(false);
     const xhrMapRef = React.useRef<Map<string, XMLHttpRequest>>(new Map());
@@ -260,6 +268,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             onClose={handleDialogClose}
             fullWidth
             maxWidth="md"
+            fullScreen={isMobile}
             slotProps={{
                 paper: {
                     sx: {
@@ -274,7 +283,20 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 },
             }}
         >
-            <DialogTitle sx={{ fontWeight: 700 }}>Загрузка фотоотчета</DialogTitle>
+            <DialogTitle
+                sx={{
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    pr: 1,
+                }}
+            >
+                Загрузка фотоотчета
+                <IconButton onClick={handleDialogClose} disabled={uploading}>
+                    <CloseIcon />
+                </IconButton>
+            </DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Typography variant="body2" color="text.secondary">
                     Файлы сохранятся в папку {reportFolder}. Если в задаче несколько БС, загрузите фото отдельно по
