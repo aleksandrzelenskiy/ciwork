@@ -963,6 +963,14 @@ export default function TaskDetailsPage() {
 
     const canCreateNcw = projectOperator === '250020';
     const executorAssigned = Boolean(task?.executorId || task?.executorName || task?.executorEmail);
+    const normalizedStatus = normalizeStatusTitle(task?.status);
+    const canUnassignExecutor = ![
+        'Done',
+        'Pending',
+        'Issues',
+        'Fixed',
+        'Agreed',
+    ].includes(normalizedStatus);
 
     const openNcwCreator = () => {
         if (!task || !canCreateNcw) return;
@@ -2008,31 +2016,33 @@ export default function TaskDetailsPage() {
                                                             </Typography>
                                                         </Box>
                                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                                            <Button
-                                                                variant={isAccepted ? 'outlined' : 'contained'}
-                                                                color={isAccepted ? 'error' : 'primary'}
-                                                                size="small"
-                                                                onClick={() =>
-                                                                    setApplicationConfirm({
-                                                                        open: true,
-                                                                        applicationId: appId,
-                                                                        action: isAccepted ? 'unassign' : 'assign',
-                                                                        contractorName:
-                                                                            app.contractorName || app.contractorEmail || null,
-                                                                    })
-                                                                }
-                                                                disabled={
-                                                                    !appId ||
-                                                                    applicationActionLoading === appId
-                                                                }
-                                                                startIcon={
-                                                                    actionInProgress ? (
-                                                                        <CircularProgress size={16} color="inherit" />
-                                                                    ) : undefined
-                                                                }
-                                                            >
-                                                                {isAccepted ? 'Снять' : 'Назначить'}
-                                                            </Button>
+                                                            {(!isAccepted || canUnassignExecutor) && (
+                                                                <Button
+                                                                    variant={isAccepted ? 'outlined' : 'contained'}
+                                                                    color={isAccepted ? 'error' : 'primary'}
+                                                                    size="small"
+                                                                    onClick={() =>
+                                                                        setApplicationConfirm({
+                                                                            open: true,
+                                                                            applicationId: appId,
+                                                                            action: isAccepted ? 'unassign' : 'assign',
+                                                                            contractorName:
+                                                                                app.contractorName || app.contractorEmail || null,
+                                                                        })
+                                                                    }
+                                                                    disabled={
+                                                                        !appId ||
+                                                                        applicationActionLoading === appId
+                                                                    }
+                                                                    startIcon={
+                                                                        actionInProgress ? (
+                                                                            <CircularProgress size={16} color="inherit" />
+                                                                        ) : undefined
+                                                                    }
+                                                                >
+                                                                    {isAccepted ? 'Снять' : 'Назначить'}
+                                                                </Button>
+                                                            )}
                                                         </Box>
                                                     </Stack>
                                                 </Paper>
