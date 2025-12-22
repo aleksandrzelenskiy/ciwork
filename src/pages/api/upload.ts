@@ -247,7 +247,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const rawBaseId = fields.baseId;
     const rawTask = fields.task;
-    const taskId = fields.taskId ?? 'unknown';
+    const normalizedTaskId = ((fields.taskId ?? rawTask) || '').trim();
+    const taskId = normalizedTaskId || 'unknown';
 
     if (!rawBaseId || !rawTask) {
         console.error('Validation error: Base ID or Task is missing');
@@ -357,7 +358,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 .jpeg({ quality: 80 })
                 .toBuffer();
 
-            const s3Key = `reports/${task}/${baseId}/${outputFilename}`;
+            const safeBaseFolder =
+                baseId.replace(/[\\/]/g, '_').replace(/\s+/g, '_').replace(/\.+/g, '.').trim() || 'base';
+            const safeTaskFolder =
+                (taskId || task || 'task').replace(/[\\/]/g, '_').replace(/\s+/g, '_').trim() || 'task';
+            const reportFolder = `${safeTaskFolder}/${safeTaskFolder}-report/${safeBaseFolder}`;
+            const s3Key = `${reportFolder}/${outputFilename}`;
             const fileUrl = await uploadBuffer(processedBuffer, s3Key, 'image/jpeg');
             fileUrls.push(fileUrl);
         } catch (error) {

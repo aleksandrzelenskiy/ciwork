@@ -3,6 +3,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import {
     Accordion,
@@ -29,6 +30,9 @@ import {
     DialogContent,
     DialogTitle,
     Container,
+    Alert,
+    TextField,
+    MenuItem,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -40,6 +44,8 @@ import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
 import TocOutlinedIcon from '@mui/icons-material/TocOutlined';
 import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import HistoryIcon from '@mui/icons-material/History';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import LinkIcon from '@mui/icons-material/Link';
 import {
     Timeline,
     TimelineConnector,
@@ -52,6 +58,7 @@ import {
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
+import { useDropzone } from 'react-dropzone';
 import { getPriorityIcon, normalizePriority } from '@/utils/priorityIcons';
 import TaskGeoLocation from '@/app/workspace/components/TaskGeoLocation';
 import { getStatusColor } from '@/utils/statusColors';
@@ -79,6 +86,12 @@ const parseUserInfo = (userString?: string) => {
     return { name: parts[0] || 'N/A', email: parts[1] || 'N/A' };
 };
 
+type UploadFileItem = {
+    id: string;
+    file: File;
+    preview: string;
+};
+
 export default function TaskDetailPage() {
     const params = useParams<{ id: string }>();
     const taskId = params?.id?.trim() || '';
@@ -99,6 +112,16 @@ export default function TaskDetailPage() {
     const [completeConfirmOpen, setCompleteConfirmOpen] = React.useState(false);
     const [completeLoading, setCompleteLoading] = React.useState(false);
     const [completeError, setCompleteError] = React.useState<string | null>(null);
+    const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false);
+    const [uploadFiles, setUploadFiles] = React.useState<UploadFileItem[]>([]);
+    const [uploadError, setUploadError] = React.useState<string | null>(null);
+    const [uploadLoading, setUploadLoading] = React.useState(false);
+    const [uploadSuccess, setUploadSuccess] = React.useState<string | null>(null);
+    const [selectedBase, setSelectedBase] = React.useState<string>('');
+    const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
+    const [reportLinkInput, setReportLinkInput] = React.useState('');
+    const [linkSaving, setLinkSaving] = React.useState(false);
+    const [linkError, setLinkError] = React.useState<string | null>(null);
 
     const handleCompleteClick = React.useCallback(() => {
         setCompleteError(null);
@@ -134,6 +157,29 @@ export default function TaskDetailPage() {
         if (typeof task?.contractorPayment !== 'number') return '—';
         return formatRuble(task.contractorPayment);
     };
+
+    const bsOptions = React.useMemo(() => {
+        const options: string[] = [];
+        const fromTaskField = (task?.bsNumber || '')
+            .split(/[,;]+/)
+            .map((v) => v.trim())
+            .filter(Boolean);
+        fromTaskField.forEach((v) => {
+            if (!options.includes(v)) options.push(v);
+        });
+        if (Array.isArray(task?.bsLocation)) {
+            task.bsLocation.forEach((loc) => {
+                const candidate = (loc?.name || '').trim();
+                if (candidate && !options.includes(candidate)) {
+                    options.push(candidate);
+                }
+            });
+        }
+        if (options.length === 0 && task?.bsNumber) {
+            options.push(task.bsNumber);
+        }
+        return options;
+    }, [task?.bsNumber, task?.bsLocation]);
 
     const asText = (x: unknown): string => {
         if (x === null || typeof x === 'undefined') return '—';
@@ -187,6 +233,18 @@ export default function TaskDetailPage() {
     React.useEffect(() => {
         void loadTask();
     }, [loadTask]);
+
+    React.useEffect(() => {
+        if (uploadDialogOpen && bsOptions.length > 0 && !selectedBase) {
+            setSelectedBase(bsOptions[0]);
+        }
+    }, [uploadDialogOpen, bsOptions, selectedBase]);
+
+    React.useEffect(() => {
+        return () => {
+            uploadFiles.forEach((item) => URL.revokeObjectURL(item.preview));
+        };
+    }, [uploadFiles]);
 
     const hasWorkItems = Array.isArray(task?.workItems) && task.workItems.length > 0;
     const attachmentLinks = React.useMemo(
@@ -351,6 +409,141 @@ export default function TaskDetailPage() {
             setDecisionError(e instanceof Error ? e.message : 'Неизвестная ошибка');
         } finally {
             setDecisionLoading(false);
+        }
+    };
+
+    const handleOpenUploadDialog = () => {
+        setUploadError(null);
+        setUploadSuccess(null);
+        setUploadFiles([]);
+        setSelectedBase(bsOptions[0] || '');
+        setUploadDialogOpen(true);
+    };
+
+    const handleCloseUploadDialog = () => {
+        if (uploadLoading) return;
+        setUploadDialogOpen(false);
+        setUploadError(null);
+        setUploadSuccess(null);
+        setUploadFiles([]);
+    };
+
+    const handleRemoveUploadFile = (id: string) => {
+        setUploadFiles((prev) => prev.filter((item) => item.id !== id));
+    };
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        accept: { 'image/*': [] },
+        multiple: true,
+        maxSize: 15 * 1024 * 1024,
+        onDrop: (acceptedFiles, fileRejections) => {
+            const mapped = acceptedFiles.map((file) => ({
+                id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+                file,
+                preview: URL.createObjectURL(file),
+            }));
+            setUploadFiles((prev) => [...prev, ...mapped]);
+            if (fileRejections.length > 0) {
+                const firstError = fileRejections[0]?.errors?.[0]?.message;
+                setUploadError(firstError || 'Некоторые файлы отклонены');
+            } else {
+                setUploadError(null);
+            }
+        },
+        onDropRejected: (rejections) => {
+            const firstError = rejections[0]?.errors?.[0]?.message;
+            setUploadError(firstError || 'Файлы не приняты');
+        },
+    });
+
+    const handleUploadSubmit = async () => {
+        if (!selectedBase) {
+            setUploadError('Выберите БС для загрузки фотоотчета');
+            return;
+        }
+        if (uploadFiles.length === 0) {
+            setUploadError('Добавьте хотя бы одно фото');
+            return;
+        }
+        if (!task?.taskId && !taskId) {
+            setUploadError('Не найден идентификатор задачи');
+            return;
+        }
+        setUploadLoading(true);
+        setUploadError(null);
+        setUploadSuccess(null);
+        try {
+            const formData = new FormData();
+            formData.append('baseId', selectedBase);
+            formData.append('task', task?.taskId || taskId);
+            formData.append('taskId', task?.taskId || taskId);
+            if (task?.initiatorId) formData.append('initiatorId', task.initiatorId);
+            if (task?.initiatorName) formData.append('initiatorName', task.initiatorName);
+
+            uploadFiles.forEach((item) => {
+                formData.append('image[]', item.file);
+            });
+
+            const res = await fetch('/api/upload/fixed', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+            if (!res.ok) {
+                setUploadError(data.error || 'Не удалось загрузить фото');
+                return;
+            }
+            setUploadSuccess(data.message || 'Фото успешно загружены');
+            setUploadFiles([]);
+            void loadTask();
+        } catch (e) {
+            setUploadError(e instanceof Error ? e.message : 'Ошибка загрузки');
+        } finally {
+            setUploadLoading(false);
+        }
+    };
+
+    const handleOpenLinkDialog = () => {
+        setReportLinkInput(task?.reportLink || '');
+        setLinkError(null);
+        setLinkDialogOpen(true);
+    };
+
+    const handleCloseLinkDialog = () => {
+        if (linkSaving) return;
+        setLinkDialogOpen(false);
+        setLinkError(null);
+    };
+
+    const handleSaveReportLink = async () => {
+        if (!taskId) {
+            setLinkError('Не найден идентификатор задачи');
+            return;
+        }
+        setLinkSaving(true);
+        setLinkError(null);
+        try {
+            const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reportLink: reportLinkInput }),
+            });
+            const data = (await res.json()) as { task?: Task; error?: string };
+            if (!res.ok || !data.task) {
+                setLinkError(data.error || 'Не удалось сохранить ссылку');
+                return;
+            }
+            setTask((prev) => {
+                const updated = data.task as Task;
+                return prev ? { ...prev, ...updated } : updated;
+            });
+            setLinkDialogOpen(false);
+        } catch (e) {
+            setLinkError(e instanceof Error ? e.message : 'Ошибка сохранения');
+        } finally {
+            setLinkSaving(false);
         }
     };
 
@@ -761,6 +954,42 @@ export default function TaskDetailPage() {
                                     </Button>
                                 </Box>
                             )}
+                            {task.status === 'Done' && (
+                                <Box sx={{ pt: 0.5 }}>
+                                    <Divider sx={{ mb: 1.5 }} />
+                                    <Stack
+                                        direction={{ xs: 'column', sm: 'row' }}
+                                        spacing={1}
+                                        useFlexGap
+                                        flexWrap="wrap"
+                                    >
+                                        <Button
+                                            variant="contained"
+                                            startIcon={<CloudUploadIcon />}
+                                            onClick={handleOpenUploadDialog}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: 1.5,
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            Загрузить фото
+                                        </Button>
+                                        <Button
+                                            variant="outlined"
+                                            startIcon={<LinkIcon />}
+                                            onClick={handleOpenLinkDialog}
+                                            sx={{
+                                                textTransform: 'none',
+                                                borderRadius: 1.5,
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            Добавить ссылку
+                                        </Button>
+                                    </Stack>
+                                </Box>
+                            )}
                         </Stack>
                     </CardItem>
 
@@ -1072,6 +1301,171 @@ export default function TaskDetailPage() {
 
                 </Stack>
             </Box>
+
+            <Dialog
+                open={uploadDialogOpen}
+                onClose={handleCloseUploadDialog}
+                fullWidth
+                maxWidth="md"
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 3,
+                            p: 1,
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 700 }}>Загрузка фотоотчета</DialogTitle>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                        Файлы сохранятся в папку {task?.taskId || taskId}/{task?.taskId || taskId}-report/
+                        {selectedBase || 'BS'} в хранилище. Если в задаче несколько БС, загрузите фото отдельно по
+                        каждой.
+                    </Typography>
+                    <TextField
+                        select
+                        label="Базовая станция"
+                        value={selectedBase}
+                        onChange={(e) => setSelectedBase(e.target.value)}
+                        fullWidth
+                        helperText="Выберите БС, для которой загружаете фото"
+                    >
+                        {bsOptions.length === 0 ? (
+                            <MenuItem value="">Нет данных по БС</MenuItem>
+                        ) : (
+                            bsOptions.map((bs) => (
+                                <MenuItem key={bs} value={bs}>
+                                    {bs}
+                                </MenuItem>
+                            ))
+                        )}
+                    </TextField>
+
+                    <Box
+                        {...getRootProps()}
+                        sx={{
+                            border: '2px dashed',
+                            borderColor: isDragActive ? 'primary.main' : 'divider',
+                            borderRadius: 3,
+                            p: 3,
+                            textAlign: 'center',
+                            backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer',
+                        }}
+                    >
+                        <input {...getInputProps()} />
+                        <CloudUploadIcon fontSize="large" color="action" />
+                        <Typography variant="h6" sx={{ mt: 1, mb: 0.5 }}>
+                            Перетащите файлы сюда или нажмите, чтобы выбрать
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Принимаются изображения до 15 МБ каждое. Интерфейс напоминает Dropbox: просто перетащите
+                            нужные фото.
+                        </Typography>
+                    </Box>
+
+                    {uploadFiles.length > 0 && (
+                        <Stack spacing={1.25}>
+                            {uploadFiles.map((item) => (
+                                <Paper
+                                    key={item.id}
+                                    variant="outlined"
+                                    sx={{ p: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                                >
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <Image
+                                            src={item.preview}
+                                            alt={item.file.name}
+                                            width={48}
+                                            height={48}
+                                            style={{ objectFit: 'cover', borderRadius: 8 }}
+                                            unoptimized
+                                        />
+                                        <Box sx={{ minWidth: 0 }}>
+                                            <Typography sx={{ wordBreak: 'break-word' }}>{item.file.name}</Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {(item.file.size / (1024 * 1024)).toFixed(2)} МБ
+                                            </Typography>
+                                        </Box>
+                                    </Stack>
+                                    <Button
+                                        size="small"
+                                        color="error"
+                                        onClick={() => handleRemoveUploadFile(item.id)}
+                                        sx={{ textTransform: 'none' }}
+                                    >
+                                        Удалить
+                                    </Button>
+                                </Paper>
+                            ))}
+                        </Stack>
+                    )}
+
+                    {uploadError && <Alert severity="error">{uploadError}</Alert>}
+                    {uploadSuccess && <Alert severity="success">{uploadSuccess}</Alert>}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
+                    <Button
+                        onClick={handleCloseUploadDialog}
+                        disabled={uploadLoading}
+                        sx={{ textTransform: 'none', borderRadius: 1.5 }}
+                    >
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void handleUploadSubmit()}
+                        disabled={uploadLoading}
+                        startIcon={uploadLoading ? <CircularProgress size={16} /> : <CloudUploadIcon />}
+                        sx={{ textTransform: 'none', borderRadius: 1.5, fontWeight: 700 }}
+                    >
+                        {uploadLoading ? 'Загрузка...' : 'Загрузить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={linkDialogOpen}
+                onClose={handleCloseLinkDialog}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle sx={{ fontWeight: 700 }}>Добавить ссылку на фотоотчет</DialogTitle>
+                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <TextField
+                        label="Ссылка"
+                        value={reportLinkInput}
+                        onChange={(e) => setReportLinkInput(e.target.value)}
+                        fullWidth
+                        placeholder="https://..."
+                        autoFocus
+                    />
+                    {linkError && <Alert severity="error">{linkError}</Alert>}
+                    <Typography variant="body2" color="text.secondary">
+                        Укажите ссылку на облачное хранилище с фотоотчетом. Она будет сохранена в поле «Отчет по задаче».
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        onClick={handleCloseLinkDialog}
+                        disabled={linkSaving}
+                        sx={{ textTransform: 'none', borderRadius: 1.5 }}
+                    >
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void handleSaveReportLink()}
+                        disabled={linkSaving}
+                        startIcon={linkSaving ? <CircularProgress size={16} /> : <LinkIcon />}
+                        sx={{ textTransform: 'none', borderRadius: 1.5, fontWeight: 700 }}
+                    >
+                        {linkSaving ? 'Сохранение...' : 'Сохранить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <Dialog
                 open={completeConfirmOpen}
