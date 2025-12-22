@@ -3,7 +3,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import {
     Accordion,
@@ -32,7 +31,6 @@ import {
     Container,
     Alert,
     TextField,
-    MenuItem,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -58,12 +56,12 @@ import {
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
-import { useDropzone } from 'react-dropzone';
 import { getPriorityIcon, normalizePriority } from '@/utils/priorityIcons';
 import TaskGeoLocation from '@/app/workspace/components/TaskGeoLocation';
 import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 import TaskComments, { type TaskComment } from '@/app/components/TaskComments';
+import PhotoReportUploader from '@/app/components/PhotoReportUploader';
 import { fetchUserContext } from '@/app/utils/userContext';
 import type { Task, WorkItem, TaskEvent } from '@/app/types/taskTypes';
 import { extractFileNameFromUrl, isDocumentUrl } from '@/utils/taskFiles';
@@ -84,12 +82,6 @@ const parseUserInfo = (userString?: string) => {
     const cleanedString = userString.replace(/\)$/, '');
     const parts = cleanedString.split(' (');
     return { name: parts[0] || 'N/A', email: parts[1] || 'N/A' };
-};
-
-type UploadFileItem = {
-    id: string;
-    file: File;
-    preview: string;
 };
 
 export default function TaskDetailPage() {
@@ -113,11 +105,6 @@ export default function TaskDetailPage() {
     const [completeLoading, setCompleteLoading] = React.useState(false);
     const [completeError, setCompleteError] = React.useState<string | null>(null);
     const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false);
-    const [uploadFiles, setUploadFiles] = React.useState<UploadFileItem[]>([]);
-    const [uploadError, setUploadError] = React.useState<string | null>(null);
-    const [uploadLoading, setUploadLoading] = React.useState(false);
-    const [uploadSuccess, setUploadSuccess] = React.useState<string | null>(null);
-    const [selectedBase, setSelectedBase] = React.useState<string>('');
     const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
     const [reportLinkInput, setReportLinkInput] = React.useState('');
     const [linkSaving, setLinkSaving] = React.useState(false);
@@ -158,28 +145,16 @@ export default function TaskDetailPage() {
         return formatRuble(task.contractorPayment);
     };
 
-    const bsOptions = React.useMemo(() => {
-        const options: string[] = [];
-        const fromTaskField = (task?.bsNumber || '')
-            .split(/[,;]+/)
-            .map((v) => v.trim())
-            .filter(Boolean);
-        fromTaskField.forEach((v) => {
-            if (!options.includes(v)) options.push(v);
-        });
-        if (Array.isArray(task?.bsLocation)) {
-            task.bsLocation.forEach((loc) => {
-                const candidate = (loc?.name || '').trim();
-                if (candidate && !options.includes(candidate)) {
-                    options.push(candidate);
-                }
-            });
-        }
-        if (options.length === 0 && task?.bsNumber) {
-            options.push(task.bsNumber);
-        }
-        return options;
-    }, [task?.bsNumber, task?.bsLocation]);
+    const bsNumberDisplay = React.useMemo(() => {
+        const names =
+            task?.bsLocation
+                ?.map((loc) => (loc?.name || '').trim())
+                .filter(Boolean) ?? [];
+        if (names.length === 1) return names[0];
+        if (names.length === 2) return `${names[0]}-${names[1]}`;
+        if (names.length > 2) return names.join(', ');
+        return task?.bsNumber || '—';
+    }, [task?.bsLocation, task?.bsNumber]);
 
     const asText = (x: unknown): string => {
         if (x === null || typeof x === 'undefined') return '—';
@@ -233,18 +208,6 @@ export default function TaskDetailPage() {
     React.useEffect(() => {
         void loadTask();
     }, [loadTask]);
-
-    React.useEffect(() => {
-        if (uploadDialogOpen && bsOptions.length > 0 && !selectedBase) {
-            setSelectedBase(bsOptions[0]);
-        }
-    }, [uploadDialogOpen, bsOptions, selectedBase]);
-
-    React.useEffect(() => {
-        return () => {
-            uploadFiles.forEach((item) => URL.revokeObjectURL(item.preview));
-        };
-    }, [uploadFiles]);
 
     const hasWorkItems = Array.isArray(task?.workItems) && task.workItems.length > 0;
     const attachmentLinks = React.useMemo(
@@ -413,94 +376,11 @@ export default function TaskDetailPage() {
     };
 
     const handleOpenUploadDialog = () => {
-        setUploadError(null);
-        setUploadSuccess(null);
-        setUploadFiles([]);
-        setSelectedBase(bsOptions[0] || '');
         setUploadDialogOpen(true);
     };
 
     const handleCloseUploadDialog = () => {
-        if (uploadLoading) return;
         setUploadDialogOpen(false);
-        setUploadError(null);
-        setUploadSuccess(null);
-        setUploadFiles([]);
-    };
-
-    const handleRemoveUploadFile = (id: string) => {
-        setUploadFiles((prev) => prev.filter((item) => item.id !== id));
-    };
-
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        accept: { 'image/*': [] },
-        multiple: true,
-        maxSize: 15 * 1024 * 1024,
-        onDrop: (acceptedFiles, fileRejections) => {
-            const mapped = acceptedFiles.map((file) => ({
-                id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
-                file,
-                preview: URL.createObjectURL(file),
-            }));
-            setUploadFiles((prev) => [...prev, ...mapped]);
-            if (fileRejections.length > 0) {
-                const firstError = fileRejections[0]?.errors?.[0]?.message;
-                setUploadError(firstError || 'Некоторые файлы отклонены');
-            } else {
-                setUploadError(null);
-            }
-        },
-        onDropRejected: (rejections) => {
-            const firstError = rejections[0]?.errors?.[0]?.message;
-            setUploadError(firstError || 'Файлы не приняты');
-        },
-    });
-
-    const handleUploadSubmit = async () => {
-        if (!selectedBase) {
-            setUploadError('Выберите БС для загрузки фотоотчета');
-            return;
-        }
-        if (uploadFiles.length === 0) {
-            setUploadError('Добавьте хотя бы одно фото');
-            return;
-        }
-        if (!task?.taskId && !taskId) {
-            setUploadError('Не найден идентификатор задачи');
-            return;
-        }
-        setUploadLoading(true);
-        setUploadError(null);
-        setUploadSuccess(null);
-        try {
-            const formData = new FormData();
-            formData.append('baseId', selectedBase);
-            formData.append('task', task?.taskId || taskId);
-            formData.append('taskId', task?.taskId || taskId);
-            if (task?.initiatorId) formData.append('initiatorId', task.initiatorId);
-            if (task?.initiatorName) formData.append('initiatorName', task.initiatorName);
-
-            uploadFiles.forEach((item) => {
-                formData.append('image[]', item.file);
-            });
-
-            const res = await fetch('/api/upload/fixed', {
-                method: 'POST',
-                body: formData,
-            });
-            const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-            if (!res.ok) {
-                setUploadError(data.error || 'Не удалось загрузить фото');
-                return;
-            }
-            setUploadSuccess(data.message || 'Фото успешно загружены');
-            setUploadFiles([]);
-            void loadTask();
-        } catch (e) {
-            setUploadError(e instanceof Error ? e.message : 'Ошибка загрузки');
-        } finally {
-            setUploadLoading(false);
-        }
     };
 
     const handleOpenLinkDialog = () => {
@@ -729,7 +609,7 @@ export default function TaskDetailPage() {
                             <Typography variant="h6" sx={{ wordBreak: 'break-word' }}>
                                 {task.taskName || 'Задача'}
                             </Typography>
-                            {task.bsNumber && <Typography variant="h6">{task.bsNumber}</Typography>}
+                            {bsNumberDisplay !== '—' && <Typography variant="h6">{bsNumberDisplay}</Typography>}
 
                             {task.taskId && (
                                 <Chip
@@ -804,7 +684,7 @@ export default function TaskDetailPage() {
 
                         <Stack spacing={1}>
                             <Typography variant="body1">
-                                <strong>Базовая станция:</strong> {task.bsNumber || '—'}
+                                <strong>Базовая станция:</strong> {bsNumberDisplay}
                             </Typography>
 
                             <Typography variant="body1">
@@ -1302,129 +1182,16 @@ export default function TaskDetailPage() {
                 </Stack>
             </Box>
 
-            <Dialog
+            <PhotoReportUploader
                 open={uploadDialogOpen}
                 onClose={handleCloseUploadDialog}
-                fullWidth
-                maxWidth="md"
-                slotProps={{
-                    paper: {
-                        sx: {
-                            borderRadius: 3,
-                            p: 1,
-                        },
-                    },
-                }}
-            >
-                <DialogTitle sx={{ fontWeight: 700 }}>Загрузка фотоотчета</DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        Файлы сохранятся в папку {task?.taskId || taskId}/{task?.taskId || taskId}-report/
-                        {selectedBase || 'BS'} в хранилище. Если в задаче несколько БС, загрузите фото отдельно по
-                        каждой.
-                    </Typography>
-                    <TextField
-                        select
-                        label="Базовая станция"
-                        value={selectedBase}
-                        onChange={(e) => setSelectedBase(e.target.value)}
-                        fullWidth
-                        helperText="Выберите БС, для которой загружаете фото"
-                    >
-                        {bsOptions.length === 0 ? (
-                            <MenuItem value="">Нет данных по БС</MenuItem>
-                        ) : (
-                            bsOptions.map((bs) => (
-                                <MenuItem key={bs} value={bs}>
-                                    {bs}
-                                </MenuItem>
-                            ))
-                        )}
-                    </TextField>
-
-                    <Box
-                        {...getRootProps()}
-                        sx={{
-                            border: '2px dashed',
-                            borderColor: isDragActive ? 'primary.main' : 'divider',
-                            borderRadius: 3,
-                            p: 3,
-                            textAlign: 'center',
-                            backgroundColor: isDragActive ? 'action.hover' : 'background.paper',
-                            transition: 'all 0.2s ease',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        <input {...getInputProps()} />
-                        <CloudUploadIcon fontSize="large" color="action" />
-                        <Typography variant="h6" sx={{ mt: 1, mb: 0.5 }}>
-                            Перетащите файлы сюда или нажмите, чтобы выбрать
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Принимаются изображения до 15 МБ каждое. Интерфейс напоминает Dropbox: просто перетащите
-                            нужные фото.
-                        </Typography>
-                    </Box>
-
-                    {uploadFiles.length > 0 && (
-                        <Stack spacing={1.25}>
-                            {uploadFiles.map((item) => (
-                                <Paper
-                                    key={item.id}
-                                    variant="outlined"
-                                    sx={{ p: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                                >
-                                    <Stack direction="row" spacing={1} alignItems="center">
-                                        <Image
-                                            src={item.preview}
-                                            alt={item.file.name}
-                                            width={48}
-                                            height={48}
-                                            style={{ objectFit: 'cover', borderRadius: 8 }}
-                                            unoptimized
-                                        />
-                                        <Box sx={{ minWidth: 0 }}>
-                                            <Typography sx={{ wordBreak: 'break-word' }}>{item.file.name}</Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {(item.file.size / (1024 * 1024)).toFixed(2)} МБ
-                                            </Typography>
-                                        </Box>
-                                    </Stack>
-                                    <Button
-                                        size="small"
-                                        color="error"
-                                        onClick={() => handleRemoveUploadFile(item.id)}
-                                        sx={{ textTransform: 'none' }}
-                                    >
-                                        Удалить
-                                    </Button>
-                                </Paper>
-                            ))}
-                        </Stack>
-                    )}
-
-                    {uploadError && <Alert severity="error">{uploadError}</Alert>}
-                    {uploadSuccess && <Alert severity="success">{uploadSuccess}</Alert>}
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
-                    <Button
-                        onClick={handleCloseUploadDialog}
-                        disabled={uploadLoading}
-                        sx={{ textTransform: 'none', borderRadius: 1.5 }}
-                    >
-                        Отмена
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={() => void handleUploadSubmit()}
-                        disabled={uploadLoading}
-                        startIcon={uploadLoading ? <CircularProgress size={16} /> : <CloudUploadIcon />}
-                        sx={{ textTransform: 'none', borderRadius: 1.5, fontWeight: 700 }}
-                    >
-                        {uploadLoading ? 'Загрузка...' : 'Загрузить'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                taskId={task.taskId || taskId}
+                taskName={task.taskName}
+                initiatorId={task.initiatorId}
+                initiatorName={task.initiatorName}
+                bsLocations={task.bsLocation}
+                onUploaded={() => void loadTask()}
+            />
 
             <Dialog
                 open={linkDialogOpen}
@@ -1488,7 +1255,7 @@ export default function TaskDetailPage() {
                 <DialogContent sx={{ pt: 1 }}>
                     <Typography variant="body1" sx={{ mb: 1.5 }}>
                         Подтвердите, что работы по задаче «{task.taskName || task.taskId || 'Задача'}»
-                        {task.bsNumber ? ` (БС ${task.bsNumber})` : ''} завершены. Статус будет изменен на
+                        {bsNumberDisplay !== '—' ? ` (БС ${bsNumberDisplay})` : ''} завершены. Статус будет изменен на
                         «Выполнено», а участники получат уведомление.
                     </Typography>
                     {completeError && (
@@ -1569,10 +1336,10 @@ export default function TaskDetailPage() {
                 <DialogContent sx={{ pt: 1 }}>
                     <Typography variant="body1" sx={{ mb: 1.5 }}>
                         {pendingDecision === 'accept'
-                            ? `Вы подтверждаете что готовы принять задачу ${task.taskName} ${task.bsNumber || ''}? Срок выполнение - ${
+                            ? `Вы подтверждаете что готовы принять задачу ${task.taskName} ${bsNumberDisplay !== '—' ? bsNumberDisplay : ''}? Срок выполнение - ${
                                   task.dueDate ? formatDate(task.dueDate) : '—'
                               }.`
-                            : `Вы уверены что хотите отказаться от задачи ${task.taskName} ${task.bsNumber || ''}?`}
+                            : `Вы уверены что хотите отказаться от задачи ${task.taskName} ${bsNumberDisplay !== '—' ? bsNumberDisplay : ''}?`}
                     </Typography>
                     {decisionError && (
                         <Typography variant="body2" color="error" fontWeight={600}>
