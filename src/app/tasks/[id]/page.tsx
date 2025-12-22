@@ -96,9 +96,13 @@ export default function TaskDetailPage() {
     const [pendingDecision, setPendingDecision] = React.useState<'accept' | 'reject' | null>(null);
     const [decisionLoading, setDecisionLoading] = React.useState(false);
     const [decisionError, setDecisionError] = React.useState<string | null>(null);
+    const [completeConfirmOpen, setCompleteConfirmOpen] = React.useState(false);
+    const [completeLoading, setCompleteLoading] = React.useState(false);
+    const [completeError, setCompleteError] = React.useState<string | null>(null);
 
     const handleCompleteClick = React.useCallback(() => {
-        // TODO: implement completion action
+        setCompleteError(null);
+        setCompleteConfirmOpen(true);
     }, []);
 
     const formatDate = (v?: string | Date) => {
@@ -310,6 +314,12 @@ export default function TaskDetailPage() {
         setDecisionError(null);
     };
 
+    const closeCompleteDialog = () => {
+        if (completeLoading) return;
+        setCompleteConfirmOpen(false);
+        setCompleteError(null);
+    };
+
     const handleDecisionConfirm = async () => {
         if (!pendingDecision) return;
         if (!taskId) {
@@ -343,6 +353,39 @@ export default function TaskDetailPage() {
             setDecisionLoading(false);
         }
     };
+
+    const handleCompleteConfirm = React.useCallback(async () => {
+        if (!taskId) {
+            setCompleteError('Не найден идентификатор задачи');
+            return;
+        }
+        setCompleteLoading(true);
+        setCompleteError(null);
+        try {
+            const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: 'Done' }),
+            });
+            const data = (await res.json()) as { task?: Task; error?: string };
+            if (!res.ok || !data.task) {
+                setCompleteError(data.error || 'Не удалось завершить задачу');
+                return;
+            }
+
+            setTask((prev) => {
+                const updated = data.task as Task;
+                return prev ? { ...prev, ...updated } : updated;
+            });
+            setCompleteConfirmOpen(false);
+        } catch (e) {
+            setCompleteError(e instanceof Error ? e.message : 'Неизвестная ошибка');
+        } finally {
+            setCompleteLoading(false);
+        }
+    }, [taskId]);
 
     if (loading) {
         return (
@@ -705,6 +748,7 @@ export default function TaskDetailPage() {
                                         variant="contained"
                                         color="success"
                                         onClick={handleCompleteClick}
+                                        disabled={completeLoading}
                                         fullWidth
                                         sx={{
                                             borderRadius: 999,
@@ -1028,6 +1072,85 @@ export default function TaskDetailPage() {
 
                 </Stack>
             </Box>
+
+            <Dialog
+                open={completeConfirmOpen}
+                onClose={closeCompleteDialog}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            borderRadius: 4,
+                            background:
+                                'linear-gradient(160deg, rgba(255,255,255,0.92), rgba(244,247,252,0.94))',
+                            border: '1px solid rgba(255,255,255,0.6)',
+                            boxShadow: '0 30px 80px rgba(12, 16, 29, 0.28)',
+                            backdropFilter: 'blur(18px)',
+                            minWidth: { xs: 'calc(100% - 32px)', sm: 420 },
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>Завершить задачу?</DialogTitle>
+                <DialogContent sx={{ pt: 1 }}>
+                    <Typography variant="body1" sx={{ mb: 1.5 }}>
+                        Подтвердите, что работы по задаче «{task.taskName || task.taskId || 'Задача'}»
+                        {task.bsNumber ? ` (БС ${task.bsNumber})` : ''} завершены. Статус будет изменен на
+                        «Выполнено», а участники получат уведомление.
+                    </Typography>
+                    {completeError && (
+                        <Typography variant="body2" color="error" fontWeight={600}>
+                            {completeError}
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        px: 3,
+                        pb: 2.5,
+                        display: 'flex',
+                        gap: 1,
+                        justifyContent: 'flex-end',
+                    }}
+                >
+                    <Button
+                        onClick={closeCompleteDialog}
+                        disabled={completeLoading}
+                        sx={{
+                            textTransform: 'none',
+                            borderRadius: 999,
+                            px: 2.25,
+                            py: 1,
+                            color: '#111',
+                            background: 'rgba(17,17,17,0.06)',
+                            '&:hover': {
+                                background: 'rgba(17,17,17,0.1)',
+                            },
+                        }}
+                    >
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void handleCompleteConfirm()}
+                        disabled={completeLoading}
+                        sx={{
+                            textTransform: 'none',
+                            borderRadius: 999,
+                            px: 2.75,
+                            py: 1,
+                            fontWeight: 700,
+                            background: 'linear-gradient(135deg, #2fd66b, #1ecf5a)',
+                            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.18)',
+                            color: '#0c2d18',
+                            '&:hover': {
+                                background: 'linear-gradient(135deg, #29c961, #1abf51)',
+                            },
+                        }}
+                    >
+                        {completeLoading ? 'Сохранение...' : 'Подтвердить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <Dialog
                 open={!!pendingDecision}
