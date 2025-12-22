@@ -12,7 +12,7 @@ import { uploadBuffer, deleteTaskFile, buildTaskFileKey, TaskFileSubfolder } fro
 import { v4 as uuidv4 } from 'uuid';
 import Busboy from 'busboy';
 import type { FileInfo } from 'busboy';
-import { sendEmail } from '@/utils/mailer';
+import { createNotification } from '@/app/utils/notificationService';
 import path from 'path';
 
 export const config = {
@@ -279,6 +279,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const fileUrls: string[] = [];
+    const taskRecord = await TaskModel.findOne({ taskId }).select('orgId projectId').lean().exec();
+    const orgIdRaw = taskRecord?.orgId?.toString?.() ?? 'unknown-org';
+    const projectIdRaw = taskRecord?.projectId?.toString?.() ?? 'unknown-project';
 
     for (const f of files) {
         let date = 'Unknown Date';
@@ -358,11 +361,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 .jpeg({ quality: 80 })
                 .toBuffer();
 
+            const safeOrgFolder =
+                orgIdRaw.replace(/[\\/]/g, '_').replace(/\s+/g, '_').replace(/\.+/g, '.').trim() ||
+                'unknown-org';
+            const safeProjectFolder =
+                projectIdRaw.replace(/[\\/]/g, '_').replace(/\s+/g, '_').replace(/\.+/g, '.').trim() ||
+                'unknown-project';
             const safeBaseFolder =
                 baseId.replace(/[\\/]/g, '_').replace(/\s+/g, '_').replace(/\.+/g, '.').trim() || 'base';
             const safeTaskFolder =
                 (taskId || task || 'task').replace(/[\\/]/g, '_').replace(/\s+/g, '_').trim() || 'task';
-            const reportFolder = `${safeTaskFolder}/${safeTaskFolder}-report/${safeBaseFolder}`;
+            const reportFolder = `uploads/${safeOrgFolder}/${safeProjectFolder}/${safeTaskFolder}/${safeTaskFolder}-report/${safeBaseFolder}`;
             const s3Key = `${reportFolder}/${outputFilename}`;
             const fileUrl = await uploadBuffer(processedBuffer, s3Key, 'image/jpeg');
             fileUrls.push(fileUrl);
@@ -440,35 +449,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             await relatedTask.save();
         }
 
-        // уведомления авторам/исполнителям
+        // уведомления в NotificationBell и email (1 раз на загрузку)
         try {
-            const frontendUrl = process.env.FRONTEND_URL || 'https://ciwork.ru';
-            const taskLink = `${frontendUrl}/tasks/${relatedTask?.taskId}`;
-            const recipients = [relatedTask?.authorEmail, relatedTask?.executorEmail]
-                .filter((email) => !!email)
-                .filter((v, i, arr) => arr.indexOf(v) === i);
+            const recipientClerkIds = new Set<string>();
+            if (typeof relatedTask?.authorId === 'string' && relatedTask.authorId.trim()) {
+                recipientClerkIds.add(relatedTask.authorId.trim());
+            }
+            if (typeof relatedTask?.executorId === 'string' && relatedTask.executorId.trim()) {
+                recipientClerkIds.add(relatedTask.executorId.trim());
+            }
 
-            for (const email of recipients) {
-                let roleText = `Информация по задаче "${relatedTask?.taskName} ${relatedTask?.bsNumber}" (${relatedTask?.taskId}).`;
-                if (email === relatedTask?.authorEmail)
-                    roleText = `Вы получили это письмо как автор задачи "${relatedTask?.taskName} ${relatedTask?.bsNumber}" (${relatedTask?.taskId}).`;
-                if (email === relatedTask?.executorEmail)
-                    roleText = `Вы получили это письмо как исполнитель задачи "${relatedTask?.taskName} ${relatedTask?.bsNumber}" (${relatedTask?.taskId}).`;
+            const bsInfo =
+                typeof relatedTask?.bsNumber === 'string' && relatedTask.bsNumber.trim()
+                    ? ` (БС ${relatedTask.bsNumber})`
+                    : '';
+            const taskLabel = relatedTask?.taskName || relatedTask?.taskId || 'задаче';
+            const link = relatedTask?.taskId
+                ? `/tasks/${encodeURIComponent(relatedTask.taskId.toLowerCase())}`
+                : undefined;
+            const metadataEntries = Object.entries({
+                taskId: relatedTask?.taskId,
+                taskMongoId: relatedTask?._id?.toString?.(),
+                bsNumber: relatedTask?.bsNumber,
+                newStatus: 'Pending',
+                baseId,
+            }).filter(([, value]) => typeof value !== 'undefined' && value !== null);
+            const metadata = metadataEntries.length > 0 ? Object.fromEntries(metadataEntries) : undefined;
 
-                const html = `
-<p>${roleText}</p>
-<p>Статус задачи <strong>${relatedTask?.taskId}</strong> был изменён на <strong>Pending</strong></p>
-<p>Автор изменения: ${name}</p>
-<p>Комментарий: Статус изменён после загрузки фотоотчёта</p>
-<p><a href="${taskLink}">Перейти к задаче</a></p>
-<p>Исполнитель задачи ${relatedTask?.taskId}, ${name} добавил фотоотчёт о выполненной работе.</p>
-<p>Ссылка на фотоотчёт доступна на <a href="${taskLink}">странице задачи</a></p>`;
+            for (const clerkUserId of recipientClerkIds) {
+                const recipient = await User.findOne({ clerkUserId })
+                    .select('_id')
+                    .lean()
+                    .exec();
+                if (!recipient?._id) continue;
 
-                await sendEmail({
-                    to: email!,
-                    subject: `Статус задачи "${relatedTask?.taskName} ${relatedTask?.bsNumber}" (${relatedTask?.taskId}) изменён`,
-                    text: `${roleText}\n\nСсылка на задачу: ${taskLink}`,
-                    html,
+                await createNotification({
+                    recipientUserId: recipient._id,
+                    type: 'task_status_change',
+                    title: `Фотоотчет загружен${bsInfo}`,
+                    message: `${name} загрузил фотоотчет по ${taskLabel}${bsInfo}. Статус задачи: Pending.`,
+                    link,
+                    orgId: relatedTask?.orgId ?? undefined,
+                    senderName: name,
+                    senderEmail: user.email ?? undefined,
+                    metadata,
                 });
             }
         } catch (error) {

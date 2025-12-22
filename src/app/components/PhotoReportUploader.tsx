@@ -83,7 +83,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     const cancelRef = React.useRef(false);
-    const xhrMapRef = React.useRef<Map<string, XMLHttpRequest>>(new Map());
+    const xhrRef = React.useRef<XMLHttpRequest | null>(null);
 
     const baseOptions = React.useMemo(() => {
         const names = bsLocations
@@ -163,8 +163,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
 
     const handleCancelUpload = () => {
         cancelRef.current = true;
-        xhrMapRef.current.forEach((xhr) => xhr.abort());
-        xhrMapRef.current.clear();
+        if (xhrRef.current) {
+            xhrRef.current.abort();
+        }
         setUploading(false);
         setItems((prev) =>
             prev.map((item) =>
@@ -175,55 +176,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         );
         setUploadError('Загрузка отменена');
     };
-
-    const uploadItem = React.useCallback(
-        (item: UploadItem) =>
-            new Promise<boolean>((resolve) => {
-                const formData = new FormData();
-                formData.append('baseId', selectedBase);
-                formData.append('task', taskId);
-                formData.append('taskId', taskId);
-                if (initiatorId) formData.append('initiatorId', initiatorId);
-                if (initiatorName) formData.append('initiatorName', initiatorName);
-                formData.append('image[]', item.file);
-
-                const xhr = new XMLHttpRequest();
-                xhrMapRef.current.set(item.id, xhr);
-
-                xhr.upload.onprogress = (event) => {
-                    if (!event.lengthComputable) return;
-                    const progress = Math.round((event.loaded / event.total) * 100);
-                    updateItem(item.id, { progress });
-                };
-
-                xhr.onload = () => {
-                    const success = xhr.status >= 200 && xhr.status < 300;
-                    updateItem(item.id, {
-                        status: success ? 'done' : 'error',
-                        progress: success ? 100 : item.progress,
-                        error: success ? undefined : 'Ошибка загрузки',
-                    });
-                    xhrMapRef.current.delete(item.id);
-                    resolve(success);
-                };
-
-                xhr.onerror = () => {
-                    updateItem(item.id, { status: 'error', error: 'Сбой сети' });
-                    xhrMapRef.current.delete(item.id);
-                    resolve(false);
-                };
-
-                xhr.onabort = () => {
-                    updateItem(item.id, { status: 'canceled', error: 'Отменено' });
-                    xhrMapRef.current.delete(item.id);
-                    resolve(false);
-                };
-
-                xhr.open('POST', '/api/upload', true);
-                xhr.send(formData);
-            }),
-        [initiatorId, initiatorName, selectedBase, taskId, updateItem]
-    );
 
     const handleUpload = async () => {
         if (!selectedBase) {
@@ -240,13 +192,113 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setUploadSuccess(null);
 
         const targets = items.filter((item) => item.status !== 'done');
-        let successCount = 0;
-        for (const item of targets) {
-            if (cancelRef.current) break;
+        targets.forEach((item) => {
             updateItem(item.id, { status: 'uploading', progress: 0, error: undefined });
-            const ok = await uploadItem(item);
-            if (ok) successCount += 1;
-        }
+        });
+
+        const ranges = targets.reduce<{ id: string; start: number; end: number; size: number }[]>(
+            (acc, item) => {
+                const start = acc.length === 0 ? 0 : acc[acc.length - 1].end;
+                const safeSize = Math.max(1, item.file.size);
+                const end = start + safeSize;
+                acc.push({ id: item.id, start, end, size: safeSize });
+                return acc;
+            },
+            []
+        );
+        const totalSize = ranges.length > 0 ? ranges[ranges.length - 1].end : 0;
+
+        const formData = new FormData();
+        formData.append('baseId', selectedBase);
+        formData.append('task', taskId);
+        formData.append('taskId', taskId);
+        if (initiatorId) formData.append('initiatorId', initiatorId);
+        if (initiatorName) formData.append('initiatorName', initiatorName);
+        targets.forEach((item) => {
+            formData.append('image[]', item.file);
+        });
+
+        let uploadOk = false;
+        await new Promise<void>((resolve) => {
+            const xhr = new XMLHttpRequest();
+            xhrRef.current = xhr;
+
+            xhr.upload.onprogress = (event) => {
+                if (!event.lengthComputable || totalSize === 0) return;
+                const loaded = event.loaded;
+                setItems((prev) =>
+                    prev.map((item) => {
+                        const range = ranges.find((r) => r.id === item.id);
+                        if (!range) return item;
+                        const progressRaw = (loaded - range.start) / range.size;
+                        const progress = Math.max(0, Math.min(1, progressRaw));
+                        return {
+                            ...item,
+                            status: item.status === 'canceled' ? item.status : 'uploading',
+                            progress: Math.round(progress * 100),
+                        };
+                    })
+                );
+            };
+
+            xhr.onload = () => {
+                const success = xhr.status >= 200 && xhr.status < 300;
+                uploadOk = success;
+                setItems((prev) =>
+                    prev.map((item) => {
+                        const isTarget = targets.some((target) => target.id === item.id);
+                        if (!isTarget) return item;
+                        return {
+                            ...item,
+                            status: success ? 'done' : 'error',
+                            progress: success ? 100 : item.progress,
+                            error: success ? undefined : 'Ошибка загрузки',
+                        };
+                    })
+                );
+                if (!success) {
+                    const responseError = (() => {
+                        try {
+                            const payload = JSON.parse(xhr.responseText || '{}') as { error?: string };
+                            return payload.error;
+                        } catch {
+                            return undefined;
+                        }
+                    })();
+                    setUploadError(responseError || 'Ошибка загрузки');
+                }
+                xhrRef.current = null;
+                resolve();
+            };
+
+            xhr.onerror = () => {
+                setItems((prev) =>
+                    prev.map((item) =>
+                        targets.some((target) => target.id === item.id)
+                            ? { ...item, status: 'error', error: 'Сбой сети' }
+                            : item
+                    )
+                );
+                setUploadError('Сбой сети');
+                xhrRef.current = null;
+                resolve();
+            };
+
+            xhr.onabort = () => {
+                setItems((prev) =>
+                    prev.map((item) =>
+                        targets.some((target) => target.id === item.id)
+                            ? { ...item, status: 'canceled', error: 'Отменено' }
+                            : item
+                    )
+                );
+                xhrRef.current = null;
+                resolve();
+            };
+
+            xhr.open('POST', '/api/upload', true);
+            xhr.send(formData);
+        });
 
         if (cancelRef.current) {
             setUploading(false);
@@ -254,7 +306,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         }
 
         setUploading(false);
-        if (successCount > 0) {
+        if (uploadOk) {
             setUploadSuccess('Фото успешно загружены');
             onUploaded?.();
         }
@@ -272,7 +324,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             slotProps={{
                 paper: {
                     sx: {
-                        borderRadius: 4,
+                        borderRadius: isMobile ? 0 : 4,
                         p: 1,
                         background:
                             'linear-gradient(160deg, rgba(255,255,255,0.95), rgba(235,240,248,0.95))',
