@@ -21,18 +21,25 @@ import {
   TextField,
   InputLabel,
   FormControl,
-  Grid,
   Button,
   Popover,
   Tooltip,
   Link,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
 import FolderIcon from '@mui/icons-material/Folder';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { BaseStatus, ReportClient, ApiResponse } from '../types/reportTypes';
 import { DateRangePicker } from '@mui/x-date-pickers-pro/DateRangePicker';
 import { SingleInputDateRangeField } from '@mui/x-date-pickers-pro/SingleInputDateRangeField';
@@ -71,7 +78,17 @@ function getColSpanByRole(role: string) {
 }
 
 // === Компонент строки (одной задачи) ===
-function Row({ report, role }: { report: ReportClient; role: string }) {
+function Row({
+  report,
+  role,
+  canDelete,
+  onDeleteReport,
+}: {
+  report: ReportClient;
+  role: string;
+  canDelete: boolean;
+  onDeleteReport: (task: string, baseId: string, reportId: string) => void;
+}) {
   const [open, setOpen] = useState(false);
 
   const handleLinkClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -112,7 +129,7 @@ function Row({ report, role }: { report: ReportClient; role: string }) {
           }}
         >
           <Link
-            href={`tasks/${report.reportId.toLowerCase()}`}
+            href={`/tasks/${report.reportId.toLowerCase()}`}
             // onClick={handleLinkClick}
             underline='always'
             color='primary'
@@ -293,14 +310,39 @@ function Row({ report, role }: { report: ReportClient; role: string }) {
                   </Typography>
                   <Box
                     sx={{
-                      backgroundColor: getStatusColor(baseStatus.status),
-                      padding: '4px 8px',
-                      display: 'inline-block',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
                       marginLeft: 'auto',
-                      color: '#fff', // Белый текст для лучшей читаемости
                     }}
                   >
-                    {getStatusLabel(baseStatus.status)}
+                    <Box
+                      sx={{
+                        backgroundColor: getStatusColor(baseStatus.status),
+                        padding: '4px 8px',
+                        display: 'inline-block',
+                        color: '#fff', // Белый текст для лучшей читаемости
+                      }}
+                    >
+                      {getStatusLabel(baseStatus.status)}
+                    </Box>
+                    {canDelete && (
+                      <Tooltip title='Delete report'>
+                        <IconButton
+                          size='small'
+                          color='error'
+                          onClick={() =>
+                            onDeleteReport(
+                              report.task,
+                              baseStatus.baseId,
+                              report.reportId
+                            )
+                          }
+                        >
+                          <DeleteForeverIcon fontSize='small' />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </Box>
                 </Box>
               ))}
@@ -314,10 +356,22 @@ function Row({ report, role }: { report: ReportClient; role: string }) {
 
 export default function ReportListPage() {
   const [role, setRole] = useState<string>('');
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [reports, setReports] = useState<ReportClient[]>([]);
   const [filteredReports, setFilteredReports] = useState<ReportClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    task: string;
+    baseId: string;
+    reportId: string;
+  } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({ open: false, message: '', severity: 'success' });
 
   // Пагинация
   const [currentPage, setCurrentPage] = useState(1);
@@ -390,20 +444,25 @@ export default function ReportListPage() {
     const fetchReports = async () => {
       try {
         const response = await fetch('/api/reports');
-        const data: ApiResponse & { userRole?: string } = await response.json();
+        const data: ApiResponse = await response.json();
 
         if (!response.ok) {
           const errorMessage = data.error || 'Unknown error';
-          throw new Error(errorMessage);
+          setError(errorMessage);
+          setLoading(false);
+          return;
         }
         if (!Array.isArray(data.reports)) {
-          throw new Error('Invalid data format');
+          setError('Invalid data format');
+          setLoading(false);
+          return;
         }
         // console.log('Reports:', data.reports);
         // Устанавливаем роль (executor, initiator, admin и т.д.)
         if (data.userRole) {
           setRole(data.userRole);
         }
+        setIsSuperAdmin(Boolean(data.isSuperAdmin));
 
         // Преобразуем даты в ISO
         const mappedReports = data.reports.map((report: ReportClient) => ({
@@ -504,6 +563,76 @@ export default function ReportListPage() {
   const openPopover = Boolean(anchorEl);
   const popoverId = openPopover ? 'filter-popover' : undefined;
 
+  const handleDeleteRequest = (task: string, baseId: string, reportId: string) => {
+    setDeleteTarget({ task, baseId, reportId });
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteTarget(null);
+  };
+
+  const handleNotificationClose = (
+    event?: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === 'clickaway') return;
+    setNotification((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      const response = await fetch(
+        `/api/reports/${encodeURIComponent(deleteTarget.task)}/${encodeURIComponent(
+          deleteTarget.baseId
+        )}`,
+        { method: 'DELETE' }
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setNotification({
+          open: true,
+          message: data.error || 'Failed to delete report.',
+          severity: 'error',
+        });
+        return;
+      }
+
+      setReports((prev) =>
+        prev
+          .map((report) => {
+            if (report.reportId !== deleteTarget.reportId) return report;
+            const nextBaseStatuses = report.baseStatuses.filter(
+              (status) => status.baseId !== deleteTarget.baseId
+            );
+            return { ...report, baseStatuses: nextBaseStatuses };
+          })
+          .filter((report) => report.baseStatuses.length > 0)
+      );
+
+      setNotification({
+        open: true,
+        message: 'Report deleted successfully.',
+        severity: 'success',
+      });
+      setDeleteTarget(null);
+    } catch (deleteError) {
+      console.error('Error deleting report:', deleteError);
+      setNotification({
+        open: true,
+        message:
+          deleteError instanceof Error
+            ? deleteError.message
+            : 'Failed to delete report.',
+        severity: 'error',
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box
@@ -529,6 +658,21 @@ export default function ReportListPage() {
           width: '100%',
         }}
       >
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={3000}
+          onClose={handleNotificationClose}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert
+            onClose={handleNotificationClose}
+            severity={notification.severity}
+            sx={{ width: '100%' }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
+
         {/* Блок "Active filters" */}
         {activeFiltersCount > 0 && (
           <Box sx={{ padding: 2, marginBottom: 2 }}>
@@ -577,21 +721,19 @@ export default function ReportListPage() {
                 />
               )}
             </Box>
-            <Grid container spacing={2} alignItems='center'>
-              <Grid item xs={12} sm={6} md={3}>
-                <Button
-                  onClick={() => {
-                    setExecutorFilter('');
-                    setInitiatorFilter('');
-                    setStatusFilter('');
-                    setTaskSearch('');
-                    setCreatedDateRange([null, null]);
-                  }}
-                >
-                  Delete All
-                </Button>
-              </Grid>
-            </Grid>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Button
+                onClick={() => {
+                  setExecutorFilter('');
+                  setInitiatorFilter('');
+                  setStatusFilter('');
+                  setTaskSearch('');
+                  setCreatedDateRange([null, null]);
+                }}
+              >
+                Delete All
+              </Button>
+            </Box>
           </Box>
         )}
 
@@ -828,7 +970,13 @@ export default function ReportListPage() {
             <TableBody>
               {paginatedReports.length > 0 ? (
                 paginatedReports.map((report: ReportClient) => (
-                  <Row key={report.reportId} report={report} role={role} />
+                  <Row
+                    key={report.reportId}
+                    report={report}
+                    role={role}
+                    canDelete={isSuperAdmin}
+                    onDeleteReport={handleDeleteRequest}
+                  />
                 ))
               ) : (
                 <TableRow>
@@ -1012,6 +1160,31 @@ export default function ReportListPage() {
             </Box>
           </Box>
         </Popover>
+
+        <Dialog open={Boolean(deleteTarget)} onClose={handleDeleteCancel}>
+          <DialogTitle>Confirm Delete</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to delete the photo report for{' '}
+              {deleteTarget
+                ? `${deleteTarget.task} | ${deleteTarget.baseId}`
+                : ''}
+              ?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDeleteCancel} color='primary'>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              color='error'
+              disabled={deleteLoading}
+            >
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </LocalizationProvider>
   );

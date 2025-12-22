@@ -120,5 +120,9 @@ export async function GET() {
     ),
   }));
 
-  return NextResponse.json({ reports, userRole: mapRoleToLegacy(userRole) });
+  return NextResponse.json({
+    reports,
+    userRole: mapRoleToLegacy(userRole),
+    isSuperAdmin,
+  });
 }

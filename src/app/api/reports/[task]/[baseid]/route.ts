@@ -244,3 +244,63 @@ export async function PATCH(
     );
   }
 }
+
+/**
+ * DELETE обработчик для удаления фотоотчёта. Доступен только super-admin.
+ */
+export async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ task: string; baseid: string }> }
+) {
+  try {
+    await dbConnect();
+
+    const { task, baseid } = await params;
+    const taskDecoded = decodeURIComponent(task);
+    const baseidDecoded = decodeURIComponent(baseid);
+
+    if (!taskDecoded || !baseidDecoded) {
+      return NextResponse.json(
+          { error: 'Missing parameters in URL' },
+          { status: 400 }
+      );
+    }
+
+    const userContext = await GetUserContext();
+    if (!userContext.success || !userContext.data) {
+      const errorMessage = userContext.success
+          ? 'Нет активной сессии пользователя'
+          : userContext.message || 'Нет активной сессии пользователя';
+      return NextResponse.json(
+          { error: errorMessage },
+          { status: 401 }
+      );
+    }
+
+    if (!userContext.data.isSuperAdmin) {
+      return NextResponse.json(
+          { error: 'Недостаточно прав для удаления отчёта' },
+          { status: 403 }
+      );
+    }
+
+    const report = await ReportModel.findOne({
+      task: taskDecoded,
+      baseId: baseidDecoded,
+    });
+
+    if (!report) {
+      return NextResponse.json({ error: 'Отчёт не найден' }, { status: 404 });
+    }
+
+    await ReportModel.deleteOne({ _id: report._id });
+
+    return NextResponse.json({ message: 'Отчёт успешно удалён' });
+  } catch (error) {
+    console.error('Ошибка при удалении отчёта:', error);
+    return NextResponse.json(
+        { error: 'Не удалось удалить отчёт' },
+        { status: 500 }
+    );
+  }
+}

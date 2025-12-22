@@ -50,5 +50,7 @@ export interface ReportClient {
 
 export interface ApiResponse {
   reports: ReportClient[];
+  userRole?: string;
+  isSuperAdmin?: boolean;
   error?: string;
 }
