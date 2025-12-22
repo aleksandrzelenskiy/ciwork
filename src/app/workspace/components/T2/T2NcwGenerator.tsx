@@ -116,9 +116,18 @@ export const T2NcwGenerator = ({
     const initialCompletionDateParam = params?.get('completionDate') ?? '';
     const initialObjectNumberParam = params?.get('objectNumber') ?? '';
     const initialObjectAddressParam = params?.get('objectAddress') ?? '';
-    const initialOrderDateFromProps = toDayjs(initialOrderDate);
-    const initialOrderSignDateFromProps = toDayjs(initialOrderSignDate);
-    const initialCompletionDateFromProps = toDayjs(initialCompletionDate);
+    const initialOrderDateFromProps = useMemo(
+        () => toDayjs(initialOrderDate),
+        [initialOrderDate],
+    );
+    const initialOrderSignDateFromProps = useMemo(
+        () => toDayjs(initialOrderSignDate),
+        [initialOrderSignDate],
+    );
+    const initialCompletionDateFromProps = useMemo(
+        () => toDayjs(initialCompletionDate),
+        [initialCompletionDate],
+    );
 
     const [contractNumber, setContractNumber] = useState('27-1/25');
     const [contractDate, setContractDate] = useState<Dayjs | null>(dayjs('2025-04-07'));
