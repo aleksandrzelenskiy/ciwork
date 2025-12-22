@@ -12,7 +12,6 @@ import { uploadBuffer, deleteTaskFile, buildTaskFileKey, TaskFileSubfolder } fro
 import { v4 as uuidv4 } from 'uuid';
 import Busboy from 'busboy';
 import type { FileInfo } from 'busboy';
-import { createNotification } from '@/app/utils/notificationService';
 import path from 'path';
 
 export const config = {
@@ -422,81 +421,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 ],
             });
             await report.save();
-        }
-
-        const relatedTask = await TaskModel.findOne({ taskId: report.reportId });
-        if (relatedTask) {
-            const oldStatus = relatedTask.status;
-            relatedTask.status = 'Pending';
-
-            // гарантируем массив событий у связанной задачи
-            if (!Array.isArray(relatedTask.events)) {
-                relatedTask.events = [];
-            }
-
-            relatedTask.events.push({
-                action: 'STATUS_CHANGED',
-                author: name,
-                authorId: user.clerkUserId,
-                date: new Date(),
-                details: {
-                    oldStatus,
-                    newStatus: 'Pending',
-                    comment: 'Статус изменен после загрузки фотоотчета',
-                },
-            });
-
-            await relatedTask.save();
-        }
-
-        // уведомления в NotificationBell и email (1 раз на загрузку)
-        try {
-            const recipientClerkIds = new Set<string>();
-            if (typeof relatedTask?.authorId === 'string' && relatedTask.authorId.trim()) {
-                recipientClerkIds.add(relatedTask.authorId.trim());
-            }
-            if (typeof relatedTask?.executorId === 'string' && relatedTask.executorId.trim()) {
-                recipientClerkIds.add(relatedTask.executorId.trim());
-            }
-
-            const bsInfo =
-                typeof relatedTask?.bsNumber === 'string' && relatedTask.bsNumber.trim()
-                    ? ` (БС ${relatedTask.bsNumber})`
-                    : '';
-            const taskLabel = relatedTask?.taskName || relatedTask?.taskId || 'задаче';
-            const link = relatedTask?.taskId
-                ? `/tasks/${encodeURIComponent(relatedTask.taskId.toLowerCase())}`
-                : undefined;
-            const metadataEntries = Object.entries({
-                taskId: relatedTask?.taskId,
-                taskMongoId: relatedTask?._id?.toString?.(),
-                bsNumber: relatedTask?.bsNumber,
-                newStatus: 'Pending',
-                baseId,
-            }).filter(([, value]) => typeof value !== 'undefined' && value !== null);
-            const metadata = metadataEntries.length > 0 ? Object.fromEntries(metadataEntries) : undefined;
-
-            for (const clerkUserId of recipientClerkIds) {
-                const recipient = await User.findOne({ clerkUserId })
-                    .select('_id')
-                    .lean()
-                    .exec();
-                if (!recipient?._id) continue;
-
-                await createNotification({
-                    recipientUserId: recipient._id,
-                    type: 'task_status_change',
-                    title: `Фотоотчет загружен${bsInfo}`,
-                    message: `${name} загрузил фотоотчет по ${taskLabel}${bsInfo}. Статус задачи: Pending.`,
-                    link,
-                    orgId: relatedTask?.orgId ?? undefined,
-                    senderName: name,
-                    senderEmail: user.email ?? undefined,
-                    metadata,
-                });
-            }
-        } catch (error) {
-            console.error('Ошибка при отправке уведомлений:', error);
         }
 
         return res.status(200).json({

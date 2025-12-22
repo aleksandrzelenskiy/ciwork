@@ -11,18 +11,20 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    IconButton,
     LinearProgress,
-    MenuItem,
     Paper,
     Stack,
-    TextField,
     Typography,
-    IconButton,
     useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SendIcon from '@mui/icons-material/Send';
 import { useDropzone } from 'react-dropzone';
 
 type BaseLocation = {
@@ -40,6 +42,11 @@ type UploadItem = {
     error?: string;
 };
 
+type FolderState = {
+    uploaded: boolean;
+    fileCount: number;
+};
+
 type PhotoReportUploaderProps = {
     open: boolean;
     onClose: () => void;
@@ -48,7 +55,7 @@ type PhotoReportUploaderProps = {
     initiatorId?: string | null;
     initiatorName?: string | null;
     bsLocations?: BaseLocation[];
-    onUploaded?: () => void;
+    onSubmitted?: () => void;
 };
 
 const getReadableSize = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(2)} МБ`;
@@ -70,14 +77,19 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         initiatorId,
         initiatorName,
         bsLocations = [],
-        onUploaded,
+        onSubmitted,
     } = props;
 
-    const [selectedBase, setSelectedBase] = React.useState('');
+    const [view, setView] = React.useState<'folders' | 'upload'>('folders');
+    const [activeBase, setActiveBase] = React.useState('');
     const [items, setItems] = React.useState<UploadItem[]>([]);
+    const [folderState, setFolderState] = React.useState<Record<string, FolderState>>({});
     const [uploadError, setUploadError] = React.useState<string | null>(null);
-    const [uploadSuccess, setUploadSuccess] = React.useState<string | null>(null);
     const [uploading, setUploading] = React.useState(false);
+    const [folderAlert, setFolderAlert] = React.useState<string | null>(null);
+    const [submitError, setSubmitError] = React.useState<string | null>(null);
+    const [submitSuccess, setSubmitSuccess] = React.useState<string | null>(null);
+    const [submitLoading, setSubmitLoading] = React.useState(false);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -93,24 +105,30 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     }, [bsLocations]);
 
     const resetState = React.useCallback(() => {
+        setView('folders');
+        setActiveBase('');
         setUploadError(null);
-        setUploadSuccess(null);
+        setFolderAlert(null);
+        setSubmitError(null);
+        setSubmitSuccess(null);
         setItems((prev) => {
             prev.forEach((item) => URL.revokeObjectURL(item.preview));
             return [];
         });
-        setSelectedBase(baseOptions[0] || '');
-    }, [baseOptions]);
+        setFolderState({});
+    }, []);
 
     React.useEffect(() => {
         if (open) {
-            setUploadError(null);
-            setUploadSuccess(null);
-            setSelectedBase((prev) => prev || baseOptions[0] || '');
-        } else if (!uploading) {
             resetState();
         }
-    }, [open, baseOptions, uploading, resetState]);
+    }, [open, resetState]);
+
+    React.useEffect(() => {
+        if (!open && !uploading && !submitLoading) {
+            resetState();
+        }
+    }, [open, uploading, submitLoading, resetState]);
 
     React.useEffect(() => {
         return () => {
@@ -157,8 +175,18 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     };
 
     const handleDialogClose = () => {
-        if (uploading) return;
+        if (uploading || submitLoading) return;
         onClose();
+    };
+
+    const handleBackToFolders = () => {
+        if (uploading) return;
+        setItems((prev) => {
+            prev.forEach((item) => URL.revokeObjectURL(item.preview));
+            return [];
+        });
+        setUploadError(null);
+        setView('folders');
     };
 
     const handleCancelUpload = () => {
@@ -178,8 +206,8 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     };
 
     const handleUpload = async () => {
-        if (!selectedBase) {
-            setUploadError('Выберите БС для загрузки фотоотчета');
+        if (!activeBase) {
+            setUploadError('Выберите папку БС для загрузки фотоотчета');
             return;
         }
         if (items.length === 0) {
@@ -189,7 +217,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setUploading(true);
         cancelRef.current = false;
         setUploadError(null);
-        setUploadSuccess(null);
 
         const targets = items.filter((item) => item.status !== 'done');
         targets.forEach((item) => {
@@ -209,7 +236,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         const totalSize = ranges.length > 0 ? ranges[ranges.length - 1].end : 0;
 
         const formData = new FormData();
-        formData.append('baseId', selectedBase);
+        formData.append('baseId', activeBase);
         formData.append('task', taskId);
         formData.append('taskId', taskId);
         if (initiatorId) formData.append('initiatorId', initiatorId);
@@ -307,12 +334,71 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
 
         setUploading(false);
         if (uploadOk) {
-            setUploadSuccess('Фото успешно загружены');
-            onUploaded?.();
+            setFolderState((prev) => ({
+                ...prev,
+                [activeBase]: {
+                    uploaded: true,
+                    fileCount: targets.length,
+                },
+            }));
+            setFolderAlert(`Фото в папке ${activeBase} успешно загружены`);
+            setItems((prev) => {
+                prev.forEach((item) => URL.revokeObjectURL(item.preview));
+                return [];
+            });
+            setView('folders');
         }
     };
 
-    const reportFolder = `${taskId}/${taskId}-report/${selectedBase || 'BS'}`;
+    const allUploaded =
+        baseOptions.length > 0 &&
+        baseOptions.every((base) => folderState[base]?.uploaded);
+
+    const handleOpenFolder = (baseId: string) => {
+        if (uploading || submitLoading) return;
+        setActiveBase(baseId);
+        setUploadError(null);
+        setFolderAlert(null);
+        setView('upload');
+    };
+
+    const handleSubmit = async () => {
+        if (!allUploaded) {
+            setSubmitError('Сначала загрузите фото по всем папкам БС');
+            return;
+        }
+        setSubmitLoading(true);
+        setSubmitError(null);
+        setSubmitSuccess(null);
+        try {
+            const res = await fetch('/api/reports/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    taskId,
+                    baseIds: baseOptions,
+                }),
+            });
+            const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+            if (!res.ok) {
+                setSubmitError(data.error || 'Не удалось отправить фотоотчет');
+                return;
+            }
+            setSubmitSuccess(data.message || 'Фотоотчет отправлен менеджеру');
+            onSubmitted?.();
+            setTimeout(() => {
+                onClose();
+            }, 800);
+        } catch (error) {
+            setSubmitError(error instanceof Error ? error.message : 'Ошибка отправки');
+        } finally {
+            setSubmitLoading(false);
+        }
+    };
+
+    const reportFolder = activeBase
+        ? `${taskId}-report/${activeBase}`
+        : `${taskId}-report`;
 
     return (
         <Dialog
@@ -342,191 +428,288 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     pr: 1,
+                    gap: 1,
                 }}
             >
-                Загрузка фотоотчета
-                <IconButton onClick={handleDialogClose} disabled={uploading}>
+                <Stack direction="row" alignItems="center" gap={1}>
+                    {view === 'upload' && (
+                        <IconButton onClick={handleBackToFolders} disabled={uploading}>
+                            <ArrowBackIcon />
+                        </IconButton>
+                    )}
+                    <Typography variant="inherit">
+                        {view === 'upload' ? `Папка ${activeBase}` : 'Загрузка фотоотчета'}
+                    </Typography>
+                </Stack>
+                <IconButton onClick={handleDialogClose} disabled={uploading || submitLoading}>
                     <CloseIcon />
                 </IconButton>
             </DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                    Файлы сохранятся в папку {reportFolder}. Если в задаче несколько БС, загрузите фото отдельно по
-                    каждой станции.
-                </Typography>
+                {view === 'folders' ? (
+                    <>
+                        <Typography variant="body2" color="text.secondary">
+                            Загрузите фото по каждой БС, затем отправьте отчет менеджеру. Папки сохраняются по пути{' '}
+                            {reportFolder}.
+                        </Typography>
+                        {folderAlert && <Alert severity="success">{folderAlert}</Alert>}
+                        {submitError && <Alert severity="error">{submitError}</Alert>}
+                        {submitSuccess && <Alert severity="success">{submitSuccess}</Alert>}
 
-                <TextField
-                    select
-                    label="Базовая станция"
-                    value={selectedBase}
-                    onChange={(e) => setSelectedBase(e.target.value)}
-                    fullWidth
-                    helperText="Выберите БС, для которой загружаете фото"
-                >
-                    {baseOptions.length === 0 ? (
-                        <MenuItem value="">Нет данных по БС</MenuItem>
-                    ) : (
-                        baseOptions.map((bs) => (
-                            <MenuItem key={bs} value={bs}>
-                                {bs}
-                            </MenuItem>
-                        ))
-                    )}
-                </TextField>
-
-                <Box
-                    {...getRootProps()}
-                    sx={{
-                        border: '1.5px dashed',
-                        borderColor: isDragActive ? 'primary.main' : 'rgba(15, 23, 42, 0.2)',
-                        borderRadius: 4,
-                        p: 3,
-                        textAlign: 'center',
-                        background:
-                            'linear-gradient(140deg, rgba(255,255,255,0.8), rgba(236,242,249,0.92))',
-                        transition: 'all 0.2s ease',
-                        cursor: uploading ? 'not-allowed' : 'pointer',
-                        opacity: uploading ? 0.6 : 1,
-                    }}
-                >
-                    <input {...getInputProps()} disabled={uploading} />
-                    <CloudUploadIcon fontSize="large" color="action" />
-                    <Typography variant="h6" sx={{ mt: 1, mb: 0.5, fontWeight: 600 }}>
-                        Перетащите фото или нажмите, чтобы выбрать
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        Поддерживаются изображения до 15 МБ. Загрузка выполняется после нажатия кнопки «Загрузить».
-                    </Typography>
-                </Box>
-
-                {items.length > 0 && (
-                    <Stack spacing={1.25}>
-                        {items.map((item) => (
-                            <Paper
-                                key={item.id}
-                                variant="outlined"
-                                sx={{
-                                    p: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: 1.5,
-                                    borderRadius: 3,
-                                    background:
-                                        'linear-gradient(135deg, rgba(255,255,255,0.92), rgba(241,245,251,0.92))',
-                                    borderColor: 'rgba(15,23,42,0.08)',
-                                }}
-                            >
-                                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
-                                    <Image
-                                        src={item.preview}
-                                        alt={item.file.name}
-                                        width={64}
-                                        height={64}
-                                        style={{ objectFit: 'cover', borderRadius: 14 }}
-                                        unoptimized
-                                    />
-                                    <Box sx={{ minWidth: 0 }}>
-                                        <Typography sx={{ wordBreak: 'break-word', fontWeight: 600 }}>
-                                            {item.file.name}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {getReadableSize(item.file.size)}
-                                        </Typography>
-                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                                            <Chip
-                                                size="small"
-                                                label={getStatusLabel(item.status)}
-                                                sx={{
-                                                    borderRadius: 999,
-                                                    fontWeight: 600,
-                                                    bgcolor:
-                                                        item.status === 'done'
-                                                            ? 'rgba(34,197,94,0.16)'
-                                                            : item.status === 'error'
-                                                              ? 'rgba(239,68,68,0.12)'
-                                                              : item.status === 'canceled'
-                                                                ? 'rgba(15,23,42,0.12)'
-                                                                : 'rgba(59,130,246,0.1)',
-                                                }}
-                                            />
-                                            {item.status === 'uploading' && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {item.progress}%
-                                                </Typography>
-                                            )}
-                                        </Stack>
-                                    </Box>
-                                </Stack>
-                                <Stack spacing={1} alignItems="flex-end">
-                                    {item.status === 'uploading' ? (
-                                        <LinearProgress
-                                            variant="determinate"
-                                            value={item.progress}
+                        {baseOptions.length === 0 ? (
+                            <Alert severity="warning">Нет папок БС для загрузки.</Alert>
+                        ) : (
+                            <Stack spacing={1.5}>
+                                {baseOptions.map((baseId) => {
+                                    const state = folderState[baseId];
+                                    return (
+                                        <Paper
+                                            key={baseId}
+                                            onClick={() => handleOpenFolder(baseId)}
+                                            role="button"
                                             sx={{
-                                                width: 160,
-                                                height: 6,
-                                                borderRadius: 999,
-                                                backgroundColor: 'rgba(15,23,42,0.08)',
-                                                '& .MuiLinearProgress-bar': {
-                                                    borderRadius: 999,
-                                                    background:
-                                                        'linear-gradient(90deg, rgba(0,122,255,0.9), rgba(88,86,214,0.9))',
+                                                p: 2,
+                                                borderRadius: 3,
+                                                cursor: 'pointer',
+                                                border: '1px solid rgba(15,23,42,0.08)',
+                                                background:
+                                                    'linear-gradient(135deg, rgba(255,255,255,0.96), rgba(239,244,250,0.96))',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: 2,
+                                                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                                '&:hover': {
+                                                    transform: 'translateY(-2px)',
+                                                    boxShadow: '0 14px 30px rgba(15,23,42,0.12)',
                                                 },
                                             }}
-                                        />
-                                    ) : (
-                                        <Button
-                                            size="small"
-                                            color="inherit"
-                                            onClick={() => handleRemoveItem(item.id)}
-                                            disabled={uploading}
-                                            startIcon={<CloseIcon />}
-                                            sx={{ textTransform: 'none', borderRadius: 999 }}
                                         >
-                                            Удалить
-                                        </Button>
-                                    )}
-                                </Stack>
-                            </Paper>
-                        ))}
-                    </Stack>
-                )}
+                                            <Stack direction="row" spacing={1.5} alignItems="center">
+                                                <FolderOutlinedIcon />
+                                                <Box>
+                                                    <Typography fontWeight={600}>{baseId}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Папка фотоотчета
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                {state?.uploaded && (
+                                                    <Chip
+                                                        size="small"
+                                                        icon={<CheckCircleIcon />}
+                                                        label={`Загружено (${state.fileCount})`}
+                                                        sx={{
+                                                            borderRadius: 999,
+                                                            bgcolor: 'rgba(34,197,94,0.16)',
+                                                            color: '#0f3d1d',
+                                                            fontWeight: 600,
+                                                        }}
+                                                    />
+                                                )}
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Открыть
+                                                </Typography>
+                                            </Stack>
+                                        </Paper>
+                                    );
+                                })}
+                            </Stack>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        <Typography variant="body2" color="text.secondary">
+                            Загружайте фото для папки {activeBase}. Путь: {reportFolder}.
+                        </Typography>
+                        {uploadError && <Alert severity="error">{uploadError}</Alert>}
+                        <Box
+                            {...getRootProps()}
+                            sx={{
+                                border: '1.5px dashed',
+                                borderColor: isDragActive ? 'primary.main' : 'rgba(15, 23, 42, 0.2)',
+                                borderRadius: 4,
+                                p: 3,
+                                textAlign: 'center',
+                                background:
+                                    'linear-gradient(140deg, rgba(255,255,255,0.8), rgba(236,242,249,0.92))',
+                                transition: 'all 0.2s ease',
+                                cursor: uploading ? 'not-allowed' : 'pointer',
+                                opacity: uploading ? 0.6 : 1,
+                            }}
+                        >
+                            <input {...getInputProps()} disabled={uploading} />
+                            <CloudUploadIcon fontSize="large" color="action" />
+                            <Typography variant="h6" sx={{ mt: 1, mb: 0.5, fontWeight: 600 }}>
+                                Перетащите фото или нажмите, чтобы выбрать
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                До 15 МБ каждое. Загрузка выполняется после нажатия «Загрузить».
+                            </Typography>
+                        </Box>
 
-                {uploadError && <Alert severity="error">{uploadError}</Alert>}
-                {uploadSuccess && <Alert severity="success">{uploadSuccess}</Alert>}
-                {taskName && (
-                    <Typography variant="caption" color="text.secondary">
-                        Задача: {taskName}
-                    </Typography>
+                        {items.length > 0 && (
+                            <Stack spacing={1.25}>
+                                {items.map((item) => (
+                                    <Paper
+                                        key={item.id}
+                                        variant="outlined"
+                                        sx={{
+                                            p: 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: 1.5,
+                                            borderRadius: 3,
+                                            background:
+                                                'linear-gradient(135deg, rgba(255,255,255,0.92), rgba(241,245,251,0.92))',
+                                            borderColor: 'rgba(15,23,42,0.08)',
+                                        }}
+                                    >
+                                        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+                                            <Image
+                                                src={item.preview}
+                                                alt={item.file.name}
+                                                width={64}
+                                                height={64}
+                                                style={{ objectFit: 'cover', borderRadius: 14 }}
+                                                unoptimized
+                                            />
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography sx={{ wordBreak: 'break-word', fontWeight: 600 }}>
+                                                    {item.file.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {getReadableSize(item.file.size)}
+                                                </Typography>
+                                                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                                                    <Chip
+                                                        size="small"
+                                                        label={getStatusLabel(item.status)}
+                                                        sx={{
+                                                            borderRadius: 999,
+                                                            fontWeight: 600,
+                                                            bgcolor:
+                                                                item.status === 'done'
+                                                                    ? 'rgba(34,197,94,0.16)'
+                                                                    : item.status === 'error'
+                                                                      ? 'rgba(239,68,68,0.12)'
+                                                                      : item.status === 'canceled'
+                                                                        ? 'rgba(15,23,42,0.12)'
+                                                                        : 'rgba(59,130,246,0.1)',
+                                                        }}
+                                                    />
+                                                    {item.status === 'uploading' && (
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {item.progress}%
+                                                        </Typography>
+                                                    )}
+                                                </Stack>
+                                            </Box>
+                                        </Stack>
+                                        <Stack spacing={1} alignItems="flex-end">
+                                            {item.status === 'uploading' ? (
+                                                <LinearProgress
+                                                    variant="determinate"
+                                                    value={item.progress}
+                                                    sx={{
+                                                        width: 160,
+                                                        height: 6,
+                                                        borderRadius: 999,
+                                                        backgroundColor: 'rgba(15,23,42,0.08)',
+                                                        '& .MuiLinearProgress-bar': {
+                                                            borderRadius: 999,
+                                                            background:
+                                                                'linear-gradient(90deg, rgba(0,122,255,0.9), rgba(88,86,214,0.9))',
+                                                        },
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Button
+                                                    size="small"
+                                                    color="inherit"
+                                                    onClick={() => handleRemoveItem(item.id)}
+                                                    disabled={uploading}
+                                                    startIcon={<CloseIcon />}
+                                                    sx={{ textTransform: 'none', borderRadius: 999 }}
+                                                >
+                                                    Удалить
+                                                </Button>
+                                            )}
+                                        </Stack>
+                                    </Paper>
+                                ))}
+                            </Stack>
+                        )}
+
+                        {taskName && (
+                            <Typography variant="caption" color="text.secondary">
+                                Задача: {taskName}
+                            </Typography>
+                        )}
+                    </>
                 )}
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2, display: 'flex', justifyContent: 'space-between' }}>
-                <Button
-                    onClick={uploading ? handleCancelUpload : handleDialogClose}
-                    sx={{ textTransform: 'none', borderRadius: 999 }}
-                >
-                    {uploading ? 'Отменить загрузку' : 'Отмена'}
-                </Button>
-                <Button
-                    variant="contained"
-                    onClick={() => void handleUpload()}
-                    disabled={uploading || items.length === 0}
-                    startIcon={<CloudUploadIcon />}
-                    sx={{
-                        textTransform: 'none',
-                        borderRadius: 999,
-                        fontWeight: 700,
-                        px: 3,
-                        background: 'linear-gradient(135deg, rgba(0,122,255,0.95), rgba(88,86,214,0.95))',
-                        boxShadow: '0 12px 28px rgba(0, 122, 255, 0.35)',
-                        '&:hover': {
-                            background: 'linear-gradient(135deg, rgba(0,113,240,0.98), rgba(72,69,212,0.98))',
-                        },
-                    }}
-                >
-                    {uploading ? 'Загрузка...' : 'Загрузить'}
-                </Button>
+                {view === 'folders' ? (
+                    <>
+                        <Button onClick={handleDialogClose} sx={{ textTransform: 'none', borderRadius: 999 }}>
+                            Отмена
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={() => void handleSubmit()}
+                            disabled={!allUploaded || submitLoading}
+                            startIcon={<SendIcon />}
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: 999,
+                                fontWeight: 700,
+                                px: 3,
+                                background: allUploaded
+                                    ? 'linear-gradient(135deg, rgba(0,122,255,0.95), rgba(88,86,214,0.95))'
+                                    : 'rgba(148,163,184,0.6)',
+                                boxShadow: allUploaded ? '0 12px 28px rgba(0, 122, 255, 0.35)' : 'none',
+                                '&:hover': {
+                                    background: allUploaded
+                                        ? 'linear-gradient(135deg, rgba(0,113,240,0.98), rgba(72,69,212,0.98))'
+                                        : 'rgba(148,163,184,0.6)',
+                                },
+                            }}
+                        >
+                            {submitLoading ? 'Отправка...' : 'Отправить'}
+                        </Button>
+                    </>
+                ) : (
+                    <>
+                        <Button
+                            onClick={uploading ? handleCancelUpload : handleBackToFolders}
+                            sx={{ textTransform: 'none', borderRadius: 999 }}
+                        >
+                            {uploading ? 'Отменить загрузку' : 'Отмена'}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={() => void handleUpload()}
+                            disabled={uploading || items.length === 0}
+                            startIcon={<CloudUploadIcon />}
+                            sx={{
+                                textTransform: 'none',
+                                borderRadius: 999,
+                                fontWeight: 700,
+                                px: 3,
+                                background: 'linear-gradient(135deg, rgba(0,122,255,0.95), rgba(88,86,214,0.95))',
+                                boxShadow: '0 12px 28px rgba(0, 122, 255, 0.35)',
+                                '&:hover': {
+                                    background: 'linear-gradient(135deg, rgba(0,113,240,0.98), rgba(72,69,212,0.98))',
+                                },
+                            }}
+                        >
+                            {uploading ? 'Загрузка...' : 'Загрузить'}
+                        </Button>
+                    </>
+                )}
             </DialogActions>
         </Dialog>
     );

@@ -1190,7 +1190,7 @@ export default function TaskDetailPage() {
                 initiatorId={task.initiatorId}
                 initiatorName={task.initiatorName}
                 bsLocations={task.bsLocation}
-                onUploaded={() => void loadTask()}
+                onSubmitted={() => void loadTask()}
             />
 
             <Dialog
