@@ -476,23 +476,17 @@ export async function PATCH(
           typeof updatedTask.taskId === 'string' ? updatedTask.taskId.toLowerCase() : '';
       const orgSlug = storageScope.orgSlug?.trim();
       const projectKey = storageScope.projectKey?.trim();
-      const taskMongoId =
-          typeof updatedTask._id?.toString === 'function'
-              ? updatedTask._id.toString()
-              : '';
-      const taskIdForOrgRoute = taskMongoId || fallbackTaskId;
       const employerLink =
-          orgSlug && projectKey && taskIdForOrgRoute
+          orgSlug && projectKey && fallbackTaskId
               ? `/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
                     projectKey
-                )}/tasks/${encodeURIComponent(taskIdForOrgRoute)}`
+                )}/tasks/${encodeURIComponent(fallbackTaskId)}`
               : null;
       const link =
           employerLink ??
           (fallbackTaskId ? `/tasks/${encodeURIComponent(fallbackTaskId)}` : undefined);
       const metadataEntries = Object.entries({
         taskId: updatedTask.taskId,
-        taskMongoId: updatedTask._id?.toString?.(),
         bsNumber: updatedTask.bsNumber,
         newStatus,
         decision: action,
@@ -710,7 +704,6 @@ export async function PATCH(
         await notifyTaskAssignment({
           executorClerkId: assignedExecutorClerkId,
           taskId: updatedTask.taskId,
-          taskMongoId: updatedTask._id,
           taskName: updatedTask.taskName,
           bsNumber: updatedTask.bsNumber,
           orgId: updatedTask.orgId ? updatedTask.orgId.toString() : undefined,
@@ -727,7 +720,6 @@ export async function PATCH(
         await notifyTaskUnassignment({
           executorClerkId: previousExecutorId,
           taskId: updatedTask.taskId,
-          taskMongoId: updatedTask._id,
           taskName: updatedTask.taskName,
           bsNumber: updatedTask.bsNumber,
           orgId: updatedTask.orgId ? updatedTask.orgId.toString() : undefined,
@@ -751,7 +743,6 @@ export async function PATCH(
       try {
         await notifyTaskStatusChange({
           taskId: updatedTask.taskId,
-          taskMongoId: updatedTask._id,
           taskName: updatedTask.taskName,
           bsNumber: updatedTask.bsNumber,
           previousStatus,

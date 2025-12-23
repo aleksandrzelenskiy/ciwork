@@ -10,7 +10,6 @@ type ObjectIdLike = Types.ObjectId | string | null | undefined;
 export interface TaskAssignmentNotificationInput {
     executorClerkId?: string | null;
     taskId?: string;
-    taskMongoId?: Types.ObjectId | string | null;
     taskName: string;
     bsNumber?: string;
     orgId?: Types.ObjectId | string | null;
@@ -39,16 +38,13 @@ const normalizeObjectId = (value: ObjectIdLike): string | undefined => {
 
 const buildTaskLink = (input: TaskNotificationContext): string | undefined => {
     if (input.link) return input.link;
-    if (input.orgSlug && input.projectRef && input.taskMongoId) {
+    if (input.orgSlug && input.projectRef && input.taskId) {
         return `/org/${encodeURIComponent(input.orgSlug)}/projects/${encodeURIComponent(
             input.projectRef
-        )}/tasks/${encodeURIComponent(String(input.taskMongoId))}`;
+        )}/tasks/${encodeURIComponent(input.taskId.toLowerCase())}`;
     }
     if (input.taskId) {
         return `/tasks/${encodeURIComponent(input.taskId.toLowerCase())}`;
-    }
-    if (input.taskMongoId) {
-        return `/tasks/${encodeURIComponent(String(input.taskMongoId))}`;
     }
     return undefined;
 };
@@ -59,7 +55,6 @@ const buildTaskMetadata = (
 ) => {
     const metadataEntries = Object.entries({
         taskId: input.taskId,
-        taskMongoId: normalizeObjectId(input.taskMongoId),
         bsNumber: input.bsNumber,
         projectRef: input.projectRef,
         projectKey: input.projectKey,
@@ -141,7 +136,6 @@ export async function notifyTaskUnassignment(input: TaskNotificationContext) {
 
 export async function notifyTaskStatusChange(input: {
     taskId?: string;
-    taskMongoId?: Types.ObjectId | string | null;
     taskName: string;
     bsNumber?: string;
     previousStatus?: string;
@@ -200,7 +194,6 @@ export async function notifyTaskStatusChange(input: {
 
 export async function notifyTaskPublished(input: {
     taskId?: string;
-    taskMongoId?: Types.ObjectId | string | null;
     taskName: string;
     bsNumber?: string;
     budget?: number | null;
@@ -251,7 +244,6 @@ export async function notifyTaskPublished(input: {
 
 export async function notifyApplicationSubmitted(input: {
     taskId?: string;
-    taskMongoId?: Types.ObjectId | string | null;
     taskName: string;
     bsNumber?: string;
     applicationId: Types.ObjectId | string;
@@ -316,7 +308,6 @@ export async function notifyApplicationStatusChanged(input: {
     status: ApplicationStatus;
     previousStatus?: ApplicationStatus;
     taskId?: string;
-    taskMongoId?: Types.ObjectId | string | null;
     taskName: string;
     bsNumber?: string;
     orgId?: Types.ObjectId | string | null;

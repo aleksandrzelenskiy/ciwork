@@ -159,8 +159,6 @@ const getNotificationLink = (
 
     const metadata = notification.metadata || {};
     const taskPublicId = normalizeMetadataValue(metadata.taskId);
-    const rawTaskId =
-        normalizeMetadataValue(metadata.taskMongoId) ?? taskPublicId;
     const isContractor = userContext?.profileType === 'contractor';
     const orgSlug = notification.orgSlug ?? undefined;
     const projectRef =
@@ -173,8 +171,8 @@ const getNotificationLink = (
     }
 
     const canUseOrgRoute = isManagerForNotification(notification, userContext);
-    if (canUseOrgRoute && orgSlug && projectRef && rawTaskId) {
-        const normalizedTaskId = rawTaskId.toLowerCase();
+    if (canUseOrgRoute && orgSlug && projectRef && taskPublicId) {
+        const normalizedTaskId = taskPublicId.toLowerCase();
         return `/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
             projectRef
         )}/tasks/${encodeURIComponent(normalizedTaskId)}`;
@@ -184,8 +182,8 @@ const getNotificationLink = (
         return notification.link;
     }
 
-    if (rawTaskId) {
-        return `/tasks/${encodeURIComponent(rawTaskId.toLowerCase())}`;
+    if (taskPublicId) {
+        return `/tasks/${encodeURIComponent(taskPublicId.toLowerCase())}`;
     }
 
     return notification.link;

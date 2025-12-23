@@ -55,10 +55,9 @@ export type MarketPublicTask = {
 
 type MapPoint = {
     id: string;
-    taskMongoId: string;
+    taskId: string;
     coords: [number, number];
     bsNumber: string;
-    taskId: string;
     taskName: string;
     region?: string | null;
     projectKey?: string | null;
@@ -173,10 +172,9 @@ export default function MarketLocations({ onOpenInfo, onOpenApply }: MarketLocat
 
                 result.push({
                     id: `${task._id}-${idx}`,
-                    taskMongoId: task._id,
                     coords,
                     bsNumber,
-                    taskId: task.taskId || task._id,
+                    taskId: task.taskId ?? '',
                     taskName: task.taskName?.trim() || 'Задача',
                     region: task.project?.regionCode ?? null,
                     projectKey: task.project?.key ?? null,
@@ -278,8 +276,8 @@ export default function MarketLocations({ onOpenInfo, onOpenApply }: MarketLocat
             ${orgLine}
             ${addressLine}
             <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
-                <a href="#" data-balloon-action="info" data-task-id="${point.taskMongoId}" style="color:#2563eb;text-decoration:none;font-weight:600;">Информация о задаче</a>
-                <button data-balloon-action="apply" data-task-id="${point.taskMongoId}" style="padding:10px 12px;border-radius:10px;border:none;background:#111827;color:#fff;font-weight:700;cursor:pointer;">Откликнуться</button>
+                <a href="#" data-balloon-action="info" data-task-id="${point.taskId}" style="color:#2563eb;text-decoration:none;font-weight:600;">Информация о задаче</a>
+                <button data-balloon-action="apply" data-task-id="${point.taskId}" style="padding:10px 12px;border-radius:10px;border:none;background:#111827;color:#fff;font-weight:700;cursor:pointer;">Откликнуться</button>
             </div>
             <div style="color:#64748b;font-size:12px;">ID: ${point.taskId || '—'}</div>
         </div>`;
@@ -324,7 +322,7 @@ export default function MarketLocations({ onOpenInfo, onOpenApply }: MarketLocat
             const action = actionNode.getAttribute('data-balloon-action');
             const taskId = actionNode.getAttribute('data-task-id');
             if (!action || !taskId) return;
-            const task = tasks.find((t) => t._id === taskId);
+            const task = tasks.find((t) => t.taskId === taskId);
             if (!task) return;
             event.preventDefault();
             if (action === 'info') {

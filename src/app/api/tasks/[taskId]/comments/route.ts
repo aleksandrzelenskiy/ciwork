@@ -167,7 +167,6 @@ export async function POST(
         const link = `/tasks/${encodeURIComponent(taskId.toLowerCase())}`;
         const metadataEntries = Object.entries({
           taskId: updatedTask.taskId,
-          taskMongoId: updatedTask._id?.toString?.(),
           bsNumber: updatedTask.bsNumber,
           commentId: newComment._id,
         }).filter(([, value]) => typeof value !== 'undefined' && value !== null);

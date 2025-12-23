@@ -87,9 +87,6 @@ const normalizeSlug = (task: TaskLocation): string | null => {
     if (typeof task.taskId === 'string' && task.taskId.trim()) {
         return task.taskId.trim().toLowerCase();
     }
-    if (typeof task._id === 'string' && task._id.trim()) {
-        return task._id.trim();
-    }
     return null;
 };
 
@@ -231,7 +228,7 @@ export default function TasksLocation(): React.ReactElement {
                     id: `${task._id ?? task.taskId ?? 'task'}-${idx}`,
                     coords,
                     bsNumber,
-                    taskId: task.taskId ?? task._id ?? '',
+                    taskId: task.taskId ?? '',
                     taskName: task.taskName?.trim() || 'Задача',
                     relatedNumbers,
                     slug: normalizeSlug(task),

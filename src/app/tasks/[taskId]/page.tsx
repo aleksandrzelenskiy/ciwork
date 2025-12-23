@@ -1,4 +1,4 @@
-// app/tasks/[id]/page.tsx
+// app/tasks/[taskId]/page.tsx
 
 'use client';
 
@@ -85,8 +85,8 @@ const parseUserInfo = (userString?: string) => {
 };
 
 export default function TaskDetailPage() {
-    const params = useParams<{ id: string }>();
-    const taskId = params?.id?.trim() || '';
+    const params = useParams<{ taskId: string }>();
+    const taskId = params?.taskId?.trim() || '';
     const router = useRouter();
 
     const pageGutter = { xs: 1.5, sm: 2.5, md: 3, lg: 3.5, xl: 4 };
@@ -891,13 +891,14 @@ export default function TaskDetailPage() {
                                     const statusLabel = related.status
                                         ? getStatusLabel(normalizeStatusTitle(related.status))
                                         : undefined;
-                                    const href = `/tasks/${encodeURIComponent(related.taskId || related._id)}`;
+                                    const href = related.taskId
+                                        ? `/tasks/${encodeURIComponent(related.taskId.toLowerCase())}`
+                                        : null;
+                                    const Wrapper = href ? Link : Box;
                                     return (
-                                        <Link
+                                        <Wrapper
                                             key={related._id}
-                                            href={href}
-                                            color="inherit"
-                                            underline="hover"
+                                            {...(href ? { href, color: 'inherit', underline: 'hover' } : {})}
                                             sx={{
                                                 display: 'block',
                                                 borderRadius: 2,
@@ -938,7 +939,7 @@ export default function TaskDetailPage() {
                                                     />
                                                 )}
                                             </Stack>
-                                        </Link>
+                                        </Wrapper>
                                     );
                                 })}
                             </Stack>

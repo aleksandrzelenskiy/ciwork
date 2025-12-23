@@ -367,7 +367,6 @@ export async function POST(
                 await notifyTaskAssignment({
                     executorClerkId: executorId,
                     taskId: created.taskId,
-                    taskMongoId: created._id,
                     taskName,
                     bsNumber,
                     orgId: orgObjId,

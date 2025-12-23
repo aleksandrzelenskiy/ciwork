@@ -824,7 +824,6 @@ export async function PUT(
                 await notifyTaskAssignment({
                     executorClerkId: assignedExecutorClerkId,
                     taskId: typeof updated.taskId === 'string' ? updated.taskId : undefined,
-                    taskMongoId: updated._id,
                     taskName: updated.taskName,
                     bsNumber: updated.bsNumber,
                     orgId,
@@ -845,7 +844,6 @@ export async function PUT(
                 await notifyTaskUnassignment({
                     executorClerkId: previousExecutorId,
                     taskId: typeof updated.taskId === 'string' ? updated.taskId : undefined,
-                    taskMongoId: updated._id,
                     taskName: updated.taskName,
                     bsNumber: updated.bsNumber,
                     orgId,
@@ -869,7 +867,6 @@ export async function PUT(
             try {
                 await notifyTaskStatusChange({
                     taskId: typeof updated.taskId === 'string' ? updated.taskId : undefined,
-                    taskMongoId: updated._id,
                     taskName: updated.taskName,
                     bsNumber: updated.bsNumber,
                     previousStatus,

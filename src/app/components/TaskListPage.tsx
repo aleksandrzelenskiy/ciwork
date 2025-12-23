@@ -124,7 +124,7 @@ function Row({
   const router = useRouter();
 
   const handleRowClick = () => {
-    const slug = task.taskId ? task.taskId.toLowerCase() : task._id;
+    const slug = task.taskId ? task.taskId.toLowerCase() : '';
     if (slug) {
       void router.push(`/tasks/${slug}`);
     }

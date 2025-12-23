@@ -205,7 +205,6 @@ export async function PATCH(
         try {
             await notifyTaskPublished({
                 taskId: savedTask.taskId ?? task.taskId,
-                taskMongoId: savedTask._id?.toString?.() ?? task._id?.toString?.(),
                 taskName: savedTask.taskName ?? task.taskName ?? 'Задача',
                 bsNumber: savedTask.bsNumber ?? task.bsNumber,
                 budget: savedTask.budget ?? task.budget,

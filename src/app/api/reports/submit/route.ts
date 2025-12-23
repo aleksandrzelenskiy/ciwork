@@ -133,7 +133,6 @@ export async function POST(req: NextRequest) {
 
     const metadataEntries = Object.entries({
         taskId: task.taskId,
-        taskMongoId: task._id?.toString?.(),
         bsNumber: task.bsNumber,
         newStatus,
         baseIds,

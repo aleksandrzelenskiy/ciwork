@@ -323,7 +323,6 @@ export async function POST(
 
         await notifyApplicationSubmitted({
             taskId: task.taskId,
-            taskMongoId: task._id,
             taskName: task.taskName ?? 'Задача',
             bsNumber: task.bsNumber,
             applicationId,
@@ -519,7 +518,6 @@ export async function PATCH(
                 status: app.status,
                 previousStatus,
                 taskId: finalTask.taskId,
-                taskMongoId: finalTask._id,
                 taskName: finalTask.taskName ?? task.taskName ?? 'Задача',
                 bsNumber: finalTask.bsNumber,
                 orgId: finalTask.orgId ?? task.orgId,
@@ -541,7 +539,6 @@ export async function PATCH(
             await notifyTaskAssignment({
                 executorClerkId: contractor.clerkUserId,
                 taskId: finalTask.taskId,
-                taskMongoId: finalTask._id,
                 taskName: finalTask.taskName ?? task.taskName ?? 'Задача',
                 bsNumber: finalTask.bsNumber,
                 orgId: finalTask.orgId ?? task.orgId,
@@ -563,7 +560,6 @@ export async function PATCH(
             await notifyTaskUnassignment({
                 executorClerkId: previousExecutorId,
                 taskId: finalTask.taskId,
-                taskMongoId: finalTask._id,
                 taskName: finalTask.taskName ?? task.taskName ?? 'Задача',
                 bsNumber: finalTask.bsNumber,
                 orgId: finalTask.orgId ?? task.orgId,
@@ -584,7 +580,6 @@ export async function PATCH(
         try {
             await notifyTaskStatusChange({
                 taskId: finalTask.taskId,
-                taskMongoId: finalTask._id,
                 taskName: finalTask.taskName ?? task.taskName ?? 'Задача',
                 bsNumber: finalTask.bsNumber,
                 previousStatus: previousTaskStatus,
