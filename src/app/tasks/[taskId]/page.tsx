@@ -894,19 +894,21 @@ export default function TaskDetailPage() {
                                     const href = related.taskId
                                         ? `/tasks/${encodeURIComponent(related.taskId.toLowerCase())}`
                                         : null;
-                                    const Wrapper = href ? Link : Box;
-                                    return (
-                                        <Wrapper
+                                    const sharedSx = {
+                                        display: 'block',
+                                        borderRadius: 2,
+                                        p: 1,
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(59,130,246,0.04)',
+                                        },
+                                    } as const;
+                                    return href ? (
+                                        <Link
                                             key={related._id}
-                                            {...(href ? { href, color: 'inherit', underline: 'hover' } : {})}
-                                            sx={{
-                                                display: 'block',
-                                                borderRadius: 2,
-                                                p: 1,
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(59,130,246,0.04)',
-                                                },
-                                            }}
+                                            href={href}
+                                            color="inherit"
+                                            underline="hover"
+                                            sx={sharedSx}
                                         >
                                             <Stack
                                                 direction="row"
@@ -939,7 +941,41 @@ export default function TaskDetailPage() {
                                                     />
                                                 )}
                                             </Stack>
-                                        </Wrapper>
+                                        </Link>
+                                    ) : (
+                                        <Box key={related._id} sx={sharedSx}>
+                                            <Stack
+                                                direction="row"
+                                                alignItems="flex-start"
+                                                justifyContent="space-between"
+                                                spacing={1}
+                                            >
+                                                <Box sx={{ minWidth: 0 }}>
+                                                    <Typography
+                                                        variant="body1"
+                                                        fontWeight={600}
+                                                        sx={{ wordBreak: 'break-word' }}
+                                                    >
+                                                        {related.taskName || related.taskId || related._id}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="caption"
+                                                        color="text.secondary"
+                                                        sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}
+                                                    >
+                                                        {related.taskId ? `#${related.taskId}` : related._id}
+                                                        {detailLabel ? ` · ${detailLabel}` : null}
+                                                    </Typography>
+                                                </Box>
+                                                {statusLabel && (
+                                                    <Chip
+                                                        label={statusLabel}
+                                                        size="small"
+                                                        sx={{ fontWeight: 500 }}
+                                                    />
+                                                )}
+                                            </Stack>
+                                        </Box>
                                     );
                                 })}
                             </Stack>
