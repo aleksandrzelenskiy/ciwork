@@ -46,6 +46,29 @@ function publicUrlForKey(key: string): string {
   return `/${key.replace(/\\/g, '/')}`;
 }
 
+export function storageKeyFromPublicUrl(publicUrl: string): string | null {
+  if (!publicUrl) {
+    return null;
+  }
+
+  if (s3 && BUCKET && ENDPOINT) {
+    const base = ENDPOINT.replace(/\/+$/, '');
+    const prefix = `${base}/${BUCKET}/`;
+    return publicUrl.startsWith(prefix) ? publicUrl.slice(prefix.length) : null;
+  }
+
+  if (/^https?:\/\//i.test(publicUrl)) {
+    try {
+      const url = new URL(publicUrl);
+      return url.pathname.replace(/^\/+/, '');
+    } catch {
+      return null;
+    }
+  }
+
+  return publicUrl.replace(/^\/+/, '');
+}
+
 /** Гарантируем существование локальной директории под ключ */
 function ensureLocalDirForKey(key: string): string {
   const full = path.join(process.cwd(), 'public', key);
@@ -206,6 +229,55 @@ export async function deleteTaskFile(publicUrl: string): Promise<void> {
   } catch (err) {
     console.error('Ошибка при удалении файла:', err);
   }
+}
+
+export async function deleteStoragePrefix(prefix: string): Promise<void> {
+  const normalizedPrefix = prefix.replace(/^\/+/, '').replace(/\/?$/, '/');
+  if (!normalizedPrefix || normalizedPrefix === '/') {
+    console.warn('⚠️ Empty prefix, skip storage delete');
+    return;
+  }
+
+  if (s3 && BUCKET) {
+    let continuationToken: string | undefined = undefined;
+
+    do {
+      const { Contents = [], IsTruncated, NextContinuationToken } =
+        await s3.send(new ListObjectsV2Command({
+          Bucket: BUCKET,
+          Prefix: normalizedPrefix,
+          ContinuationToken: continuationToken,
+        })) as ListObjectsV2CommandOutput;
+
+      const keys = Contents.map(({ Key }) => Key).filter(
+        (key): key is string => typeof key === 'string' && key.trim().length > 0
+      );
+
+      if (keys.length > 0) {
+        const deleteCmd = new DeleteObjectsCommand({
+          Bucket: BUCKET,
+          Delete: {
+            Objects: keys.map(
+              (Key): ObjectIdentifier => ({
+                Key,
+              })
+            ),
+            Quiet: true,
+          },
+        });
+        await s3.send(deleteCmd);
+        console.log(`🗑️ Deleted ${keys.length} objects from S3 prefix ${normalizedPrefix}`);
+      }
+
+      continuationToken = IsTruncated ? NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    return;
+  }
+
+  const localDir = path.join(process.cwd(), 'public', normalizedPrefix);
+  await fs.promises.rm(localDir, { recursive: true, force: true });
+  console.log(`🗑️ Deleted local folder: ${localDir}`);
 }
 
 /** Полное удаление папки задачи uploads/<TASKID>/ со всеми вложениями (S3 или локально) */

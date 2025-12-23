@@ -87,7 +87,7 @@ function Row({
   report: ReportClient;
   role: string;
   canDelete: boolean;
-  onDeleteReport: (task: string, baseId: string, reportId: string) => void;
+  onDeleteReport: (taskId: string, baseId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -129,13 +129,13 @@ function Row({
           }}
         >
           <Link
-            href={`/tasks/${report.reportId.toLowerCase()}`}
+            href={`/tasks/${report.taskId.toLowerCase()}`}
             // onClick={handleLinkClick}
             underline='always'
             color='primary'
             sx={{ cursor: 'pointer' }}
           >
-            <Typography variant='body2'>{report.reportId}</Typography>
+            <Typography variant='body2'>{report.taskId}</Typography>
           </Link>
         </TableCell>
 
@@ -159,7 +159,7 @@ function Row({
                 color='primary'
                 sx={{ cursor: 'pointer' }}
               >
-                {report.task}
+                {report.task || report.taskId}
               </Link>
             </Typography>
           </Box>
@@ -290,7 +290,7 @@ function Row({
                   />
                   <Typography variant='body2' sx={{ marginRight: '16px' }}>
                     <Link
-                      href={`/reports/${report.task}/${baseStatus.baseId}`}
+                      href={`/reports/${report.taskId}/${baseStatus.baseId}`}
                       underline='always'
                       color='textSecondary'
                     >
@@ -332,11 +332,7 @@ function Row({
                           size='small'
                           color='error'
                           onClick={() =>
-                            onDeleteReport(
-                              report.task,
-                              baseStatus.baseId,
-                              report.reportId
-                            )
+                            onDeleteReport(report.taskId, baseStatus.baseId)
                           }
                         >
                           <DeleteForeverIcon fontSize='small' />
@@ -362,9 +358,8 @@ export default function ReportListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
-    task: string;
+    taskId: string;
     baseId: string;
-    reportId: string;
   } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [notification, setNotification] = useState<{
@@ -531,7 +526,9 @@ export default function ReportListPage() {
     // Search by tasks
     if (taskSearch) {
       tempReports = tempReports.filter((report) =>
-        report.task.toLowerCase().includes(taskSearch.toLowerCase())
+        (report.task || report.taskId)
+          .toLowerCase()
+          .includes(taskSearch.toLowerCase())
       );
     }
 
@@ -563,8 +560,8 @@ export default function ReportListPage() {
   const openPopover = Boolean(anchorEl);
   const popoverId = openPopover ? 'filter-popover' : undefined;
 
-  const handleDeleteRequest = (task: string, baseId: string, reportId: string) => {
-    setDeleteTarget({ task, baseId, reportId });
+  const handleDeleteRequest = (taskId: string, baseId: string) => {
+    setDeleteTarget({ taskId, baseId });
   };
 
   const handleDeleteCancel = () => {
@@ -584,7 +581,7 @@ export default function ReportListPage() {
     setDeleteLoading(true);
     try {
       const response = await fetch(
-        `/api/reports/${encodeURIComponent(deleteTarget.task)}/${encodeURIComponent(
+        `/api/reports/${encodeURIComponent(deleteTarget.taskId)}/${encodeURIComponent(
           deleteTarget.baseId
         )}`,
         { method: 'DELETE' }
@@ -603,7 +600,7 @@ export default function ReportListPage() {
       setReports((prev) =>
         prev
           .map((report) => {
-            if (report.reportId !== deleteTarget.reportId) return report;
+            if (report.taskId !== deleteTarget.taskId) return report;
             const nextBaseStatuses = report.baseStatuses.filter(
               (status) => status.baseId !== deleteTarget.baseId
             );
@@ -971,7 +968,7 @@ export default function ReportListPage() {
               {paginatedReports.length > 0 ? (
                 paginatedReports.map((report: ReportClient) => (
                   <Row
-                    key={report.reportId}
+                    key={report.taskId}
                     report={report}
                     role={role}
                     canDelete={isSuperAdmin}
@@ -1167,7 +1164,7 @@ export default function ReportListPage() {
             <DialogContentText>
               Are you sure you want to delete the photo report for{' '}
               {deleteTarget
-                ? `${deleteTarget.task} | ${deleteTarget.baseId}`
+                ? `${deleteTarget.taskId} | ${deleteTarget.baseId}`
                 : ''}
               ?
             </DialogContentText>

@@ -370,7 +370,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 baseId.replace(/[\\/]/g, '_').replace(/\s+/g, '_').replace(/\.+/g, '.').trim() || 'base';
             const safeTaskFolder =
                 (taskId || task || 'task').replace(/[\\/]/g, '_').replace(/\s+/g, '_').trim() || 'task';
-            const reportFolder = `uploads/${safeOrgFolder}/${safeProjectFolder}/${safeTaskFolder}/${safeTaskFolder}-report/${safeBaseFolder}`;
+            const reportFolder = `uploads/${safeOrgFolder}/${safeProjectFolder}/${safeTaskFolder}/${safeTaskFolder}-reports/${safeBaseFolder}`;
             const s3Key = `${reportFolder}/${outputFilename}`;
             const fileUrl = await uploadBuffer(processedBuffer, s3Key, 'image/jpeg');
             fileUrls.push(fileUrl);
@@ -381,9 +381,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        let report = await Report.findOne({ reportId: taskId, task, baseId });
+        let report = await Report.findOne({
+            baseId,
+            $or: [
+                { taskId },
+                { reportId: taskId },
+                { task: taskId },
+            ],
+        });
 
         if (report) {
+            if (!report.taskId) {
+                report.taskId = taskId;
+            }
             report.files.push(...fileUrls);
             report.events.push({
                 action: 'REPORT_UPDATED',
@@ -399,7 +409,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             await report.save();
         } else {
             report = new Report({
-                reportId: taskId,
+                taskId,
                 task,
                 baseId,
                 executorId: user.clerkUserId,

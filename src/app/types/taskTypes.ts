@@ -52,11 +52,12 @@ export interface TaskEvent {
 
 export interface PhotoReport {
   _id: string;
-  reportId: string;
+  taskId: string;
+  reportId?: string;
   baseId: string;
   status: string;
   createdAt: Date;
-  task: string;
+  task?: string;
   files: string[];
   fixedFiles: string[];
 }

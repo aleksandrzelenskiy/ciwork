@@ -401,8 +401,8 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     };
 
     const reportFolder = activeBase
-        ? `${taskId}-report/${activeBase}`
-        : `${taskId}-report`;
+        ? `${taskId}-reports/${activeBase}`
+        : `${taskId}-reports`;
 
     return (
         <Dialog

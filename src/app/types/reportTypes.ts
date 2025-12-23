@@ -17,8 +17,9 @@ export interface IEvent {
 // Серверный формат IReport
 export interface IReport {
   _id: string;
-  reportId: string;
-  task: string;
+  taskId: string;
+  task?: string;
+  reportId?: string;
   baseId: string;
   files: string[];
   fixedFiles: string[];
@@ -33,8 +34,9 @@ export interface IReport {
 }
 
 export interface ReportClient {
-  reportId: string;
-  task: string;
+  taskId: string;
+  task?: string;
+  reportId?: string;
   authorId?: string;
   executorId?: string;
   executorName?: string;

@@ -1,4 +1,4 @@
-// app/api/reports/[task]/[baseid]/download/route.ts
+// app/api/reports/[taskId]/[baseId]/download/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/mongoose';
@@ -12,12 +12,14 @@ export const runtime = 'nodejs';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ task: string; baseid: string }> }
+  { params }: { params: Promise<{ taskId: string; baseId: string }> }
 ) {
-  const { task, baseid } = await params;
+  const { taskId, baseId } = await params;
+  const taskIdDecoded = decodeURIComponent(taskId);
+  const baseIdDecoded = decodeURIComponent(baseId);
 
   try {
-    if (!task || !baseid) {
+    if (!taskIdDecoded || !baseIdDecoded) {
       return NextResponse.json(
         { error: 'Missing required parameters' },
         { status: 400 }
@@ -26,8 +28,12 @@ export async function GET(
 
     await dbConnect();
     const report = await Report.findOne({
-      task,
-      baseId: baseid,
+      baseId: baseIdDecoded,
+      $or: [
+        { taskId: taskIdDecoded },
+        { reportId: taskIdDecoded },
+        { task: taskIdDecoded },
+      ],
     }).lean<IReport>();
 
     if (!report) {
@@ -51,7 +57,7 @@ export async function GET(
     // Заголовки для ответа
     const headers = new Headers({
       'Content-Type': 'application/zip',
-      'Content-Disposition': `attachment; filename="report-${baseid}.zip"`,
+      'Content-Disposition': `attachment; filename="report-${baseIdDecoded}.zip"`,
     });
 
     // Готовим поток данных (ReadableStream), куда собираем zip

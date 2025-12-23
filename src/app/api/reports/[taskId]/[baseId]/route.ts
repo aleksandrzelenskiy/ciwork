@@ -1,4 +1,4 @@
-// app/api/reports/[task]/[baseid]/route.ts
+// app/api/reports/[taskId]/[baseId]/route.ts
 
 import { NextResponse } from 'next/server';
 import dbConnect from '@/utils/mongoose';
@@ -7,6 +7,12 @@ import TaskModel from '@/app/models/TaskModel';
 import { currentUser } from '@clerk/nextjs/server';
 import { GetUserContext } from '@/server-actions/user-context';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
+import path from 'path';
+import {
+  deleteStoragePrefix,
+  deleteTaskFile,
+  storageKeyFromPublicUrl,
+} from '@/utils/s3';
 
 /**
  * GET обработчик для получения информации о конкретном отчёте.
@@ -14,16 +20,16 @@ import { mapRoleToLegacy } from '@/utils/roleMapping';
  */
 export async function GET(
     request: Request,
-    { params }: { params: Promise<{ task: string; baseid: string }> }
+    { params }: { params: Promise<{ taskId: string; baseId: string }> }
 ) {
   try {
     await dbConnect();
 
-    const { task, baseid } = await params;
-    const taskDecoded = decodeURIComponent(task);
-    const baseidDecoded = decodeURIComponent(baseid);
+    const { taskId, baseId } = await params;
+    const taskIdDecoded = decodeURIComponent(taskId);
+    const baseIdDecoded = decodeURIComponent(baseId);
 
-    if (!taskDecoded || !baseidDecoded) {
+    if (!taskIdDecoded || !baseIdDecoded) {
       return NextResponse.json(
           { error: 'Missing parameters in URL' },
           { status: 400 }
@@ -42,8 +48,12 @@ export async function GET(
     }
 
     const report = await ReportModel.findOne({
-      task: taskDecoded,
-      baseId: baseidDecoded,
+      baseId: baseIdDecoded,
+      $or: [
+        { taskId: taskIdDecoded },
+        { reportId: taskIdDecoded },
+        { task: taskIdDecoded },
+      ],
     });
 
     if (!report) {
@@ -58,7 +68,7 @@ export async function GET(
         );
 
     return NextResponse.json({
-      reportId: report.reportId,
+      taskId: report.taskId || report.reportId || taskIdDecoded,
       files: report.files,
       createdAt: report.createdAt,
       executorName: report.executorName,
@@ -83,16 +93,16 @@ export async function GET(
  */
 export async function PATCH(
     request: Request,
-    { params }: { params: Promise<{ task: string; baseid: string }> }
+    { params }: { params: Promise<{ taskId: string; baseId: string }> }
 ) {
   try {
     await dbConnect();
 
-    const { task, baseid } = await params;
-    const taskDecoded = decodeURIComponent(task);
-    const baseidDecoded = decodeURIComponent(baseid);
+    const { taskId, baseId } = await params;
+    const taskIdDecoded = decodeURIComponent(taskId);
+    const baseIdDecoded = decodeURIComponent(baseId);
 
-    if (!taskDecoded || !baseidDecoded) {
+    if (!taskIdDecoded || !baseIdDecoded) {
       return NextResponse.json(
           { error: 'Missing parameters in URL' },
           { status: 400 }
@@ -120,12 +130,20 @@ export async function PATCH(
 
     // Находим отчёт
     const report = await ReportModel.findOne({
-      task: taskDecoded,
-      baseId: baseidDecoded,
+      baseId: baseIdDecoded,
+      $or: [
+        { taskId: taskIdDecoded },
+        { reportId: taskIdDecoded },
+        { task: taskIdDecoded },
+      ],
     });
 
     if (!report) {
       return NextResponse.json({ error: 'Отчёт не найден' }, { status: 404 });
+    }
+
+    if (!report.taskId) {
+      report.taskId = report.reportId || report.task || taskIdDecoded;
     }
 
     const oldStatus = report.status;
@@ -214,7 +232,7 @@ export async function PATCH(
     await report.save();
 
     // Синхронизируем статус с задачей
-    const relatedTask = await TaskModel.findOne({ taskId: report.reportId });
+    const relatedTask = await TaskModel.findOne({ taskId: report.taskId });
     if (relatedTask && relatedTask.status !== report.status) {
       const oldTaskStatus = relatedTask.status;
       relatedTask.status = report.status;
@@ -250,16 +268,16 @@ export async function PATCH(
  */
 export async function DELETE(
     request: Request,
-    { params }: { params: Promise<{ task: string; baseid: string }> }
+    { params }: { params: Promise<{ taskId: string; baseId: string }> }
 ) {
   try {
     await dbConnect();
 
-    const { task, baseid } = await params;
-    const taskDecoded = decodeURIComponent(task);
-    const baseidDecoded = decodeURIComponent(baseid);
+    const { taskId, baseId } = await params;
+    const taskIdDecoded = decodeURIComponent(taskId);
+    const baseIdDecoded = decodeURIComponent(baseId);
 
-    if (!taskDecoded || !baseidDecoded) {
+    if (!taskIdDecoded || !baseIdDecoded) {
       return NextResponse.json(
           { error: 'Missing parameters in URL' },
           { status: 400 }
@@ -285,13 +303,88 @@ export async function DELETE(
     }
 
     const report = await ReportModel.findOne({
-      task: taskDecoded,
-      baseId: baseidDecoded,
+      baseId: baseIdDecoded,
+      $or: [
+        { taskId: taskIdDecoded },
+        { reportId: taskIdDecoded },
+        { task: taskIdDecoded },
+      ],
     });
 
     if (!report) {
       return NextResponse.json({ error: 'Отчёт не найден' }, { status: 404 });
     }
+
+    const allFiles = [...report.files, ...report.fixedFiles].filter(
+      (file): file is string => typeof file === 'string' && file.length > 0
+    );
+
+    const prefixSet = new Set<string>();
+    const fallbackDeletes: Promise<void>[] = [];
+
+    const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
+      .select('orgId projectId')
+      .lean();
+
+    const safeOrgFolder =
+      taskRecord?.orgId?.toString?.()
+        ?.replace(/[\\/]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/\.+/g, '.')
+        .trim() || 'unknown-org';
+    const safeProjectFolder =
+      taskRecord?.projectId?.toString?.()
+        ?.replace(/[\\/]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/\.+/g, '.')
+        .trim() || 'unknown-project';
+    const safeBaseFolder =
+      baseIdDecoded
+        .replace(/[\\/]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/\.+/g, '.')
+        .trim() || 'base';
+    const safeTaskFolder =
+      taskIdDecoded
+        .replace(/[\\/]/g, '_')
+        .replace(/\s+/g, '_')
+        .trim() || 'task';
+
+    const reportFolder = path.posix.join(
+      'uploads',
+      safeOrgFolder,
+      safeProjectFolder,
+      safeTaskFolder,
+      `${safeTaskFolder}-reports`,
+      safeBaseFolder
+    );
+    prefixSet.add(`${reportFolder.replace(/\/+$/, '')}/`);
+
+    const reportFolderWithoutOrg = path.posix.join(
+      'uploads',
+      safeTaskFolder,
+      `${safeTaskFolder}-reports`,
+      safeBaseFolder
+    );
+    prefixSet.add(`${reportFolderWithoutOrg.replace(/\/+$/, '')}/`);
+
+    for (const fileUrl of allFiles) {
+      const key = storageKeyFromPublicUrl(fileUrl);
+      if (!key) {
+        fallbackDeletes.push(deleteTaskFile(fileUrl));
+        continue;
+      }
+
+      const dir = path.posix.dirname(key);
+      if (dir && dir !== '.') {
+        prefixSet.add(`${dir.replace(/\/+$/, '')}/`);
+      }
+    }
+
+    await Promise.all([
+      ...Array.from(prefixSet).map((prefix) => deleteStoragePrefix(prefix)),
+      ...fallbackDeletes,
+    ]);
 
     await ReportModel.deleteOne({ _id: report._id });
 

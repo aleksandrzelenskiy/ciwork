@@ -66,10 +66,15 @@ export default function MiniReportsList({
       try {
         const res = await fetch('/api/reports');
         if (!res.ok) {
-          throw new Error('Failed to fetch reports');
+          setError('Failed to fetch reports');
+          return;
         }
         // Ожидаем формат ApiResponse { reports: ReportClient[], error?: string }
         const data: ApiResponse = await res.json();
+        if (!Array.isArray(data.reports)) {
+          setError('Invalid reports response');
+          return;
+        }
         setReports(data.reports);
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -174,7 +179,7 @@ export default function MiniReportsList({
                 {lastFive.map((report) => {
                   const status = getTaskStatus(report.baseStatuses || []);
                   return (
-                    <TableRow key={report.reportId}>
+                    <TableRow key={report.taskId}>
                       <TableCell>
                         {/* Клик по названию отчёта -> открываем диалог */}
                         <Box
@@ -190,7 +195,7 @@ export default function MiniReportsList({
                             fontSize='small'
                             sx={{ color: getStatusColor(status) }}
                           />
-                          {report.task || report.reportId}
+                          {report.task || report.taskId}
                         </Box>
                       </TableCell>
 
@@ -246,7 +251,7 @@ export default function MiniReportsList({
               <Box>
                 <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
                   {'View the report on "' +
-                    selectedReport.task +
+                    (selectedReport.task || selectedReport.taskId) +
                     '" at the base station:'}
                 </Typography>
               </Box>
@@ -269,7 +274,7 @@ export default function MiniReportsList({
                     <ListItemButton
                       key={base.baseId}
                       component={Link}
-                      href={`/reports/${selectedReport.task}/${base.baseId}`}
+                      href={`/reports/${selectedReport.taskId}/${base.baseId}`}
                     >
                       <ListItemIcon>
                         <FolderIcon sx={{ color }} />

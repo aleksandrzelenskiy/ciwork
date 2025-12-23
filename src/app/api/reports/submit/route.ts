@@ -47,8 +47,12 @@ export async function POST(req: NextRequest) {
     }
 
     const reports = await ReportModel.find({
-        reportId: taskId,
         baseId: { $in: baseIds },
+        $or: [
+            { taskId },
+            { reportId: taskId },
+            { task: taskId },
+        ],
     })
         .select('baseId files')
         .lean();

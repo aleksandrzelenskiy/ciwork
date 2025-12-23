@@ -16,8 +16,9 @@ const EventSchema = new Schema<IEvent>(
 
 // Main report schema
 const ReportSchema = new Schema<IReport>({
-  reportId: { type: String, required: true },
-  task: { type: String, required: true },
+  taskId: { type: String, required: true },
+  task: { type: String, default: '' },
+  reportId: { type: String }, // legacy field
   baseId: { type: String, required: true },
   files: { type: [String], default: [] },
   fixedFiles: { type: [String], default: [] },

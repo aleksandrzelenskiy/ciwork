@@ -132,7 +132,10 @@ export async function GET(
     });
 
     const photoReports = await Report.find({
-      reportId: { $regex: `^${taskIdUpper}` },
+      $or: [
+        { taskId: { $regex: `^${taskIdUpper}` } },
+        { reportId: { $regex: `^${taskIdUpper}` } },
+      ],
     });
 
     const baseTask = task.toObject();

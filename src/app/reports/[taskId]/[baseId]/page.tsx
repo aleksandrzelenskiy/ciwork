@@ -1,4 +1,4 @@
-// app/reports/[task]/[baseid]/page.tsx
+// app/reports/[taskId]/[baseId]/page.tsx
 
 'use client';
 
@@ -7,7 +7,6 @@ import {
   Box,
   CircularProgress,
   Typography,
-  Grid,
   Button,
   TextField,
   Table,
@@ -30,6 +29,7 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
+import Grid from '@mui/material/Unstable_Grid2';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -75,7 +75,7 @@ const ACTIONS = {
 };
 
 export default function PhotoReportPage() {
-  const { task, baseid } = useParams() as { task: string; baseid: string };
+  const { taskId, baseId } = useParams() as { taskId: string; baseId: string };
 
   // ======================
   // Role state
@@ -161,13 +161,14 @@ export default function PhotoReportPage() {
   );
 
   // ======================
-  // Fetch report (GET /api/reports/[task]/[baseid])
+  // Fetch report (GET /api/reports/[taskId]/[baseId])
   // ======================
   const fetchReport = useCallback(async () => {
     try {
-      const response = await fetch(`/api/reports/${task}/${baseid}`);
+      const response = await fetch(`/api/reports/${taskId}/${baseId}`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch report. Status: ${response.status}`);
+        setError(`Failed to fetch report. Status: ${response.status}`);
+        return;
       }
 
       const data = await response.json();
@@ -192,7 +193,7 @@ export default function PhotoReportPage() {
       setEvents(data.events || []);
       setIssuesFixed((data.fixedFiles || []).length > 0);
       setStatus(data.status || 'Pending');
-      setReportId(data.reportId || '');
+      setReportId(data.taskId || data.reportId || '');
     } catch (err: unknown) {
       console.error('Error fetching report:', err);
       setError(
@@ -203,7 +204,7 @@ export default function PhotoReportPage() {
     } finally {
       setLoading(false);
     }
-  }, [task, baseid]);
+  }, [taskId, baseId]);
 
   useEffect(() => {
     fetchReport();
@@ -237,7 +238,7 @@ export default function PhotoReportPage() {
     }
 
     try {
-      const response = await fetch(`/api/reports/${task}/${baseid}`, {
+      const response = await fetch(`/api/reports/${taskId}/${baseId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -246,7 +247,8 @@ export default function PhotoReportPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete issue.');
+        showAlert('Failed to delete issue. Please try again.', 'error');
+        return;
       }
 
       // Обновляем локальное состояние issues
@@ -264,7 +266,7 @@ export default function PhotoReportPage() {
       // Если замечаний больше нет, обновляем статус на Pending
       if (updatedIssues.length === 0) {
         const updateStatusResponse = await fetch(
-          `/api/reports/${task}/${baseid}`,
+          `/api/reports/${taskId}/${baseId}`,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -275,7 +277,8 @@ export default function PhotoReportPage() {
         );
 
         if (!updateStatusResponse.ok) {
-          throw new Error('Failed to update status.');
+          showAlert('Failed to update status. Please try again.', 'error');
+          return;
         }
 
         setStatus('Pending');
@@ -321,7 +324,7 @@ export default function PhotoReportPage() {
     }
 
     try {
-      const response = await fetch(`/api/reports/${task}/${baseid}`, {
+      const response = await fetch(`/api/reports/${taskId}/${baseId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -331,7 +334,8 @@ export default function PhotoReportPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update issues.');
+        showAlert('Failed to update issues. Please try again.', 'error');
+        return;
       }
 
       setStatus(filteredNew.length > 0 ? 'Issues' : 'Pending'); // Обновляем локальный статус
@@ -385,30 +389,32 @@ export default function PhotoReportPage() {
   const handleConfirmAgree = async () => {
     setOpenAgreeDialog(false);
     try {
-      const response = await fetch(`/api/reports/${task}/${baseid}`);
+      const response = await fetch(`/api/reports/${taskId}/${baseId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch current status.');
+        showAlert('Failed to fetch current status.', 'error');
+        return;
       }
       const data = await response.json();
 
       if (data.status === 'Agreed') {
         showAlert(
           `Photo report ${decodeURIComponent(
-            task
-          )} | Base: ${decodeURIComponent(baseid)} has already been agreed.`,
+          taskId
+          )} | Base: ${decodeURIComponent(baseId)} has already been agreed.`,
           'info'
         );
         return;
       }
 
-      const updateResponse = await fetch(`/api/reports/${task}/${baseid}`, {
+      const updateResponse = await fetch(`/api/reports/${taskId}/${baseId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Agreed' }),
       });
 
       if (!updateResponse.ok) {
-        throw new Error('Failed to update status.');
+        showAlert('Failed to update status. Please try again.', 'error');
+        return;
       }
 
       showAlert('Status has been updated to Agreed.', 'success');
@@ -483,8 +489,8 @@ export default function PhotoReportPage() {
 
     try {
       const formData = new FormData();
-      formData.append('baseId', baseid);
-      formData.append('task', task);
+      formData.append('baseId', baseId);
+      formData.append('task', taskId);
 
       for (const uf of uploadedFiles) {
         formData.append('image[]', uf.file);
@@ -543,11 +549,13 @@ export default function PhotoReportPage() {
   const handleDownloadReport = async () => {
     setDownloading(true);
     try {
-      const response = await fetch(`/api/reports/${task}/${baseid}/download`);
+      const response = await fetch(`/api/reports/${taskId}/${baseId}/download`);
       if (!response.ok) {
-        throw new Error(
-          `Failed to download report. Status: ${response.status}`
+        showAlert(
+          `Failed to download report. Status: ${response.status}`,
+          'error'
         );
+        return;
       }
       const blob = await response.blob();
       const url = window.URL.createObjectURL(new Blob([blob]));
@@ -613,8 +621,8 @@ export default function PhotoReportPage() {
   const generateAgreeMessage = () => {
     if (status === 'Agreed' && reportStatusEvent) {
       return `Photo report ${decodeURIComponent(
-        task
-      )} | Base ID: ${decodeURIComponent(baseid)} has been agreed by user ${
+        taskId
+      )} | Base ID: ${decodeURIComponent(baseId)} has been agreed by user ${
         reportStatusEvent.author
       } on ${new Date(reportStatusEvent.date).toLocaleDateString()}.`;
     }
@@ -679,7 +687,7 @@ export default function PhotoReportPage() {
         >
           <Chip label={reportId} sx={{ mb: 1, mr: 1 }} />
         </Link>
-        {decodeURIComponent(task)} | BS Number: {decodeURIComponent(baseid)}
+        {decodeURIComponent(taskId)} | BS Number: {decodeURIComponent(baseId)}
         <Chip
           label={status}
           sx={{
@@ -740,7 +748,7 @@ export default function PhotoReportPage() {
       >
         <Grid container spacing={1}>
           {photos.map((photo) => (
-            <Grid item xs={6} sm={4} md={2} key={photo}>
+            <Grid xs={6} sm={4} md={2} key={photo}>
               <PhotoView src={photo}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -791,7 +799,7 @@ export default function PhotoReportPage() {
         <DialogContent>
           <DialogContentText>
             Are you sure you want to agree to the photo report{' '}
-            {decodeURIComponent(task)} | Base ID: {decodeURIComponent(baseid)}?
+            {decodeURIComponent(taskId)} | Base ID: {decodeURIComponent(baseId)}?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -925,7 +933,7 @@ export default function PhotoReportPage() {
                 <Box mt={2}>
                   <Grid container spacing={2}>
                     {uploadedFiles.map((uf) => (
-                      <Grid item xs={6} sm={4} md={3} key={uf.id}>
+                      <Grid xs={6} sm={4} md={3} key={uf.id}>
                         <Box
                           sx={{
                             position: 'relative',
@@ -1068,7 +1076,7 @@ export default function PhotoReportPage() {
               >
                 <Grid container spacing={1}>
                   {fixedPhotos.map((photo, idx) => (
-                    <Grid item xs={6} sm={4} md={2} key={`fixed-${idx}`}>
+                    <Grid xs={6} sm={4} md={2} key={`fixed-${idx}`}>
                       <PhotoView src={photo}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img

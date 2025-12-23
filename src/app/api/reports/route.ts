@@ -50,7 +50,11 @@ export async function GET() {
     {
       $group: {
         _id: '$_id',
-        reportId: { $first: '$reportId' },
+        taskId: {
+          $first: {
+            $ifNull: ['$taskId', { $ifNull: ['$reportId', '$task'] }],
+          },
+        },
         status: { $last: '$status' },
         latestStatusChangeDate: { $max: '$events.date' },
         executorId: { $first: '$executorId' },
@@ -65,8 +69,8 @@ export async function GET() {
     },
     {
       $group: {
-        _id: '$reportId',
-        reportId: { $first: '$reportId' },
+        _id: '$taskId',
+        taskId: { $first: '$taskId' },
         task: { $first: '$task' },
         executorId: { $first: '$executorId' },
         executorName: { $first: '$executorName' },
@@ -99,7 +103,7 @@ export async function GET() {
 
   const reports = rawReports.map((report) => ({
     _id: report._id,
-    reportId: report.reportId,
+    taskId: report.taskId || report.reportId || report.task,
     task: report.task,
     executorId: report.executorId,
     executorName: report.executorName,
