@@ -174,8 +174,12 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         });
     };
 
-    const handleDialogClose = () => {
+    const handleDialogClose = (
+        _event?: object,
+        reason?: 'backdropClick' | 'escapeKeyDown'
+    ) => {
         if (uploading || submitLoading) return;
+        if (reason === 'backdropClick') return;
         onClose();
     };
 
