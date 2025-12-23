@@ -29,7 +29,12 @@ import type {
     NotificationReadEventPayload,
     NotificationUnreadEventPayload,
 } from '@/app/types/notifications';
+import { MANAGER_ROLES } from '@/app/types/roles';
 import { NOTIFICATIONS_SOCKET_PATH } from '@/config/socket';
+import {
+    fetchUserContext,
+    type UserContextResponse,
+} from '@/app/utils/userContext';
 import type { Socket } from 'socket.io-client';
 
 type NotificationSocketEventMap = {
@@ -118,7 +123,28 @@ const normalizeMetadataValue = (value: unknown) => {
     return null;
 };
 
-const getNotificationLink = (notification: NotificationDTO) => {
+const isManagerForNotification = (
+    notification: NotificationDTO,
+    userContext: UserContextResponse | null
+) => {
+    if (!userContext) return false;
+    if (userContext.isSuperAdmin) return true;
+    const orgId = notification.orgId;
+    if (!orgId) return false;
+    const membership =
+        userContext.memberships?.find((item) => String(item.orgId) === String(orgId)) ??
+        (userContext.activeMembership?.orgId === orgId
+            ? userContext.activeMembership
+            : null);
+    const role = membership?.role ?? null;
+    if (!role) return false;
+    return MANAGER_ROLES.includes(role);
+};
+
+const getNotificationLink = (
+    notification: NotificationDTO,
+    userContext: UserContextResponse | null
+) => {
     const isTaskNotification =
         notification.type === 'task_assigned' ||
         notification.type === 'task_unassigned' ||
@@ -141,7 +167,8 @@ const getNotificationLink = (notification: NotificationDTO) => {
         normalizeMetadataValue(metadata.projectKey) ??
         undefined;
 
-    if (orgSlug && projectRef && rawTaskId) {
+    const canUseOrgRoute = isManagerForNotification(notification, userContext);
+    if (canUseOrgRoute && orgSlug && projectRef && rawTaskId) {
         const normalizedTaskId = rawTaskId.toLowerCase();
         return `/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
             projectRef
@@ -196,6 +223,7 @@ export default function NotificationBell({ buttonSx }: NotificationBellProps) {
     const [notifications, setNotifications] = React.useState<NotificationDTO[]>([]);
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+    const [userContext, setUserContext] = React.useState<UserContextResponse | null>(null);
     const [unreadCount, setUnreadCount] = React.useState(0);
     const [actionError, setActionError] = React.useState<string | null>(null);
     const [pendingDeletes, setPendingDeletes] = React.useState<Record<string, boolean>>({});
@@ -257,6 +285,14 @@ export default function NotificationBell({ buttonSx }: NotificationBellProps) {
     React.useEffect(() => {
         loadNotifications({ page: 1 });
     }, [loadNotifications]);
+
+    React.useEffect(() => {
+        const loadUserContext = async () => {
+            const context = await fetchUserContext();
+            setUserContext(context);
+        };
+        void loadUserContext();
+    }, []);
 
     const handleToggleMenu = async (event: React.MouseEvent<HTMLElement>) => {
         if (open) {
@@ -555,7 +591,10 @@ export default function NotificationBell({ buttonSx }: NotificationBellProps) {
                         <>
                             <List dense disablePadding>
                                 {notifications.map((notification) => {
-                                    const resolvedLink = getNotificationLink(notification);
+                                    const resolvedLink = getNotificationLink(
+                                        notification,
+                                        userContext
+                                    );
                                     return (
                                         <React.Fragment key={notification.id}>
                                         <ListItem

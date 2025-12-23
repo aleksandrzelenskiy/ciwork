@@ -11,6 +11,22 @@ import { notificationSocketGateway } from '@/server/socket/notificationSocket';
 import UserModel from '@/app/models/UserModel';
 import { sendEmail } from '@/utils/mailer';
 
+const FRONTEND_URL =
+    process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://ws.ciwork.pro';
+
+const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '');
+
+const toAbsoluteLink = (link?: string): string | undefined => {
+    if (!link) return undefined;
+    const trimmed = link.trim();
+    if (!trimmed) return undefined;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (trimmed.startsWith('//')) return `https:${trimmed}`;
+    const base = normalizeBaseUrl(FRONTEND_URL);
+    if (trimmed.startsWith('/')) return `${base}${trimmed}`;
+    return `${base}/${trimmed}`;
+};
+
 type ObjectIdLike = Types.ObjectId | string;
 
 const toObjectId = (value: ObjectIdLike): Types.ObjectId => {
@@ -85,9 +101,10 @@ const buildEmailHtml = (message: string, link?: string, orgName?: string) => {
         );
     }
 
-    if (link) {
+    const absoluteLink = toAbsoluteLink(link);
+    if (absoluteLink) {
         parts.push(
-            `<p style="margin:0;"><a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Открыть в CI Work</a></p>`
+            `<p style="margin:0;"><a href="${escapeHtml(absoluteLink)}" target="_blank" rel="noopener noreferrer">Открыть в CI Work</a></p>`
         );
     }
 
@@ -121,8 +138,9 @@ async function sendNotificationEmail(params: {
             textLines.push(`Организация: ${params.orgName}`);
         }
 
-        if (params.link) {
-            textLines.push(`Открыть: ${params.link}`);
+        const absoluteLink = toAbsoluteLink(params.link);
+        if (absoluteLink) {
+            textLines.push(`Открыть: ${absoluteLink}`);
         }
 
         await sendEmail({

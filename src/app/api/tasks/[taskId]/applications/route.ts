@@ -8,6 +8,8 @@ import { GetUserContext } from '@/server-actions/user-context';
 import type { ApplicationStatus } from '@/app/models/ApplicationModel';
 import UserModel from '@/app/models/UserModel';
 import MembershipModel from '@/app/models/MembershipModel';
+import OrganizationModel from '@/app/models/OrganizationModel';
+import ProjectModel from '@/app/models/ProjectModel';
 import { ensureSeatAvailable } from '@/utils/seats';
 import { debitForBid, BID_COST_RUB } from '@/utils/wallet';
 import {
@@ -52,6 +54,47 @@ type UpdateApplicationBody = {
 async function loadTask(taskId: string) {
     if (!mongoose.Types.ObjectId.isValid(taskId)) return null;
     return TaskModel.findById(taskId).lean();
+}
+
+async function resolveStorageScope(task: {
+    orgId?: unknown;
+    projectId?: unknown;
+}): Promise<{ orgSlug?: string; projectKey?: string; projectRef?: string }> {
+    const scope: { orgSlug?: string; projectKey?: string; projectRef?: string } = {};
+    const lookups: Promise<void>[] = [];
+
+    if (task?.orgId) {
+        lookups.push(
+            OrganizationModel.findById(task.orgId)
+                .select('orgSlug')
+                .lean()
+                .then((org) => {
+                    if (org?.orgSlug) scope.orgSlug = org.orgSlug;
+                })
+                .catch(() => undefined)
+        );
+    }
+
+    if (task?.projectId) {
+        lookups.push(
+            ProjectModel.findById(task.projectId)
+                .select('key')
+                .lean()
+                .then((project) => {
+                    if (project?.key) scope.projectKey = project.key;
+                })
+                .catch(() => undefined)
+        );
+    }
+
+    if (lookups.length) {
+        await Promise.all(lookups);
+    }
+
+    const projectId = task?.projectId ? String(task.projectId) : undefined;
+    scope.projectRef = scope.projectKey ?? projectId;
+
+    return scope;
 }
 
 export async function GET(
@@ -276,6 +319,8 @@ export async function POST(
             .map((v) => (typeof v === 'string' ? v.trim() : ''))
             .filter((v) => v.length > 0);
 
+        const storageScope = await resolveStorageScope(task);
+
         await notifyApplicationSubmitted({
             taskId: task.taskId,
             taskMongoId: task._id,
@@ -285,11 +330,11 @@ export async function POST(
             contractor: { _id: user._id, name: user.name, email: user.email },
             proposedBudget,
             orgId: task.orgId,
-            orgSlug: (task as { orgSlug?: string })?.orgSlug,
+            orgSlug: storageScope.orgSlug,
             orgName: (task as { orgName?: string })?.orgName,
             managerClerkIds,
-            projectRef: undefined,
-            projectKey: undefined,
+            projectRef: storageScope.projectRef,
+            projectKey: storageScope.projectKey,
             projectName: undefined,
             triggeredByName: user.name,
             triggeredByEmail: user.email,
@@ -461,6 +506,7 @@ export async function PATCH(
         updatedTask ??
         (await TaskModel.findById(task._id).lean()) ??
         task;
+    const storageScope = await resolveStorageScope(finalTask ?? task);
 
     if (contractor && previousStatus !== app.status) {
         try {
@@ -477,10 +523,10 @@ export async function PATCH(
                 taskName: finalTask.taskName ?? task.taskName ?? 'Задача',
                 bsNumber: finalTask.bsNumber,
                 orgId: finalTask.orgId ?? task.orgId,
-                orgSlug: (finalTask as { orgSlug?: string })?.orgSlug,
+                orgSlug: storageScope.orgSlug,
                 orgName: (finalTask as { orgName?: string })?.orgName,
-                projectRef: undefined,
-                projectKey: undefined,
+                projectRef: storageScope.projectRef,
+                projectKey: storageScope.projectKey,
                 projectName: undefined,
                 triggeredByName: actorName,
                 triggeredByEmail: actorEmail,
@@ -499,10 +545,10 @@ export async function PATCH(
                 taskName: finalTask.taskName ?? task.taskName ?? 'Задача',
                 bsNumber: finalTask.bsNumber,
                 orgId: finalTask.orgId ?? task.orgId,
-                orgSlug: (finalTask as { orgSlug?: string })?.orgSlug,
+                orgSlug: storageScope.orgSlug,
                 orgName: (finalTask as { orgName?: string })?.orgName,
-                projectRef: undefined,
-                projectKey: undefined,
+                projectRef: storageScope.projectRef,
+                projectKey: storageScope.projectKey,
                 projectName: undefined,
                 triggeredByName: actorName,
                 triggeredByEmail: actorEmail,
@@ -521,10 +567,10 @@ export async function PATCH(
                 taskName: finalTask.taskName ?? task.taskName ?? 'Задача',
                 bsNumber: finalTask.bsNumber,
                 orgId: finalTask.orgId ?? task.orgId,
-                orgSlug: (finalTask as { orgSlug?: string })?.orgSlug,
+                orgSlug: storageScope.orgSlug,
                 orgName: (finalTask as { orgName?: string })?.orgName,
-                projectRef: undefined,
-                projectKey: undefined,
+                projectRef: storageScope.projectRef,
+                projectKey: storageScope.projectKey,
                 projectName: undefined,
                 triggeredByName: actorName,
                 triggeredByEmail: actorEmail,
@@ -550,10 +596,10 @@ export async function PATCH(
                 triggeredByName: actorName,
                 triggeredByEmail: actorEmail,
                 orgId: finalTask.orgId ?? task.orgId,
-                orgSlug: (finalTask as { orgSlug?: string })?.orgSlug,
+                orgSlug: storageScope.orgSlug,
                 orgName: (finalTask as { orgName?: string })?.orgName,
-                projectRef: undefined,
-                projectKey: undefined,
+                projectRef: storageScope.projectRef,
+                projectKey: storageScope.projectKey,
                 projectName: undefined,
             });
         } catch (notifyErr) {
