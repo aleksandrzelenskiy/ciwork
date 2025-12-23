@@ -161,11 +161,16 @@ const getNotificationLink = (
     const rawTaskId =
         normalizeMetadataValue(metadata.taskMongoId) ??
         normalizeMetadataValue(metadata.taskId);
+    const isContractor = userContext?.profileType === 'contractor';
     const orgSlug = notification.orgSlug ?? undefined;
     const projectRef =
         normalizeMetadataValue(metadata.projectRef) ??
         normalizeMetadataValue(metadata.projectKey) ??
         undefined;
+
+    if (isContractor && rawTaskId) {
+        return `/tasks/${encodeURIComponent(rawTaskId.toLowerCase())}`;
+    }
 
     const canUseOrgRoute = isManagerForNotification(notification, userContext);
     if (canUseOrgRoute && orgSlug && projectRef && rawTaskId) {
