@@ -194,13 +194,13 @@ export default function ProjectTaskLocation(): React.ReactElement {
                     id: `${task._id ?? task.taskId ?? 'task'}-${idx}`,
                     coords,
                     bsNumber,
-                    taskId: task.taskId ?? task._id ?? '',
+                    taskId: task.taskId ?? '',
                     taskName: task.taskName?.trim() || 'Задача',
                     relatedNumbers,
                     taskIdentifier:
-                        (typeof task.taskId === 'string' && task.taskId.trim()) ||
-                        (typeof task._id === 'string' && task._id.trim()) ||
-                        null,
+                        typeof task.taskId === 'string' && task.taskId.trim()
+                            ? task.taskId.trim()
+                            : null,
                     status: task.status,
                     priority: task.priority,
                     projectKey: task.projectKey ?? null,

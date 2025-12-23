@@ -216,7 +216,7 @@ export default function ProjectTaskBoard({
 
     // ЛКМ - переход на страницу задачи
     const openTaskPage = (task: Task) => {
-        const slug = task.taskId ? task.taskId : task._id;
+        const slug = task.taskId;
         router.push(
             `/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(project)}/tasks/${encodeURIComponent(slug)}`
         );
@@ -263,7 +263,7 @@ export default function ProjectTaskBoard({
             setDeleteError(null);
             const url = `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
                 project
-            )}/tasks/${encodeURIComponent(menuTask._id)}`;
+            )}/tasks/${encodeURIComponent(menuTask.taskId)}`;
             const res = await fetch(url, { method: 'DELETE' });
             if (!res.ok) {
                 const data: unknown = await res.json().catch(() => ({}));

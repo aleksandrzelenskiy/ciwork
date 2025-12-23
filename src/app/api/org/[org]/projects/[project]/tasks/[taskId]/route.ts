@@ -1,4 +1,4 @@
-// src/app/api/org/[org]/projects/[project]/tasks/[id]/route.ts
+// src/app/api/org/[org]/projects/[project]/tasks/[taskId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/utils/mongoose';
@@ -292,25 +292,25 @@ async function requireOrgProject(
     };
 }
 
-// собираем запрос к задаче по org/project и id|taskId
+// собираем запрос к задаче по org/project и taskId|id
 function buildTaskQuery(
     orgId: Types.ObjectId,
     projectId: Types.ObjectId,
-    rawId: string
+    rawTaskId: string
 ): Record<string, unknown> {
     const query: Record<string, unknown> = { orgId, projectId };
-    if (Types.ObjectId.isValid(rawId)) {
-        query._id = new Types.ObjectId(rawId);
+    if (Types.ObjectId.isValid(rawTaskId)) {
+        query._id = new Types.ObjectId(rawTaskId);
     } else {
-        query.taskId = rawId;
+        query.taskId = rawTaskId;
     }
     return query;
 }
 
-// DELETE /tasks/[id]
+// DELETE /tasks/[taskId]
 export async function DELETE(
     _req: NextRequest,
-    ctx: { params: Promise<{ org: string; project: string; id: string }> }
+    ctx: { params: Promise<{ org: string; project: string; taskId: string }> }
 ) {
     try {
         await dbConnect();
@@ -318,7 +318,7 @@ export async function DELETE(
         const email = me?.emailAddresses?.[0]?.emailAddress;
         if (!email) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
-        const { org: orgSlug, project: projectRef, id } = await ctx.params;
+        const { org: orgSlug, project: projectRef, taskId } = await ctx.params;
 
         const ensured = await requireOrgProject(orgSlug, projectRef);
         if (!ensured.ok) {
@@ -326,7 +326,7 @@ export async function DELETE(
         }
         const { orgId, projectId } = ensured;
 
-        const query = buildTaskQuery(orgId, projectId, id);
+        const query = buildTaskQuery(orgId, projectId, taskId);
 
         const deletedTask = await TaskModel.findOneAndDelete(query)
             .select('taskId orgId projectId taskName bsNumber')
@@ -339,7 +339,7 @@ export async function DELETE(
         const taskIdForCleanup =
             typeof deletedTask.taskId === 'string' && deletedTask.taskId.trim()
                 ? deletedTask.taskId
-                : id;
+                : taskId;
         await deleteTaskFolder(taskIdForCleanup, orgSlug, projectRef);
 
         await TaskDeletionLog.create({
@@ -359,10 +359,10 @@ export async function DELETE(
     }
 }
 
-// PUT /tasks/[id]
+// PUT /tasks/[taskId]
 export async function PUT(
     req: NextRequest,
-    ctx: { params: Promise<{ org: string; project: string; id: string }> }
+    ctx: { params: Promise<{ org: string; project: string; taskId: string }> }
 ) {
     try {
         await dbConnect();
@@ -370,7 +370,7 @@ export async function PUT(
         const email = me?.emailAddresses?.[0]?.emailAddress;
         if (!email) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
-        const { org: orgSlug, project: projectRef, id } = await ctx.params;
+        const { org: orgSlug, project: projectRef, taskId } = await ctx.params;
 
         const ensured = await requireOrgProject(orgSlug, projectRef);
         if (!ensured.ok) {
@@ -379,7 +379,7 @@ export async function PUT(
         const { orgId, projectId, projectDoc } = ensured;
 
         const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-        const taskQuery = buildTaskQuery(orgId, projectId, id);
+        const taskQuery = buildTaskQuery(orgId, projectId, taskId);
 
         const currentTask = await TaskModel.findOne(taskQuery);
         if (!currentTask) {
@@ -902,10 +902,10 @@ export async function PUT(
     }
 }
 
-// GET /tasks/[id]
+// GET /tasks/[taskId]
 export async function GET(
     _req: NextRequest,
-    ctx: { params: Promise<{ org: string; project: string; id: string }> }
+    ctx: { params: Promise<{ org: string; project: string; taskId: string }> }
 ) {
     try {
         await dbConnect();
@@ -913,7 +913,7 @@ export async function GET(
         const email = me?.emailAddresses?.[0]?.emailAddress;
         if (!email) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
-        const { org: orgSlug, project: projectRef, id } = await ctx.params;
+        const { org: orgSlug, project: projectRef, taskId } = await ctx.params;
 
         const ensured = await requireOrgProject(orgSlug, projectRef);
         if (!ensured.ok) {
@@ -921,7 +921,7 @@ export async function GET(
         }
         const { orgId, projectId } = ensured;
 
-        const taskQuery = buildTaskQuery(orgId, projectId, id);
+        const taskQuery = buildTaskQuery(orgId, projectId, taskId);
 
         const taskDoc = await TaskModel.findOne(taskQuery)
             .populate('relatedTasks', 'taskId taskName bsNumber status priority')

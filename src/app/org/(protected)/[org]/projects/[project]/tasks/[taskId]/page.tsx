@@ -1,4 +1,4 @@
-// app/org/[org]/projects/[project]/tasks/[id]/page.tsx
+// app/org/[org]/projects/[project]/tasks/[taskId]/page.tsx
 
 'use client';
 
@@ -219,10 +219,10 @@ const TASK_SECTION_LABELS: Record<TaskSectionKey, string> = {
 const TASK_SECTION_STORAGE_KEY = 'task-section-visibility';
 
 export default function TaskDetailsPage() {
-    const params = useParams<{ org: string; project: string; id: string }>() as {
+    const params = useParams<{ org: string; project: string; taskId: string }>() as {
         org: string;
         project: string;
-        id: string;
+        taskId: string;
     };
 
     const router = useRouter();
@@ -232,7 +232,7 @@ export default function TaskDetailsPage() {
 
     const org = params.org?.trim();
     const project = params.project?.trim();
-    const id = params.id?.trim();
+    const taskId = params.taskId?.trim();
 
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
@@ -384,14 +384,14 @@ export default function TaskDetailsPage() {
     };
 
     const load = React.useCallback(async () => {
-        if (!org || !project || !id) return;
+        if (!org || !project || !taskId) return;
         try {
             setLoading(true);
             setError(null);
             const res = await fetch(
                 `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
                     project
-                )}/tasks/${encodeURIComponent(id)}`,
+                )}/tasks/${encodeURIComponent(taskId)}`,
                 { cache: 'no-store' }
             );
             const data = (await res.json()) as { task?: Task; error?: string };
@@ -407,7 +407,7 @@ export default function TaskDetailsPage() {
         } finally {
             setLoading(false);
         }
-    }, [org, project, id]);
+    }, [org, project, taskId]);
 
     const loadOrg = React.useCallback(async () => {
         if (!org) return;
@@ -471,10 +471,10 @@ export default function TaskDetailsPage() {
             makePublic: boolean,
             payload?: { skills?: string[]; budget?: number | null; publicDescription?: string }
         ) => {
-            if (!id) return false;
+            if (!taskId) return false;
             setPublishLoading(true);
             try {
-                const res = await fetch(`/api/tasks/${encodeURIComponent(id)}/publish`, {
+                const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/publish`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(
@@ -516,7 +516,7 @@ export default function TaskDetailsPage() {
                 setPublishLoading(false);
             }
         },
-        [id, load]
+        [taskId, load]
     );
 
     const openProfileDialog = (userId?: string | null) => {
@@ -747,13 +747,13 @@ export default function TaskDetailsPage() {
     };
 
     const handleDelete = async () => {
-        if (!org || !project || !id) return;
+        if (!org || !project || !taskId) return;
         setDeleting(true);
         try {
             const res = await fetch(
                 `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
                     project
-                )}/tasks/${encodeURIComponent(id)}`,
+                )}/tasks/${encodeURIComponent(taskId)}`,
                 { method: 'DELETE' }
             );
             if (!res.ok) {
@@ -1540,7 +1540,7 @@ export default function TaskDetailsPage() {
                 }}
             >
                 <TaskComments
-                    taskId={currentTask.taskId || id}
+                    taskId={currentTask.taskId || taskId}
                     initialComments={currentTask.comments}
                     onTaskUpdated={(updatedTask) =>
                         setTask((prev) =>

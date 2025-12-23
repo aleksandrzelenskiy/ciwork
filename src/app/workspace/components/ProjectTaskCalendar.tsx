@@ -150,7 +150,7 @@ export default function ProjectTaskCalendar({
 
     const openTaskPage = (task: Task) => {
         if (!org || !project) return;
-        const slug = task.taskId ? task.taskId : task._id;
+        const slug = task.taskId;
         router.push(
             `/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(project)}/tasks/${encodeURIComponent(slug)}`
         );
