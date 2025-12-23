@@ -748,7 +748,7 @@ export default function PhotoReportPage() {
       >
         <Grid container spacing={1}>
           {photos.map((photo) => (
-            <Grid xs={6} sm={4} md={2} key={photo}>
+            <Grid size={{ xs: 6, sm: 4, md: 2 }} key={photo}>
               <PhotoView src={photo}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -933,7 +933,7 @@ export default function PhotoReportPage() {
                 <Box mt={2}>
                   <Grid container spacing={2}>
                     {uploadedFiles.map((uf) => (
-                      <Grid xs={6} sm={4} md={3} key={uf.id}>
+                      <Grid size={{ xs: 6, sm: 4, md: 3 }} key={uf.id}>
                         <Box
                           sx={{
                             position: 'relative',
@@ -1076,7 +1076,7 @@ export default function PhotoReportPage() {
               >
                 <Grid container spacing={1}>
                   {fixedPhotos.map((photo, idx) => (
-                    <Grid xs={6} sm={4} md={2} key={`fixed-${idx}`}>
+                    <Grid size={{ xs: 6, sm: 4, md: 2 }} key={`fixed-${idx}`}>
                       <PhotoView src={photo}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
