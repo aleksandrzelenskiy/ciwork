@@ -151,7 +151,7 @@ export const syncTaskStatus = async (params: {
     const allowedPublicStatuses = new Set(['open', 'in_review', 'assigned', 'closed']);
     if (task.publicStatus && !allowedPublicStatuses.has(task.publicStatus)) {
         // normalize legacy/invalid values to a valid enum before save
-        task.publicStatus = task.publicStatus === 'done' ? 'closed' : 'closed';
+        task.publicStatus = 'closed';
     }
     const oldStatus = task.status;
     if (oldStatus === status) return task;
