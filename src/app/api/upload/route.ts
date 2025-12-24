@@ -9,6 +9,8 @@ import {
     buildTaskFileKey,
     TaskFileSubfolder,
 } from '@/utils/s3';
+import { assertWritableStorage, recordStorageBytes } from '@/utils/storageUsage';
+import { resolveStorageScope } from '@/app/api/reports/_shared';
 import path from 'path';
 
 export const runtime = 'nodejs';
@@ -141,14 +143,37 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const task = await TaskModel.findOne({ taskId: taskIdForAttachments }).lean();
+        if (!task) {
+            return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+        }
+
+        if (!task.orgId) {
+            return NextResponse.json({ error: 'Task organization is missing' }, { status: 400 });
+        }
+
+        const storageCheck = await assertWritableStorage(task.orgId);
+        if (!storageCheck.ok) {
+            return NextResponse.json(
+                {
+                    error: storageCheck.error,
+                    readOnly: true,
+                    storage: storageCheck.access,
+                },
+                { status: 402 }
+            );
+        }
+
+        const scope = await resolveStorageScope(task);
         const uploadedUrls: string[] = [];
+        let totalBytes = 0;
         const targetField = subfolder === 'documents' ? 'documents' : 'attachments';
 
         for (const f of files) {
             const filename = safeBasename(f.filename || 'file');
             const key = buildTaskFileKey(taskIdForAttachments, subfolder, filename, {
-                orgSlug: orgSlug || undefined,
-                projectKey: projectKey || undefined,
+                orgSlug: orgSlug || scope.orgSlug || undefined,
+                projectKey: projectKey || scope.projectKey || undefined,
             });
 
             const url = await uploadBuffer(
@@ -158,9 +183,11 @@ export async function POST(request: NextRequest) {
             );
 
             uploadedUrls.push(url);
+            totalBytes += f.buffer.length;
         }
 
         if (uploadedUrls.length) {
+            await recordStorageBytes(task.orgId, totalBytes);
             await TaskModel.updateOne(
                 { taskId: taskIdForAttachments },
                 {
