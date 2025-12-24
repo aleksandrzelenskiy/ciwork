@@ -60,6 +60,10 @@ const formatBytes = (bytes: number) => {
     return `${Math.round(bytes)} Б`;
 };
 
+const isStorageUsageResponse = (
+    data: StorageUsageResponse | { error?: string } | null,
+): data is StorageUsageResponse => Boolean(data && 'usage' in data);
+
 export default function OrgStorageUsageCard({
     orgSlug,
     cardSx,
@@ -82,7 +86,7 @@ export default function OrgStorageUsageCard({
                     cache: 'no-store',
                 });
                 const data = (await res.json().catch(() => null)) as StorageUsageResponse | { error?: string } | null;
-                if (!res.ok || !data || 'error' in data) {
+                if (!res.ok || !data || !isStorageUsageResponse(data)) {
                     if (active) {
                         setError(data && 'error' in data ? data.error ?? 'Не удалось загрузить данные' : 'Не удалось загрузить данные');
                     }
