@@ -3,6 +3,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/utils/mongoose';
 import Report from '@/app/models/ReportModel';
+import TaskModel from '@/app/models/TaskModel';
+import ProjectModel from '@/app/models/ProjectModel';
 import { GetUserContext } from '@/server-actions/user-context';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
 
@@ -61,18 +63,66 @@ export async function GET() {
     );
   }
 
+  const taskIds = Array.from(
+    new Set(
+      rawReports
+        .map((report) => (typeof report.taskId === 'string' ? report.taskId : ''))
+        .filter((taskId) => taskId.length > 0)
+    )
+  );
+
+  const taskMeta = taskIds.length
+    ? await TaskModel.find({ taskId: { $in: taskIds } })
+        .select('taskId bsNumber executorName projectId')
+        .lean()
+    : [];
+  const taskMetaMap = new Map(
+    taskMeta.map((task) => [
+      task.taskId,
+      {
+        bsNumber: task.bsNumber,
+        executorName: task.executorName,
+        projectId: task.projectId ? task.projectId.toString() : null,
+      },
+    ])
+  );
+
+  const projectIds = new Set<string>();
+  rawReports.forEach((report) => {
+    const reportProjectId = report.projectId?.toString?.() ?? null;
+    const taskProjectId = taskMetaMap.get(report.taskId)?.projectId ?? null;
+    const projectId = reportProjectId || taskProjectId;
+    if (projectId) projectIds.add(projectId);
+  });
+
+  const projects = projectIds.size > 0
+    ? await ProjectModel.find({ _id: { $in: Array.from(projectIds) } })
+        .select('managers')
+        .lean()
+    : [];
+  const projectManagersMap = new Map(
+    projects.map((project) => [project._id.toString(), project.managers ?? []])
+  );
+
+  const normalizedEmail =
+    userContext.data.user.email?.trim().toLowerCase() ?? '';
+
   type BaseStatus = {
     baseId: string;
     status: string;
     latestStatusChangeDate: Date;
+    fileCount?: number;
   };
   type TaskEntry = {
     taskId: string;
     taskName?: string;
+    bsNumber?: string;
     createdById?: string;
     createdByName?: string;
+    executorName?: string;
     initiatorName?: string;
     createdAt: Date;
+    canDelete?: boolean;
     baseStatuses: BaseStatus[];
   };
 
@@ -87,19 +137,40 @@ export async function GET() {
           return eventDate > latest ? eventDate : latest;
         }, createdAt)
       : createdAt;
+    const taskMetaEntry = taskMetaMap.get(taskId);
+    const projectId =
+      report.projectId?.toString?.() ??
+      taskMetaEntry?.projectId ??
+      null;
+    const managers = projectId
+      ? projectManagersMap.get(projectId) ?? []
+      : [];
+    const canDelete = normalizedEmail.length > 0
+      ? managers.some(
+          (manager) =>
+            typeof manager === 'string' &&
+            manager.trim().toLowerCase() === normalizedEmail
+        )
+      : false;
     const entry = taskMap.get(taskId) ?? {
       taskId,
       taskName: report.taskName,
+      bsNumber: taskMetaEntry?.bsNumber,
       createdById: report.createdById,
       createdByName: report.createdByName,
+      executorName: taskMetaEntry?.executorName ?? report.createdByName,
       initiatorName: report.initiatorName,
       createdAt,
+      canDelete,
       baseStatuses: [] as BaseStatus[],
     };
     entry.baseStatuses.push({
       baseId: report.baseId,
       status: report.status,
       latestStatusChangeDate: latestEventDate,
+      fileCount:
+        (Array.isArray(report.files) ? report.files.length : 0) +
+        (Array.isArray(report.fixedFiles) ? report.fixedFiles.length : 0),
     });
     taskMap.set(taskId, entry);
   });

@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/utils/mongoose';
 import ReportModel from '@/app/models/ReportModel';
 import TaskModel from '@/app/models/TaskModel';
+import ProjectModel from '@/app/models/ProjectModel';
+import ReportDeletionLog from '@/app/models/ReportDeletionLog';
 import { currentUser } from '@clerk/nextjs/server';
 import { GetUserContext } from '@/server-actions/user-context';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
@@ -219,7 +221,7 @@ export async function PATCH(
 }
 
 /**
- * DELETE обработчик для удаления фотоотчёта. Доступен только super-admin.
+ * DELETE обработчик для удаления фотоотчёта. Доступен только менеджеру проекта.
  */
 export async function DELETE(
     request: Request,
@@ -250,10 +252,11 @@ export async function DELETE(
       );
     }
 
-    if (!userContext.data.isSuperAdmin) {
+    const userEmail = userContext.data.user.email?.trim().toLowerCase();
+    if (!userEmail) {
       return NextResponse.json(
-          { error: 'Недостаточно прав для удаления отчёта' },
-          { status: 403 }
+          { error: 'Не удалось определить пользователя' },
+          { status: 401 }
       );
     }
 
@@ -266,6 +269,32 @@ export async function DELETE(
       return NextResponse.json({ error: 'Отчёт не найден' }, { status: 404 });
     }
 
+    const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
+      .select('orgId projectId taskName bsNumber')
+      .lean();
+    const projectId =
+      report.projectId?.toString?.() ?? taskRecord?.projectId?.toString?.() ?? null;
+    if (!projectId) {
+      return NextResponse.json(
+          { error: 'Проект для отчёта не найден' },
+          { status: 404 }
+      );
+    }
+
+    const project = await ProjectModel.findById(projectId)
+      .select('managers')
+      .lean();
+    const managers = Array.isArray(project?.managers) ? project?.managers : [];
+    const managesProject = managers.some(
+      (manager) => typeof manager === 'string' && manager.trim().toLowerCase() === userEmail
+    );
+    if (!managesProject) {
+      return NextResponse.json(
+          { error: 'Недостаточно прав для удаления отчёта' },
+          { status: 403 }
+      );
+    }
+
     const allFiles = [...report.files, ...report.fixedFiles].filter(
       (file): file is string => typeof file === 'string' && file.length > 0
     );
@@ -273,18 +302,14 @@ export async function DELETE(
     const prefixSet = new Set<string>();
     const fallbackDeletes: Promise<void>[] = [];
 
-    const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
-      .select('orgId projectId')
-      .lean();
-
     const safeOrgFolder =
-      taskRecord?.orgId?.toString?.()
+      (taskRecord?.orgId ?? report.orgId)?.toString?.()
         ?.replace(/[\\/]/g, '_')
         .replace(/\s+/g, '_')
         .replace(/\.+/g, '.')
         .trim() || 'unknown-org';
     const safeProjectFolder =
-      taskRecord?.projectId?.toString?.()
+      (taskRecord?.projectId ?? report.projectId)?.toString?.()
         ?.replace(/[\\/]/g, '_')
         .replace(/\s+/g, '_')
         .replace(/\.+/g, '.')
@@ -340,6 +365,17 @@ export async function DELETE(
     if (report.storageBytes && report.orgId) {
       await adjustStorageBytes(report.orgId.toString(), -Math.abs(report.storageBytes));
     }
+
+    await ReportDeletionLog.create({
+      orgId: report.orgId ?? taskRecord?.orgId,
+      projectId: report.projectId ?? taskRecord?.projectId,
+      taskId: report.taskId,
+      taskName: report.taskName || taskRecord?.taskName,
+      baseId: report.baseId,
+      deletedById: userContext.data.user.clerkUserId,
+      deletedByEmail: userContext.data.user.email,
+      deletedAt: new Date(),
+    });
 
     await ReportModel.deleteOne({ _id: report._id });
 

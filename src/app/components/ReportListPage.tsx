@@ -3,8 +3,15 @@
 import React from 'react';
 import {
   Box,
+  Badge,
+  Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
   MenuItem,
   Select,
   Stack,
@@ -14,12 +21,18 @@ import {
 } from '@mui/material';
 import Link from 'next/link';
 import FolderIcon from '@mui/icons-material/Folder';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { BaseStatus, ReportClient, ApiResponse } from '@/app/types/reportTypes';
-import ReportStatusPill from '@/app/components/reports/ReportStatusPill';
+import { getStatusColor } from '@/utils/statusColors';
 
 const getTaskStatus = (baseStatuses: BaseStatus[] = []) => {
   const nonAgreedStatus = baseStatuses.find((bs) => bs.status !== 'Agreed');
   return nonAgreedStatus ? nonAgreedStatus.status : 'Agreed';
+};
+
+const resolveStatusColor = (status: string) => {
+  const color = getStatusColor(status);
+  return color === 'default' ? undefined : color;
 };
 
 export default function ReportListPage() {
@@ -28,6 +41,9 @@ export default function ReportListPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [statusFilter, setStatusFilter] = React.useState('all');
   const [search, setSearch] = React.useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleteTarget, setDeleteTarget] = React.useState<ReportClient | null>(null);
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
 
   React.useEffect(() => {
     const fetchReports = async () => {
@@ -51,10 +67,50 @@ export default function ReportListPage() {
   const filtered = reports.filter((report) => {
     const status = getTaskStatus(report.baseStatuses);
     const matchesStatus = statusFilter === 'all' || status === statusFilter;
-    const label = (report.taskName || report.taskId || '').toLowerCase();
+    const label = [report.taskName, report.taskId, report.bsNumber]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
     const matchesSearch = label.includes(search.toLowerCase());
     return matchesStatus && matchesSearch;
   });
+
+  const handleOpenDeleteDialog = (report: ReportClient) => {
+    setDeleteTarget(report);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    if (deleteLoading) return;
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      const deletions = deleteTarget.baseStatuses.map((base) =>
+        fetch(
+          `/api/reports/${encodeURIComponent(deleteTarget.taskId)}/${encodeURIComponent(base.baseId)}`,
+          { method: 'DELETE' }
+        ).then(async (response) => {
+          const data = (await response.json().catch(() => ({}))) as { error?: string };
+          if (!response.ok) {
+            throw new Error(data.error || 'Не удалось удалить отчёт');
+          }
+        })
+      );
+      await Promise.all(deletions);
+      setReports((prev) => prev.filter((report) => report.taskId !== deleteTarget.taskId));
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось удалить отчёт');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -117,6 +173,13 @@ export default function ReportListPage() {
         )}
         {filtered.map((report) => {
           const status = getTaskStatus(report.baseStatuses);
+          const title = report.taskName || report.taskId;
+          const titleWithBs = report.bsNumber ? `${title} ${report.bsNumber}` : title;
+          const statusColor = getStatusColor(status);
+          const statusChipSx =
+            statusColor === 'default'
+              ? { fontWeight: 600 }
+              : { backgroundColor: statusColor, color: '#fff', fontWeight: 600 };
           return (
             <Box
               key={report.taskId}
@@ -132,25 +195,52 @@ export default function ReportListPage() {
                 <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
                   <Box>
                     <Typography variant="h6" fontWeight={600}>
-                      {report.taskName || report.taskId}
+                      {titleWithBs}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Задача {report.taskId} · {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : '—'}
                     </Typography>
-                    {report.createdByName && (
+                    {(report.executorName || report.createdByName) && (
                       <Typography variant="body2" color="text.secondary">
-                        Исполнитель: {report.createdByName}
+                        Исполнитель: {report.executorName || report.createdByName}
                       </Typography>
                     )}
                   </Box>
-                  <ReportStatusPill status={status} />
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip label={status} size="small" sx={statusChipSx} />
+                    {report.canDelete && (
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDeleteDialog(report)}
+                        aria-label="Удалить отчет"
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Stack>
                 </Stack>
 
                 <Stack direction="row" spacing={1} flexWrap="wrap">
                   {report.baseStatuses.map((base) => (
                     <Chip
                       key={`${report.taskId}-${base.baseId}`}
-                      icon={<FolderIcon />}
+                      icon={
+                        <Badge
+                          badgeContent={base.fileCount ?? 0}
+                          color="primary"
+                          showZero
+                          overlap="circular"
+                          sx={{
+                            '& .MuiBadge-badge': {
+                              minWidth: 16,
+                              height: 16,
+                              fontSize: 10,
+                            },
+                          }}
+                        >
+                          <FolderIcon sx={{ color: resolveStatusColor(base.status) }} />
+                        </Badge>
+                      }
                       label={`БС ${base.baseId}`}
                       component={Link}
                       href={`/reports/${report.taskId}/${base.baseId}`}
@@ -168,6 +258,28 @@ export default function ReportListPage() {
           );
         })}
       </Stack>
+
+      <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog}>
+        <DialogTitle>Удалить фотоотчёт?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Отчёт и все файлы в хранилище будут удалены без возможности восстановления.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog} disabled={deleteLoading}>
+            Отмена
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleConfirmDelete}
+            disabled={deleteLoading}
+          >
+            Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

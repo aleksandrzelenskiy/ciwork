@@ -4,6 +4,7 @@ export interface BaseStatus {
   baseId: string;
   status: string;
   latestStatusChangeDate: string;
+  fileCount?: number;
 }
 
 export interface IEvent {
@@ -41,10 +42,13 @@ export interface IReport {
 export interface ReportClient {
   taskId: string;
   taskName?: string;
+  bsNumber?: string;
   createdById?: string;
   createdByName?: string;
+  executorName?: string;
   initiatorName?: string;
   createdAt: string;
+  canDelete?: boolean;
   baseStatuses: BaseStatus[];
 }
 
