@@ -3,7 +3,6 @@
 import React from 'react';
 import {
   Box,
-  Badge,
   Button,
   Chip,
   CircularProgress,
@@ -224,23 +223,7 @@ export default function ReportListPage() {
                   {report.baseStatuses.map((base) => (
                     <Chip
                       key={`${report.taskId}-${base.baseId}`}
-                      icon={
-                        <Badge
-                          badgeContent={base.fileCount ?? 0}
-                          color="primary"
-                          showZero
-                          overlap="circular"
-                          sx={{
-                            '& .MuiBadge-badge': {
-                              minWidth: 16,
-                              height: 16,
-                              fontSize: 10,
-                            },
-                          }}
-                        >
-                          <FolderIcon sx={{ color: resolveStatusColor(base.status) }} />
-                        </Badge>
-                      }
+                      icon={<FolderIcon sx={{ color: resolveStatusColor(base.status) }} />}
                       label={`БС ${base.baseId}`}
                       component={Link}
                       href={`/reports/${report.taskId}/${base.baseId}`}

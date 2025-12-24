@@ -1,6 +1,7 @@
 import sharp from 'sharp';
 import ExifReader from 'exifreader';
 import { v4 as uuidv4 } from 'uuid';
+import heicConvert from 'heic-convert';
 import OrganizationModel from '@/app/models/OrganizationModel';
 import ProjectModel from '@/app/models/ProjectModel';
 
@@ -245,15 +246,33 @@ const buildOverlaySvg = (params: {
 
 export const prepareImageBuffer = async (file: File, overlayContext?: OverlayContext) => {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.name?.split('.').pop()?.toLowerCase() || 'jpg';
-    const nameBase = `${uuidv4()}.${ext}`;
+    const ext = file.name?.split('.').pop()?.toLowerCase() || '';
+    const mime = file.type || '';
+    const isHeic = /heic|heif/i.test(mime) || ['heic', 'heif'].includes(ext);
+    const nameBase = `${uuidv4()}.jpg`;
+    const maxEdge = 2048;
+    const outputQuality = 85;
+    let sourceBuffer = buffer;
+
+    if (isHeic) {
+        try {
+            const converted = await heicConvert({
+                buffer,
+                format: 'JPEG',
+                quality: 0.92,
+            });
+            sourceBuffer = Buffer.from(converted);
+        } catch (error) {
+            console.warn('Failed to convert HEIC image, using original buffer.', error);
+        }
+    }
     try {
-        const resized = sharp(buffer)
+        const resized = sharp(sourceBuffer, { failOnError: false })
             .rotate()
-            .resize(1920, 1920, { fit: sharp.fit.inside, withoutEnlargement: true });
+            .resize(maxEdge, maxEdge, { fit: sharp.fit.inside, withoutEnlargement: true });
         const metadata = await resized.metadata();
-        const width = metadata.width ?? 1920;
-        const height = metadata.height ?? 1080;
+        const width = metadata.width ?? maxEdge;
+        const height = metadata.height ?? maxEdge;
         const overlayMeta = overlayContext ? extractOverlayMeta(buffer) : null;
         const lines = overlayContext
             ? [
@@ -262,14 +281,13 @@ export const prepareImageBuffer = async (file: File, overlayContext?: OverlayCon
                         ? overlayMeta.date.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
                         : new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
                 }`,
+                `Task ID: ${overlayContext.taskId}`,
+                `Задача: ${(overlayContext.taskName || '—').trim()}`,
+                `БС: ${overlayContext.baseId || overlayContext.bsNumber || '—'}`,
                 `Координаты: ${
                     overlayMeta?.lat != null && overlayMeta?.lon != null
                         ? `${overlayMeta.lat.toFixed(6)}, ${overlayMeta.lon.toFixed(6)}`
                         : '—'
-                }`,
-                `Task ID: ${overlayContext.taskId}`,
-                `Задача: ${(overlayContext.taskName || '—').trim()} · БС ${
-                    overlayContext.baseId || overlayContext.bsNumber || '—'
                 }`,
                 `Исполнитель: ${overlayContext.executorName || '—'}`,
             ]
@@ -292,10 +310,36 @@ export const prepareImageBuffer = async (file: File, overlayContext?: OverlayCon
                     ]
                     : []
             )
-            .jpeg({ quality: 82 })
+            .jpeg({ quality: outputQuality, mozjpeg: true, progressive: true })
             .toBuffer();
-        return { buffer: converted, filename: nameBase, size: converted.length };
-    } catch {
-        return { buffer, filename: nameBase, size: buffer.length };
+        return {
+            buffer: converted,
+            filename: nameBase,
+            size: converted.length,
+            contentType: 'image/jpeg',
+        };
+    } catch (error) {
+        console.warn('Failed to apply overlay, retrying without it.', error);
+        try {
+            const fallback = await sharp(sourceBuffer, { failOnError: false })
+                .rotate()
+                .resize(maxEdge, maxEdge, { fit: sharp.fit.inside, withoutEnlargement: true })
+                .jpeg({ quality: outputQuality, mozjpeg: true, progressive: true })
+                .toBuffer();
+            return {
+                buffer: fallback,
+                filename: nameBase,
+                size: fallback.length,
+                contentType: 'image/jpeg',
+            };
+        } catch (fallbackError) {
+            console.warn('Failed to convert image to JPEG.', fallbackError);
+            return {
+                buffer: sourceBuffer,
+                filename: nameBase,
+                size: sourceBuffer.length,
+                contentType: isHeic ? 'image/jpeg' : file.type || 'application/octet-stream',
+            };
+        }
     }
 };

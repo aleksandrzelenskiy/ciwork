@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
             baseId: payload.baseId,
             filename: prepared.filename,
         });
-        const url = await uploadBuffer(prepared.buffer, key, file.type || 'image/jpeg');
+        const url = await uploadBuffer(prepared.buffer, key, prepared.contentType || 'image/jpeg');
         uploadedUrls.push(url);
         totalBytes += prepared.size;
     }
