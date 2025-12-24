@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import ExifReader from 'exifreader';
 import { v4 as uuidv4 } from 'uuid';
 import OrganizationModel from '@/app/models/OrganizationModel';
 import ProjectModel from '@/app/models/ProjectModel';
@@ -90,14 +91,207 @@ export const buildReportKey = (params: {
     return parts.join('/');
 };
 
-export const prepareImageBuffer = async (file: File) => {
+type OverlayContext = {
+    taskId: string;
+    taskName?: string | null;
+    baseId?: string | null;
+    bsNumber?: string | null;
+    executorName?: string | null;
+};
+
+const escapeSvgText = (value: string) =>
+    value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+const normalizeExifDate = (value: string) => {
+    const trimmed = value.trim();
+    const match = trimmed.match(
+        /^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?/
+    );
+    if (match) {
+        const [, y, m, d, hh, mm, ss] = match;
+        return new Date(`${y}-${m}-${d}T${hh}:${mm}:${ss ?? '00'}`);
+    }
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const toNumber = (value: unknown) => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const parsed = Number.parseFloat(value);
+        return Number.isNaN(parsed) ? null : parsed;
+    }
+    if (value && typeof value === 'object') {
+        const rec = value as { numerator?: number; denominator?: number };
+        if (typeof rec.numerator === 'number' && typeof rec.denominator === 'number') {
+            return rec.denominator === 0 ? null : rec.numerator / rec.denominator;
+        }
+    }
+    return null;
+};
+
+const toDecimalCoord = (parts: unknown, ref?: string | null) => {
+    if (!Array.isArray(parts) || parts.length < 2) return null;
+    const degrees = toNumber(parts[0]);
+    const minutes = toNumber(parts[1]);
+    const seconds = toNumber(parts[2] ?? 0);
+    if (degrees === null || minutes === null || seconds === null) return null;
+    let decimal = degrees + minutes / 60 + seconds / 3600;
+    if (ref && ['S', 'W'].includes(ref)) {
+        decimal *= -1;
+    }
+    return decimal;
+};
+
+const readTagValue = (tag: unknown) => {
+    if (!tag) return null;
+    if (typeof tag === 'string' || typeof tag === 'number') return tag;
+    if (typeof tag === 'object') {
+        const candidate = tag as { description?: unknown; value?: unknown };
+        if (typeof candidate.description === 'string' || typeof candidate.description === 'number') {
+            return candidate.description;
+        }
+        if (candidate.value !== undefined) return candidate.value;
+    }
+    return null;
+};
+
+const getExifTag = (tags: Record<string, unknown>, key: string) => {
+    if (key in tags) return tags[key];
+    const groups = ['gps', 'exif', 'image'] as const;
+    for (const group of groups) {
+        const bucket = tags[group];
+        if (bucket && typeof bucket === 'object' && key in (bucket as Record<string, unknown>)) {
+            return (bucket as Record<string, unknown>)[key];
+        }
+    }
+    return null;
+};
+
+const extractOverlayMeta = (buffer: Buffer) => {
+    try {
+        const tags = ExifReader.load(buffer, { expanded: true }) as Record<string, unknown>;
+        const dateTag =
+            getExifTag(tags, 'DateTimeOriginal') ??
+            getExifTag(tags, 'DateTimeDigitized') ??
+            getExifTag(tags, 'DateTime');
+        const dateValue = readTagValue(dateTag);
+        const date =
+            typeof dateValue === 'string'
+                ? normalizeExifDate(dateValue)
+                : dateValue instanceof Date
+                    ? dateValue
+                    : null;
+
+        const latTag = getExifTag(tags, 'GPSLatitude');
+        const lonTag = getExifTag(tags, 'GPSLongitude');
+        const latRefTag = getExifTag(tags, 'GPSLatitudeRef');
+        const lonRefTag = getExifTag(tags, 'GPSLongitudeRef');
+
+        const latValue = readTagValue(latTag);
+        const lonValue = readTagValue(lonTag);
+        const latRef = readTagValue(latRefTag);
+        const lonRef = readTagValue(lonRefTag);
+
+        const lat =
+            typeof latValue === 'string'
+                ? Number.parseFloat(latValue)
+                : toDecimalCoord(latValue, typeof latRef === 'string' ? latRef : null);
+        const lon =
+            typeof lonValue === 'string'
+                ? Number.parseFloat(lonValue)
+                : toDecimalCoord(lonValue, typeof lonRef === 'string' ? lonRef : null);
+
+        return {
+            date,
+            lat: Number.isFinite(lat) ? lat : null,
+            lon: Number.isFinite(lon) ? lon : null,
+        };
+    } catch {
+        return { date: null, lat: null, lon: null };
+    }
+};
+
+const buildOverlaySvg = (params: {
+    width: number;
+    height: number;
+    lines: string[];
+}) => {
+    const fontSize = Math.max(20, Math.round(params.width * 0.02));
+    const lineHeight = fontSize + Math.round(fontSize * 0.4);
+    const padding = Math.round(fontSize * 0.6);
+    const contentHeight = lineHeight * params.lines.length;
+    const overlayHeight = Math.min(
+        params.height,
+        contentHeight + padding * 2
+    );
+    const textLines = params.lines.map((line, idx) => {
+        const y = padding + lineHeight * (idx + 0.8);
+        return `<text x="${padding}" y="${y}" font-family="Arial, sans-serif" font-size="${fontSize}" fill="#ffffff">${escapeSvgText(line)}</text>`;
+    });
+    return {
+        svg: Buffer.from(
+            `<svg width="${params.width}" height="${overlayHeight}" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0" y="0" width="${params.width}" height="${overlayHeight}" fill="rgba(0,0,0,0.55)" />
+                ${textLines.join('')}
+            </svg>`
+        ),
+        height: overlayHeight,
+    };
+};
+
+export const prepareImageBuffer = async (file: File, overlayContext?: OverlayContext) => {
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = file.name?.split('.').pop()?.toLowerCase() || 'jpg';
     const nameBase = `${uuidv4()}.${ext}`;
     try {
-        const converted = await sharp(buffer)
+        const resized = sharp(buffer)
             .rotate()
-            .resize(1920, 1920, { fit: sharp.fit.inside, withoutEnlargement: true })
+            .resize(1920, 1920, { fit: sharp.fit.inside, withoutEnlargement: true });
+        const metadata = await resized.metadata();
+        const width = metadata.width ?? 1920;
+        const height = metadata.height ?? 1080;
+        const overlayMeta = overlayContext ? extractOverlayMeta(buffer) : null;
+        const lines = overlayContext
+            ? [
+                `Дата: ${
+                    overlayMeta?.date
+                        ? overlayMeta.date.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
+                        : new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
+                }`,
+                `Координаты: ${
+                    overlayMeta?.lat != null && overlayMeta?.lon != null
+                        ? `${overlayMeta.lat.toFixed(6)}, ${overlayMeta.lon.toFixed(6)}`
+                        : '—'
+                }`,
+                `Task ID: ${overlayContext.taskId}`,
+                `Задача: ${(overlayContext.taskName || '—').trim()} · БС ${
+                    overlayContext.baseId || overlayContext.bsNumber || '—'
+                }`,
+                `Исполнитель: ${overlayContext.executorName || '—'}`,
+            ]
+            : [];
+
+        const overlay =
+            overlayContext && lines.length > 0
+                ? buildOverlaySvg({ width, height, lines })
+                : null;
+
+        const converted = await resized
+            .composite(
+                overlay
+                    ? [
+                        {
+                            input: overlay.svg,
+                            top: Math.max(0, height - overlay.height),
+                            left: 0,
+                        },
+                    ]
+                    : []
+            )
             .jpeg({ quality: 82 })
             .toBuffer();
         return { buffer: converted, filename: nameBase, size: converted.length };

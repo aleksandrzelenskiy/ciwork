@@ -62,7 +62,13 @@ export async function POST(request: NextRequest) {
     let totalBytes = 0;
 
     for (const file of payload.files) {
-        const prepared = await prepareImageBuffer(file);
+        const prepared = await prepareImageBuffer(file, {
+            taskId: payload.taskId,
+            taskName: task.taskName ?? null,
+            baseId: payload.baseId,
+            bsNumber: task.bsNumber ?? null,
+            executorName: buildActorName(user),
+        });
         const key = buildReportKey({
             orgSlug: scope.orgSlug,
             projectKey: scope.projectKey,
