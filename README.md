@@ -38,3 +38,6 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## Environment variables
 
 - `BILLING_CRON_SECRET` — shared secret for calling the hourly storage billing endpoint (`/api/internal/storage/charge-hourly`).
+- `STORAGE_RECONCILE_CRON_SECRET` — shared secret for calling daily storage reconciliation (`/api/internal/storage/reconcile`).
+- `AWS_S3_INVENTORY_BUCKET` — destination bucket for S3 Inventory reports (used for storage reconciliation).
+- `AWS_S3_INVENTORY_PREFIX` — prefix in the inventory bucket where `manifest.json` files are stored.

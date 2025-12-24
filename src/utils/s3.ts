@@ -4,12 +4,15 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   ListObjectsV2CommandOutput,
   ObjectIdentifier,
 } from '@aws-sdk/client-s3';
 import fs from 'fs';
 import path from 'path';
+import { Readable } from 'stream';
+import { createGunzip } from 'zlib';
 
 // --- ENV config ---
 const BUCKET = process.env.AWS_S3_BUCKET;
@@ -17,6 +20,8 @@ const REGION = process.env.AWS_S3_REGION;
 const ENDPOINT = process.env.AWS_S3_ENDPOINT;
 const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
+const INVENTORY_BUCKET = process.env.AWS_S3_INVENTORY_BUCKET;
+const INVENTORY_PREFIX = process.env.AWS_S3_INVENTORY_PREFIX;
 
 const useS3 = !!(BUCKET && REGION && ENDPOINT && ACCESS_KEY_ID && SECRET_ACCESS_KEY);
 
@@ -346,4 +351,262 @@ export async function deleteTaskFolder(
     await fs.promises.rm(localDir, { recursive: true, force: true });
     console.log(`🗑️ Deleted local task folder: ${localDir}`);
   }
+}
+
+async function getLocalDirSize(targetPath: string): Promise<number> {
+  try {
+    const entries = await fs.promises.readdir(targetPath, { withFileTypes: true });
+    let total = 0;
+    for (const entry of entries) {
+      const full = path.join(targetPath, entry.name);
+      if (entry.isDirectory()) {
+        total += await getLocalDirSize(full);
+      } else if (entry.isFile()) {
+        const stats = await fs.promises.stat(full);
+        total += stats.size;
+      }
+    }
+    return total;
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code;
+    if (code === 'ENOENT') {
+      return 0;
+    }
+    throw err;
+  }
+}
+
+export async function sumStorageBytes(prefix: string): Promise<number> {
+  const normalizedPrefix = prefix.replace(/^\/+/, '').replace(/\/?$/, '/');
+  if (!normalizedPrefix || normalizedPrefix === '/') {
+    throw new Error('INVALID_STORAGE_PREFIX');
+  }
+
+  if (s3 && BUCKET) {
+    let continuationToken: string | undefined = undefined;
+    let total = 0;
+
+    do {
+      const { Contents = [], IsTruncated, NextContinuationToken } =
+        await s3.send(new ListObjectsV2Command({
+          Bucket: BUCKET,
+          Prefix: normalizedPrefix,
+          ContinuationToken: continuationToken,
+        })) as ListObjectsV2CommandOutput;
+
+      for (const item of Contents) {
+        if (typeof item.Size === 'number' && item.Size > 0) {
+          total += item.Size;
+        }
+      }
+
+      continuationToken = IsTruncated ? NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    return total;
+  }
+
+  const localDir = path.join(process.cwd(), 'public', normalizedPrefix);
+  return await getLocalDirSize(localDir);
+}
+
+type InventoryConfig = {
+  bucket: string;
+  prefix: string;
+};
+
+type InventoryManifest = {
+  fileSchema?: string;
+  files?: Array<{ key: string }>;
+};
+
+const getInventoryConfig = (): InventoryConfig | null => {
+  if (!INVENTORY_BUCKET || !INVENTORY_PREFIX) return null;
+  const prefix = INVENTORY_PREFIX.replace(/^\/+/, '').replace(/\/?$/, '/');
+  if (!prefix) return null;
+  return { bucket: INVENTORY_BUCKET, prefix };
+};
+
+const parseCsvLine = (line: string): string[] => {
+  const out: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i += 1) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') {
+          current += '"';
+          i += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += ch;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inQuotes = true;
+      continue;
+    }
+    if (ch === ',') {
+      out.push(current);
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+  out.push(current);
+  return out;
+};
+
+const readStreamToString = async (body: Readable): Promise<string> => {
+  let data = '';
+  for await (const chunk of body) {
+    data += chunk.toString('utf8');
+  }
+  return data;
+};
+
+const findLatestInventoryManifestKey = async (config: InventoryConfig): Promise<string | null> => {
+  if (!s3) return null;
+  let continuationToken: string | undefined = undefined;
+  let latestKey: string | null = null;
+  let latestTime = 0;
+
+  do {
+    const { Contents = [], IsTruncated, NextContinuationToken } =
+      await s3.send(new ListObjectsV2Command({
+        Bucket: config.bucket,
+        Prefix: config.prefix,
+        ContinuationToken: continuationToken,
+      })) as ListObjectsV2CommandOutput;
+
+    for (const item of Contents) {
+      if (!item.Key || !item.Key.endsWith('manifest.json') || !item.LastModified) {
+        continue;
+      }
+      const time = item.LastModified.getTime();
+      if (time >= latestTime) {
+        latestTime = time;
+        latestKey = item.Key;
+      }
+    }
+
+    continuationToken = IsTruncated ? NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return latestKey;
+};
+
+const loadInventoryManifest = async (config: InventoryConfig): Promise<InventoryManifest | null> => {
+  if (!s3) return null;
+  const manifestKey = await findLatestInventoryManifestKey(config);
+  if (!manifestKey) return null;
+  const response = await s3.send(new GetObjectCommand({
+    Bucket: config.bucket,
+    Key: manifestKey,
+  }));
+  if (!response.Body) return null;
+  const manifestText = await readStreamToString(response.Body as Readable);
+  try {
+    return JSON.parse(manifestText) as InventoryManifest;
+  } catch {
+    console.warn('⚠️ Failed to parse inventory manifest JSON');
+    return null;
+  }
+};
+
+const sumStorageBytesByOrgFromInventory = async (
+  config: InventoryConfig,
+  orgSlugs: string[]
+): Promise<Map<string, number>> => {
+  if (!s3) return new Map();
+  const manifest = await loadInventoryManifest(config);
+  if (!manifest?.fileSchema || !manifest.files?.length) {
+    return new Map();
+  }
+
+  const columns = manifest.fileSchema.split(',').map((value) => value.trim());
+  const keyIndex = columns.indexOf('Key');
+  const sizeIndex = columns.indexOf('Size');
+  const isLatestIndex = columns.indexOf('IsLatest');
+  const deleteMarkerIndex = columns.indexOf('IsDeleteMarker');
+
+  if (keyIndex < 0 || sizeIndex < 0) {
+    throw new Error('INVENTORY_SCHEMA_MISSING_COLUMNS');
+  }
+
+  const normalized = orgSlugs.map(sanitizePathSegment).filter(Boolean);
+  const allowed = new Set(normalized);
+  const totals = new Map<string, number>();
+  for (const slug of normalized) {
+    totals.set(slug, 0);
+  }
+
+  for (const file of manifest.files) {
+    if (!file.key) continue;
+    const response = await s3.send(new GetObjectCommand({
+      Bucket: config.bucket,
+      Key: file.key,
+    }));
+    if (!response.Body) continue;
+    let stream = response.Body as Readable;
+    if (file.key.endsWith('.gz')) {
+      stream = stream.pipe(createGunzip());
+    }
+
+    let buffered = '';
+    for await (const chunk of stream) {
+      buffered += chunk.toString('utf8');
+      const lines = buffered.split(/\r?\n/);
+      buffered = lines.pop() ?? '';
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        const fields = parseCsvLine(line);
+        const key = fields[keyIndex] ?? '';
+        if (!key.startsWith('uploads/')) continue;
+        if (deleteMarkerIndex >= 0 && fields[deleteMarkerIndex] === 'true') continue;
+        if (isLatestIndex >= 0 && fields[isLatestIndex] !== 'true') continue;
+        const slug = key.slice('uploads/'.length).split('/')[0];
+        if (!slug || (allowed.size > 0 && !allowed.has(slug))) continue;
+        const sizeRaw = fields[sizeIndex] ?? '0';
+        const size = Number.parseInt(sizeRaw, 10);
+        if (Number.isNaN(size) || size <= 0) continue;
+        totals.set(slug, (totals.get(slug) ?? 0) + size);
+      }
+    }
+  }
+
+  return totals;
+};
+
+export async function sumStorageBytesByOrg(orgSlugs: string[]): Promise<Map<string, number>> {
+  const normalized = orgSlugs.map(sanitizePathSegment).filter(Boolean);
+  const totals = new Map<string, number>();
+  for (const slug of normalized) {
+    totals.set(slug, 0);
+  }
+
+  const inventory = getInventoryConfig();
+  if (inventory && s3) {
+    try {
+      const inventoryTotals = await sumStorageBytesByOrgFromInventory(inventory, normalized);
+      for (const slug of normalized) {
+        totals.set(slug, inventoryTotals.get(slug) ?? 0);
+      }
+      return totals;
+    } catch {
+      console.warn('⚠️ Inventory scan failed, fallback to ListObjectsV2');
+    }
+  }
+
+  for (const slug of normalized) {
+    const bytes = await sumStorageBytes(`uploads/${slug}/`);
+    totals.set(slug, bytes);
+  }
+
+  return totals;
 }
