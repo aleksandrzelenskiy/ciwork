@@ -39,7 +39,7 @@ export async function GET(
             baseId: baseIdDecoded,
         }).lean();
 
-        if (!report) {
+        if (!report || Array.isArray(report)) {
             return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
         }
 
