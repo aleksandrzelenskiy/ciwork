@@ -38,6 +38,7 @@ import OrgSetDialog, {
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 import OrgWalletCard from '@/app/components/org/OrgWalletCard';
 import OrgWalletTransactionsDialog from '@/app/components/org/OrgWalletTransactionsDialog';
+import OrgStorageUsageCard from '@/app/components/org/OrgStorageUsageCard';
 
 type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
 type MemberStatus = 'active' | 'invited';
@@ -1125,6 +1126,17 @@ export default function OrgSettingsPage() {
                         />
                     </Stack>
                 </Box>
+
+                {org && (
+                    <Box sx={{ mt: { xs: 2.5, md: 3 } }}>
+                        <OrgStorageUsageCard
+                            orgSlug={org}
+                            cardSx={cardBaseSx}
+                            cardHeaderSx={cardHeaderSx}
+                            cardContentSx={cardContentSx}
+                        />
+                    </Box>
+                )}
 
                 {subscriptionError && (
                     <Alert severity="error" sx={{ ...getAlertSx('error'), mb: 2 }}>
