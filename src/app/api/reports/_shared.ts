@@ -257,7 +257,7 @@ export const prepareImageBuffer = async (file: File, overlayContext?: OverlayCon
     if (isHeic) {
         try {
             const converted = await heicConvert({
-                buffer,
+                buffer: buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength),
                 format: 'JPEG',
                 quality: 0.92,
             });
