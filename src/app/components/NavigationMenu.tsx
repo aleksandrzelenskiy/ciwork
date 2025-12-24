@@ -293,7 +293,8 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
 
     const contextUser = userContext?.user as DbUserPayload | undefined;
     const effectiveRole = resolveRoleFromContext(userContext);
-    const isSuperAdminUser = Boolean(userContext?.isSuperAdmin);
+    const isSuperAdminUser =
+        effectiveRole === 'super_admin' || Boolean(userContext?.isSuperAdmin);
     const profileType =
         userContext?.profileType ||
         (contextUser?.profileType as string | undefined) ||
@@ -384,8 +385,8 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
         const items: NavItem[] = [...BASE_NAV_ITEMS];
         if (isSuperAdminUser) {
             items.push({
-                label: 'АДМИНИСТРИРОВАНИЕ',
-                path: '/admin/organizations',
+                label: 'АДМИН',
+                path: '/admin',
                 icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />,
             });
         }

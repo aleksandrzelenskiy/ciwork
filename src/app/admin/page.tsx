@@ -1,0 +1,75 @@
+'use client';
+
+import * as React from 'react';
+import {
+    Box,
+    Tab,
+    Tabs,
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import OrganizationsAdmin from '@/app/components/admin/OrganizationsAdmin';
+import UsersAdmin from '@/app/components/admin/UsersAdmin';
+
+type AdminTab = 'organizations' | 'users';
+
+export default function AdminPage() {
+    const theme = useTheme();
+    const isDarkMode = theme.palette.mode === 'dark';
+    const [tab, setTab] = React.useState<AdminTab>('organizations');
+    const tabBorderColor = isDarkMode ? 'rgba(148,163,184,0.3)' : 'rgba(15,23,42,0.16)';
+    const tabActiveBg = isDarkMode ? 'rgba(14,116,144,0.24)' : 'rgba(14,116,144,0.1)';
+    const tabInactiveColor = isDarkMode ? 'rgba(226,232,240,0.7)' : 'rgba(15,23,42,0.6)';
+
+    return (
+        <Box sx={{ px: { xs: 1, md: 2 }, py: { xs: 2, md: 3 } }}>
+            <Tabs
+                value={tab}
+                onChange={(_, newValue) => setTab(newValue as AdminTab)}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{
+                    mb: 2,
+                    '& .MuiTabs-indicator': {
+                        display: 'none',
+                    },
+                }}
+            >
+                <Tab
+                    value="organizations"
+                    label="ОРГАНИЗАЦИИ"
+                    sx={{
+                        textTransform: 'uppercase',
+                        fontWeight: 600,
+                        borderRadius: '10px',
+                        minHeight: 0,
+                        px: 2.5,
+                        py: 1.2,
+                        mx: 0.5,
+                        color: tab === 'organizations' ? theme.palette.text.primary : tabInactiveColor,
+                        backgroundColor: tab === 'organizations' ? tabActiveBg : 'transparent',
+                        border: `1px solid ${tabBorderColor}`,
+                    }}
+                />
+                <Tab
+                    value="users"
+                    label="ПОЛЬЗОВАТЕЛИ"
+                    sx={{
+                        textTransform: 'uppercase',
+                        fontWeight: 600,
+                        borderRadius: '10px',
+                        minHeight: 0,
+                        px: 2.5,
+                        py: 1.2,
+                        mx: 0.5,
+                        color: tab === 'users' ? theme.palette.text.primary : tabInactiveColor,
+                        backgroundColor: tab === 'users' ? tabActiveBg : 'transparent',
+                        border: `1px solid ${tabBorderColor}`,
+                    }}
+                />
+            </Tabs>
+
+            {tab === 'organizations' && <OrganizationsAdmin />}
+            {tab === 'users' && <UsersAdmin />}
+        </Box>
+    );
+}
