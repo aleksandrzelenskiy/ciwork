@@ -14,11 +14,13 @@ export interface IEvent {
   details?: Record<string, unknown>;
 }
 
+import type { Types } from 'mongoose';
+
 // Серверный формат IReport
 export interface IReport {
   _id: string;
-  orgId: string;
-  projectId?: string;
+  orgId: Types.ObjectId | string;
+  projectId?: Types.ObjectId | string;
   taskId: string;
   baseId: string;
   taskName?: string;
