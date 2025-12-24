@@ -96,7 +96,7 @@ export default function MiniReportsList({
       return reports;
     }
     if (role === 'executor') {
-      return reports.filter((rep) => rep.executorId === clerkUserId);
+      return reports.filter((rep) => rep.createdById === clerkUserId);
     }
     return reports;
   }, [role, clerkUserId, reports]);
@@ -195,11 +195,11 @@ export default function MiniReportsList({
                             fontSize='small'
                             sx={{ color: getStatusColor(status) }}
                           />
-                          {report.task || report.taskId}
+                          {report.taskName || report.taskId}
                         </Box>
                       </TableCell>
 
-                      <TableCell>{report.executorName}</TableCell>
+                      <TableCell>{report.createdByName}</TableCell>
                       <TableCell>
                         {new Date(report.createdAt).toLocaleDateString()}
                       </TableCell>
@@ -251,7 +251,7 @@ export default function MiniReportsList({
               <Box>
                 <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
                   {'View the report on "' +
-                    (selectedReport.task || selectedReport.taskId) +
+                    (selectedReport.taskName || selectedReport.taskId) +
                     '" at the base station:'}
                 </Typography>
               </Box>

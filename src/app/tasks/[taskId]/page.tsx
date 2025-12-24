@@ -29,8 +29,6 @@ import {
     DialogContent,
     DialogTitle,
     Container,
-    Alert,
-    TextField,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -43,7 +41,6 @@ import TocOutlinedIcon from '@mui/icons-material/TocOutlined';
 import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import LinkIcon from '@mui/icons-material/Link';
 import {
     Timeline,
     TimelineConnector,
@@ -105,10 +102,6 @@ export default function TaskDetailPage() {
     const [completeLoading, setCompleteLoading] = React.useState(false);
     const [completeError, setCompleteError] = React.useState<string | null>(null);
     const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false);
-    const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
-    const [reportLinkInput, setReportLinkInput] = React.useState('');
-    const [linkSaving, setLinkSaving] = React.useState(false);
-    const [linkError, setLinkError] = React.useState<string | null>(null);
 
     const handleCompleteClick = React.useCallback(() => {
         setCompleteError(null);
@@ -215,8 +208,7 @@ export default function TaskDetailPage() {
         [task]
     );
 
-    const hasAttachments = attachmentLinks.length > 0;
-    const hasAttachmentBlock = hasAttachments || Boolean(task?.reportLink);
+    const hasAttachmentBlock = attachmentLinks.length > 0;
     const relatedTasks = React.useMemo(
         () => normalizeRelatedTasks(task?.relatedTasks),
         [task?.relatedTasks]
@@ -383,49 +375,6 @@ export default function TaskDetailPage() {
         setUploadDialogOpen(false);
     };
 
-    const handleOpenLinkDialog = () => {
-        setReportLinkInput(task?.reportLink || '');
-        setLinkError(null);
-        setLinkDialogOpen(true);
-    };
-
-    const handleCloseLinkDialog = () => {
-        if (linkSaving) return;
-        setLinkDialogOpen(false);
-        setLinkError(null);
-    };
-
-    const handleSaveReportLink = async () => {
-        if (!taskId) {
-            setLinkError('Не найден идентификатор задачи');
-            return;
-        }
-        setLinkSaving(true);
-        setLinkError(null);
-        try {
-            const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ reportLink: reportLinkInput }),
-            });
-            const data = (await res.json()) as { task?: Task; error?: string };
-            if (!res.ok || !data.task) {
-                setLinkError(data.error || 'Не удалось сохранить ссылку');
-                return;
-            }
-            setTask((prev) => {
-                const updated = data.task as Task;
-                return prev ? { ...prev, ...updated } : updated;
-            });
-            setLinkDialogOpen(false);
-        } catch (e) {
-            setLinkError(e instanceof Error ? e.message : 'Ошибка сохранения');
-        } finally {
-            setLinkSaving(false);
-        }
-    };
 
     const handleCompleteConfirm = React.useCallback(async () => {
         if (!taskId) {
@@ -855,18 +804,6 @@ export default function TaskDetailPage() {
                                         >
                                             Загрузить фото
                                         </Button>
-                                        <Button
-                                            variant="outlined"
-                                            startIcon={<LinkIcon />}
-                                            onClick={handleOpenLinkDialog}
-                                            sx={{
-                                                textTransform: 'none',
-                                                borderRadius: 1.5,
-                                                fontWeight: 700,
-                                            }}
-                                        >
-                                            Добавить ссылку
-                                        </Button>
                                     </Stack>
                                 </Box>
                             )}
@@ -1079,17 +1016,6 @@ export default function TaskDetailPage() {
                                         {extractFileNameFromUrl(url, `Вложение ${idx + 1}`)}
                                     </Link>
                                 ))}
-                                {task.reportLink && (
-                                    <Button
-                                        href={task.reportLink}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        variant="text"
-                                        sx={{ alignSelf: 'flex-start' }}
-                                    >
-                                        Отчет по задаче
-                                    </Button>
-                                )}
                             </Stack>
                         </CardItem>
                     )}
@@ -1224,52 +1150,9 @@ export default function TaskDetailPage() {
                 onClose={handleCloseUploadDialog}
                 taskId={task.taskId || taskId}
                 taskName={task.taskName}
-                initiatorId={task.initiatorId}
-                initiatorName={task.initiatorName}
                 bsLocations={task.bsLocation}
                 onSubmitted={() => void loadTask()}
             />
-
-            <Dialog
-                open={linkDialogOpen}
-                onClose={handleCloseLinkDialog}
-                fullWidth
-                maxWidth="sm"
-            >
-                <DialogTitle sx={{ fontWeight: 700 }}>Добавить ссылку на фотоотчет</DialogTitle>
-                <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <TextField
-                        label="Ссылка"
-                        value={reportLinkInput}
-                        onChange={(e) => setReportLinkInput(e.target.value)}
-                        fullWidth
-                        placeholder="https://..."
-                        autoFocus
-                    />
-                    {linkError && <Alert severity="error">{linkError}</Alert>}
-                    <Typography variant="body2" color="text.secondary">
-                        Укажите ссылку на облачное хранилище с фотоотчетом. Она будет сохранена в поле «Отчет по задаче».
-                    </Typography>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button
-                        onClick={handleCloseLinkDialog}
-                        disabled={linkSaving}
-                        sx={{ textTransform: 'none', borderRadius: 1.5 }}
-                    >
-                        Отмена
-                    </Button>
-                    <Button
-                        variant="contained"
-                        onClick={() => void handleSaveReportLink()}
-                        disabled={linkSaving}
-                        startIcon={linkSaving ? <CircularProgress size={16} /> : <LinkIcon />}
-                        sx={{ textTransform: 'none', borderRadius: 1.5, fontWeight: 700 }}
-                    >
-                        {linkSaving ? 'Сохранение...' : 'Сохранить'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
 
             <Dialog
                 open={completeConfirmOpen}

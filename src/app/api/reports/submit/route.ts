@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const payload = (await req.json().catch(() => null)) as SubmitPayload | null;
 
-    const taskId = payload?.taskId?.trim() || '';
+    const taskId = payload?.taskId?.trim().toUpperCase() || '';
     const baseIds = Array.isArray(payload?.baseIds) ? payload!.baseIds!.filter((id) => id.trim()) : [];
 
     if (!taskId) {
@@ -47,12 +47,8 @@ export async function POST(req: NextRequest) {
     }
 
     const reports = await ReportModel.find({
+        taskId,
         baseId: { $in: baseIds },
-        $or: [
-            { taskId },
-            { reportId: taskId },
-            { task: taskId },
-        ],
     })
         .select('baseId files')
         .lean();

@@ -36,6 +36,8 @@ import OrgSetDialog, {
     defaultOrgSettings,
 } from '@/app/workspace/components/OrgSetDialog';
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
+import OrgWalletCard from '@/app/components/org/OrgWalletCard';
+import OrgWalletTransactionsDialog from '@/app/components/org/OrgWalletTransactionsDialog';
 
 type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
 type MemberStatus = 'active' | 'invited';
@@ -81,6 +83,16 @@ type SubscriptionInfo = {
 
 type GetSubscriptionResponse = { subscription: SubscriptionInfo };
 type PatchSubscriptionResponse = { ok: true; subscription: SubscriptionInfo };
+type OrgWalletInfo = { balance: number; currency: string };
+type OrgWalletTx = {
+    id: string;
+    amount: number;
+    type: string;
+    source: string;
+    balanceAfter: number;
+    createdAt: string;
+    meta?: Record<string, unknown>;
+};
 
 type ApplicationRow = {
     _id: string;
@@ -178,6 +190,13 @@ export default function OrgSettingsPage() {
     const [subscriptionLoading, setSubscriptionLoading] = React.useState(true);
     const [subscriptionError, setSubscriptionError] = React.useState<string | null>(null);
     const [startTrialLoading, setStartTrialLoading] = React.useState(false);
+    const [walletInfo, setWalletInfo] = React.useState<OrgWalletInfo | null>(null);
+    const [walletLoading, setWalletLoading] = React.useState(false);
+    const [walletError, setWalletError] = React.useState<string | null>(null);
+    const [walletDialogOpen, setWalletDialogOpen] = React.useState(false);
+    const [walletTx, setWalletTx] = React.useState<OrgWalletTx[]>([]);
+    const [walletTxLoading, setWalletTxLoading] = React.useState(false);
+    const [walletTxError, setWalletTxError] = React.useState<string | null>(null);
 
     // диалог приглашения
     const [inviteOpen, setInviteOpen] = React.useState(false);
@@ -238,6 +257,51 @@ export default function OrgSettingsPage() {
         setProjectDialogOpen(false);
         setProjectToEdit(null);
     };
+
+    const fetchWalletInfo = React.useCallback(async () => {
+        if (!org) return;
+        try {
+            setWalletLoading(true);
+            setWalletError(null);
+            const res = await fetch(`/api/org/${encodeURIComponent(org)}/wallet`, { cache: 'no-store' });
+            const data = (await res.json().catch(() => null)) as
+                | { wallet?: OrgWalletInfo; error?: string }
+                | null;
+            if (!res.ok || !data?.wallet) {
+                setWalletError(data?.error || 'Не удалось загрузить баланс');
+                return;
+            }
+            setWalletInfo(data.wallet);
+        } catch (err) {
+            setWalletError(err instanceof Error ? err.message : 'Не удалось загрузить баланс');
+        } finally {
+            setWalletLoading(false);
+        }
+    }, [org]);
+
+    const fetchWalletTransactions = React.useCallback(async () => {
+        if (!org) return;
+        try {
+            setWalletTxLoading(true);
+            setWalletTxError(null);
+            const res = await fetch(
+                `/api/org/${encodeURIComponent(org)}/wallet/transactions`,
+                { cache: 'no-store' }
+            );
+            const data = (await res.json().catch(() => null)) as
+                | { transactions?: OrgWalletTx[]; error?: string }
+                | null;
+            if (!res.ok || !Array.isArray(data?.transactions)) {
+                setWalletTxError(data?.error || 'Не удалось загрузить операции');
+                return;
+            }
+            setWalletTx(data.transactions);
+        } catch (err) {
+            setWalletTxError(err instanceof Error ? err.message : 'Не удалось загрузить операции');
+        } finally {
+            setWalletTxLoading(false);
+        }
+    }, [org]);
 
     const handleProjectDialogSubmit = async (values: ProjectDialogValues) => {
         if (!org) return;
@@ -508,14 +572,16 @@ export default function OrgSettingsPage() {
             void fetchOrgSettings();
             void loadSubscription();
             void fetchApplications();
+            void fetchWalletInfo();
         }
-    }, [canManage, fetchMembers, fetchProjects, fetchOrgSettings, loadSubscription, fetchApplications]);
+    }, [canManage, fetchMembers, fetchProjects, fetchOrgSettings, loadSubscription, fetchApplications, fetchWalletInfo]);
 
     const handleRefreshClick = () => {
         void fetchMembers();
         void fetchProjects();
         void loadSubscription();
         void fetchApplications();
+        void fetchWalletInfo();
     };
 
     // удаление участника
@@ -1048,12 +1114,27 @@ export default function OrgSettingsPage() {
                                 Организация {orgName || org}
                             </Typography>
                         </Box>
+                        <OrgWalletCard
+                            balance={walletInfo?.balance ?? 0}
+                            currency={walletInfo?.currency ?? 'RUB'}
+                            loading={walletLoading}
+                            onOpen={() => {
+                                setWalletDialogOpen(true);
+                                void fetchWalletTransactions();
+                            }}
+                        />
                     </Stack>
                 </Box>
 
                 {subscriptionError && (
                     <Alert severity="error" sx={{ ...getAlertSx('error'), mb: 2 }}>
                         Не удалось получить статус подписки: {subscriptionError}
+                    </Alert>
+                )}
+
+                {walletError && (
+                    <Alert severity="warning" sx={{ ...getAlertSx('warning'), mb: 2 }}>
+                        Не удалось загрузить баланс: {walletError}
                     </Alert>
                 )}
 
@@ -1854,6 +1935,14 @@ export default function OrgSettingsPage() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <OrgWalletTransactionsDialog
+                open={walletDialogOpen}
+                onClose={() => setWalletDialogOpen(false)}
+                loading={walletTxLoading}
+                error={walletTxError}
+                transactions={walletTx}
+            />
 
             <OrgSetDialog
                 open={orgSettingsOpen}

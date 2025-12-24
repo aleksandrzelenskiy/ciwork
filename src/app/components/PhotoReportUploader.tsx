@@ -52,8 +52,6 @@ type PhotoReportUploaderProps = {
     onClose: () => void;
     taskId: string;
     taskName?: string | null;
-    initiatorId?: string | null;
-    initiatorName?: string | null;
     bsLocations?: BaseLocation[];
     onSubmitted?: () => void;
 };
@@ -74,8 +72,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         onClose,
         taskId,
         taskName,
-        initiatorId,
-        initiatorName,
         bsLocations = [],
         onSubmitted,
     } = props;
@@ -241,12 +237,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
 
         const formData = new FormData();
         formData.append('baseId', activeBase);
-        formData.append('task', taskId);
         formData.append('taskId', taskId);
-        if (initiatorId) formData.append('initiatorId', initiatorId);
-        if (initiatorName) formData.append('initiatorName', initiatorName);
         targets.forEach((item) => {
-            formData.append('image[]', item.file);
+            formData.append('files', item.file);
         });
 
         let uploadOk = false;
@@ -290,7 +283,13 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 if (!success) {
                     const responseError = (() => {
                         try {
-                            const payload = JSON.parse(xhr.responseText || '{}') as { error?: string };
+                            const payload = JSON.parse(xhr.responseText || '{}') as {
+                                error?: string;
+                                readOnly?: boolean;
+                            };
+                            if (payload.readOnly) {
+                                return payload.error || 'Хранилище доступно только для чтения';
+                            }
                             return payload.error;
                         } catch {
                             return undefined;
@@ -327,7 +326,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 resolve();
             };
 
-            xhr.open('POST', '/api/upload', true);
+            xhr.open('POST', '/api/reports/upload', true);
             xhr.send(formData);
         });
 
@@ -401,8 +400,8 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     };
 
     const reportFolder = activeBase
-        ? `${taskId}-reports/${activeBase}`
-        : `${taskId}-reports`;
+        ? `${taskId}/${taskId}-reports/${activeBase}`
+        : `${taskId}/${taskId}-reports`;
 
     return (
         <Dialog

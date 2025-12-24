@@ -27,7 +27,7 @@ const ReportsStatistics = async ({
 
   // 2) Фильтр в зависимости от роли
   const matchCondition: Record<string, string> =
-    role === 'executor' ? { executorId: clerkUserId } : {};
+    role === 'executor' ? { createdById: clerkUserId } : {};
 
   // 3) Агрегация за всё время
   const reportsAggregation = await ReportModel.aggregate([

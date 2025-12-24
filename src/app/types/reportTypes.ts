@@ -17,35 +17,31 @@ export interface IEvent {
 // Серверный формат IReport
 export interface IReport {
   _id: string;
+  orgId: string;
+  projectId?: string;
   taskId: string;
-  task?: string;
-  reportId?: string;
   baseId: string;
+  taskName?: string;
   files: string[];
   fixedFiles: string[];
   issues: string[];
+  storageBytes?: number;
   status: string;
   createdAt: Date;
-  executorId: string;
-  executorName: string;
-  initiatorId: string;
-  initiatorName: string;
+  updatedAt?: Date;
+  createdById: string;
+  createdByName: string;
+  initiatorId?: string;
+  initiatorName?: string;
   events: IEvent[];
 }
 
 export interface ReportClient {
   taskId: string;
-  task?: string;
-  reportId?: string;
-  authorId?: string;
-  executorId?: string;
-  executorName?: string;
-  initiatorId?: string;
+  taskName?: string;
+  createdById?: string;
+  createdByName?: string;
   initiatorName?: string;
-  reviewerName?: string;
-  userId?: string;
-  userName?: string;
-  userAvatar?: string;
   createdAt: string;
   baseStatuses: BaseStatus[];
 }

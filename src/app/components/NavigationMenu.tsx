@@ -17,7 +17,7 @@ import { useTheme } from '@mui/material/styles';
 import { usePathname } from 'next/navigation';
 import HomeIcon from '@mui/icons-material/Home';
 import TaskIcon from '@mui/icons-material/Task';
-// import PermMediaIcon from '@mui/icons-material/PermMedia';
+import PermMediaIcon from '@mui/icons-material/PermMedia';
 import PlaceIcon from '@mui/icons-material/Place';
 import LogoutIcon from '@mui/icons-material/Logout';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -406,6 +406,11 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                     children: projectsChildren,
                 });
             }
+            items.push({
+                label: 'ФОТООТЧЕТЫ',
+                path: '/reports',
+                icon: <PermMediaIcon sx={{ fontSize: 20 }} />,
+            });
             items.push({
                 label: 'ГЕОЛОКАЦИИ',
                 path: locationsPath,

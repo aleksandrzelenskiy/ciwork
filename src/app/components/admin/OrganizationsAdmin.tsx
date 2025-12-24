@@ -23,6 +23,7 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    TextField,
     Typography,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -42,6 +43,8 @@ type OrganizationRow = {
     publicTasksLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
+    walletBalance?: number;
+    walletCurrency?: string;
     periodStart?: string | null;
     periodEnd?: string | null;
     note?: string;
@@ -110,6 +113,7 @@ export default function OrganizationsAdmin() {
     const [selectedOrg, setSelectedOrg] = React.useState<OrganizationRow | null>(null);
     const [selectedPlan, setSelectedPlan] = React.useState<Plan>('basic');
     const [selectedStatus, setSelectedStatus] = React.useState<SubStatus>('inactive');
+    const [walletBalanceInput, setWalletBalanceInput] = React.useState('0');
     const [dialogError, setDialogError] = React.useState<string | null>(null);
     const [saving, setSaving] = React.useState(false);
 
@@ -146,6 +150,9 @@ export default function OrganizationsAdmin() {
         setSelectedOrg(org);
         setSelectedPlan(org.plan);
         setSelectedStatus(org.status);
+        setWalletBalanceInput(
+            typeof org.walletBalance === 'number' ? String(org.walletBalance) : '0'
+        );
         setDialogError(null);
     };
 
@@ -160,6 +167,26 @@ export default function OrganizationsAdmin() {
         setSaving(true);
         setDialogError(null);
         try {
+            const nextWalletBalance = Number(walletBalanceInput);
+            if (Number.isFinite(nextWalletBalance)) {
+                const walletRes = await fetch(
+                    `/api/admin/organizations/${encodeURIComponent(selectedOrg.orgSlug)}/wallet`,
+                    {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ balance: nextWalletBalance }),
+                    }
+                );
+                if (!walletRes.ok) {
+                    const walletPayload = (await walletRes.json().catch(() => null)) as
+                        | { error?: string }
+                        | null;
+                    const message = walletPayload?.error || 'Не удалось обновить баланс';
+                    setDialogError(message);
+                    setSaving(false);
+                    return;
+                }
+            }
             const response = await fetch(
                 `/api/admin/organizations/${encodeURIComponent(selectedOrg.orgSlug)}/subscription`,
                 {
@@ -196,6 +223,7 @@ export default function OrganizationsAdmin() {
                               periodStart: payload.subscription.periodStart,
                               periodEnd: payload.subscription.periodEnd,
                               updatedAt: payload.subscription.updatedAt,
+                              walletBalance: Number(walletBalanceInput),
                           }
                         : item
                 )
@@ -270,6 +298,7 @@ export default function OrganizationsAdmin() {
                                 <TableCell>Тариф</TableCell>
                                 <TableCell>Статус</TableCell>
                                 <TableCell>Лимиты</TableCell>
+                                <TableCell>Баланс</TableCell>
                                 <TableCell>Последнее обновление</TableCell>
                                 <TableCell align="right">Действия</TableCell>
                             </TableRow>
@@ -277,7 +306,7 @@ export default function OrganizationsAdmin() {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center">
+                                    <TableCell colSpan={8} align="center">
                                         <Stack
                                             direction="row"
                                             spacing={1}
@@ -291,7 +320,7 @@ export default function OrganizationsAdmin() {
                                 </TableRow>
                             ) : organizations.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center">
+                                    <TableCell colSpan={8} align="center">
                                         Нет зарегистрированных организаций
                                     </TableCell>
                                 </TableRow>
@@ -311,11 +340,6 @@ export default function OrganizationsAdmin() {
                                         </TableCell>
                                         <TableCell>
                                             <Typography fontWeight={600}>{org.plan.toUpperCase()}</Typography>
-                                            {typeof org.storageLimitGb === 'number' && (
-                                                <Typography variant="caption" color="text.secondary">
-                                                    {org.storageLimitGb} ГБ хранилища
-                                                </Typography>
-                                            )}
                                         </TableCell>
                                         <TableCell>{statusChip(org.status)}</TableCell>
                                         <TableCell>
@@ -330,6 +354,11 @@ export default function OrganizationsAdmin() {
                                                     Публикации: {org.publicTasksLimit ?? '—'}
                                                 </Typography>
                                             </Stack>
+                                        </TableCell>
+                                        <TableCell>
+                                            {Number.isFinite(org.walletBalance)
+                                                ? `${org.walletBalance} ${org.walletCurrency || 'RUB'}`
+                                                : '—'}
                                         </TableCell>
                                         <TableCell>
                                             {formatDate(org.updatedAt)}
@@ -393,6 +422,14 @@ export default function OrganizationsAdmin() {
                                     ))}
                                 </Select>
                             </FormControl>
+                            <TextField
+                                label="Баланс (RUB)"
+                                type="number"
+                                value={walletBalanceInput}
+                                onChange={(event) => setWalletBalanceInput(event.target.value)}
+                                size="small"
+                                inputProps={{ min: 0, step: 1 }}
+                            />
                             {dialogError && <Alert severity="error">{dialogError}</Alert>}
                         </Stack>
                     ) : null}

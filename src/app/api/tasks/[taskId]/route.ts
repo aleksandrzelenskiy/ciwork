@@ -38,7 +38,6 @@ interface UpdateData {
   orderUrl?: string;
   ncwUrl?: string;
   workCompletionDate?: string; // ISO
-  reportLink?: string;
   event?: { details?: { comment?: string } };
   existingAttachments?: string[];
   decision?: string; // 'accept' | 'reject'
@@ -131,12 +130,7 @@ export async function GET(
       select: 'taskId taskName bsNumber status priority',
     });
 
-    const photoReports = await Report.find({
-      $or: [
-        { taskId: { $regex: `^${taskIdUpper}` } },
-        { reportId: { $regex: `^${taskIdUpper}` } },
-      ],
-    });
+    const photoReports = await Report.find({ taskId: taskIdUpper });
 
     const baseTask = task.toObject();
     const { attachments } = splitAttachmentsAndDocuments(
@@ -656,32 +650,6 @@ export async function PATCH(
     if (updateData.workCompletionDate) {
       const d = new Date(updateData.workCompletionDate);
       if (!isNaN(d.getTime())) task.workCompletionDate = d;
-    }
-
-    // === внешняя ссылка на отчёт ===
-    if (updateData.reportLink !== undefined) {
-      const v = (updateData.reportLink ?? '').trim();
-
-      if (v) {
-        task.reportLink = v;
-
-        if (task.status !== 'Pending') {
-          task.events.push({
-            action: 'STATUS_CHANGED',
-            author: authorName,
-            authorId: user.id,
-            date: new Date(),
-            details: {
-              oldStatus: task.status,
-              newStatus: 'Pending',
-              comment: 'Status changed after adding the photo report link',
-            },
-          });
-          task.status = 'Pending';
-        }
-      } else {
-        task.reportLink = '';
-      }
     }
 
     // === Excel при Agreed ===

@@ -16,23 +16,26 @@ const EventSchema = new Schema<IEvent>(
 
 // Main report schema
 const ReportSchema = new Schema<IReport>({
-  taskId: { type: String, required: true },
-  task: { type: String, default: '' },
-  reportId: { type: String }, // legacy field
-  baseId: { type: String, required: true },
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+  taskId: { type: String, required: true, index: true },
+  baseId: { type: String, required: true, index: true },
+  taskName: { type: String, default: '' },
   files: { type: [String], default: [] },
   fixedFiles: { type: [String], default: [] },
   issues: { type: [String], default: [] },
+  storageBytes: { type: Number, default: 0 },
   status: { type: String, default: 'Pending' },
-  createdAt: { type: Date, default: Date.now },
-  executorId: { type: String, required: true },
-  executorName: { type: String, default: 'Unknown' },
-  initiatorId: { type: String, required: true },
+  createdById: { type: String, required: true },
+  createdByName: { type: String, default: 'Unknown' },
+  initiatorId: { type: String },
   initiatorName: { type: String, default: 'initiator' },
   events: { type: [EventSchema], default: [] },
-});
+}, { timestamps: true });
 
 // If the model already exists, use it; otherwise, create a new one.
+ReportSchema.index({ taskId: 1, baseId: 1 }, { unique: true });
+
 const ReportModel =
   mongoose.models.Report || mongoose.model<IReport>('Report', ReportSchema);
 

@@ -118,7 +118,6 @@ const TaskSchema = new Schema<Task & Document>({
   orderSignDate: { type: Date },
   ncwUrl: { type: String, required: false, default: '' },        // ссылка на PDF в S3
   workCompletionDate: { type: Date, required: false },           // дата окончания работ (= дата уведомления)
-  reportLink: { type: String }, // ссылка на внешний архив/папку с отчётом
   closingDocumentsUrl: { type: String },
 
   // История событий

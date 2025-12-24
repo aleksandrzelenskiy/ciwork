@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/utils/mongoose';
 import Organization from '@/app/models/OrganizationModel';
 import Subscription from '@/app/models/SubscriptionModel';
+import OrgWalletModel from '@/app/models/OrgWalletModel';
 import { GetUserContext } from '@/server-actions/user-context';
 
 export const runtime = 'nodejs';
@@ -23,6 +24,8 @@ type AdminOrganizationDTO = {
     publicTasksLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
+    walletBalance?: number;
+    walletCurrency?: string;
     periodStart?: string | null;
     periodEnd?: string | null;
     note?: string;
@@ -56,15 +59,23 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
     }).lean();
     const orgIds = organizations.map((org) => org._id);
     const subscriptions = await Subscription.find({ orgId: { $in: orgIds } }).lean();
+    const wallets = await OrgWalletModel.find({ orgId: { $in: orgIds } }).lean();
     const subscriptionMap = new Map<string, typeof subscriptions[number]>();
     subscriptions.forEach((subscription) => {
         if (subscription.orgId) {
             subscriptionMap.set(String(subscription.orgId), subscription);
         }
     });
+    const walletMap = new Map<string, typeof wallets[number]>();
+    wallets.forEach((wallet) => {
+        if (wallet.orgId) {
+            walletMap.set(String(wallet.orgId), wallet);
+        }
+    });
 
     const result: AdminOrganizationDTO[] = organizations.map((org) => {
         const subscription = subscriptionMap.get(String(org._id));
+        const wallet = walletMap.get(String(org._id));
         return {
             orgId: String(org._id),
             name: org.name,
@@ -77,6 +88,8 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             publicTasksLimit: subscription?.publicTasksLimit,
             boostCredits: subscription?.boostCredits,
             storageLimitGb: subscription?.storageLimitGb,
+            walletBalance: wallet?.balance ?? 0,
+            walletCurrency: wallet?.currency ?? 'RUB',
             periodStart: toISOStringOrNull(subscription?.periodStart ?? null),
             periodEnd: toISOStringOrNull(subscription?.periodEnd ?? null),
             note: subscription?.note,

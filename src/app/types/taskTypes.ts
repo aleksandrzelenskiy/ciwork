@@ -53,11 +53,10 @@ export interface TaskEvent {
 export interface PhotoReport {
   _id: string;
   taskId: string;
-  reportId?: string;
   baseId: string;
   status: string;
   createdAt: Date;
-  task?: string;
+  taskName?: string;
   files: string[];
   fixedFiles: string[];
 }
@@ -142,7 +141,6 @@ export interface Task {
   orderSignDate?: Date;
   ncwUrl?: string;
   workCompletionDate?:  Date | string;
-  reportLink?: string;
   closingDocumentsUrl?: string;
 
   objectDetails: {

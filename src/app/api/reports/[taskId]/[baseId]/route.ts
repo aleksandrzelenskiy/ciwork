@@ -13,6 +13,7 @@ import {
   deleteTaskFile,
   storageKeyFromPublicUrl,
 } from '@/utils/s3';
+import { adjustStorageBytes } from '@/utils/storageUsage';
 
 /**
  * GET обработчик для получения информации о конкретном отчёте.
@@ -26,7 +27,7 @@ export async function GET(
     await dbConnect();
 
     const { taskId, baseId } = await params;
-    const taskIdDecoded = decodeURIComponent(taskId);
+    const taskIdDecoded = decodeURIComponent(taskId).toUpperCase();
     const baseIdDecoded = decodeURIComponent(baseId);
 
     if (!taskIdDecoded || !baseIdDecoded) {
@@ -49,11 +50,7 @@ export async function GET(
 
     const report = await ReportModel.findOne({
       baseId: baseIdDecoded,
-      $or: [
-        { taskId: taskIdDecoded },
-        { reportId: taskIdDecoded },
-        { task: taskIdDecoded },
-      ],
+      taskId: taskIdDecoded,
     });
 
     if (!report) {
@@ -68,11 +65,12 @@ export async function GET(
         );
 
     return NextResponse.json({
-      taskId: report.taskId || report.reportId || taskIdDecoded,
+      taskId: report.taskId,
+      taskName: report.taskName,
       files: report.files,
       createdAt: report.createdAt,
-      executorName: report.executorName,
-      reviewerName: report.reviewerName,
+      executorName: report.createdByName,
+      reviewerName: report.initiatorName,
       status: report.status,
       issues: report.issues || [],
       fixedFiles: report.fixedFiles || [],
@@ -99,7 +97,7 @@ export async function PATCH(
     await dbConnect();
 
     const { taskId, baseId } = await params;
-    const taskIdDecoded = decodeURIComponent(taskId);
+    const taskIdDecoded = decodeURIComponent(taskId).toUpperCase();
     const baseIdDecoded = decodeURIComponent(baseId);
 
     if (!taskIdDecoded || !baseIdDecoded) {
@@ -122,28 +120,18 @@ export async function PATCH(
     const body: {
       status?: string;
       issues?: string[];
-      updateIssue?: { index: number; text: string };
-      deleteIssueIndex?: number;
     } = await request.json();
 
-    const { status, issues, updateIssue, deleteIssueIndex } = body;
+    const { status, issues } = body;
 
     // Находим отчёт
     const report = await ReportModel.findOne({
       baseId: baseIdDecoded,
-      $or: [
-        { taskId: taskIdDecoded },
-        { reportId: taskIdDecoded },
-        { task: taskIdDecoded },
-      ],
+      taskId: taskIdDecoded,
     });
 
     if (!report) {
       return NextResponse.json({ error: 'Отчёт не найден' }, { status: 404 });
-    }
-
-    if (!report.taskId) {
-      report.taskId = report.reportId || report.task || taskIdDecoded;
     }
 
     const oldStatus = report.status;
@@ -177,39 +165,6 @@ export async function PATCH(
       if (addedIssues.length > 0 || removedIssues.length > 0) {
         issuesChanged = true;
         report.issues = Array.from(newIssuesSet);
-      }
-    }
-
-    if (updateIssue) {
-      const { index, text } = updateIssue;
-      if (
-          index >= 0 &&
-          Array.isArray(report.issues) &&
-          index < report.issues.length
-      ) {
-        report.issues[index] = text;
-        issuesChanged = true;
-      } else {
-        return NextResponse.json(
-            { error: 'Неверный индекс для обновления issue' },
-            { status: 400 }
-        );
-      }
-    }
-
-    if (typeof deleteIssueIndex === 'number') {
-      if (
-          deleteIssueIndex >= 0 &&
-          Array.isArray(report.issues) &&
-          deleteIssueIndex < report.issues.length
-      ) {
-        report.issues.splice(deleteIssueIndex, 1);
-        issuesChanged = true;
-      } else {
-        return NextResponse.json(
-            { error: 'Неверный индекс для удаления issue' },
-            { status: 400 }
-        );
       }
     }
 
@@ -274,7 +229,7 @@ export async function DELETE(
     await dbConnect();
 
     const { taskId, baseId } = await params;
-    const taskIdDecoded = decodeURIComponent(taskId);
+    const taskIdDecoded = decodeURIComponent(taskId).toUpperCase();
     const baseIdDecoded = decodeURIComponent(baseId);
 
     if (!taskIdDecoded || !baseIdDecoded) {
@@ -304,11 +259,7 @@ export async function DELETE(
 
     const report = await ReportModel.findOne({
       baseId: baseIdDecoded,
-      $or: [
-        { taskId: taskIdDecoded },
-        { reportId: taskIdDecoded },
-        { task: taskIdDecoded },
-      ],
+      taskId: taskIdDecoded,
     });
 
     if (!report) {
@@ -385,6 +336,10 @@ export async function DELETE(
       ...Array.from(prefixSet).map((prefix) => deleteStoragePrefix(prefix)),
       ...fallbackDeletes,
     ]);
+
+    if (report.storageBytes && report.orgId) {
+      await adjustStorageBytes(report.orgId.toString(), -Math.abs(report.storageBytes));
+    }
 
     await ReportModel.deleteOne({ _id: report._id });
 

@@ -5,7 +5,6 @@ import dbConnect from '@/utils/mongoose';
 import Report from '@/app/models/ReportModel';
 import { GetUserContext } from '@/server-actions/user-context';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
-import type { PipelineStage } from 'mongoose';
 
 export async function GET() {
   try {
@@ -39,90 +38,68 @@ export async function GET() {
   const clerkUserId = user.clerkUserId;
   const userRole = effectiveOrgRole || activeMembership?.role || null;
 
-  const pipeline: PipelineStage[] = [];
-
-  if (!isSuperAdmin && userRole === 'executor') {
-    pipeline.push({ $match: { executorId: clerkUserId } });
+  const query: Record<string, unknown> = {};
+  const activeOrgId =
+      userContext.data.activeOrgId ||
+      userContext.data.activeMembership?.orgId ||
+      null;
+  if (activeOrgId) {
+    query.orgId = activeOrgId;
   }
-
-  pipeline.push(
-    { $unwind: '$events' },
-    {
-      $group: {
-        _id: '$_id',
-        taskId: {
-          $first: {
-            $ifNull: ['$taskId', { $ifNull: ['$reportId', '$task'] }],
-          },
-        },
-        status: { $last: '$status' },
-        latestStatusChangeDate: { $max: '$events.date' },
-        executorId: { $first: '$executorId' },
-        executorName: { $first: '$executorName' },
-        executorAvatar: { $first: '$executorAvatar' },
-        initiatorId: { $first: '$initiatorId' },
-        initiatorName: { $first: '$initiatorName' },
-        createdAt: { $first: '$createdAt' },
-        task: { $first: '$task' },
-        baseId: { $first: '$baseId' },
-      },
-    },
-    {
-      $group: {
-        _id: '$taskId',
-        taskId: { $first: '$taskId' },
-        task: { $first: '$task' },
-        executorId: { $first: '$executorId' },
-        executorName: { $first: '$executorName' },
-        executorAvatar: { $first: '$executorAvatar' },
-        initiatorId: { $first: '$initiatorId' },
-        initiatorName: { $first: '$initiatorName' },
-        createdAt: { $first: '$createdAt' },
-        baseStatuses: {
-          $push: {
-            baseId: '$baseId',
-            status: '$status',
-            latestStatusChangeDate: '$latestStatusChangeDate',
-          },
-        },
-      },
-    },
-    { $sort: { createdAt: -1 } }
-  );
+  if (!isSuperAdmin && userRole === 'executor') {
+    query.createdById = clerkUserId;
+  }
 
   let rawReports;
   try {
-    rawReports = await Report.aggregate(pipeline);
+    rawReports = await Report.find(query).lean();
   } catch (error: unknown) {
-    console.error('Error during aggregation:', error);
+    console.error('Error during report fetch:', error);
     return NextResponse.json(
       { error: 'Failed to fetch reports' },
       { status: 500 }
     );
   }
 
-  const reports = rawReports.map((report) => ({
-    _id: report._id,
-    taskId: report.taskId || report.reportId || report.task,
-    task: report.task,
-    executorId: report.executorId,
-    executorName: report.executorName,
-    executorAvatar: report.executorAvatar || '',
-    initiatorId: report.initiatorId || 'Unknown',
-    initiatorName: report.initiatorName || 'Unknown',
-    createdAt: report.createdAt,
-    baseStatuses: report.baseStatuses.map(
-      (bs: {
-        baseId: unknown;
-        status: unknown;
-        latestStatusChangeDate: unknown;
-      }) => ({
-        baseId: bs.baseId,
-        status: bs.status,
-        latestStatusChangeDate: bs.latestStatusChangeDate,
-      })
-    ),
-  }));
+  const taskMap = new Map<string, {
+    taskId: string;
+    taskName?: string;
+    createdById?: string;
+    createdByName?: string;
+    initiatorName?: string;
+    createdAt: Date;
+    baseStatuses: Array<{ baseId: string; status: string; latestStatusChangeDate: Date }>;
+  }>();
+
+  rawReports.forEach((report) => {
+    const taskId = report.taskId;
+    const createdAt = report.createdAt ?? new Date();
+    const latestEventDate = Array.isArray(report.events) && report.events.length > 0
+      ? report.events.reduce((latest: Date, evt: { date: Date }) => {
+          const eventDate = evt?.date ? new Date(evt.date) : latest;
+          return eventDate > latest ? eventDate : latest;
+        }, createdAt)
+      : createdAt;
+    const entry = taskMap.get(taskId) ?? {
+      taskId,
+      taskName: report.taskName,
+      createdById: report.createdById,
+      createdByName: report.createdByName,
+      initiatorName: report.initiatorName,
+      createdAt,
+      baseStatuses: [],
+    };
+    entry.baseStatuses.push({
+      baseId: report.baseId,
+      status: report.status,
+      latestStatusChangeDate: latestEventDate,
+    });
+    taskMap.set(taskId, entry);
+  });
+
+  const reports = Array.from(taskMap.values()).sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+  );
 
   return NextResponse.json({
     reports,
