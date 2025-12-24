@@ -61,15 +61,22 @@ export async function GET() {
     );
   }
 
-  const taskMap = new Map<string, {
+  type BaseStatus = {
+    baseId: string;
+    status: string;
+    latestStatusChangeDate: Date;
+  };
+  type TaskEntry = {
     taskId: string;
     taskName?: string;
     createdById?: string;
     createdByName?: string;
     initiatorName?: string;
     createdAt: Date;
-    baseStatuses: Array<{ baseId: string; status: string; latestStatusChangeDate: Date }>;
-  }>();
+    baseStatuses: BaseStatus[];
+  };
+
+  const taskMap = new Map<string, TaskEntry>();
 
   rawReports.forEach((report) => {
     const taskId = report.taskId;
@@ -87,7 +94,7 @@ export async function GET() {
       createdByName: report.createdByName,
       initiatorName: report.initiatorName,
       createdAt,
-      baseStatuses: [],
+      baseStatuses: [] as BaseStatus[],
     };
     entry.baseStatuses.push({
       baseId: report.baseId,
