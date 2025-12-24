@@ -5,6 +5,7 @@ import Organization from '@/app/models/OrganizationModel';
 import OrgWalletModel from '@/app/models/OrgWalletModel';
 import OrgWalletTransactionModel from '@/app/models/OrgWalletTransactionModel';
 import { ensureOrgWallet } from '@/utils/orgWallet';
+import { Types } from 'mongoose';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,7 +35,7 @@ export async function PATCH(
     }
 
     await dbConnect();
-    const organization = await Organization.findOne({ orgSlug }).lean();
+    const organization = await Organization.findOne({ orgSlug }).lean<{ _id: Types.ObjectId }>();
     if (!organization) {
         return NextResponse.json({ error: 'Организация не найдена' }, { status: 404 });
     }
