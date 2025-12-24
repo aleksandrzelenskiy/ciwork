@@ -6,6 +6,8 @@ const nextConfig = {
       // ставим с запасом: 100 мегабайт
       bodySizeLimit: '100mb',
     },
+    // allow larger multipart/form-data uploads for app routes
+    middlewareClientMaxBodySize: '100mb',
   },
 };
 
