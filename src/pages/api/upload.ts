@@ -3,6 +3,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAuth } from '@clerk/nextjs/server';
 import TaskModel from '@/app/models/TaskModel';
+import UserModel from '@/app/models/UserModel';
 import dbConnect from '@/utils/mongoose';
 import { uploadBuffer, deleteTaskFile, buildTaskFileKey, TaskFileSubfolder } from '@/utils/s3';
 import Busboy from 'busboy';
@@ -151,7 +152,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         try {
             await dbConnect();
 
-            const user = await User.findOne({ clerkUserId: userId }).lean().exec();
+            const user = await UserModel.findOne({ clerkUserId: userId }).lean().exec();
             if (!user) {
                 console.warn(
                     '[upload attachments] user not found in database, but continuing upload for task attachments'
