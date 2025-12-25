@@ -5,9 +5,17 @@ type ReportIssuesPanelProps = {
     issues: string[];
     canEdit: boolean;
     onSave: (issues: string[]) => Promise<void>;
+    canUploadFix?: boolean;
+    onUploadFix?: () => void;
 };
 
-export default function ReportIssuesPanel({ issues, canEdit, onSave }: ReportIssuesPanelProps) {
+export default function ReportIssuesPanel({
+    issues,
+    canEdit,
+    onSave,
+    canUploadFix,
+    onUploadFix,
+}: ReportIssuesPanelProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState<string[]>(issues.length ? issues : ['']);
     const [saving, setSaving] = useState(false);
@@ -54,15 +62,22 @@ export default function ReportIssuesPanel({ issues, canEdit, onSave }: ReportIss
                 background: 'rgba(255,255,255,0.9)',
             }}
         >
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
                 <Typography variant="subtitle1" fontWeight={600}>
                     Замечания
                 </Typography>
-                {canEdit && !editing && (
-                    <Button size="small" variant="text" onClick={handleStartEdit}>
-                        {issues.length ? 'Редактировать' : 'Добавить'}
-                    </Button>
-                )}
+                <Stack direction="row" spacing={1} alignItems="center">
+                    {canUploadFix && !editing && issues.length > 0 && (
+                        <Button size="small" variant="contained" onClick={onUploadFix}>
+                            Загрузить исправления
+                        </Button>
+                    )}
+                    {canEdit && !editing && (
+                        <Button size="small" variant="text" onClick={handleStartEdit}>
+                            {issues.length ? 'Редактировать' : 'Добавить'}
+                        </Button>
+                    )}
+                </Stack>
             </Stack>
 
             {!editing && (

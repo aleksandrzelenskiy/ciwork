@@ -251,6 +251,8 @@ export default function PhotoReportPage() {
                             issues={report.issues || []}
                             canEdit={canEditIssues}
                             onSave={handleSaveIssues}
+                            canUploadFix={canUploadFix}
+                            onUploadFix={() => setFixDialogOpen(true)}
                         />
                         <Box
                             sx={{

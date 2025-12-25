@@ -6,6 +6,8 @@ import ReportModel from '@/app/models/ReportModel';
 import TaskModel from '@/app/models/TaskModel';
 import ProjectModel from '@/app/models/ProjectModel';
 import ReportDeletionLog from '@/app/models/ReportDeletionLog';
+import UserModel from '@/app/models/UserModel';
+import { createNotification } from '@/app/utils/notificationService';
 import { currentUser } from '@clerk/nextjs/server';
 import { GetUserContext } from '@/server-actions/user-context';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
@@ -152,6 +154,7 @@ export async function PATCH(
 
     let actorName = '';
     let actorId = '';
+    let actorEmail: string | undefined;
     const allowedGuestStatuses = new Set(['Agreed', 'Issues', 'Pending']);
     if (guestAccess) {
       const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
@@ -176,6 +179,7 @@ export async function PATCH(
       }
       actorName = taskRecord?.initiatorName?.trim() || guestAccess.email;
       actorId = `guest:${guestAccess.email}`;
+      actorEmail = guestAccess.email;
     } else {
       const user = await currentUser();
       if (!user) {
@@ -186,6 +190,7 @@ export async function PATCH(
       }
       actorName = `${user.firstName || 'Unknown'} ${user.lastName || ''}`.trim();
       actorId = user.id;
+      actorEmail = user.emailAddresses?.[0]?.emailAddress;
     }
 
     const oldStatus = report.status;
@@ -260,6 +265,72 @@ export async function PATCH(
       });
 
       await relatedTask.save();
+    }
+
+    const statusChanged = Boolean(status && status !== oldStatus);
+    const hasIssuesNow = Array.isArray(report.issues) && report.issues.length > 0;
+    const shouldNotifyAgreed = statusChanged && report.status === 'Agreed';
+    const shouldNotifyIssues =
+        !shouldNotifyAgreed &&
+        ((statusChanged && report.status === 'Issues') || (issuesChanged && hasIssuesNow));
+
+    if ((shouldNotifyIssues || shouldNotifyAgreed) && relatedTask) {
+      const recipientClerkIds = new Set<string>();
+      if (typeof relatedTask.authorId === 'string' && relatedTask.authorId.trim()) {
+        recipientClerkIds.add(relatedTask.authorId.trim());
+      }
+      if (typeof relatedTask.executorId === 'string' && relatedTask.executorId.trim()) {
+        recipientClerkIds.add(relatedTask.executorId.trim());
+      }
+      if (actorId && !actorId.startsWith('guest:')) {
+        recipientClerkIds.delete(actorId);
+      }
+
+      if (recipientClerkIds.size > 0) {
+        const recipients = await UserModel.find({
+          clerkUserId: { $in: Array.from(recipientClerkIds) },
+        })
+          .select('_id')
+          .lean()
+          .exec();
+
+        const bsInfo = relatedTask.bsNumber ? ` (БС ${relatedTask.bsNumber})` : '';
+        const baseInfo = baseIdDecoded ? ` БС ${baseIdDecoded}` : '';
+        const taskTitle = relatedTask.taskName || relatedTask.taskId;
+        const link = `/reports/${encodeURIComponent(taskIdDecoded)}/${encodeURIComponent(
+            baseIdDecoded
+        )}`;
+
+        const metadata = {
+          taskId: relatedTask.taskId,
+          baseId: baseIdDecoded,
+          status: report.status,
+          issuesCount: report.issues?.length ?? 0,
+        };
+
+        const title = shouldNotifyAgreed
+            ? `Фотоотчет согласован${bsInfo}`
+            : `Замечания по фотоотчету${bsInfo}`;
+        const message = shouldNotifyAgreed
+            ? `${actorName} согласовал фотоотчет по задаче «${taskTitle}»${baseInfo}.`
+            : `${actorName} оставил замечания по фотоотчету по задаче «${taskTitle}»${baseInfo}.`;
+
+        await Promise.all(
+            recipients.map((recipient) =>
+                createNotification({
+                  recipientUserId: recipient._id,
+                  type: 'task_status_change',
+                  title,
+                  message,
+                  link,
+                  orgId: relatedTask.orgId ?? undefined,
+                  senderName: actorName,
+                  senderEmail: actorEmail,
+                  metadata,
+                })
+            )
+        );
+      }
     }
 
     return NextResponse.json({ message: 'Отчёт успешно обновлён' });
