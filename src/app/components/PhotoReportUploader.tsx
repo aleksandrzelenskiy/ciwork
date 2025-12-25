@@ -715,14 +715,20 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                 <Typography variant="subtitle2" fontWeight={600}>
                                     Уже загружено
                                 </Typography>
-                                <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+                                <Box
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(112px, 1fr))',
+                                        gap: 1.5,
+                                    }}
+                                >
                                     {existingFiles.map((url) => (
                                         <Box
                                             key={url}
                                             sx={{
                                                 position: 'relative',
-                                                width: 112,
-                                                height: 112,
+                                                width: '100%',
+                                                aspectRatio: '1 / 1',
                                                 borderRadius: 2.5,
                                                 overflow: 'hidden',
                                                 border: '1px solid rgba(15,23,42,0.08)',
@@ -757,12 +763,18 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                             )}
                                         </Box>
                                     ))}
-                                </Stack>
+                                </Box>
                             </Stack>
                         )}
 
                         {!readOnly && items.length > 0 && (
-                            <Stack spacing={1.25}>
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                                    gap: 1.25,
+                                }}
+                            >
                                 {items.map((item) => (
                                     <Paper
                                         key={item.id}
@@ -770,9 +782,8 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                         sx={{
                                             p: 1,
                                             display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            gap: 1.5,
+                                            flexDirection: 'column',
+                                            gap: 1,
                                             borderRadius: 3,
                                             background:
                                                 'linear-gradient(135deg, rgba(255,255,255,0.92), rgba(241,245,251,0.92))',
@@ -849,7 +860,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                         )}
                                     </Paper>
                                 ))}
-                            </Stack>
+                            </Box>
                         )}
 
                         {taskName && (
