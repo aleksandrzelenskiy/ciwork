@@ -39,8 +39,10 @@ export async function DELETE(
             return NextResponse.json({ error: 'Отчёт не найден' }, { status: 404 });
         }
 
-        const beforeFiles = Array.isArray(report.files) ? report.files : [];
-        const beforeFixedFiles = Array.isArray(report.fixedFiles) ? report.fixedFiles : [];
+        const beforeFiles = Array.isArray(report.files) ? (report.files as string[]) : [];
+        const beforeFixedFiles = Array.isArray(report.fixedFiles)
+            ? (report.fixedFiles as string[])
+            : [];
         const wasInMain = beforeFiles.includes(targetUrl);
         const wasInFix = beforeFixedFiles.includes(targetUrl);
 
