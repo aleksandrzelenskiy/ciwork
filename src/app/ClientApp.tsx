@@ -703,6 +703,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
               height: '100vh',
               width: '100vw',
               padding: 0,
+              overflowY: 'auto',
             }}
           >
             {children}

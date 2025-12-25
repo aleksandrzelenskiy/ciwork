@@ -189,6 +189,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         if (submitError) {
             submitAlertTimerRef.current = setTimeout(() => {
                 setSubmitError(null);
+                onClose();
             }, 3000);
         }
     }, [submitError, submitSuccess, onClose]);
