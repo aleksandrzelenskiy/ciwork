@@ -283,9 +283,6 @@ export const prepareImageBuffer = async (file: File, overlayContext?: OverlayCon
         const resized = sharp(sourceBuffer, { failOnError: false })
             .rotate()
             .resize(maxEdge, maxEdge, { fit: sharp.fit.inside, withoutEnlargement: true });
-        const metadata = await resized.metadata();
-        const width = metadata.width ?? maxEdge;
-        const height = metadata.height ?? maxEdge;
         const overlayMeta = overlayContext ? extractOverlayMeta(buffer) : null;
         const lines = overlayContext
             ? [
@@ -307,6 +304,20 @@ export const prepareImageBuffer = async (file: File, overlayContext?: OverlayCon
                 `Исполнитель: ${overlayContext.executorName || '—'}`,
             ]
             : [];
+        let width = maxEdge;
+        let height = maxEdge;
+
+        if (overlayContext && lines.length > 0) {
+            try {
+                const { info } = await resized.clone().toBuffer({ resolveWithObject: true });
+                if (info?.width) width = info.width;
+                if (info?.height) height = info.height;
+            } catch {
+                const metadata = await resized.metadata().catch(() => null);
+                if (metadata?.width) width = metadata.width;
+                if (metadata?.height) height = metadata.height;
+            }
+        }
 
         const overlay =
             overlayContext && lines.length > 0
