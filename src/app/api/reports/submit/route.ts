@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    const actorName = getActorName(user);
+    const actorName = task.executorName?.trim() || getActorName(user);
     const oldStatus = task.status;
     const newStatus = 'Pending';
 
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     ).exec();
 
     const frontendUrl = process.env.FRONTEND_URL || 'https://ciwork.ru';
-    const taskLink = `${frontendUrl}/tasks/${encodeURIComponent(task.taskId)}`;
+    const reportLink = `${frontendUrl}/reports?highlightTaskId=${encodeURIComponent(task.taskId)}`;
     const bsInfo = task.bsNumber ? ` (БС ${task.bsNumber})` : '';
     const reportTitle = task.taskName ? `Фотоотчет по задаче "${task.taskName}"${bsInfo}` : 'Фотоотчет по задаче';
     const reportMessage = `${actorName} отправил фотоотчет${bsInfo ? ` по${bsInfo}` : ''}. Статус: ${newStatus}.`;
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
                 type: 'task_status_change',
                 title: reportTitle,
                 message: reportMessage,
-                link: `/tasks/${encodeURIComponent(task.taskId.toLowerCase())}`,
+                link: `/reports?highlightTaskId=${encodeURIComponent(task.taskId.toLowerCase())}`,
                 orgId: task.orgId ?? undefined,
                 senderName: actorName,
                 senderEmail: user.emailAddresses?.[0]?.emailAddress ?? undefined,
@@ -159,11 +159,11 @@ export async function POST(req: NextRequest) {
             await sendEmail({
                 to: email,
                 subject: reportTitle,
-                text: [reportMessage, baseListLine, `Ссылка: ${taskLink}`].filter(Boolean).join('\n\n'),
+                text: [reportMessage, baseListLine, `Ссылка: ${reportLink}`].filter(Boolean).join('\n\n'),
                 html: `
 <p>${reportMessage}</p>
 ${baseListLine ? `<p>${baseListLine}</p>` : ''}
-<p><a href="${taskLink}">Перейти к задаче</a></p>`,
+<p><a href="${reportLink}">Перейти к фотоотчетам</a></p>`,
             });
         } catch (error) {
             console.error('Failed to send report email', error);

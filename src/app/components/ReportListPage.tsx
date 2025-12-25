@@ -19,6 +19,7 @@ import {
   Alert,
 } from '@mui/material';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import FolderIcon from '@mui/icons-material/Folder';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { BaseStatus, ReportClient, ApiResponse } from '@/app/types/reportTypes';
@@ -43,6 +44,13 @@ export default function ReportListPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<ReportClient | null>(null);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
+  const searchParams = useSearchParams();
+  const reportRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+  const highlightTaskId = React.useMemo(() => {
+    const raw = searchParams.get('highlightTaskId');
+    return raw ? raw.trim().toLowerCase() : '';
+  }, [searchParams]);
+  const highlightActive = Boolean(highlightTaskId);
 
   React.useEffect(() => {
     const fetchReports = async () => {
@@ -62,6 +70,14 @@ export default function ReportListPage() {
     };
     void fetchReports();
   }, []);
+
+  React.useEffect(() => {
+    if (!highlightActive || loading) return;
+    const target = reportRefs.current[highlightTaskId];
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [highlightActive, highlightTaskId, loading, reports]);
 
   const filtered = reports.filter((report) => {
     const status = getTaskStatus(report.baseStatuses);
@@ -134,8 +150,20 @@ export default function ReportListPage() {
         py: { xs: 3, md: 6 },
         background: 'linear-gradient(180deg, #f7f8fb 0%, #ffffff 100%)',
         minHeight: '100vh',
+        position: 'relative',
       }}
     >
+      {highlightActive && (
+        <Box
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15,23,42,0.35)',
+            zIndex: 1,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       <Stack spacing={2} sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight={700}>
           Фотоотчеты
@@ -179,15 +207,24 @@ export default function ReportListPage() {
             statusColor === 'default'
               ? { fontWeight: 600 }
               : { backgroundColor: statusColor, color: '#fff', fontWeight: 600 };
+          const reportKey = report.taskId.trim().toLowerCase();
+          const isHighlighted = highlightActive && reportKey === highlightTaskId;
           return (
             <Box
               key={report.taskId}
+              ref={(node) => {
+                reportRefs.current[reportKey] = node;
+              }}
               sx={{
+                position: 'relative',
+                zIndex: isHighlighted ? 2 : 0,
                 borderRadius: 4,
                 p: 3,
                 border: '1px solid rgba(15,23,42,0.08)',
                 background: 'rgba(255,255,255,0.92)',
-                boxShadow: '0 24px 60px rgba(15,23,42,0.08)',
+                boxShadow: isHighlighted
+                  ? '0 0 0 3px rgba(56, 189, 248, 0.9), 0 30px 70px rgba(15,23,42,0.25)'
+                  : '0 24px 60px rgba(15,23,42,0.08)',
               }}
             >
               <Stack spacing={2}>
