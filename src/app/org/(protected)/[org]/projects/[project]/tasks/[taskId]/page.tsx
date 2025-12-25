@@ -149,6 +149,8 @@ type Task = {
     executorId?: string;
     executorName?: string;
     executorEmail?: string;
+    initiatorName?: string;
+    initiatorEmail?: string;
     files?: TaskFile[];
     attachments?: string[];
     documents?: string[];
@@ -1824,6 +1826,14 @@ export default function TaskDetailsPage() {
                                         <Typography variant="body1">
                                             <strong>Исполнитель:</strong>{' '}
                                             {task.executorName || task.executorEmail}
+                                        </Typography>
+                                    )}
+                                    {(task.initiatorName || task.initiatorEmail) && (
+                                        <Typography variant="body1">
+                                            <strong>Инициатор:</strong>{' '}
+                                            {task.initiatorName && task.initiatorEmail
+                                                ? `${task.initiatorName} (${task.initiatorEmail})`
+                                                : task.initiatorName || task.initiatorEmail}
                                         </Typography>
                                     )}
                                     {task.publicDescription && (

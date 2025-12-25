@@ -694,9 +694,14 @@ export default function TaskDetailPage() {
                                 </Typography>
                             )}
 
-                            <Typography variant="body1">
-                                <strong>Инициатор:</strong> {parseUserInfo(task.initiatorName).name}
-                            </Typography>
+                            {(task.initiatorName || task.initiatorEmail) && (
+                                <Typography variant="body1">
+                                    <strong>Инициатор:</strong>{' '}
+                                    {task.initiatorName && task.initiatorEmail
+                                        ? `${task.initiatorName} (${task.initiatorEmail})`
+                                        : task.initiatorName || task.initiatorEmail}
+                                </Typography>
+                            )}
 
                             <Box
                                 sx={{

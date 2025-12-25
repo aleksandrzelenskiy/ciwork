@@ -104,6 +104,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
 
     const cancelRef = React.useRef(false);
     const xhrRef = React.useRef<XMLHttpRequest | null>(null);
+    const submitAlertTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const baseOptions = React.useMemo(() => {
         const names = bsLocations
@@ -172,6 +173,25 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             items.forEach((item) => URL.revokeObjectURL(item.preview));
         };
     }, [items]);
+
+    React.useEffect(() => {
+        if (submitAlertTimerRef.current) {
+            clearTimeout(submitAlertTimerRef.current);
+            submitAlertTimerRef.current = null;
+        }
+        if (submitSuccess) {
+            submitAlertTimerRef.current = setTimeout(() => {
+                setSubmitSuccess(null);
+                onClose();
+            }, 3000);
+            return;
+        }
+        if (submitError) {
+            submitAlertTimerRef.current = setTimeout(() => {
+                setSubmitError(null);
+            }, 3000);
+        }
+    }, [submitError, submitSuccess, onClose]);
 
     const updateItem = React.useCallback((id: string, patch: Partial<UploadItem>) => {
         setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
@@ -545,9 +565,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             }
             setSubmitSuccess(data.message || 'Фотоотчет отправлен менеджеру');
             onSubmitted?.();
-            setTimeout(() => {
-                onClose();
-            }, 800);
         } catch (error) {
             setSubmitError(error instanceof Error ? error.message : 'Ошибка отправки');
         } finally {
@@ -611,8 +628,16 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                 : 'Загрузите фото по каждой БС, затем отправьте отчет менеджеру.'}
                         </Typography>
                         {folderAlert && <Alert severity="success">{folderAlert}</Alert>}
-                        {submitError && <Alert severity="error">{submitError}</Alert>}
-                        {submitSuccess && <Alert severity="success">{submitSuccess}</Alert>}
+                        {submitError && (
+                            <Alert variant="filled" severity="error">
+                                {submitError}
+                            </Alert>
+                        )}
+                        {submitSuccess && (
+                            <Alert variant="filled" severity="success">
+                                {submitSuccess}
+                            </Alert>
+                        )}
 
                         {baseOptions.length === 0 ? (
                             <Alert severity="warning">Нет папок БС для загрузки.</Alert>

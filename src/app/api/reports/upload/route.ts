@@ -4,7 +4,7 @@ import TaskModel from '@/app/models/TaskModel';
 import { currentUser } from '@clerk/nextjs/server';
 import { uploadBuffer } from '@/utils/s3';
 import { assertWritableStorage, recordStorageBytes } from '@/utils/storageUsage';
-import { appendReportFiles, syncTaskStatus, upsertReport } from '@/server-actions/reportService';
+import { appendReportFiles, upsertReport } from '@/server-actions/reportService';
 import { buildReportKey, extractUploadPayload, prepareImageBuffer, resolveStorageScope } from '@/app/api/reports/_shared';
 
 export const runtime = 'nodejs';
@@ -98,13 +98,6 @@ export async function POST(request: NextRequest) {
     });
 
     await appendReportFiles({ report, files: uploadedUrls, bytesAdded: totalBytes, actor, kind: 'main' });
-    await syncTaskStatus({
-        taskId: payload.taskId,
-        status: 'Pending',
-        actor,
-        comment: 'Фотоотчет обновлен',
-    });
-
     return NextResponse.json({
         success: true,
         uploaded: uploadedUrls.length,
