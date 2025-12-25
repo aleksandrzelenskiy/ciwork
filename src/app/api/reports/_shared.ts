@@ -31,16 +31,24 @@ export const resolveStorageScope = async (task: {
     orgId?: unknown;
     projectId?: unknown;
 }) => {
-    const scope: { orgSlug?: string; projectKey?: string } = {};
+    const scope: {
+        orgSlug?: string;
+        orgName?: string;
+        projectKey?: string;
+        projectName?: string;
+    } = {};
     const lookups: Promise<void>[] = [];
 
     if (task?.orgId) {
         lookups.push(
             OrganizationModel.findById(task.orgId)
-                .select('orgSlug')
+                .select('orgSlug name companyProfile.organizationName')
                 .lean()
                 .then((org) => {
-                    if (org?.orgSlug) scope.orgSlug = org.orgSlug;
+                    if (!org) return;
+                    if (org.orgSlug) scope.orgSlug = org.orgSlug;
+                    const orgName = org.companyProfile?.organizationName || org.name;
+                    if (orgName) scope.orgName = orgName;
                 })
                 .catch(() => undefined)
         );
@@ -49,10 +57,12 @@ export const resolveStorageScope = async (task: {
     if (task?.projectId) {
         lookups.push(
             ProjectModel.findById(task.projectId)
-                .select('key')
+                .select('key name')
                 .lean()
                 .then((project) => {
-                    if (project?.key) scope.projectKey = project.key;
+                    if (!project) return;
+                    if (project.key) scope.projectKey = project.key;
+                    if (project.name) scope.projectName = project.name;
                 })
                 .catch(() => undefined)
         );
@@ -98,6 +108,9 @@ type OverlayContext = {
     baseId?: string | null;
     bsNumber?: string | null;
     executorName?: string | null;
+    orgName?: string | null;
+    projectId?: string | null;
+    projectKey?: string | null;
 };
 
 const escapeSvgText = (value: string) =>
@@ -281,6 +294,8 @@ export const prepareImageBuffer = async (file: File, overlayContext?: OverlayCon
                         ? overlayMeta.date.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
                         : new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
                 }`,
+                `Организация: ${overlayContext.orgName || '—'}`,
+                `ID проекта: ${overlayContext.projectKey || overlayContext.projectId || '—'}`,
                 `Task ID: ${overlayContext.taskId}`,
                 `Задача: ${(overlayContext.taskName || '—').trim()}`,
                 `БС: ${overlayContext.baseId || overlayContext.bsNumber || '—'}`,

@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
             baseId: payload.baseId,
             bsNumber: task.bsNumber ?? null,
             executorName: buildActorName(user),
+            orgName: scope.orgName ?? null,
+            projectId: task.projectId ? String(task.projectId) : null,
+            projectKey: scope.projectKey ?? null,
         });
         const key = buildReportKey({
             orgSlug: scope.orgSlug,
