@@ -1,15 +1,16 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import type { NextRequest } from 'next/server';
 
 const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/api/internal(.*)']);
 const isReportPageRoute = createRouteMatcher(['/reports(.*)']);
 const isReportApiRoute = createRouteMatcher(['/api/reports(.*)']);
 
-const hasInitiatorToken = (request: Request) => {
+const hasInitiatorToken = (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   return Boolean(searchParams.get('token')?.trim());
 };
 
-const isAllowedGuestReportApi = (request: Request) => {
+const isAllowedGuestReportApi = (request: NextRequest) => {
   if (!isReportApiRoute(request)) return false;
   if (!hasInitiatorToken(request)) return false;
 
