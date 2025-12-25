@@ -47,7 +47,7 @@ export default function ReportListPage() {
   const searchParams = useSearchParams();
   const reportRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const highlightTaskId = React.useMemo(() => {
-    const raw = searchParams.get('highlightTaskId');
+    const raw = searchParams?.get('highlightTaskId') ?? '';
     return raw ? raw.trim().toLowerCase() : '';
   }, [searchParams]);
   const highlightActive = Boolean(highlightTaskId);
