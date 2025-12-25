@@ -59,6 +59,7 @@ export interface PhotoReport {
   taskName?: string;
   files: string[];
   fixedFiles: string[];
+  issues?: string[];
 }
 
 export interface Comment {

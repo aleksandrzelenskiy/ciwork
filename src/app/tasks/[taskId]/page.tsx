@@ -35,6 +35,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
 import TocOutlinedIcon from '@mui/icons-material/TocOutlined';
@@ -60,6 +61,7 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 import TaskComments, { type TaskComment } from '@/app/components/TaskComments';
 import PhotoReportUploader from '@/app/components/PhotoReportUploader';
+import ReportFixUploader from '@/app/components/reports/ReportFixUploader';
 import { fetchUserContext } from '@/app/utils/userContext';
 import type { Task, WorkItem, TaskEvent } from '@/app/types/taskTypes';
 import { extractFileNameFromUrl, isDocumentUrl } from '@/utils/taskFiles';
@@ -103,11 +105,23 @@ export default function TaskDetailPage() {
     const [completeLoading, setCompleteLoading] = React.useState(false);
     const [completeError, setCompleteError] = React.useState<string | null>(null);
     const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false);
+    const [fixDialogOpen, setFixDialogOpen] = React.useState(false);
+    const [activeFixBaseId, setActiveFixBaseId] = React.useState('');
 
     const handleCompleteClick = React.useCallback(() => {
         setCompleteError(null);
         setCompleteConfirmOpen(true);
     }, []);
+
+    const handleOpenFixDialog = (baseId: string) => {
+        setActiveFixBaseId(baseId);
+        setFixDialogOpen(true);
+    };
+
+    const handleCloseFixDialog = () => {
+        setFixDialogOpen(false);
+        setActiveFixBaseId('');
+    };
 
     const formatDate = (v?: string | Date) => {
         if (!v) return '—';
@@ -214,6 +228,23 @@ export default function TaskDetailPage() {
         () => normalizeRelatedTasks(task?.relatedTasks),
         [task?.relatedTasks]
     );
+    const reportTaskId = (task?.taskId || taskId).trim();
+    const issueReports = React.useMemo(() => {
+        if (!Array.isArray(task?.photoReports)) return [];
+        return task.photoReports
+            .map((report) => {
+                const issues = Array.isArray(report?.issues)
+                    ? report.issues.map((issue) => issue.trim()).filter(Boolean)
+                    : [];
+                return { ...report, issues };
+            })
+            .filter((report) => report.issues.length > 0)
+            .sort((a, b) => {
+                const da = new Date(a.createdAt).getTime();
+                const db = new Date(b.createdAt).getTime();
+                return db - da;
+            });
+    }, [task?.photoReports]);
 
     const sortedEvents = React.useMemo(() => {
         if (!task?.events) return [];
@@ -831,6 +862,91 @@ export default function TaskDetailPage() {
                         </Stack>
                     </CardItem>
 
+                    {issueReports.length > 0 && (
+                        <CardItem sx={{ minWidth: 0 }}>
+                            <Typography
+                                variant="subtitle1"
+                                fontWeight={600}
+                                gutterBottom
+                                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                            >
+                                <ErrorOutlineIcon fontSize="small" />
+                                Замечания по фотоотчетам
+                            </Typography>
+                            <Divider sx={{ mb: 1.5 }} />
+                            <Stack spacing={2}>
+                                {issueReports.map((report) => {
+                                    const statusLabel = report.status
+                                        ? getStatusLabel(normalizeStatusTitle(report.status))
+                                        : '';
+                                    return (
+                                        <Box
+                                            key={report._id}
+                                            sx={{
+                                                borderRadius: 2,
+                                                border: '1px solid rgba(15,23,42,0.08)',
+                                                p: 1.5,
+                                                backgroundColor: 'rgba(248,250,252,0.8)',
+                                            }}
+                                        >
+                                            <Stack
+                                                direction="row"
+                                                alignItems="center"
+                                                justifyContent="space-between"
+                                                spacing={1}
+                                            >
+                                                <Typography variant="body1" fontWeight={600}>
+                                                    БС {report.baseId || '—'}
+                                                </Typography>
+                                                {statusLabel && (
+                                                    <Chip label={statusLabel} size="small" sx={{ fontWeight: 500 }} />
+                                                )}
+                                            </Stack>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Отчет от {formatDate(report.createdAt)}
+                                            </Typography>
+                                            <Stack spacing={0.5} sx={{ mt: 1 }}>
+                                                {report.issues.map((issue, idx) => (
+                                                    <Typography
+                                                        key={`${report._id}-issue-${idx}`}
+                                                        variant="body2"
+                                                    >
+                                                        {idx + 1}. {issue}
+                                                    </Typography>
+                                                ))}
+                                            </Stack>
+                                            <Stack
+                                                direction={{ xs: 'column', sm: 'row' }}
+                                                spacing={1}
+                                                sx={{ mt: 1.5 }}
+                                            >
+                                                <Button
+                                                    component={Link}
+                                                    href={`/reports/${encodeURIComponent(
+                                                        reportTaskId
+                                                    )}/${encodeURIComponent(report.baseId)}`}
+                                                    variant="outlined"
+                                                    size="small"
+                                                    sx={{ textTransform: 'none' }}
+                                                >
+                                                    Открыть отчет
+                                                </Button>
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    onClick={() => handleOpenFixDialog(report.baseId)}
+                                                    sx={{ textTransform: 'none' }}
+                                                >
+                                                    Загрузить исправления
+                                                </Button>
+                                            </Stack>
+                                        </Box>
+                                    );
+                                })}
+                            </Stack>
+                        </CardItem>
+                    )}
+
                     {relatedTasks.length > 0 && (
                         <CardItem sx={{ minWidth: 0 }}>
                             <Typography
@@ -1175,6 +1291,13 @@ export default function TaskDetailPage() {
                 photoReports={task.photoReports}
                 onSubmitted={() => void loadTask()}
                 readOnly={isReportReadOnly}
+            />
+            <ReportFixUploader
+                open={fixDialogOpen}
+                onClose={handleCloseFixDialog}
+                taskId={reportTaskId}
+                baseId={activeFixBaseId}
+                onUploaded={() => void loadTask()}
             />
 
             <Dialog
