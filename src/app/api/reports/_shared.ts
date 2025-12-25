@@ -260,9 +260,9 @@ const buildOverlaySvg = (params: {
     height: number;
     lines: string[];
 }) => {
-    const fontSize = Math.max(14, Math.round(params.width * 0.015));
-    const lineHeight = Math.round(fontSize * 1.25);
-    const padding = Math.round(fontSize * 0.5);
+    const fontSize = Math.max(12, Math.round(params.width * 0.012));
+    const lineHeight = Math.round(fontSize * 1.2);
+    const padding = Math.round(fontSize * 0.45);
     const contentHeight = lineHeight * params.lines.length;
     const overlayHeight = Math.min(
         params.height,
@@ -275,7 +275,7 @@ const buildOverlaySvg = (params: {
     return {
         svg: Buffer.from(
             `<svg width="${params.width}" height="${overlayHeight}" xmlns="http://www.w3.org/2000/svg">
-                <rect x="0" y="0" width="${params.width}" height="${overlayHeight}" fill="rgba(0,0,0,0.55)" />
+                <rect x="0" y="0" width="${params.width}" height="${overlayHeight}" fill="rgba(0,0,0,0.32)" />
                 ${textLines.join('')}
             </svg>`
         ),

@@ -25,7 +25,9 @@ import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useDropzone } from 'react-dropzone';
+import type { PhotoReport } from '@/app/types/taskTypes';
 
 type BaseLocation = {
     name?: string | null;
@@ -53,6 +55,7 @@ type PhotoReportUploaderProps = {
     taskId: string;
     taskName?: string | null;
     bsLocations?: BaseLocation[];
+    photoReports?: PhotoReport[];
     onSubmitted?: () => void;
 };
 
@@ -73,6 +76,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         taskId,
         taskName,
         bsLocations = [],
+        photoReports = [],
         onSubmitted,
     } = props;
 
@@ -80,12 +84,18 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const [activeBase, setActiveBase] = React.useState('');
     const [items, setItems] = React.useState<UploadItem[]>([]);
     const [folderState, setFolderState] = React.useState<Record<string, FolderState>>({});
+    const [existingFilesByBase, setExistingFilesByBase] = React.useState<Record<string, string[]>>({});
     const [uploadError, setUploadError] = React.useState<string | null>(null);
+    const [existingError, setExistingError] = React.useState<string | null>(null);
     const [uploading, setUploading] = React.useState(false);
+    const [existingLoading, setExistingLoading] = React.useState(false);
     const [folderAlert, setFolderAlert] = React.useState<string | null>(null);
     const [submitError, setSubmitError] = React.useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = React.useState<string | null>(null);
     const [submitLoading, setSubmitLoading] = React.useState(false);
+    const [deleteTarget, setDeleteTarget] = React.useState<{ baseId: string; url: string } | null>(null);
+    const [deleteLoading, setDeleteLoading] = React.useState(false);
+    const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -100,19 +110,48 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         return Array.from(new Set(names));
     }, [bsLocations]);
 
+    const initialExistingFilesByBase = React.useMemo(() => {
+        const map: Record<string, string[]> = {};
+        photoReports.forEach((report) => {
+            const baseId = report?.baseId?.trim();
+            const files = Array.isArray(report?.files) ? report.files.filter(Boolean) : [];
+            if (baseId && files.length > 0) {
+                map[baseId] = files;
+            }
+        });
+        return map;
+    }, [photoReports]);
+
+    const initialFolderState = React.useMemo(() => {
+        const map: Record<string, FolderState> = {};
+        baseOptions.forEach((baseId) => {
+            const count = initialExistingFilesByBase[baseId]?.length ?? 0;
+            if (count > 0) {
+                map[baseId] = { uploaded: true, fileCount: count };
+            }
+        });
+        return map;
+    }, [baseOptions, initialExistingFilesByBase]);
+
     const resetState = React.useCallback(() => {
         setView('folders');
         setActiveBase('');
         setUploadError(null);
+        setExistingError(null);
+        setExistingLoading(false);
         setFolderAlert(null);
         setSubmitError(null);
         setSubmitSuccess(null);
+        setDeleteTarget(null);
+        setDeleteError(null);
+        setDeleteLoading(false);
         setItems((prev) => {
             prev.forEach((item) => URL.revokeObjectURL(item.preview));
             return [];
         });
-        setFolderState({});
-    }, []);
+        setFolderState(initialFolderState);
+        setExistingFilesByBase(initialExistingFilesByBase);
+    }, [initialExistingFilesByBase, initialFolderState]);
 
     React.useEffect(() => {
         if (open) {
@@ -186,6 +225,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             return [];
         });
         setUploadError(null);
+        setExistingError(null);
         setView('folders');
     };
 
@@ -243,6 +283,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         });
 
         let uploadOk = false;
+        let uploadedUrls: string[] = [];
         await new Promise<void>((resolve) => {
             const xhr = new XMLHttpRequest();
             xhrRef.current = xhr;
@@ -268,6 +309,14 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             xhr.onload = () => {
                 const success = xhr.status >= 200 && xhr.status < 300;
                 uploadOk = success;
+                if (success) {
+                    try {
+                        const payload = JSON.parse(xhr.responseText || '{}') as { urls?: string[] };
+                        uploadedUrls = Array.isArray(payload.urls) ? payload.urls : [];
+                    } catch {
+                        uploadedUrls = [];
+                    }
+                }
                 setItems((prev) =>
                     prev.map((item) => {
                         const isTarget = targets.some((target) => target.id === item.id);
@@ -337,11 +386,18 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
 
         setUploading(false);
         if (uploadOk) {
+            setExistingFilesByBase((prev) => {
+                const existing = prev[activeBase] ?? [];
+                const next = uploadedUrls.length > 0 ? [...existing, ...uploadedUrls] : existing;
+                return { ...prev, [activeBase]: next };
+            });
             setFolderState((prev) => ({
                 ...prev,
                 [activeBase]: {
                     uploaded: true,
-                    fileCount: targets.length,
+                    fileCount:
+                        (prev[activeBase]?.fileCount ?? 0) +
+                        (uploadedUrls.length > 0 ? uploadedUrls.length : targets.length),
                 },
             }));
             setFolderAlert(`Фото в папке ${activeBase} успешно загружены`);
@@ -361,8 +417,101 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         if (uploading || submitLoading) return;
         setActiveBase(baseId);
         setUploadError(null);
+        setExistingError(null);
         setFolderAlert(null);
         setView('upload');
+        void loadExistingFiles(baseId);
+    };
+
+    const loadExistingFiles = React.useCallback(
+        async (baseId: string) => {
+            if (!taskId || !baseId) return;
+            setExistingLoading(true);
+            setExistingError(null);
+            try {
+                const res = await fetch(
+                    `/api/reports/${encodeURIComponent(taskId)}/${encodeURIComponent(baseId)}`,
+                    { cache: 'no-store' }
+                );
+                if (res.status === 404) {
+                    setExistingFilesByBase((prev) => ({ ...prev, [baseId]: [] }));
+                    setFolderState((prev) => ({
+                        ...prev,
+                        [baseId]: { uploaded: false, fileCount: 0 },
+                    }));
+                    return;
+                }
+                const data = (await res.json().catch(() => ({}))) as { files?: string[]; error?: string };
+                if (!res.ok) {
+                    setExistingError(data.error || 'Не удалось загрузить фотоотчет');
+                    return;
+                }
+                const files = Array.isArray(data.files) ? data.files.filter(Boolean) : [];
+                setExistingFilesByBase((prev) => ({ ...prev, [baseId]: files }));
+                setFolderState((prev) => ({
+                    ...prev,
+                    [baseId]: { uploaded: files.length > 0, fileCount: files.length },
+                }));
+            } catch (error) {
+                setExistingError(error instanceof Error ? error.message : 'Ошибка загрузки фотоотчета');
+            } finally {
+                setExistingLoading(false);
+            }
+        },
+        [taskId]
+    );
+
+    const handleDeleteExisting = (baseId: string, url: string) => {
+        setDeleteError(null);
+        setDeleteTarget({ baseId, url });
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deleteTarget) return;
+        setDeleteLoading(true);
+        setDeleteError(null);
+        try {
+            const res = await fetch(
+                `/api/reports/${encodeURIComponent(taskId)}/${encodeURIComponent(deleteTarget.baseId)}/files`,
+                {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: deleteTarget.url }),
+                }
+            );
+            const data = (await res.json().catch(() => ({}))) as { error?: string; files?: string[] };
+            if (!res.ok) {
+                setDeleteError(data.error || 'Не удалось удалить фото');
+                return;
+            }
+            const nextFiles = Array.isArray(data.files)
+                ? data.files.filter(Boolean)
+                : (existingFilesByBase[deleteTarget.baseId] ?? []).filter(
+                      (fileUrl) => fileUrl !== deleteTarget.url
+                  );
+            setExistingFilesByBase((prev) => ({
+                ...prev,
+                [deleteTarget.baseId]: nextFiles,
+            }));
+            setFolderState((prev) => ({
+                ...prev,
+                [deleteTarget.baseId]: {
+                    uploaded: nextFiles.length > 0,
+                    fileCount: nextFiles.length,
+                },
+            }));
+            setDeleteTarget(null);
+        } catch (error) {
+            setDeleteError(error instanceof Error ? error.message : 'Ошибка удаления фото');
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
+    const handleDeleteDialogClose = () => {
+        if (deleteLoading) return;
+        setDeleteTarget(null);
+        setDeleteError(null);
     };
 
     const handleSubmit = async () => {
@@ -399,9 +548,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         }
     };
 
-    const reportFolder = activeBase
-        ? `${taskId}/${taskId}-reports/${activeBase}`
-        : `${taskId}/${taskId}-reports`;
+    const existingFiles = activeBase ? existingFilesByBase[activeBase] ?? [] : [];
 
     return (
         <Dialog
@@ -441,7 +588,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                         </IconButton>
                     )}
                     <Typography variant="inherit">
-                        {view === 'upload' ? `Папка ${activeBase}` : 'Загрузка фотоотчета'}
+                        {view === 'upload' ? `Фотоотчет — ${activeBase}` : 'Фотоотчет'}
                     </Typography>
                 </Stack>
                 <IconButton onClick={handleDialogClose} disabled={uploading || submitLoading}>
@@ -452,8 +599,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 {view === 'folders' ? (
                     <>
                         <Typography variant="body2" color="text.secondary">
-                            Загрузите фото по каждой БС, затем отправьте отчет менеджеру. Папки сохраняются по пути{' '}
-                            {reportFolder}.
+                            Загрузите фото по каждой БС, затем отправьте отчет менеджеру.
                         </Typography>
                         {folderAlert && <Alert severity="success">{folderAlert}</Alert>}
                         {submitError && <Alert severity="error">{submitError}</Alert>}
@@ -493,7 +639,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                 <Box>
                                                     <Typography fontWeight={600}>{baseId}</Typography>
                                                     <Typography variant="caption" color="text.secondary">
-                                                        Папка фотоотчета
+                                                        Фотоотчет
                                                     </Typography>
                                                 </Box>
                                             </Stack>
@@ -511,9 +657,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                         }}
                                                     />
                                                 )}
-                                                <Typography variant="body2" color="text.secondary">
-                                                    Открыть
-                                                </Typography>
                                             </Stack>
                                         </Paper>
                                     );
@@ -524,9 +667,10 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 ) : (
                     <>
                         <Typography variant="body2" color="text.secondary">
-                            Загружайте фото для папки {activeBase}. Путь: {reportFolder}.
+                            Загружайте фото для БС {activeBase}.
                         </Typography>
                         {uploadError && <Alert severity="error">{uploadError}</Alert>}
+                        {existingError && <Alert severity="error">{existingError}</Alert>}
                         <Box
                             {...getRootProps()}
                             sx={{
@@ -551,6 +695,56 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                 До 15 МБ каждое. Загрузка выполняется после нажатия «Загрузить».
                             </Typography>
                         </Box>
+
+                        {existingLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
+                        {existingFiles.length > 0 && (
+                            <Stack spacing={1}>
+                                <Typography variant="subtitle2" fontWeight={600}>
+                                    Уже загружено
+                                </Typography>
+                                <Stack direction="row" spacing={1.5} useFlexGap flexWrap="wrap">
+                                    {existingFiles.map((url) => (
+                                        <Box
+                                            key={url}
+                                            sx={{
+                                                position: 'relative',
+                                                width: 112,
+                                                height: 112,
+                                                borderRadius: 2.5,
+                                                overflow: 'hidden',
+                                                border: '1px solid rgba(15,23,42,0.08)',
+                                            }}
+                                        >
+                                            <Image
+                                                src={url}
+                                                alt="Фотоотчет"
+                                                fill
+                                                style={{ objectFit: 'cover' }}
+                                                unoptimized
+                                            />
+                                            <IconButton
+                                                onClick={() => handleDeleteExisting(activeBase, url)}
+                                                disabled={uploading || deleteLoading}
+                                                size="small"
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: 4,
+                                                    right: 4,
+                                                    bgcolor: 'rgba(15,23,42,0.65)',
+                                                    color: '#fff',
+                                                    '&:hover': {
+                                                        bgcolor: 'rgba(15,23,42,0.8)',
+                                                    },
+                                                }}
+                                                aria-label="Удалить фото"
+                                            >
+                                                <DeleteOutlineIcon fontSize="small" />
+                                            </IconButton>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                            </Stack>
+                        )}
 
                         {items.length > 0 && (
                             <Stack spacing={1.25}>
@@ -579,7 +773,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                 style={{ objectFit: 'cover', borderRadius: 14 }}
                                                 unoptimized
                                             />
-                                            <Box sx={{ minWidth: 0 }}>
+                                            <Box sx={{ minWidth: 0, flex: 1 }}>
                                                 <Typography sx={{ wordBreak: 'break-word', fontWeight: 600 }}>
                                                     {item.file.name}
                                                 </Typography>
@@ -610,14 +804,22 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                     )}
                                                 </Stack>
                                             </Box>
+                                            {item.status !== 'uploading' && (
+                                                <IconButton
+                                                    onClick={() => handleRemoveItem(item.id)}
+                                                    disabled={uploading}
+                                                    size="small"
+                                                >
+                                                    <CloseIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
                                         </Stack>
-                                        <Stack spacing={1} alignItems="flex-end">
-                                            {item.status === 'uploading' ? (
+                                        {item.status === 'uploading' && (
+                                            <Box sx={{ mt: 1 }}>
                                                 <LinearProgress
                                                     variant="determinate"
                                                     value={item.progress}
                                                     sx={{
-                                                        width: 160,
                                                         height: 6,
                                                         borderRadius: 999,
                                                         backgroundColor: 'rgba(15,23,42,0.08)',
@@ -628,19 +830,8 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                         },
                                                     }}
                                                 />
-                                            ) : (
-                                                <Button
-                                                    size="small"
-                                                    color="inherit"
-                                                    onClick={() => handleRemoveItem(item.id)}
-                                                    disabled={uploading}
-                                                    startIcon={<CloseIcon />}
-                                                    sx={{ textTransform: 'none', borderRadius: 999 }}
-                                                >
-                                                    Удалить
-                                                </Button>
-                                            )}
-                                        </Stack>
+                                            </Box>
+                                        )}
                                     </Paper>
                                 ))}
                             </Stack>
@@ -714,6 +905,57 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                     </>
                 )}
             </DialogActions>
+            <Dialog open={Boolean(deleteTarget)} onClose={handleDeleteDialogClose}>
+                <DialogTitle>Удалить фото?</DialogTitle>
+                <DialogContent sx={{ pt: 1.5 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Фото будет удалено из фотоотчета и хранилища. Это действие нельзя отменить.
+                    </Typography>
+                    {deleteTarget && (
+                        <Box
+                            sx={{
+                                position: 'relative',
+                                width: '100%',
+                                height: 180,
+                                borderRadius: 2,
+                                overflow: 'hidden',
+                                border: '1px solid rgba(15,23,42,0.1)',
+                            }}
+                        >
+                            <Image
+                                src={deleteTarget.url}
+                                alt="Фото для удаления"
+                                fill
+                                style={{ objectFit: 'cover' }}
+                                unoptimized
+                            />
+                        </Box>
+                    )}
+                    {deleteError && (
+                        <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+                            {deleteError}
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button
+                        onClick={handleDeleteDialogClose}
+                        disabled={deleteLoading}
+                        sx={{ textTransform: 'none', borderRadius: 999 }}
+                    >
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => void handleConfirmDelete()}
+                        disabled={deleteLoading}
+                        sx={{ textTransform: 'none', borderRadius: 999 }}
+                    >
+                        {deleteLoading ? 'Удаление...' : 'Удалить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Dialog>
     );
 }

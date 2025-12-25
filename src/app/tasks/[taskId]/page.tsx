@@ -41,6 +41,7 @@ import TocOutlinedIcon from '@mui/icons-material/TocOutlined';
 import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import {
     Timeline,
     TimelineConnector,
@@ -256,6 +257,13 @@ export default function TaskDetailPage() {
         if (parsed.email && parsed.email !== 'N/A') return `${parsed.name} (${parsed.email})`;
         return parsed.name;
     };
+
+    const hasPhotoReport = React.useMemo(() => {
+        if (!Array.isArray(task?.photoReports)) return false;
+        return task.photoReports.some(
+            (report) => Array.isArray(report.files) && report.files.length > 0
+        );
+    }, [task?.photoReports]);
 
     const renderWorkItemsTable = (maxHeight?: number | string) => {
         if (!hasWorkItems) {
@@ -794,7 +802,7 @@ export default function TaskDetailPage() {
                                     >
                                         <Button
                                             variant="contained"
-                                            startIcon={<CloudUploadIcon />}
+                                            startIcon={hasPhotoReport ? <EditOutlinedIcon /> : <CloudUploadIcon />}
                                             onClick={handleOpenUploadDialog}
                                             sx={{
                                                 textTransform: 'none',
@@ -802,7 +810,7 @@ export default function TaskDetailPage() {
                                                 fontWeight: 700,
                                             }}
                                         >
-                                            Загрузить фото
+                                            {hasPhotoReport ? 'Редактировать отчет' : 'Загрузить фото'}
                                         </Button>
                                     </Stack>
                                 </Box>
@@ -1151,6 +1159,7 @@ export default function TaskDetailPage() {
                 taskId={task.taskId || taskId}
                 taskName={task.taskName}
                 bsLocations={task.bsLocation}
+                photoReports={task.photoReports}
                 onSubmitted={() => void loadTask()}
             />
 
