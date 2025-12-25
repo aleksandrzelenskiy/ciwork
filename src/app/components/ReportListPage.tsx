@@ -213,7 +213,7 @@ export default function ReportListPage() {
             <Box
               key={report.taskId}
               ref={(node) => {
-                reportRefs.current[reportKey] = node;
+                reportRefs.current[reportKey] = node as HTMLDivElement | null;
               }}
               sx={{
                 position: 'relative',
