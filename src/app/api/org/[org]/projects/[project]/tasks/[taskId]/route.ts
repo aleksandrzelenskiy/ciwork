@@ -28,6 +28,7 @@ import { deleteTaskFolder } from '@/utils/s3';
 import TaskDeletionLog from '@/app/models/TaskDeletionLog';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { addReverseRelations, removeReverseRelations } from '@/app/utils/relatedTasksSync';
+import ReportModel from '@/app/models/ReportModel';
 
 
 export const runtime = 'nodejs';
@@ -942,6 +943,9 @@ export async function GET(
         );
 
         const relatedTasks = normalizeRelatedTasks(taskDoc.relatedTasks);
+        const photoReports = await ReportModel.find({ taskId: taskDoc.taskId })
+            .select('taskId baseId status createdAt taskName files fixedFiles')
+            .lean();
 
         return NextResponse.json({
             task: {
@@ -949,6 +953,7 @@ export async function GET(
                 relatedTasks,
                 attachments,
                 documents,
+                photoReports,
             },
         });
     } catch (err) {

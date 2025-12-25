@@ -85,6 +85,7 @@ import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import type { RelatedTaskRef } from '@/app/types/taskTypes';
 import { buildBsAddressFromLocations } from '@/utils/bsLocation';
 import ProfilePageContent from '@/app/profile/ProfilePageContent';
+import type { PhotoReport } from '@/app/types/taskTypes';
 
 type TaskFile = {
     url: string;
@@ -160,6 +161,7 @@ type Task = {
     workItems?: WorkItem[];
     comments?: TaskComment[];
     relatedTasks?: RelatedTaskRef[];
+    photoReports?: PhotoReport[];
 };
 
 type DocumentItem = {
@@ -195,6 +197,7 @@ const TASK_SECTION_KEYS = [
     'geo',
     'work',
     'attachments',
+    'photoReports',
     'documents',
     'order',
     'comments',
@@ -211,6 +214,7 @@ const TASK_SECTION_LABELS: Record<TaskSectionKey, string> = {
     geo: 'Геолокация',
     work: 'Состав работ',
     attachments: 'Вложения',
+    photoReports: 'Фотоотчеты',
     documents: 'Документы',
     order: 'Заказ',
     comments: 'Комментарии',
@@ -564,7 +568,8 @@ export default function TaskDetailsPage() {
                     const valid = parsed.filter((key): key is TaskSectionKey =>
                         TASK_SECTION_KEYS.includes(key)
                     );
-                    setVisibleSections(valid);
+                    const missing = TASK_SECTION_KEYS.filter((key) => !valid.includes(key));
+                    setVisibleSections([...valid, ...missing]);
                 }
             } catch {
                 // ignore corrupted storage
@@ -691,6 +696,24 @@ export default function TaskDetailsPage() {
         !!task &&
         ((Array.isArray(task.files) && task.files.length > 0) ||
             attachmentLinks.length > 0);
+    const photoReportItems = React.useMemo(() => {
+        if (!Array.isArray(task?.photoReports)) return [];
+        return task.photoReports
+            .map((report) => {
+                const filesCount = Array.isArray(report.files) ? report.files.length : 0;
+                const fixedCount = Array.isArray(report.fixedFiles) ? report.fixedFiles.length : 0;
+                return {
+                    baseId: report.baseId,
+                    status: report.status,
+                    filesCount,
+                    fixedCount,
+                    totalCount: filesCount + fixedCount,
+                };
+            })
+            .filter((report) => report.baseId && report.totalCount > 0)
+            .sort((a, b) => a.baseId.localeCompare(b.baseId));
+    }, [task?.photoReports]);
+    const hasPhotoReports = photoReportItems.length > 0;
 
     const orderCompletionDate = React.useMemo(() => {
         if (!task?.orderSignDate) return null;
@@ -2259,6 +2282,63 @@ export default function TaskDetailsPage() {
                                             {extractFileNameFromUrl(url, `Вложение ${idx + 1}`)}
                                         </Link>
                                     ))}
+                                </Stack>
+                            </CardItem>
+                        )}
+
+                        {isSectionVisible('photoReports') && hasPhotoReports && task.taskId && (
+                            <CardItem sx={{ minWidth: 0 }}>
+                                <Typography
+                                    variant="subtitle1"
+                                    fontWeight={600}
+                                    gutterBottom
+                                    sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                                >
+                                    <ArticleOutlinedIcon fontSize="small" />
+                                    Фотоотчеты
+                                </Typography>
+                                <Divider sx={{ mb: 1.5 }} />
+                                <Stack spacing={1.5}>
+                                    {photoReportItems.map((report) => {
+                                        const statusLabel = getStatusLabel(report.status);
+                                        const statusColor = getStatusColor(
+                                            normalizeStatusTitle(report.status)
+                                        );
+                                        return (
+                                            <Stack
+                                                key={`photo-report-${report.baseId}`}
+                                                direction="row"
+                                                alignItems="center"
+                                                justifyContent="space-between"
+                                                gap={1}
+                                                flexWrap="wrap"
+                                            >
+                                                <Stack spacing={0.5}>
+                                                    <Link
+                                                        href={`/reports/${encodeURIComponent(
+                                                            task.taskId.toLowerCase()
+                                                        )}/${encodeURIComponent(report.baseId)}`}
+                                                        underline="hover"
+                                                    >
+                                                        Папка БС {report.baseId}
+                                                    </Link>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Основные фото: {report.filesCount} · Исправления:{' '}
+                                                        {report.fixedCount}
+                                                    </Typography>
+                                                </Stack>
+                                                <Chip
+                                                    label={statusLabel}
+                                                    size="small"
+                                                    sx={{
+                                                        bgcolor: statusColor,
+                                                        color: '#fff',
+                                                        fontWeight: 500,
+                                                    }}
+                                                />
+                                            </Stack>
+                                        );
+                                    })}
                                 </Stack>
                             </CardItem>
                         )}
