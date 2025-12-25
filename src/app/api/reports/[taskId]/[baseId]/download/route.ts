@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/mongoose';
 import ReportModel from '@/app/models/ReportModel';
+import TaskModel from '@/app/models/TaskModel';
+import { currentUser } from '@clerk/nextjs/server';
+import { verifyInitiatorAccessToken } from '@/utils/initiatorAccessToken';
 import archiver from 'archiver';
 import path from 'path';
 
@@ -18,7 +21,7 @@ const filenameFromUrl = (fileUrl: string) => {
 };
 
 export async function GET(
-    _request: NextRequest,
+    request: NextRequest,
     { params }: { params: Promise<{ taskId: string; baseId: string }> }
 ) {
     const { taskId, baseId } = await params;
@@ -34,6 +37,34 @@ export async function GET(
         }
 
         await dbConnect();
+
+        const url = new URL(request.url);
+        const token = url.searchParams.get('token')?.trim() || '';
+        const guestAccess = token ? verifyInitiatorAccessToken(token) : null;
+        if (guestAccess) {
+            const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
+                .select('initiatorEmail')
+                .lean();
+            const initiatorEmail = taskRecord?.initiatorEmail?.trim().toLowerCase() || '';
+            if (
+                guestAccess.taskId !== taskIdDecoded ||
+                !initiatorEmail ||
+                initiatorEmail !== guestAccess.email
+            ) {
+                return NextResponse.json(
+                    { error: 'Недостаточно прав для скачивания отчёта' },
+                    { status: 403 }
+                );
+            }
+        } else {
+            const user = await currentUser();
+            if (!user) {
+                return NextResponse.json(
+                    { error: 'Пользователь не авторизован' },
+                    { status: 401 }
+                );
+            }
+        }
         const report = await ReportModel.findOne({
             taskId: taskIdDecoded,
             baseId: baseIdDecoded,

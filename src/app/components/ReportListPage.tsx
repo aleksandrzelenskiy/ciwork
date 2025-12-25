@@ -140,7 +140,9 @@ export default function ReportListPage() {
     if (downloadingTaskId) return;
     setDownloadingTaskId(taskId);
     try {
-      const response = await fetch(`/api/reports/${encodeURIComponent(taskId)}/download`);
+      const response = await fetch(
+        `/api/reports/${encodeURIComponent(taskId)}/download${tokenParam}`
+      );
       if (!response.ok) {
         setError('Не удалось скачать отчет');
         return;

@@ -181,7 +181,7 @@ export default function PhotoReportPage() {
         if (downloading) return;
         setDownloading(true);
         try {
-            const response = await fetch(`/api/reports/${taskId}/${baseId}/download`);
+            const response = await fetch(`/api/reports/${taskId}/${baseId}/download${tokenParam}`);
             if (!response.ok) {
                 showAlert('Не удалось скачать отчет', 'error');
                 return;
