@@ -47,8 +47,7 @@ export const resolveStorageScope = async (task: {
                 .then((org) => {
                     if (!org) return;
                     if (org.orgSlug) scope.orgSlug = org.orgSlug;
-                    const orgName = org.companyProfile?.organizationName || org.name;
-                    if (orgName) scope.orgName = orgName;
+                    if (org.name) scope.orgName = org.name;
                 })
                 .catch(() => undefined)
         );
@@ -160,6 +159,21 @@ const toDecimalCoord = (parts: unknown, ref?: string | null) => {
     return decimal;
 };
 
+const parseCoordFromDescription = (value: string) => {
+    const numbers = value.match(/-?\d+(?:\.\d+)?/g);
+    if (!numbers || numbers.length === 0) return null;
+    const degrees = Number.parseFloat(numbers[0]);
+    if (!Number.isFinite(degrees)) return null;
+    const minutes = numbers.length > 1 ? Number.parseFloat(numbers[1]) : 0;
+    const seconds = numbers.length > 2 ? Number.parseFloat(numbers[2]) : 0;
+    const hasMinSec = numbers.length > 1;
+    let decimal = hasMinSec ? degrees + minutes / 60 + seconds / 3600 : degrees;
+    if (/[SW]/i.test(value)) {
+        decimal = -Math.abs(decimal);
+    }
+    return decimal;
+};
+
 const readTagValue = (tag: unknown) => {
     if (!tag) return null;
     if (typeof tag === 'string' || typeof tag === 'number') return tag;
@@ -212,10 +226,10 @@ const extractOverlayMeta = (buffer: Buffer) => {
                     ? dateValue
                     : null;
 
-        const latTag = getExifTag(tags, 'GPSLatitude');
-        const lonTag = getExifTag(tags, 'GPSLongitude');
-        const latRefTag = getExifTag(tags, 'GPSLatitudeRef');
-        const lonRefTag = getExifTag(tags, 'GPSLongitudeRef');
+        const latTag = getExifTag(tags, 'GPSLatitude') ?? getExifTag(tags, 'Latitude');
+        const lonTag = getExifTag(tags, 'GPSLongitude') ?? getExifTag(tags, 'Longitude');
+        const latRefTag = getExifTag(tags, 'GPSLatitudeRef') ?? getExifTag(tags, 'LatitudeRef');
+        const lonRefTag = getExifTag(tags, 'GPSLongitudeRef') ?? getExifTag(tags, 'LongitudeRef');
 
         const latValue = readGpsValue(latTag);
         const lonValue = readGpsValue(lonTag);
@@ -224,11 +238,11 @@ const extractOverlayMeta = (buffer: Buffer) => {
 
         const lat =
             typeof latValue === 'string'
-                ? Number.parseFloat(latValue)
+                ? parseCoordFromDescription(latValue) ?? Number.parseFloat(latValue)
                 : toDecimalCoord(latValue, typeof latRef === 'string' ? latRef : null);
         const lon =
             typeof lonValue === 'string'
-                ? Number.parseFloat(lonValue)
+                ? parseCoordFromDescription(lonValue) ?? Number.parseFloat(lonValue)
                 : toDecimalCoord(lonValue, typeof lonRef === 'string' ? lonRef : null);
 
         return {

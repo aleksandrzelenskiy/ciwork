@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
             taskName: task.taskName ?? null,
             baseId: payload.baseId,
             bsNumber: task.bsNumber ?? null,
-            executorName: buildActorName(user),
+            executorName: task.executorName ?? buildActorName(user),
             orgName: scope.orgName ?? null,
             projectId: task.projectId ? String(task.projectId) : null,
             projectKey: scope.projectKey ?? null,
