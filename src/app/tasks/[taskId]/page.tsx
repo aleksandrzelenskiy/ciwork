@@ -260,10 +260,14 @@ export default function TaskDetailPage() {
 
     const hasPhotoReport = React.useMemo(() => {
         if (!Array.isArray(task?.photoReports)) return false;
-        return task.photoReports.some(
-            (report) => Array.isArray(report.files) && report.files.length > 0
-        );
+        return task.photoReports.some((report) => {
+            const filesCount = Array.isArray(report.files) ? report.files.length : 0;
+            const fixedCount = Array.isArray(report.fixedFiles) ? report.fixedFiles.length : 0;
+            return filesCount + fixedCount > 0;
+        });
     }, [task?.photoReports]);
+    const showReportActions = ['Done', 'Pending', 'Issues', 'Fixed', 'Agreed'].includes(task?.status ?? '');
+    const isReportReadOnly = (task?.status ?? '') === 'Agreed';
 
     const renderWorkItemsTable = (maxHeight?: number | string) => {
         if (!hasWorkItems) {
@@ -791,7 +795,7 @@ export default function TaskDetailPage() {
                                     </Button>
                                 </Box>
                             )}
-                            {task.status === 'Done' && (
+                            {showReportActions && (
                                 <Box sx={{ pt: 0.5 }}>
                                     <Divider sx={{ mb: 1.5 }} />
                                     <Stack
@@ -810,7 +814,11 @@ export default function TaskDetailPage() {
                                                 fontWeight: 700,
                                             }}
                                         >
-                                            {hasPhotoReport ? 'Редактировать отчет' : 'Загрузить фото'}
+                                            {isReportReadOnly
+                                                ? 'Посмотреть отчет'
+                                                : hasPhotoReport
+                                                  ? 'Редактировать отчет'
+                                                  : 'Загрузить фото'}
                                         </Button>
                                     </Stack>
                                 </Box>
@@ -1161,6 +1169,7 @@ export default function TaskDetailPage() {
                 bsLocations={task.bsLocation}
                 photoReports={task.photoReports}
                 onSubmitted={() => void loadTask()}
+                readOnly={isReportReadOnly}
             />
 
             <Dialog
