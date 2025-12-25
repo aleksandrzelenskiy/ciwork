@@ -315,7 +315,7 @@ export async function POST(
     const createdApplication = applicationObj;
 
     try {
-        const managerClerkIds = [task.initiatorId, task.authorId]
+        const managerClerkIds = [task.authorId]
             .map((v) => (typeof v === 'string' ? v.trim() : ''))
             .filter((v) => v.length > 0);
 
@@ -584,7 +584,6 @@ export async function PATCH(
                 bsNumber: finalTask.bsNumber,
                 previousStatus: previousTaskStatus,
                 newStatus: finalTask.status,
-                initiatorClerkId: typeof finalTask.initiatorId === 'string' ? finalTask.initiatorId : undefined,
                 authorClerkId: typeof finalTask.authorId === 'string' ? finalTask.authorId : undefined,
                 executorClerkId: typeof finalTask.executorId === 'string' ? finalTask.executorId : undefined,
                 triggeredByClerkId: actorClerkId,

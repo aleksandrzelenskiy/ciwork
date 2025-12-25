@@ -9,6 +9,7 @@ import ReportDeletionLog from '@/app/models/ReportDeletionLog';
 import { currentUser } from '@clerk/nextjs/server';
 import { GetUserContext } from '@/server-actions/user-context';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
+import { verifyInitiatorAccessToken } from '@/utils/initiatorAccessToken';
 import path from 'path';
 import {
   deleteStoragePrefix,
@@ -39,17 +40,6 @@ export async function GET(
       );
     }
 
-    const userContext = await GetUserContext();
-    if (!userContext.success || !userContext.data) {
-      const errorMessage = userContext.success
-        ? 'Нет активной сессии пользователя'
-        : userContext.message || 'Нет активной сессии пользователя';
-      return NextResponse.json(
-          { error: errorMessage },
-          { status: 401 }
-      );
-    }
-
     const report = await ReportModel.findOne({
       baseId: baseIdDecoded,
       taskId: taskIdDecoded,
@@ -60,15 +50,40 @@ export async function GET(
     }
 
     const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
-      .select('taskName bsNumber executorName')
+      .select('taskName bsNumber executorName initiatorEmail initiatorName')
       .lean();
 
-    const role =
-        mapRoleToLegacy(
-            userContext.data.effectiveOrgRole ||
-            userContext.data.activeMembership?.role ||
-            null
+    const url = new URL(request.url);
+    const token = url.searchParams.get('token')?.trim() || '';
+    const guestAccess = token ? verifyInitiatorAccessToken(token) : null;
+    const initiatorEmail = taskRecord?.initiatorEmail?.trim().toLowerCase() || '';
+    const isGuestAllowed =
+        !!guestAccess &&
+        guestAccess.taskId === taskIdDecoded &&
+        initiatorEmail &&
+        initiatorEmail === guestAccess.email;
+
+    let role: ReturnType<typeof mapRoleToLegacy> = null;
+    if (isGuestAllowed) {
+      role = 'viewer';
+    } else {
+      const userContext = await GetUserContext();
+      if (!userContext.success || !userContext.data) {
+        const errorMessage = userContext.success
+          ? 'Нет активной сессии пользователя'
+          : userContext.message || 'Нет активной сессии пользователя';
+        return NextResponse.json(
+            { error: errorMessage },
+            { status: 401 }
         );
+      }
+      role =
+          mapRoleToLegacy(
+              userContext.data.effectiveOrgRole ||
+              userContext.data.activeMembership?.role ||
+              null
+          );
+    }
 
     return NextResponse.json({
       taskId: report.taskId,
@@ -114,15 +129,9 @@ export async function PATCH(
       );
     }
 
-    const user = await currentUser();
-    if (!user) {
-      return NextResponse.json(
-          { error: 'Пользователь не авторизован' },
-          { status: 401 }
-      );
-    }
-
-    const name = `${user.firstName || 'Unknown'} ${user.lastName || ''}`.trim();
+    const url = new URL(request.url);
+    const token = url.searchParams.get('token')?.trim() || '';
+    const guestAccess = token ? verifyInitiatorAccessToken(token) : null;
 
     const body: {
       status?: string;
@@ -141,6 +150,44 @@ export async function PATCH(
       return NextResponse.json({ error: 'Отчёт не найден' }, { status: 404 });
     }
 
+    let actorName = '';
+    let actorId = '';
+    const allowedGuestStatuses = new Set(['Agreed', 'Issues', 'Pending']);
+    if (guestAccess) {
+      const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
+        .select('initiatorEmail initiatorName')
+        .lean();
+      const initiatorEmail = taskRecord?.initiatorEmail?.trim().toLowerCase() || '';
+      if (
+        guestAccess.taskId !== taskIdDecoded ||
+        !initiatorEmail ||
+        initiatorEmail !== guestAccess.email
+      ) {
+        return NextResponse.json(
+            { error: 'Недостаточно прав для обновления отчёта' },
+            { status: 403 }
+        );
+      }
+      if (status && !allowedGuestStatuses.has(status)) {
+        return NextResponse.json(
+            { error: 'Недопустимый статус для инициатора' },
+            { status: 403 }
+        );
+      }
+      actorName = taskRecord?.initiatorName?.trim() || guestAccess.email;
+      actorId = `guest:${guestAccess.email}`;
+    } else {
+      const user = await currentUser();
+      if (!user) {
+        return NextResponse.json(
+            { error: 'Пользователь не авторизован' },
+            { status: 401 }
+        );
+      }
+      actorName = `${user.firstName || 'Unknown'} ${user.lastName || ''}`.trim();
+      actorId = user.id;
+    }
+
     const oldStatus = report.status;
     const oldIssues = [...report.issues];
 
@@ -150,8 +197,8 @@ export async function PATCH(
       report.events = report.events || [];
       report.events.push({
         action: 'STATUS_CHANGED',
-        author: name,
-        authorId: user.id,
+        author: actorName,
+        authorId: actorId,
         date: new Date(),
         details: {
           oldStatus,
@@ -180,8 +227,8 @@ export async function PATCH(
       report.events = report.events || [];
       report.events.push({
         action: 'ISSUES_UPDATED',
-        author: name,
-        authorId: user.id,
+        author: actorName,
+        authorId: actorId,
         date: new Date(),
         details: {
           oldIssues,
@@ -202,8 +249,8 @@ export async function PATCH(
       relatedTask.events = relatedTask.events || [];
       relatedTask.events.push({
         action: 'STATUS_CHANGED',
-        author: name,
-        authorId: user.id,
+        author: actorName,
+        authorId: actorId,
         date: new Date(),
         details: {
           oldStatus: oldTaskStatus,

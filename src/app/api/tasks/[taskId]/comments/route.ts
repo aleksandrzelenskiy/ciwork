@@ -148,7 +148,6 @@ export async function POST(
     // ===== Уведомления через NotificationBell =====
     try {
       const executorClerkId = typeof updatedTask.executorId === 'string' ? updatedTask.executorId.trim() : '';
-      const initiatorClerkId = typeof updatedTask.initiatorId === 'string' ? updatedTask.initiatorId.trim() : '';
       const authorClerkId = typeof updatedTask.authorId === 'string' ? updatedTask.authorId.trim() : '';
 
       const notifyUser = async (targetClerkId: string) => {
@@ -202,9 +201,9 @@ export async function POST(
         await notifyUser(executorClerkId);
       }
 
-      // Менеджер (инициатор или автор) получает уведомление, когда коммент оставил исполнитель
+      // Менеджер (автор) получает уведомление, когда коммент оставил исполнитель
       const commenterIsExecutor = executorClerkId && executorClerkId === user.id;
-      const managerClerkId = commenterIsExecutor ? (initiatorClerkId || authorClerkId) : '';
+      const managerClerkId = commenterIsExecutor ? authorClerkId : '';
       if (managerClerkId && managerClerkId !== user.id && managerClerkId !== executorClerkId) {
         await notifyUser(managerClerkId);
       }

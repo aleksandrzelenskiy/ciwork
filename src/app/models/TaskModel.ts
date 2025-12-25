@@ -30,7 +30,6 @@ const TaskSchema = new Schema<Task & Document>({
   authorId: { type: String },
   authorName: { type: String },
   authorEmail: { type: String },
-  initiatorId: { type: String },
   initiatorName: { type: String },
   initiatorEmail: { type: String },
   executorId: { type: String },

@@ -8,6 +8,7 @@ import ReportModel from '@/app/models/ReportModel';
 import UserModel from '@/app/models/UserModel';
 import { createNotification } from '@/app/utils/notificationService';
 import { sendEmail } from '@/utils/mailer';
+import { signInitiatorAccessToken } from '@/utils/initiatorAccessToken';
 import { currentUser } from '@clerk/nextjs/server';
 
 type SubmitPayload = {
@@ -101,9 +102,6 @@ export async function POST(req: NextRequest) {
     if (typeof task.authorId === 'string' && task.authorId.trim()) {
         recipientClerkIds.add(task.authorId.trim());
     }
-    if (typeof task.initiatorId === 'string' && task.initiatorId.trim()) {
-        recipientClerkIds.add(task.initiatorId.trim());
-    }
 
     const recipientsByClerkId = await UserModel.find({
         clerkUserId: { $in: Array.from(recipientClerkIds) },
@@ -126,6 +124,16 @@ export async function POST(req: NextRequest) {
     if (typeof task.initiatorEmail === 'string' && task.initiatorEmail.trim()) {
         directEmails.add(task.initiatorEmail.trim().toLowerCase());
     }
+    const initiatorEmailNormalized =
+        typeof task.initiatorEmail === 'string' ? task.initiatorEmail.trim().toLowerCase() : '';
+    const initiatorAccessLink = initiatorEmailNormalized
+        ? `${frontendUrl}/reports?token=${encodeURIComponent(
+            signInitiatorAccessToken({
+                taskId: task.taskId,
+                email: initiatorEmailNormalized,
+            })
+        )}&highlightTaskId=${encodeURIComponent(task.taskId.toLowerCase())}`
+        : '';
 
     const metadataEntries = Object.entries({
         taskId: task.taskId,
@@ -154,16 +162,19 @@ export async function POST(req: NextRequest) {
     }
 
     for (const email of directEmails) {
-        if (recipientEmails.has(email)) continue;
+        if (recipientEmails.has(email) && email !== initiatorEmailNormalized) continue;
         try {
+            const link = email === initiatorEmailNormalized && initiatorAccessLink
+                ? initiatorAccessLink
+                : reportLink;
             await sendEmail({
                 to: email,
                 subject: reportTitle,
-                text: [reportMessage, baseListLine, `Ссылка: ${reportLink}`].filter(Boolean).join('\n\n'),
+                text: [reportMessage, baseListLine, `Ссылка: ${link}`].filter(Boolean).join('\n\n'),
                 html: `
 <p>${reportMessage}</p>
 ${baseListLine ? `<p>${baseListLine}</p>` : ''}
-<p><a href="${reportLink}">Перейти к фотоотчетам</a></p>`,
+<p><a href="${link}">Перейти к фотоотчетам</a></p>`,
             });
         } catch (error) {
             console.error('Failed to send report email', error);

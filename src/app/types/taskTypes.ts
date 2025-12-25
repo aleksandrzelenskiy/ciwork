@@ -101,7 +101,6 @@ export interface Task {
   authorEmail: string;
   authorName: string;
 
-  initiatorId: string;
   initiatorName: string;
   initiatorEmail: string;
 

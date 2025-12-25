@@ -20,7 +20,6 @@ export const upsertReport = async (params: {
     taskName?: string;
     orgId: string;
     projectId?: string | null;
-    initiatorId?: string | null;
     initiatorName?: string | null;
     actor: Actor;
 }) => {
@@ -30,7 +29,6 @@ export const upsertReport = async (params: {
         taskName,
         orgId,
         projectId,
-        initiatorId,
         initiatorName,
         actor,
     } = params;
@@ -46,7 +44,6 @@ export const upsertReport = async (params: {
         projectId: projectId ?? undefined,
         createdById: actor.id,
         createdByName: actor.name,
-        initiatorId: initiatorId ?? undefined,
         initiatorName: initiatorName ?? undefined,
         status: 'Pending',
         files: [],

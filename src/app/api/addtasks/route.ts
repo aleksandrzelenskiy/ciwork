@@ -69,7 +69,6 @@ export async function POST(request: Request) {
       authorId: (formData.get('authorId') as string) || '',
       authorName: (formData.get('authorName') as string) || '',
       authorEmail: (formData.get('authorEmail') as string) || '',
-      initiatorId: (formData.get('initiatorId') as string) || '',
       initiatorName: (formData.get('initiatorName') as string) || '',
       initiatorEmail: (formData.get('initiatorEmail') as string) || '',
       executorId: (formData.get('executorId') as string) || '',
@@ -89,6 +88,12 @@ export async function POST(request: Request) {
     if (!taskData.taskName || !taskData.bsNumber) {
       return NextResponse.json(
           { error: 'taskName and bsNumber are required' },
+          { status: 400 }
+      );
+    }
+    if (!taskData.initiatorName || !taskData.initiatorEmail) {
+      return NextResponse.json(
+          { error: 'initiatorName and initiatorEmail are required' },
           { status: 400 }
       );
     }

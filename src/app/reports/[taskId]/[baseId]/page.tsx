@@ -7,7 +7,7 @@ import { Box, Button, CircularProgress, Snackbar, Alert, Stack, Typography } fro
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import ReportHeader from '@/app/components/reports/ReportHeader';
 import ReportGallery from '@/app/components/reports/ReportGallery';
 import ReportIssuesPanel from '@/app/components/reports/ReportIssuesPanel';
@@ -32,6 +32,9 @@ type RelatedReport = BaseStatus;
 
 export default function PhotoReportPage() {
     const { taskId, baseId } = useParams() as { taskId: string; baseId: string };
+    const searchParams = useSearchParams();
+    const token = searchParams?.get('token')?.trim() || '';
+    const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
     const [report, setReport] = React.useState<ReportPayload | null>(null);
@@ -55,7 +58,7 @@ export default function PhotoReportPage() {
     const fetchReport = React.useCallback(async () => {
         try {
             setLoading(true);
-            const response = await fetch(`/api/reports/${taskId}/${baseId}`);
+            const response = await fetch(`/api/reports/${taskId}/${baseId}${tokenParam}`);
             const data = (await response.json().catch(() => null)) as (ReportPayload & { error?: string }) | null;
             if (!response.ok || !data || data.error) {
                 setError(data?.error || 'Не удалось загрузить отчет');
@@ -71,11 +74,11 @@ export default function PhotoReportPage() {
         } finally {
             setLoading(false);
         }
-    }, [taskId, baseId]);
+    }, [taskId, baseId, tokenParam]);
 
     const fetchRelatedReports = React.useCallback(async () => {
         try {
-            const response = await fetch('/api/reports');
+            const response = await fetch(token ? `/api/reports?token=${encodeURIComponent(token)}` : '/api/reports');
             const data = (await response.json().catch(() => null)) as ApiResponse | null;
             if (!response.ok || !data || !Array.isArray(data.reports)) {
                 setRelatedReports([]);
@@ -104,7 +107,7 @@ export default function PhotoReportPage() {
         } catch {
             setRelatedReports([]);
         }
-    }, [taskId, baseId]);
+    }, [taskId, baseId, token]);
 
     React.useEffect(() => {
         void fetchReport();
@@ -118,7 +121,7 @@ export default function PhotoReportPage() {
 
     const handleApprove = async () => {
         if (!report) return;
-        const response = await fetch(`/api/reports/${taskId}/${baseId}`, {
+        const response = await fetch(`/api/reports/${taskId}/${baseId}${tokenParam}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'Agreed' }),
@@ -133,7 +136,7 @@ export default function PhotoReportPage() {
     };
 
     const handleSaveIssues = async (issues: string[]) => {
-        const response = await fetch(`/api/reports/${taskId}/${baseId}`, {
+        const response = await fetch(`/api/reports/${taskId}/${baseId}${tokenParam}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -213,7 +216,7 @@ export default function PhotoReportPage() {
 
             <Button
                 component={Link}
-                href="/reports"
+                href={token ? `/reports?token=${encodeURIComponent(token)}` : '/reports'}
                 startIcon={<ArrowBackIcon />}
                 sx={{ textTransform: 'none', mb: 3 }}
             >
@@ -272,7 +275,7 @@ export default function PhotoReportPage() {
                                             component={Link}
                                             href={`/reports/${encodeURIComponent(
                                                 taskId
-                                            )}/${encodeURIComponent(related.baseId)}`}
+                                            )}/${encodeURIComponent(related.baseId)}${tokenParam}`}
                                             variant="outlined"
                                             sx={{
                                                 justifyContent: 'space-between',

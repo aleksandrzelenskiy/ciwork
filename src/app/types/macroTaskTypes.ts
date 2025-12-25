@@ -31,7 +31,6 @@ export interface MacroTask {
     description?: string;
 
     // заказчик
-    initiatorId: string;
     initiatorName: string;
     initiatorEmail: string;
 

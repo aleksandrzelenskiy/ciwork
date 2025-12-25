@@ -95,7 +95,6 @@ const EstimateUploadPage: React.FC = () => {
     authorId: '',
     authorName: '',
     authorEmail: '',
-    initiatorId: '',
     initiatorName: '',
     initiatorEmail: '',
     executorId: '',
@@ -403,10 +402,6 @@ const EstimateUploadPage: React.FC = () => {
       }
 
       // Данные инициатора
-      const initiatorUser = users.find(
-          (user) => user.clerkUserId === formData.initiatorId
-      );
-      formDataToSend.append('initiatorId', initiatorUser?.clerkUserId || '');
       formDataToSend.append('initiatorName', formData.initiatorName || '');
       formDataToSend.append('initiatorEmail', formData.initiatorEmail || '');
 
@@ -785,13 +780,12 @@ const EstimateUploadPage: React.FC = () => {
                         getOptionLabel={(user) => `${user.name} (${user.email})`}
                         value={
                             users.find(
-                                (user) => user.clerkUserId === formData.initiatorId
+                                (user) => user.email === formData.initiatorEmail
                             ) || null
                         }
                         onChange={(_, newValue) => {
                           setFormData({
                             ...formData,
-                            initiatorId: newValue?.clerkUserId || '',
                             initiatorName: newValue?.name || '',
                             initiatorEmail: newValue?.email || '',
                           });

@@ -48,17 +48,22 @@ export default function ReportListPage() {
   const [deleteLoading, setDeleteLoading] = React.useState(false);
   const [downloadingTaskId, setDownloadingTaskId] = React.useState<string | null>(null);
   const searchParams = useSearchParams();
+  const token = searchParams?.get('token')?.trim() || '';
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
   const reportRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const highlightTaskId = React.useMemo(() => {
     const raw = searchParams?.get('highlightTaskId') ?? '';
     return raw ? raw.trim().toLowerCase() : '';
   }, [searchParams]);
   const highlightActive = Boolean(highlightTaskId);
+  const isGuest = Boolean(token);
 
   React.useEffect(() => {
     const fetchReports = async () => {
       try {
-        const response = await fetch('/api/reports');
+        const response = await fetch(
+          token ? `/api/reports?token=${encodeURIComponent(token)}` : '/api/reports'
+        );
         const data: ApiResponse = await response.json();
         if (!response.ok) {
           setError(data.error || 'Не удалось загрузить фотоотчеты');
@@ -72,7 +77,7 @@ export default function ReportListPage() {
       }
     };
     void fetchReports();
-  }, []);
+  }, [token]);
 
   React.useEffect(() => {
     if (!highlightActive || loading) return;
@@ -94,6 +99,7 @@ export default function ReportListPage() {
   });
 
   const handleOpenDeleteDialog = (report: ReportClient) => {
+    if (isGuest) return;
     setDeleteTarget(report);
     setDeleteDialogOpen(true);
   };
@@ -286,7 +292,7 @@ export default function ReportListPage() {
                         </span>
                       </Tooltip>
                     )}
-                    {report.canDelete && (
+                    {!isGuest && report.canDelete && (
                       <IconButton
                         size="small"
                         onClick={() => handleOpenDeleteDialog(report)}
@@ -305,7 +311,7 @@ export default function ReportListPage() {
                       icon={<FolderIcon sx={{ color: resolveStatusColor(base.status) }} />}
                       label={`БС ${base.baseId}`}
                       component={Link}
-                      href={`/reports/${report.taskId}/${base.baseId}`}
+                      href={`/reports/${report.taskId}/${base.baseId}${tokenParam}`}
                       clickable
                       sx={{
                         borderRadius: 999,

@@ -34,7 +34,6 @@ export interface IReport {
   updatedAt?: Date;
   createdById: string;
   createdByName: string;
-  initiatorId?: string;
   initiatorName?: string;
   events: IEvent[];
 }

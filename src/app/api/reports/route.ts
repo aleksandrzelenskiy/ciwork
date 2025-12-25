@@ -7,8 +7,9 @@ import TaskModel from '@/app/models/TaskModel';
 import ProjectModel from '@/app/models/ProjectModel';
 import { GetUserContext } from '@/server-actions/user-context';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
+import { verifyInitiatorAccessToken } from '@/utils/initiatorAccessToken';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await dbConnect();
     console.log('Connected to MongoDB');
@@ -20,36 +21,80 @@ export async function GET() {
     );
   }
 
-  const userContext = await GetUserContext();
-  if (!userContext.success || !userContext.data) {
-    const errorMessage = userContext.success
-      ? 'No active user session found'
-      : userContext.message || 'No active user session found';
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 401 }
-    );
-  }
+  const url = new URL(request.url);
+  const token = url.searchParams.get('token')?.trim() || '';
+  const guestAccess = token ? verifyInitiatorAccessToken(token) : null;
+  const isGuest = Boolean(guestAccess);
 
-  const {
-    user,
-    effectiveOrgRole,
-    isSuperAdmin,
-    activeMembership,
-  } = userContext.data;
-  const clerkUserId = user.clerkUserId;
-  const userRole = effectiveOrgRole || activeMembership?.role || null;
+  let effectiveRole: Parameters<typeof mapRoleToLegacy>[0] = null;
+  let legacyRole: ReturnType<typeof mapRoleToLegacy> = null;
+  let isSuperAdmin = false;
+  let query: Record<string, unknown> = {};
+  let normalizedEmail = '';
+  let taskMeta: Array<{
+    taskId: string;
+    bsNumber?: string;
+    executorName?: string;
+    projectId?: string | null;
+  }> = [];
 
-  const query: Record<string, unknown> = {};
-  const activeOrgId =
-      userContext.data.activeOrgId ||
-      userContext.data.activeMembership?.orgId ||
-      null;
-  if (activeOrgId) {
-    query.orgId = activeOrgId;
-  }
-  if (!isSuperAdmin && userRole === 'executor') {
-    query.createdById = clerkUserId;
+  if (guestAccess) {
+    const taskRecord = await TaskModel.findOne({ taskId: guestAccess.taskId })
+      .select('taskId bsNumber executorName projectId initiatorEmail')
+      .lean();
+    const initiatorEmail = taskRecord?.initiatorEmail?.trim().toLowerCase() || '';
+    if (!initiatorEmail || initiatorEmail !== guestAccess.email) {
+      return NextResponse.json(
+        { error: 'Недостаточно прав для просмотра отчетов' },
+        { status: 403 }
+      );
+    }
+    query = { taskId: guestAccess.taskId };
+    if (taskRecord) {
+      taskMeta = [
+        {
+          taskId: taskRecord.taskId,
+          bsNumber: taskRecord.bsNumber,
+          executorName: taskRecord.executorName,
+          projectId: taskRecord.projectId?.toString?.() ?? null,
+        },
+      ];
+    }
+    legacyRole = 'viewer';
+  } else {
+    const userContext = await GetUserContext();
+    if (!userContext.success || !userContext.data) {
+      const errorMessage = userContext.success
+        ? 'No active user session found'
+        : userContext.message || 'No active user session found';
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: 401 }
+      );
+    }
+
+    const {
+      user,
+      effectiveOrgRole,
+      isSuperAdmin: superAdmin,
+      activeMembership,
+    } = userContext.data;
+    const clerkUserId = user.clerkUserId;
+    effectiveRole = effectiveOrgRole || activeMembership?.role || null;
+    isSuperAdmin = Boolean(superAdmin);
+
+    const activeOrgId =
+        userContext.data.activeOrgId ||
+        userContext.data.activeMembership?.orgId ||
+        null;
+    if (activeOrgId) {
+      query.orgId = activeOrgId;
+    }
+    if (!isSuperAdmin && userRole === 'executor') {
+      query.createdById = clerkUserId;
+    }
+    normalizedEmail =
+      userContext.data.user.email?.trim().toLowerCase() ?? '';
   }
 
   let rawReports;
@@ -71,11 +116,13 @@ export async function GET() {
     )
   );
 
-  const taskMeta = taskIds.length
-    ? await TaskModel.find({ taskId: { $in: taskIds } })
-        .select('taskId bsNumber executorName projectId')
-        .lean()
-    : [];
+  if (!isGuest) {
+    taskMeta = taskIds.length
+      ? await TaskModel.find({ taskId: { $in: taskIds } })
+          .select('taskId bsNumber executorName projectId')
+          .lean()
+      : [];
+  }
   const taskMetaMap = new Map(
     taskMeta.map((task) => [
       task.taskId,
@@ -87,25 +134,25 @@ export async function GET() {
     ])
   );
 
-  const projectIds = new Set<string>();
-  rawReports.forEach((report) => {
-    const reportProjectId = report.projectId?.toString?.() ?? null;
-    const taskProjectId = taskMetaMap.get(report.taskId)?.projectId ?? null;
-    const projectId = reportProjectId || taskProjectId;
-    if (projectId) projectIds.add(projectId);
-  });
+  const projectManagersMap = new Map<string, string[]>();
+  if (!isGuest) {
+    const projectIds = new Set<string>();
+    rawReports.forEach((report) => {
+      const reportProjectId = report.projectId?.toString?.() ?? null;
+      const taskProjectId = taskMetaMap.get(report.taskId)?.projectId ?? null;
+      const projectId = reportProjectId || taskProjectId;
+      if (projectId) projectIds.add(projectId);
+    });
 
-  const projects = projectIds.size > 0
-    ? await ProjectModel.find({ _id: { $in: Array.from(projectIds) } })
-        .select('managers')
-        .lean()
-    : [];
-  const projectManagersMap = new Map(
-    projects.map((project) => [project._id.toString(), project.managers ?? []])
-  );
-
-  const normalizedEmail =
-    userContext.data.user.email?.trim().toLowerCase() ?? '';
+    const projects = projectIds.size > 0
+      ? await ProjectModel.find({ _id: { $in: Array.from(projectIds) } })
+          .select('managers')
+          .lean()
+      : [];
+    projects.forEach((project) => {
+      projectManagersMap.set(project._id.toString(), project.managers ?? []);
+    });
+  }
 
   type BaseStatus = {
     baseId: string;
@@ -148,7 +195,6 @@ export async function GET() {
     const canDelete = normalizedEmail.length > 0
       ? managers.some(
           (manager) =>
-            typeof manager === 'string' &&
             manager.trim().toLowerCase() === normalizedEmail
         )
       : false;
@@ -181,7 +227,7 @@ export async function GET() {
 
   return NextResponse.json({
     reports,
-    userRole: mapRoleToLegacy(userRole),
+    userRole: isGuest ? legacyRole : mapRoleToLegacy(effectiveRole),
     isSuperAdmin,
   });
 }

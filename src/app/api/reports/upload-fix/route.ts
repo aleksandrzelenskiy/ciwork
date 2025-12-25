@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
         taskName: task.taskName ?? '',
         orgId: String(task.orgId ?? ''),
         projectId: task.projectId ? String(task.projectId) : null,
-        initiatorId: task.initiatorId ?? null,
         initiatorName: task.initiatorName ?? null,
         actor,
     });

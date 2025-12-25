@@ -20,6 +20,7 @@ import {
 import { splitAttachmentsAndDocuments } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { createNotification } from '@/app/utils/notificationService';
+import { sendEmail } from '@/utils/mailer';
 import OrganizationModel from '@/app/models/OrganizationModel';
 import ProjectModel from '@/app/models/ProjectModel';
 
@@ -28,7 +29,8 @@ interface UpdateData {
   taskName?: string;
   bsNumber?: string;
   taskDescription?: string;
-  initiatorId?: string;
+  initiatorName?: string;
+  initiatorEmail?: string;
   executorId?: string | null;
   dueDate?: string;
   priority?: PriorityLevel;
@@ -367,15 +369,11 @@ export async function PATCH(
     if (updateData.bsNumber) task.bsNumber = updateData.bsNumber;
     if (updateData.taskDescription) task.taskDescription = updateData.taskDescription;
 
-    if (updateData.initiatorId) {
-      const initiator = await UserModel.findOne({
-        clerkUserId: updateData.initiatorId,
-      });
-      if (initiator) {
-        task.initiatorId = initiator.clerkUserId;
-        task.initiatorName = initiator.name;
-        task.initiatorEmail = initiator.email;
-      }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'initiatorName')) {
+      task.initiatorName = updateData.initiatorName?.trim() || '';
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'initiatorEmail')) {
+      task.initiatorEmail = updateData.initiatorEmail?.trim() || '';
     }
 
     // === исполнитель: обновляем ТОЛЬКО если поле присутствует в запросе ===
@@ -447,7 +445,7 @@ export async function PATCH(
         action: 'accept' | 'reject',
         newStatus: string
     ) => {
-      const possibleManagers = [updatedTask.initiatorId, updatedTask.authorId]
+      const possibleManagers = [updatedTask.authorId]
           .map((v) => (typeof v === 'string' ? v.trim() : ''))
           .filter((v) => v && v !== user.id);
 
@@ -715,10 +713,6 @@ export async function PATCH(
           bsNumber: updatedTask.bsNumber,
           previousStatus,
           newStatus: updatedTask.status,
-          initiatorClerkId:
-              typeof updatedTask.initiatorId === 'string'
-                  ? updatedTask.initiatorId
-                  : undefined,
           authorClerkId:
               typeof updatedTask.authorId === 'string' ? updatedTask.authorId : undefined,
           executorClerkId:
@@ -736,6 +730,23 @@ export async function PATCH(
         });
       } catch (notifyErr) {
         console.error('Failed to send status change notification', notifyErr);
+      }
+
+      const initiatorEmail = updatedTask.initiatorEmail?.trim();
+      if (initiatorEmail) {
+        const bsInfo = updatedTask.bsNumber ? ` (БС ${updatedTask.bsNumber})` : '';
+        const subject = `Статус задачи обновлён: ${updatedTask.taskName}${bsInfo}`;
+        const text = `Статус задачи «${updatedTask.taskName}»${bsInfo} изменён с ${previousStatus ?? 'не указан'} на ${updatedTask.status}.`;
+        try {
+          await sendEmail({
+            to: initiatorEmail,
+            subject,
+            text,
+            html: `<p>${text}</p>`,
+          });
+        } catch (emailErr) {
+          console.error('Failed to send status email to initiator', emailErr);
+        }
       }
     }
 

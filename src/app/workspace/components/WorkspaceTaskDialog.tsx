@@ -96,6 +96,8 @@ export type TaskForEdit = {
     executorId?: string;
     executorName?: string;
     executorEmail?: string;
+    initiatorName?: string;
+    initiatorEmail?: string;
     files?: Array<{ name?: string; url?: string; size?: number }>;
     attachments?: string[];
     bsLocation?: Array<{ name: string; coordinates: string; address?: string }>;
@@ -394,6 +396,9 @@ export default function WorkspaceTaskDialog({
     const [membersError, setMembersError] = React.useState<string | null>(null);
     const [selectedExecutor, setSelectedExecutor] = React.useState<MemberOption | null>(null);
 
+    const [initiatorName, setInitiatorName] = React.useState('');
+    const [initiatorEmail, setInitiatorEmail] = React.useState('');
+
     const [existingAttachments, setExistingAttachments] = React.useState<
         Array<{ key: string; name: string; url?: string; size?: number }>
     >([]);
@@ -571,6 +576,8 @@ export default function WorkspaceTaskDialog({
         setPriority(['urgent', 'high', 'medium', 'low'].includes(pr) ? pr : 'medium');
         setDueDate(initialTask.dueDate ? new Date(initialTask.dueDate) : null);
         setTaskDescription(initialTask.taskDescription ?? '');
+        setInitiatorName(initialTask.initiatorName ?? '');
+        setInitiatorEmail(initialTask.initiatorEmail ?? '');
 
         // стоимость
         setTotalCost(
@@ -999,6 +1006,8 @@ export default function WorkspaceTaskDialog({
         setPriority('medium');
         setDueDate(new Date());
         setSelectedExecutor(null);
+        setInitiatorName('');
+        setInitiatorEmail('');
         setExistingAttachments([]);
         setAttachments([]);
         setEstimateFile(null);
@@ -1224,6 +1233,12 @@ export default function WorkspaceTaskDialog({
         if (!orgSlug || !projectRef) return;
         if (hasInvalidCoords) return;
         if (!taskBsAddress) return;
+        if (!initiatorName.trim() || !initiatorEmail.trim()) {
+            setSnackbarMsg('Укажите имя и email инициатора');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+            return;
+        }
 
         setSaving(true);
         const newTaskId = genId();
@@ -1246,6 +1261,8 @@ export default function WorkspaceTaskDialog({
                 executorId: selectedExecutor ? selectedExecutor.id : null,
                 executorName: selectedExecutor ? selectedExecutor.name : null,
                 executorEmail: selectedExecutor ? selectedExecutor.email : null,
+                initiatorName: initiatorName.trim(),
+                initiatorEmail: initiatorEmail.trim(),
                 totalCost: totalCost.trim() ? Number(totalCost.trim()) : undefined,
                 contractorPayment: contractorPayment.trim() ? Number(contractorPayment.trim()) : undefined,
                 workItems,
@@ -1286,6 +1303,12 @@ export default function WorkspaceTaskDialog({
         if (!orgSlug || !projectRef) return;
         if (hasInvalidCoords) return;
         if (!taskBsAddress) return;
+        if (!initiatorName.trim() || !initiatorEmail.trim()) {
+            setSnackbarMsg('Укажите имя и email инициатора');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+            return;
+        }
 
         setSaving(true);
         const bsLocation = buildBsLocation();
@@ -1305,6 +1328,8 @@ export default function WorkspaceTaskDialog({
                 executorId: selectedExecutor ? selectedExecutor.id : null,
                 executorName: selectedExecutor ? selectedExecutor.name : null,
                 executorEmail: selectedExecutor ? selectedExecutor.email : null,
+                initiatorName: initiatorName.trim(),
+                initiatorEmail: initiatorEmail.trim(),
                 totalCost: totalCost.trim() ? Number(totalCost.trim()) : undefined,
                 contractorPayment: contractorPayment.trim() ? Number(contractorPayment.trim()) : undefined,
                 workItems,
@@ -1880,6 +1905,25 @@ export default function WorkspaceTaskDialog({
                                     </Box>
                                 </Collapse>
                             </Box>
+
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                                <TextField
+                                    label="Инициатор (имя)"
+                                    value={initiatorName}
+                                    onChange={(e) => setInitiatorName(e.target.value)}
+                                    fullWidth
+                                    required
+                                    sx={glassInputSx}
+                                />
+                                <TextField
+                                    label="Инициатор (email)"
+                                    value={initiatorEmail}
+                                    onChange={(e) => setInitiatorEmail(e.target.value)}
+                                    fullWidth
+                                    required
+                                    sx={glassInputSx}
+                                />
+                            </Stack>
 
                             <Autocomplete<MemberOption>
                                 options={members}

@@ -28,7 +28,6 @@ const ReportSchema = new Schema<IReport>({
   status: { type: String, default: 'Pending' },
   createdById: { type: String, required: true },
   createdByName: { type: String, default: 'Unknown' },
-  initiatorId: { type: String },
   initiatorName: { type: String, default: 'initiator' },
   events: { type: [EventSchema], default: [] },
 }, { timestamps: true });

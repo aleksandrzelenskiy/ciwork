@@ -427,6 +427,18 @@ export async function PUT(
             allowedPatch.taskDescription = trimmed || undefined;
         }
 
+        if (typeof body.initiatorName === 'string') {
+            const trimmed = body.initiatorName.trim();
+            markChange('initiatorName', currentTask.initiatorName, trimmed || undefined);
+            allowedPatch.initiatorName = trimmed || undefined;
+        }
+
+        if (typeof body.initiatorEmail === 'string') {
+            const trimmed = body.initiatorEmail.trim();
+            markChange('initiatorEmail', currentTask.initiatorEmail, trimmed || undefined);
+            allowedPatch.initiatorEmail = trimmed || undefined;
+        }
+
         // статус
         const status = normalizeStatus(body.status as string | undefined);
         if (status) {
@@ -871,8 +883,6 @@ export async function PUT(
                     bsNumber: updated.bsNumber,
                     previousStatus,
                     newStatus: updated.status,
-                    initiatorClerkId:
-                        typeof updated.initiatorId === 'string' ? updated.initiatorId : undefined,
                     authorClerkId:
                         typeof updated.authorId === 'string' ? updated.authorId : undefined,
                     executorClerkId:

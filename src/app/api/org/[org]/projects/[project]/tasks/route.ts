@@ -125,6 +125,8 @@ type CreateTaskBody = {
     orderDate?: string;
     orderSignDate?: string;
     taskDescription?: string;
+    initiatorName?: string;
+    initiatorEmail?: string;
     executorId?: string;
     executorName?: string;
     executorEmail?: string;
@@ -252,6 +254,8 @@ export async function POST(
             orderDate,
             orderSignDate,
             taskDescription,
+            initiatorName,
+            initiatorEmail,
             executorId,
             executorName,
             executorEmail,
@@ -266,6 +270,12 @@ export async function POST(
         if (!bsNumber) return NextResponse.json({ error: 'bsNumber is required' }, { status: 400 });
         if (!finalBsAddress)
             return NextResponse.json({ error: 'bsAddress is required' }, { status: 400 });
+        if (!initiatorName || !initiatorEmail) {
+            return NextResponse.json(
+                { error: 'initiatorName and initiatorEmail are required' },
+                { status: 400 }
+            );
+        }
 
         const hasExecutor = typeof executorId === 'string' && executorId.trim().length > 0;
         const finalStatus = hasExecutor ? 'Assigned' : normalizeStatus(status);
@@ -351,6 +361,9 @@ export async function POST(
             authorId: user.id,
             authorEmail: user.emailAddresses?.[0]?.emailAddress,
             authorName: creatorName,
+
+            initiatorName,
+            initiatorEmail,
 
             executorId: hasExecutor ? executorId : undefined,
             executorName: hasExecutor ? executorName : undefined,

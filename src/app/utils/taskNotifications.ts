@@ -140,7 +140,6 @@ export async function notifyTaskStatusChange(input: {
     bsNumber?: string;
     previousStatus?: string;
     newStatus: string;
-    initiatorClerkId?: string | null;
     authorClerkId?: string | null;
     executorClerkId?: string | null;
     triggeredByClerkId?: string | null;
@@ -154,7 +153,7 @@ export async function notifyTaskStatusChange(input: {
     projectName?: string;
     link?: string;
 }) {
-    const targets = [input.initiatorClerkId, input.authorClerkId, input.executorClerkId]
+    const targets = [input.authorClerkId, input.executorClerkId]
         .map((v) => (typeof v === 'string' ? v.trim() : ''))
         .filter((v) => v && v !== input.triggeredByClerkId);
 
