@@ -81,6 +81,7 @@ export async function GET(request: Request) {
     } = userContext.data;
     const clerkUserId = user.clerkUserId;
     effectiveRole = effectiveOrgRole || activeMembership?.role || null;
+    legacyRole = mapRoleToLegacy(effectiveRole);
     isSuperAdmin = Boolean(superAdmin);
 
     const activeOrgId =
@@ -90,7 +91,7 @@ export async function GET(request: Request) {
     if (activeOrgId) {
       query.orgId = activeOrgId;
     }
-    if (!isSuperAdmin && userRole === 'executor') {
+    if (!isSuperAdmin && legacyRole === 'executor') {
       query.createdById = clerkUserId;
     }
     normalizedEmail =
