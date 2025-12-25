@@ -6,6 +6,9 @@ import { uploadBuffer } from '@/utils/s3';
 import { assertWritableStorage, recordStorageBytes } from '@/utils/storageUsage';
 import { appendReportFiles, syncTaskStatus, upsertReport } from '@/server-actions/reportService';
 import { buildReportKey, extractUploadPayload, prepareImageBuffer, resolveStorageScope } from '@/app/api/reports/_shared';
+import UserModel from '@/app/models/UserModel';
+import { createNotification } from '@/app/utils/notificationService';
+import ProjectModel from '@/app/models/ProjectModel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -87,7 +90,9 @@ export async function POST(request: NextRequest) {
 
     await recordStorageBytes(task.orgId, totalBytes);
 
-    const actor = { id: user.id, name: buildActorName(user) };
+    const actorName = buildActorName(user);
+    const actor = { id: user.id, name: actorName };
+    const actorEmail = user.emailAddresses?.[0]?.emailAddress;
     const report = await upsertReport({
         taskId: payload.taskId,
         baseId: payload.baseId,
@@ -105,6 +110,92 @@ export async function POST(request: NextRequest) {
         actor,
         comment: 'Исполнитель загрузил исправления по фотоотчету',
     });
+
+    const recipientClerkIds = new Set<string>();
+    if (typeof task.authorId === 'string' && task.authorId.trim()) {
+        recipientClerkIds.add(task.authorId.trim());
+    }
+    if (typeof task.executorId === 'string' && task.executorId.trim()) {
+        recipientClerkIds.add(task.executorId.trim());
+    }
+    recipientClerkIds.delete(user.id);
+
+    const recipientEmails = new Set<string>();
+    if (typeof task.authorEmail === 'string' && task.authorEmail.trim()) {
+        recipientEmails.add(task.authorEmail.trim().toLowerCase());
+    }
+    if (typeof task.initiatorEmail === 'string' && task.initiatorEmail.trim()) {
+        recipientEmails.add(task.initiatorEmail.trim().toLowerCase());
+    }
+
+    if (task.projectId) {
+        const project = await ProjectModel.findById(task.projectId).select('managers').lean();
+        const managers = Array.isArray(project?.managers) ? project.managers : [];
+        managers.forEach((email) => {
+            if (typeof email === 'string' && email.trim()) {
+                recipientEmails.add(email.trim().toLowerCase());
+            }
+        });
+    }
+
+    if (actorEmail) {
+        recipientEmails.delete(actorEmail.trim().toLowerCase());
+    }
+
+    if (recipientClerkIds.size > 0 || recipientEmails.size > 0) {
+        const orConditions: Record<string, unknown>[] = [];
+        if (recipientClerkIds.size > 0) {
+            orConditions.push({ clerkUserId: { $in: Array.from(recipientClerkIds) } });
+        }
+        if (recipientEmails.size > 0) {
+            orConditions.push({ email: { $in: Array.from(recipientEmails) } });
+        }
+
+        const recipients = await UserModel.find({ $or: orConditions })
+            .select('_id clerkUserId email')
+            .lean()
+            .exec();
+
+        const filteredRecipients = recipients.filter((recipient) => {
+            const isActorByClerk = Boolean(recipient?.clerkUserId && recipient.clerkUserId === user.id);
+            const isActorByEmail = Boolean(
+                recipient?.email &&
+                    actorEmail &&
+                    recipient.email.trim().toLowerCase() === actorEmail.trim().toLowerCase()
+            );
+            return !isActorByClerk && !isActorByEmail;
+        });
+
+        if (filteredRecipients.length > 0) {
+            const bsInfo = task.bsNumber ? ` (БС ${task.bsNumber})` : '';
+            const baseInfo = payload.baseId ? ` БС ${payload.baseId}` : '';
+            const taskTitle = task.taskName || task.taskId;
+            const link = `/reports/${encodeURIComponent(payload.taskId)}/${encodeURIComponent(
+                payload.baseId
+            )}`;
+
+            await Promise.all(
+                filteredRecipients.map((recipient) =>
+                    createNotification({
+                        recipientUserId: recipient._id,
+                        type: 'task_status_change',
+                        title: `Исправления по фотоотчету${bsInfo}`,
+                        message: `${actorName} загрузил исправления по фотоотчету по задаче «${taskTitle}»${baseInfo}.`,
+                        link,
+                        orgId: task.orgId ?? undefined,
+                        senderName: actorName,
+                        senderEmail: actorEmail,
+                        metadata: {
+                            taskId: task.taskId,
+                            baseId: payload.baseId,
+                            status: 'Fixed',
+                            fixedFilesCount: uploadedUrls.length,
+                        },
+                    })
+                )
+            );
+        }
+    }
 
     return NextResponse.json({
         success: true,
