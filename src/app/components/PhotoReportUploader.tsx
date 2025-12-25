@@ -57,6 +57,7 @@ type PhotoReportUploaderProps = {
     bsLocations?: BaseLocation[];
     photoReports?: PhotoReport[];
     onSubmitted?: () => void;
+    readOnly?: boolean;
 };
 
 const getReadableSize = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(2)} МБ`;
@@ -78,6 +79,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         bsLocations = [],
         photoReports = [],
         onSubmitted,
+        readOnly = false,
     } = props;
 
     const [view, setView] = React.useState<'folders' | 'upload'>('folders');
@@ -179,6 +181,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         accept: { 'image/*': [] },
         multiple: true,
         maxSize: 15 * 1024 * 1024,
+        disabled: uploading || readOnly,
         onDrop: (acceptedFiles, fileRejections) => {
             const mapped = acceptedFiles.map((file) => ({
                 id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
@@ -246,6 +249,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     };
 
     const handleUpload = async () => {
+        if (readOnly) return;
         if (!activeBase) {
             setUploadError('Выберите папку БС для загрузки фотоотчета');
             return;
@@ -462,11 +466,13 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     );
 
     const handleDeleteExisting = (baseId: string, url: string) => {
+        if (readOnly) return;
         setDeleteError(null);
         setDeleteTarget({ baseId, url });
     };
 
     const handleConfirmDelete = async () => {
+        if (readOnly) return;
         if (!deleteTarget) return;
         setDeleteLoading(true);
         setDeleteError(null);
@@ -515,6 +521,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     };
 
     const handleSubmit = async () => {
+        if (readOnly) return;
         if (!allUploaded) {
             setSubmitError('Сначала загрузите фото по всем папкам БС');
             return;
@@ -599,7 +606,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 {view === 'folders' ? (
                     <>
                         <Typography variant="body2" color="text.secondary">
-                            Загрузите фото по каждой БС, затем отправьте отчет менеджеру.
+                            {readOnly
+                                ? 'Просмотр фотоотчета по папкам БС.'
+                                : 'Загрузите фото по каждой БС, затем отправьте отчет менеджеру.'}
                         </Typography>
                         {folderAlert && <Alert severity="success">{folderAlert}</Alert>}
                         {submitError && <Alert severity="error">{submitError}</Alert>}
@@ -667,34 +676,38 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 ) : (
                     <>
                         <Typography variant="body2" color="text.secondary">
-                            Загружайте фото для БС {activeBase}.
+                            {readOnly
+                                ? `Просмотр фото для БС ${activeBase}.`
+                                : `Загружайте фото для БС ${activeBase}.`}
                         </Typography>
                         {uploadError && <Alert severity="error">{uploadError}</Alert>}
                         {existingError && <Alert severity="error">{existingError}</Alert>}
-                        <Box
-                            {...getRootProps()}
-                            sx={{
-                                border: '1.5px dashed',
-                                borderColor: isDragActive ? 'primary.main' : 'rgba(15, 23, 42, 0.2)',
-                                borderRadius: 4,
-                                p: 3,
-                                textAlign: 'center',
-                                background:
-                                    'linear-gradient(140deg, rgba(255,255,255,0.8), rgba(236,242,249,0.92))',
-                                transition: 'all 0.2s ease',
-                                cursor: uploading ? 'not-allowed' : 'pointer',
-                                opacity: uploading ? 0.6 : 1,
-                            }}
-                        >
-                            <input {...getInputProps()} disabled={uploading} />
-                            <CloudUploadIcon fontSize="large" color="action" />
-                            <Typography variant="h6" sx={{ mt: 1, mb: 0.5, fontWeight: 600 }}>
-                                Перетащите фото или нажмите, чтобы выбрать
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                До 15 МБ каждое. Загрузка выполняется после нажатия «Загрузить».
-                            </Typography>
-                        </Box>
+                        {!readOnly && (
+                            <Box
+                                {...getRootProps()}
+                                sx={{
+                                    border: '1.5px dashed',
+                                    borderColor: isDragActive ? 'primary.main' : 'rgba(15, 23, 42, 0.2)',
+                                    borderRadius: 4,
+                                    p: 3,
+                                    textAlign: 'center',
+                                    background:
+                                        'linear-gradient(140deg, rgba(255,255,255,0.8), rgba(236,242,249,0.92))',
+                                    transition: 'all 0.2s ease',
+                                    cursor: uploading ? 'not-allowed' : 'pointer',
+                                    opacity: uploading ? 0.6 : 1,
+                                }}
+                            >
+                                <input {...getInputProps()} disabled={uploading} />
+                                <CloudUploadIcon fontSize="large" color="action" />
+                                <Typography variant="h6" sx={{ mt: 1, mb: 0.5, fontWeight: 600 }}>
+                                    Перетащите фото или нажмите, чтобы выбрать
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    До 15 МБ каждое. Загрузка выполняется после нажатия «Загрузить».
+                                </Typography>
+                            </Box>
+                        )}
 
                         {existingLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
                         {existingFiles.length > 0 && (
@@ -722,31 +735,33 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                 style={{ objectFit: 'cover' }}
                                                 unoptimized
                                             />
-                                            <IconButton
-                                                onClick={() => handleDeleteExisting(activeBase, url)}
-                                                disabled={uploading || deleteLoading}
-                                                size="small"
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 4,
-                                                    right: 4,
-                                                    bgcolor: 'rgba(15,23,42,0.65)',
-                                                    color: '#fff',
-                                                    '&:hover': {
-                                                        bgcolor: 'rgba(15,23,42,0.8)',
-                                                    },
-                                                }}
-                                                aria-label="Удалить фото"
-                                            >
-                                                <DeleteOutlineIcon fontSize="small" />
-                                            </IconButton>
+                                            {!readOnly && (
+                                                <IconButton
+                                                    onClick={() => handleDeleteExisting(activeBase, url)}
+                                                    disabled={uploading || deleteLoading}
+                                                    size="small"
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 4,
+                                                        right: 4,
+                                                        bgcolor: 'rgba(15,23,42,0.65)',
+                                                        color: '#fff',
+                                                        '&:hover': {
+                                                            bgcolor: 'rgba(15,23,42,0.8)',
+                                                        },
+                                                    }}
+                                                    aria-label="Удалить фото"
+                                                >
+                                                    <DeleteOutlineIcon fontSize="small" />
+                                                </IconButton>
+                                            )}
                                         </Box>
                                     ))}
                                 </Stack>
                             </Stack>
                         )}
 
-                        {items.length > 0 && (
+                        {!readOnly && items.length > 0 && (
                             <Stack spacing={1.25}>
                                 {items.map((item) => (
                                     <Paper
@@ -849,31 +864,33 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 {view === 'folders' ? (
                     <>
                         <Button onClick={handleDialogClose} sx={{ textTransform: 'none', borderRadius: 999 }}>
-                            Отмена
+                            {readOnly ? 'Закрыть' : 'Отмена'}
                         </Button>
-                        <Button
-                            variant="contained"
-                            onClick={() => void handleSubmit()}
-                            disabled={!allUploaded || submitLoading}
-                            startIcon={<SendIcon />}
-                            sx={{
-                                textTransform: 'none',
-                                borderRadius: 999,
-                                fontWeight: 700,
-                                px: 3,
-                                background: allUploaded
-                                    ? 'linear-gradient(135deg, rgba(0,122,255,0.95), rgba(88,86,214,0.95))'
-                                    : 'rgba(148,163,184,0.6)',
-                                boxShadow: allUploaded ? '0 12px 28px rgba(0, 122, 255, 0.35)' : 'none',
-                                '&:hover': {
+                        {!readOnly && (
+                            <Button
+                                variant="contained"
+                                onClick={() => void handleSubmit()}
+                                disabled={!allUploaded || submitLoading}
+                                startIcon={<SendIcon />}
+                                sx={{
+                                    textTransform: 'none',
+                                    borderRadius: 999,
+                                    fontWeight: 700,
+                                    px: 3,
                                     background: allUploaded
-                                        ? 'linear-gradient(135deg, rgba(0,113,240,0.98), rgba(72,69,212,0.98))'
+                                        ? 'linear-gradient(135deg, rgba(0,122,255,0.95), rgba(88,86,214,0.95))'
                                         : 'rgba(148,163,184,0.6)',
-                                },
-                            }}
-                        >
-                            {submitLoading ? 'Отправка...' : 'Отправить'}
-                        </Button>
+                                    boxShadow: allUploaded ? '0 12px 28px rgba(0, 122, 255, 0.35)' : 'none',
+                                    '&:hover': {
+                                        background: allUploaded
+                                            ? 'linear-gradient(135deg, rgba(0,113,240,0.98), rgba(72,69,212,0.98))'
+                                            : 'rgba(148,163,184,0.6)',
+                                    },
+                                }}
+                            >
+                                {submitLoading ? 'Отправка...' : 'Отправить'}
+                            </Button>
+                        )}
                     </>
                 ) : (
                     <>
@@ -881,27 +898,29 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                             onClick={uploading ? handleCancelUpload : handleBackToFolders}
                             sx={{ textTransform: 'none', borderRadius: 999 }}
                         >
-                            {uploading ? 'Отменить загрузку' : 'Отмена'}
+                            {uploading ? 'Отменить загрузку' : readOnly ? 'Назад' : 'Отмена'}
                         </Button>
-                        <Button
-                            variant="contained"
-                            onClick={() => void handleUpload()}
-                            disabled={uploading || items.length === 0}
-                            startIcon={<CloudUploadIcon />}
-                            sx={{
-                                textTransform: 'none',
-                                borderRadius: 999,
-                                fontWeight: 700,
-                                px: 3,
-                                background: 'linear-gradient(135deg, rgba(0,122,255,0.95), rgba(88,86,214,0.95))',
-                                boxShadow: '0 12px 28px rgba(0, 122, 255, 0.35)',
-                                '&:hover': {
-                                    background: 'linear-gradient(135deg, rgba(0,113,240,0.98), rgba(72,69,212,0.98))',
-                                },
-                            }}
-                        >
-                            {uploading ? 'Загрузка...' : 'Загрузить'}
-                        </Button>
+                        {!readOnly && (
+                            <Button
+                                variant="contained"
+                                onClick={() => void handleUpload()}
+                                disabled={uploading || items.length === 0}
+                                startIcon={<CloudUploadIcon />}
+                                sx={{
+                                    textTransform: 'none',
+                                    borderRadius: 999,
+                                    fontWeight: 700,
+                                    px: 3,
+                                    background: 'linear-gradient(135deg, rgba(0,122,255,0.95), rgba(88,86,214,0.95))',
+                                    boxShadow: '0 12px 28px rgba(0, 122, 255, 0.35)',
+                                    '&:hover': {
+                                        background: 'linear-gradient(135deg, rgba(0,113,240,0.98), rgba(72,69,212,0.98))',
+                                    },
+                                }}
+                            >
+                                {uploading ? 'Загрузка...' : 'Загрузить'}
+                            </Button>
+                        )}
                     </>
                 )}
             </DialogActions>
