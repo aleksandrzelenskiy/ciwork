@@ -59,6 +59,10 @@ export async function GET(
       return NextResponse.json({ error: 'Отчёт не найден' }, { status: 404 });
     }
 
+    const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
+      .select('taskName bsNumber executorName')
+      .lean();
+
     const role =
         mapRoleToLegacy(
             userContext.data.effectiveOrgRole ||
@@ -68,10 +72,11 @@ export async function GET(
 
     return NextResponse.json({
       taskId: report.taskId,
-      taskName: report.taskName,
+      taskName: report.taskName || taskRecord?.taskName,
+      bsNumber: taskRecord?.bsNumber,
       files: report.files,
       createdAt: report.createdAt,
-      executorName: report.createdByName,
+      executorName: taskRecord?.executorName ?? report.createdByName,
       reviewerName: report.initiatorName,
       status: report.status,
       issues: report.issues || [],

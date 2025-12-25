@@ -3,7 +3,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Button, CircularProgress, Snackbar, Alert, Stack } from '@mui/material';
+import { Box, Button, CircularProgress, Snackbar, Alert, Stack, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -12,10 +12,12 @@ import ReportGallery from '@/app/components/reports/ReportGallery';
 import ReportIssuesPanel from '@/app/components/reports/ReportIssuesPanel';
 import ReportActions from '@/app/components/reports/ReportActions';
 import ReportFixUploader from '@/app/components/reports/ReportFixUploader';
+import type { ApiResponse, BaseStatus } from '@/app/types/reportTypes';
 
 type ReportPayload = {
     taskId: string;
     taskName?: string;
+    bsNumber?: string;
     files: string[];
     fixedFiles: string[];
     createdAt: string;
@@ -25,11 +27,14 @@ type ReportPayload = {
     role?: string | null;
 };
 
+type RelatedReport = BaseStatus;
+
 export default function PhotoReportPage() {
     const { taskId, baseId } = useParams() as { taskId: string; baseId: string };
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
     const [report, setReport] = React.useState<ReportPayload | null>(null);
+    const [relatedReports, setRelatedReports] = React.useState<RelatedReport[]>([]);
     const [alertState, setAlertState] = React.useState<{
         open: boolean;
         message: string;
@@ -67,9 +72,43 @@ export default function PhotoReportPage() {
         }
     }, [taskId, baseId]);
 
+    const fetchRelatedReports = React.useCallback(async () => {
+        try {
+            const response = await fetch('/api/reports');
+            const data = (await response.json().catch(() => null)) as ApiResponse | null;
+            if (!response.ok || !data || !Array.isArray(data.reports)) {
+                setRelatedReports([]);
+                return;
+            }
+            const currentTaskId = taskId.toUpperCase();
+            const taskEntry = data.reports.find(
+                (entry) => entry.taskId?.toUpperCase() === currentTaskId
+            );
+            const baseStatuses = Array.isArray(taskEntry?.baseStatuses)
+                ? taskEntry.baseStatuses
+                : [];
+            const normalizedBaseId = baseId.toLowerCase();
+            const sorted = baseStatuses
+                .filter((base) => base.baseId?.toLowerCase() !== normalizedBaseId)
+                .sort((a, b) => {
+                    const aTime = a.latestStatusChangeDate
+                        ? new Date(a.latestStatusChangeDate).getTime()
+                        : 0;
+                    const bTime = b.latestStatusChangeDate
+                        ? new Date(b.latestStatusChangeDate).getTime()
+                        : 0;
+                    return bTime - aTime;
+                });
+            setRelatedReports(sorted);
+        } catch {
+            setRelatedReports([]);
+        }
+    }, [taskId, baseId]);
+
     React.useEffect(() => {
         void fetchReport();
-    }, [fetchReport]);
+        void fetchRelatedReports();
+    }, [fetchReport, fetchRelatedReports]);
 
     const canApprove = report?.role === 'admin' || report?.role === 'manager' || report?.role === 'viewer';
     const canEditIssues = canApprove;
@@ -183,6 +222,7 @@ export default function PhotoReportPage() {
                 <ReportHeader
                     taskId={report.taskId}
                     taskName={report.taskName}
+                    bsNumber={report.bsNumber}
                     baseId={baseId}
                     createdByName={report.executorName}
                     createdAt={report.createdAt}
@@ -207,6 +247,50 @@ export default function PhotoReportPage() {
                             canEdit={canEditIssues}
                             onSave={handleSaveIssues}
                         />
+                        <Box
+                            sx={{
+                                borderRadius: 3,
+                                border: '1px solid rgba(15,23,42,0.08)',
+                                backgroundColor: '#fff',
+                                p: 2,
+                            }}
+                        >
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                                Связанные отчеты
+                            </Typography>
+                            {relatedReports.length === 0 ? (
+                                <Typography variant="body2" sx={{ color: 'rgba(15,23,42,0.6)' }}>
+                                    Нет других фотоотчетов по этой задаче.
+                                </Typography>
+                            ) : (
+                                <Stack spacing={1}>
+                                    {relatedReports.map((related) => (
+                                        <Button
+                                            key={related.baseId}
+                                            component={Link}
+                                            href={`/reports/${encodeURIComponent(
+                                                taskId
+                                            )}/${encodeURIComponent(related.baseId)}`}
+                                            variant="outlined"
+                                            sx={{
+                                                justifyContent: 'space-between',
+                                                textTransform: 'none',
+                                                borderRadius: 2,
+                                                px: 2,
+                                                py: 1,
+                                            }}
+                                        >
+                                            <Typography variant="body2">
+                                                БС {related.baseId}
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: 'rgba(15,23,42,0.6)' }}>
+                                                {related.status}
+                                            </Typography>
+                                        </Button>
+                                    ))}
+                                </Stack>
+                            )}
+                        </Box>
                         <Button
                             variant="outlined"
                             onClick={handleDownloadReport}

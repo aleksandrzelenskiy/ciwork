@@ -4,6 +4,7 @@ import ReportStatusPill from '@/app/components/reports/ReportStatusPill';
 type ReportHeaderProps = {
     taskId: string;
     taskName?: string | null;
+    bsNumber?: string | null;
     baseId: string;
     createdByName?: string | null;
     createdAt?: string;
@@ -13,11 +14,14 @@ type ReportHeaderProps = {
 export default function ReportHeader({
     taskId,
     taskName,
+    bsNumber,
     baseId,
     createdByName,
     createdAt,
     status,
 }: ReportHeaderProps) {
+    const title = `${taskName || taskId}${bsNumber ? ` ${bsNumber}` : ''}`;
+
     return (
         <Stack spacing={1.5}>
             <Typography
@@ -34,7 +38,7 @@ export default function ReportHeader({
             >
                 <Box>
                     <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                        {taskName || taskId}
+                        {title}
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'rgba(15,23,42,0.6)' }}>
                         Задача {taskId} · БС {baseId}
