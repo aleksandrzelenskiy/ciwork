@@ -17,11 +17,13 @@ import {
   TextField,
   Typography,
   Alert,
+  Tooltip,
 } from '@mui/material';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import FolderIcon from '@mui/icons-material/Folder';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import { BaseStatus, ReportClient, ApiResponse } from '@/app/types/reportTypes';
 import { getStatusColor } from '@/utils/statusColors';
 
@@ -44,6 +46,7 @@ export default function ReportListPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deleteTarget, setDeleteTarget] = React.useState<ReportClient | null>(null);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
+  const [downloadingTaskId, setDownloadingTaskId] = React.useState<string | null>(null);
   const searchParams = useSearchParams();
   const reportRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const highlightTaskId = React.useMemo(() => {
@@ -124,6 +127,31 @@ export default function ReportListPage() {
       setError(err instanceof Error ? err.message : 'Не удалось удалить отчёт');
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleDownloadTaskReports = async (taskId: string) => {
+    if (downloadingTaskId) return;
+    setDownloadingTaskId(taskId);
+    try {
+      const response = await fetch(`/api/reports/${encodeURIComponent(taskId)}/download`);
+      if (!response.ok) {
+        setError('Не удалось скачать отчет');
+        return;
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `reports-${taskId}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось скачать отчет');
+    } finally {
+      setDownloadingTaskId(null);
     }
   };
 
@@ -244,6 +272,20 @@ export default function ReportListPage() {
                   </Box>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Chip label={status} size="small" sx={statusChipSx} />
+                    {status === 'Agreed' && (
+                      <Tooltip title="Скачать отчет">
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDownloadTaskReports(report.taskId)}
+                            aria-label="Скачать отчет"
+                            disabled={downloadingTaskId === report.taskId}
+                          >
+                            <CloudDownloadIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    )}
                     {report.canDelete && (
                       <IconButton
                         size="small"

@@ -5,6 +5,7 @@
 import React from 'react';
 import { Box, Button, CircularProgress, Snackbar, Alert, Stack, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import ReportHeader from '@/app/components/reports/ReportHeader';
@@ -113,6 +114,7 @@ export default function PhotoReportPage() {
     const canApprove = report?.role === 'admin' || report?.role === 'manager' || report?.role === 'viewer';
     const canEditIssues = canApprove;
     const canUploadFix = report?.role === 'executor';
+    const canDownload = report?.status === 'Agreed';
 
     const handleApprove = async () => {
         if (!report) return;
@@ -291,14 +293,17 @@ export default function PhotoReportPage() {
                                 </Stack>
                             )}
                         </Box>
-                        <Button
-                            variant="outlined"
-                            onClick={handleDownloadReport}
-                            disabled={downloading}
-                            sx={{ borderRadius: 999, textTransform: 'none' }}
-                        >
-                            {downloading ? 'Скачиваем…' : 'Скачать ZIP'}
-                        </Button>
+                        {canDownload && (
+                            <Button
+                                variant="outlined"
+                                onClick={handleDownloadReport}
+                                disabled={downloading}
+                                startIcon={<CloudDownloadIcon />}
+                                sx={{ borderRadius: 999, textTransform: 'none' }}
+                            >
+                                {downloading ? 'Скачиваем…' : 'Скачать отчет'}
+                            </Button>
+                        )}
                     </Stack>
                 </Stack>
             </Stack>
