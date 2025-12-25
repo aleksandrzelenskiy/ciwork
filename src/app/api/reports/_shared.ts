@@ -173,6 +173,18 @@ const readTagValue = (tag: unknown) => {
     return null;
 };
 
+const readGpsValue = (tag: unknown) => {
+    if (!tag) return null;
+    if (typeof tag === 'object') {
+        const candidate = tag as { value?: unknown; description?: unknown };
+        if (candidate.value !== undefined) return candidate.value;
+        if (typeof candidate.description === 'string' || typeof candidate.description === 'number') {
+            return candidate.description;
+        }
+    }
+    return readTagValue(tag);
+};
+
 const getExifTag = (tags: Record<string, unknown>, key: string) => {
     if (key in tags) return tags[key];
     const groups = ['gps', 'exif', 'image'] as const;
@@ -205,8 +217,8 @@ const extractOverlayMeta = (buffer: Buffer) => {
         const latRefTag = getExifTag(tags, 'GPSLatitudeRef');
         const lonRefTag = getExifTag(tags, 'GPSLongitudeRef');
 
-        const latValue = readTagValue(latTag);
-        const lonValue = readTagValue(lonTag);
+        const latValue = readGpsValue(latTag);
+        const lonValue = readGpsValue(lonTag);
         const latRef = readTagValue(latRefTag);
         const lonRef = readTagValue(lonRefTag);
 
@@ -234,9 +246,9 @@ const buildOverlaySvg = (params: {
     height: number;
     lines: string[];
 }) => {
-    const fontSize = Math.max(20, Math.round(params.width * 0.02));
-    const lineHeight = fontSize + Math.round(fontSize * 0.4);
-    const padding = Math.round(fontSize * 0.6);
+    const fontSize = Math.max(14, Math.round(params.width * 0.015));
+    const lineHeight = Math.round(fontSize * 1.25);
+    const padding = Math.round(fontSize * 0.5);
     const contentHeight = lineHeight * params.lines.length;
     const overlayHeight = Math.min(
         params.height,
@@ -288,8 +300,8 @@ export const prepareImageBuffer = async (file: File, overlayContext?: OverlayCon
             ? [
                 `Дата: ${
                     overlayMeta?.date
-                        ? overlayMeta.date.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
-                        : new Date().toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
+                        ? overlayMeta.date.toLocaleDateString('ru-RU', { dateStyle: 'short' })
+                        : new Date().toLocaleDateString('ru-RU', { dateStyle: 'short' })
                 }`,
                 `Организация: ${overlayContext.orgName || '—'}`,
                 `ID проекта: ${overlayContext.projectKey || overlayContext.projectId || '—'}`,
