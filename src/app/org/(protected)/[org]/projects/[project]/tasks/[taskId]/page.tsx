@@ -55,6 +55,8 @@ import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
@@ -2294,7 +2296,7 @@ export default function TaskDetailsPage() {
                                     gutterBottom
                                     sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                                 >
-                                    <ArticleOutlinedIcon fontSize="small" />
+                                    <PhotoLibraryOutlinedIcon fontSize="small" />
                                     Фотоотчеты
                                 </Typography>
                                 <Divider sx={{ mb: 1.5 }} />
@@ -2319,8 +2321,14 @@ export default function TaskDetailsPage() {
                                                             task.taskId.toLowerCase()
                                                         )}/${encodeURIComponent(report.baseId)}`}
                                                         underline="hover"
+                                                        sx={{
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: 0.75,
+                                                        }}
                                                     >
-                                                        Папка БС {report.baseId}
+                                                        <FolderOutlinedIcon fontSize="small" />
+                                                        БС {report.baseId}
                                                     </Link>
                                                     <Typography variant="caption" color="text.secondary">
                                                         Основные фото: {report.filesCount} · Исправления:{' '}

@@ -248,6 +248,11 @@ export async function PATCH(
     // Синхронизируем статус с задачей
     const relatedTask = await TaskModel.findOne({ taskId: report.taskId });
     if (relatedTask && relatedTask.status !== report.status) {
+      const allowedPublicStatuses = new Set(['open', 'in_review', 'assigned', 'closed']);
+      if (relatedTask.publicStatus && !allowedPublicStatuses.has(relatedTask.publicStatus)) {
+        // normalize legacy/invalid values before save
+        relatedTask.publicStatus = 'closed';
+      }
       const oldTaskStatus = relatedTask.status;
       relatedTask.status = report.status;
 

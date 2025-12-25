@@ -3,7 +3,20 @@
 'use client';
 
 import React from 'react';
-import { Box, Button, CircularProgress, Snackbar, Alert, Stack, Typography } from '@mui/material';
+import {
+    Box,
+    Button,
+    CircularProgress,
+    Snackbar,
+    Alert,
+    Stack,
+    Typography,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
+} from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import Link from 'next/link';
@@ -45,6 +58,8 @@ export default function PhotoReportPage() {
         severity: 'success' | 'error' | 'info' | 'warning';
     }>({ open: false, message: '', severity: 'success' });
     const [fixDialogOpen, setFixDialogOpen] = React.useState(false);
+    const [approveDialogOpen, setApproveDialogOpen] = React.useState(false);
+    const [approving, setApproving] = React.useState(false);
     const [downloading, setDownloading] = React.useState(false);
 
     const showAlert = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
@@ -119,8 +134,14 @@ export default function PhotoReportPage() {
     const canUploadFix = report?.role === 'executor';
     const canDownload = report?.status === 'Agreed';
 
+    const handleApproveRequest = () => {
+        setApproveDialogOpen(true);
+    };
+
     const handleApprove = async () => {
         if (!report) return;
+        if (approving) return;
+        setApproving(true);
         const response = await fetch(`/api/reports/${taskId}/${baseId}${tokenParam}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -129,10 +150,13 @@ export default function PhotoReportPage() {
         const payload = (await response.json().catch(() => ({}))) as { error?: string };
         if (!response.ok) {
             showAlert(payload.error || 'Не удалось согласовать', 'error');
+            setApproving(false);
             return;
         }
         showAlert('Отчет согласован', 'success');
+        setApproveDialogOpen(false);
         await fetchReport();
+        setApproving(false);
     };
 
     const handleSaveIssues = async (issues: string[]) => {
@@ -244,7 +268,7 @@ export default function PhotoReportPage() {
                             status={report.status}
                             canApprove={canApprove}
                             canUploadFix={canUploadFix}
-                            onApprove={handleApprove}
+                            onApprove={handleApproveRequest}
                             onUploadFix={() => setFixDialogOpen(true)}
                         />
                         <ReportIssuesPanel
@@ -320,6 +344,37 @@ export default function PhotoReportPage() {
                 baseId={baseId}
                 onUploaded={() => void fetchReport()}
             />
+            <Dialog
+                open={approveDialogOpen}
+                onClose={() => setApproveDialogOpen(false)}
+                aria-labelledby="report-approve-title"
+                aria-describedby="report-approve-description"
+            >
+                <DialogTitle id="report-approve-title">Подтвердить согласование</DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="report-approve-description">
+                        После подтверждения фотоотчет и задача перейдут в статус согласовано.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={() => setApproveDialogOpen(false)}
+                        disabled={approving}
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Отмена
+                    </Button>
+                    <Button
+                        onClick={handleApprove}
+                        variant="contained"
+                        color="success"
+                        disabled={approving}
+                        sx={{ textTransform: 'none' }}
+                    >
+                        {approving ? 'Согласуем…' : 'Согласовать'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
