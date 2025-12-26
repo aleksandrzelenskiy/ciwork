@@ -1377,7 +1377,12 @@ export default function TaskDetailPage() {
                         position: 'fixed',
                         inset: 0,
                         zIndex: 1500,
-                        pointerEvents: 'none',
+                        pointerEvents: 'auto',
+                    }}
+                    onClick={() => {
+                        if (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches) {
+                            setPhotoGuideOpen(false);
+                        }
                     }}
                 >
                     <Box
@@ -1390,12 +1395,7 @@ export default function TaskDetailPage() {
                             borderRadius: 999,
                             border: '2px solid rgba(255,255,255,0.95)',
                             boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.72)',
-                            animation: 'photoGuidePulse 1.6s ease-in-out infinite',
-                            '@keyframes photoGuidePulse': {
-                                '0%': { boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.72)' },
-                                '50%': { boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.58)' },
-                                '100%': { boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.72)' },
-                            },
+                            pointerEvents: 'none',
                         }}
                     />
                     <Box
@@ -1411,6 +1411,7 @@ export default function TaskDetailPage() {
                                 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(235,242,255,0.98))',
                             border: '1px solid rgba(255,255,255,0.85)',
                             boxShadow: '0 16px 50px rgba(8, 12, 24, 0.28)',
+                            pointerEvents: 'none',
                         }}
                     >
                         <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
