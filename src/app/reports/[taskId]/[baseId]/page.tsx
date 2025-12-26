@@ -272,19 +272,17 @@ export default function PhotoReportPage() {
                         <ReportGallery title="Исправления" photos={report.fixedFiles} />
                     </Stack>
                     <Stack spacing={3} sx={{ width: { xs: '100%', lg: 360 }, flexShrink: 0 }}>
-                        <ReportActions
-                            status={report.status}
-                            canApprove={canApprove}
-                            canUploadFix={canUploadFix}
-                            onApprove={handleApproveRequest}
-                            onUploadFix={() => setFixDialogOpen(true)}
-                        />
                         <ReportIssuesPanel
                             issues={report.issues || []}
                             canEdit={canEditIssues}
                             onSave={handleSaveIssues}
                             status={report.status}
+                        />
+                        <ReportActions
+                            status={report.status}
+                            canApprove={canApprove}
                             canUploadFix={canUploadFix}
+                            onApprove={handleApproveRequest}
                             onUploadFix={() => setFixDialogOpen(true)}
                         />
                         <Box

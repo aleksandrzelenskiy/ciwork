@@ -8,8 +8,6 @@ type ReportIssuesPanelProps = {
     issues: string[];
     canEdit: boolean;
     onSave: (issues: string[]) => Promise<void>;
-    canUploadFix?: boolean;
-    onUploadFix?: () => void;
     status?: string;
 };
 
@@ -17,8 +15,6 @@ export default function ReportIssuesPanel({
     issues,
     canEdit,
     onSave,
-    canUploadFix,
-    onUploadFix,
     status,
 }: ReportIssuesPanelProps) {
     const [editing, setEditing] = useState(false);
@@ -87,11 +83,6 @@ export default function ReportIssuesPanel({
                     Замечания
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
-                    {canUploadFix && !editing && issues.length > 0 && (
-                        <Button size="small" variant="contained" onClick={onUploadFix}>
-                            Загрузить исправления
-                        </Button>
-                    )}
                     {canEditIssues && !editing && (
                         <Button size="small" variant="text" onClick={handleStartEdit}>
                             {issues.length ? 'Редактировать' : 'Добавить'}

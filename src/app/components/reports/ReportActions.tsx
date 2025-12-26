@@ -1,4 +1,4 @@
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Stack } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
@@ -29,9 +29,6 @@ export default function ReportActions({
                 background: 'rgba(255,255,255,0.95)',
             }}
         >
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-                Действия
-            </Typography>
             <Stack spacing={1.5}>
                 {showApprove && (
                     <Button

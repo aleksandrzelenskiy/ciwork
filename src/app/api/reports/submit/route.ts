@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
     }
 
     for (const email of directEmails) {
-        if (recipientEmails.has(email) && email !== initiatorEmailNormalized) continue;
+        if (recipientEmails.has(email)) continue;
         try {
             const link = email === initiatorEmailNormalized && initiatorAccessLink
                 ? initiatorAccessLink

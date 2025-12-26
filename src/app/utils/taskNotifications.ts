@@ -159,9 +159,13 @@ export async function notifyTaskStatusChange(input: {
         return getStatusLabel(normalizeStatusTitle(status)) || status;
     };
 
-    const targets = [input.authorClerkId, input.executorClerkId]
-        .map((v) => (typeof v === 'string' ? v.trim() : ''))
-        .filter((v) => v && v !== input.triggeredByClerkId);
+    const targets = Array.from(
+        new Set(
+            [input.authorClerkId, input.executorClerkId]
+                .map((v) => (typeof v === 'string' ? v.trim() : ''))
+                .filter((v) => v && v !== input.triggeredByClerkId)
+        )
+    );
 
     if (targets.length === 0) return;
 
@@ -266,9 +270,13 @@ export async function notifyApplicationSubmitted(input: {
     triggeredByName?: string;
     triggeredByEmail?: string;
 }) {
-    const targets = (input.managerClerkIds ?? [])
-        .map((v) => v?.trim?.())
-        .filter((v): v is string => Boolean(v));
+    const targets = Array.from(
+        new Set(
+            (input.managerClerkIds ?? [])
+                .map((v) => v?.trim?.())
+                .filter((v): v is string => Boolean(v))
+        )
+    );
 
     if (targets.length === 0) return;
 

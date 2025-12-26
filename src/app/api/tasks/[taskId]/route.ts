@@ -747,8 +747,30 @@ export async function PATCH(
           typeof updatedTask.authorEmail === 'string'
               ? updatedTask.authorEmail.trim().toLowerCase()
               : '';
+      const executorEmailNormalized =
+          typeof updatedTask.executorEmail === 'string'
+              ? updatedTask.executorEmail.trim().toLowerCase()
+              : '';
+      const statusNotificationEmails = new Set<string>();
+      if (
+          typeof updatedTask.authorId === 'string' &&
+          updatedTask.authorId.trim() &&
+          updatedTask.authorId !== user.id &&
+          authorEmailNormalized
+      ) {
+        statusNotificationEmails.add(authorEmailNormalized);
+      }
+      if (
+          typeof executorForStatusNotice === 'string' &&
+          executorForStatusNotice.trim() &&
+          executorForStatusNotice !== user.id &&
+          executorEmailNormalized
+      ) {
+        statusNotificationEmails.add(executorEmailNormalized);
+      }
       const shouldNotifyInitiator =
           Boolean(initiatorEmailNormalized) &&
+          !statusNotificationEmails.has(initiatorEmailNormalized) &&
           !(managerDecision && initiatorEmailNormalized === authorEmailNormalized);
       if (shouldNotifyInitiator) {
         const bsInfo = updatedTask.bsNumber ? ` (БС ${updatedTask.bsNumber})` : '';

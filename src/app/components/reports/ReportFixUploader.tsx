@@ -1,5 +1,17 @@
 import React from 'react';
-import { Dialog, DialogActions, DialogContent, DialogTitle, Button, Stack, Typography, Alert } from '@mui/material';
+import {
+    Alert,
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    IconButton,
+    Stack,
+    Typography,
+} from '@mui/material';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useDropzone } from 'react-dropzone';
 
 type ReportFixUploaderProps = {
@@ -18,6 +30,7 @@ export default function ReportFixUploader({
     onUploaded,
 }: ReportFixUploaderProps) {
     const [files, setFiles] = React.useState<File[]>([]);
+    const [previews, setPreviews] = React.useState<{ name: string; url: string }[]>([]);
     const [uploading, setUploading] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
 
@@ -29,6 +42,21 @@ export default function ReportFixUploader({
         }
     }, [open]);
 
+    React.useEffect(() => {
+        if (!files.length) {
+            setPreviews([]);
+            return;
+        }
+        const next = files.map((file) => ({
+            name: file.name,
+            url: URL.createObjectURL(file),
+        }));
+        setPreviews(next);
+        return () => {
+            next.forEach((preview) => URL.revokeObjectURL(preview.url));
+        };
+    }, [files]);
+
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         accept: { 'image/*': [] },
         multiple: true,
@@ -36,6 +64,11 @@ export default function ReportFixUploader({
             setFiles((prev) => [...prev, ...acceptedFiles]);
         },
     });
+
+    const handleRemoveFile = (index: number) => {
+        if (uploading) return;
+        setFiles((prev) => prev.filter((_, idx) => idx !== index));
+    };
 
     const handleClose = () => {
         if (uploading) return;
@@ -107,6 +140,63 @@ export default function ReportFixUploader({
                             Добавлено файлов: {files.length}
                         </Typography>
                     </Stack>
+                    {previews.length > 0 && (
+                        <Stack spacing={1}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                Добавленные фото
+                            </Typography>
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
+                                    gap: 1,
+                                }}
+                            >
+                                {previews.map((preview, index) => (
+                                    <Box
+                                        key={`${preview.name}-${index}`}
+                                        sx={{
+                                            position: 'relative',
+                                            borderRadius: 2,
+                                            overflow: 'hidden',
+                                            border: '1px solid rgba(15,23,42,0.08)',
+                                            height: 96,
+                                        }}
+                                    >
+                                        <Box
+                                            component="img"
+                                            src={preview.url}
+                                            alt={preview.name}
+                                            sx={{
+                                                width: '100%',
+                                                height: '100%',
+                                                objectFit: 'cover',
+                                                display: 'block',
+                                            }}
+                                        />
+                                        <IconButton
+                                            size="small"
+                                            aria-label={`Удалить ${preview.name}`}
+                                            onClick={() => handleRemoveFile(index)}
+                                            disabled={uploading}
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 4,
+                                                right: 4,
+                                                backgroundColor: 'rgba(15,23,42,0.7)',
+                                                color: '#fff',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(15,23,42,0.85)',
+                                                },
+                                            }}
+                                        >
+                                            <DeleteOutlineIcon fontSize="small" />
+                                        </IconButton>
+                                    </Box>
+                                ))}
+                            </Box>
+                        </Stack>
+                    )}
                     {error && <Alert severity="error">{error}</Alert>}
                 </Stack>
             </DialogContent>
