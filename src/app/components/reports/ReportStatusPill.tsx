@@ -1,5 +1,6 @@
 import { Box, Typography } from '@mui/material';
 import { getStatusColor } from '@/utils/statusColors';
+import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 
 type ReportStatusPillProps = {
     status: string;
@@ -7,7 +8,9 @@ type ReportStatusPillProps = {
 };
 
 export default function ReportStatusPill({ status, label }: ReportStatusPillProps) {
-    const color = getStatusColor(status);
+    const normalizedStatus = normalizeStatusTitle(status);
+    const color = getStatusColor(normalizedStatus);
+    const resolvedLabel = label ?? getStatusLabel(normalizedStatus);
     return (
         <Box
             sx={{
@@ -24,7 +27,7 @@ export default function ReportStatusPill({ status, label }: ReportStatusPillProp
             }}
         >
             <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                {label ?? status}
+                {resolvedLabel}
             </Typography>
         </Box>
     );

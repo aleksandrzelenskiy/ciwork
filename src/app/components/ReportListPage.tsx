@@ -26,6 +26,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import { BaseStatus, ReportClient, ApiResponse } from '@/app/types/reportTypes';
 import { getStatusColor } from '@/utils/statusColors';
+import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 
 const getTaskStatus = (baseStatuses: BaseStatus[] = []) => {
   const nonAgreedStatus = baseStatuses.find((bs) => bs.status !== 'Agreed');
@@ -238,7 +239,9 @@ export default function ReportListPage() {
           const status = getTaskStatus(report.baseStatuses);
           const title = report.taskName || report.taskId;
           const titleWithBs = report.bsNumber ? `${title} ${report.bsNumber}` : title;
-          const statusColor = getStatusColor(status);
+          const normalizedStatus = normalizeStatusTitle(status);
+          const statusLabel = getStatusLabel(normalizedStatus);
+          const statusColor = getStatusColor(normalizedStatus);
           const statusChipSx =
             statusColor === 'default'
               ? { fontWeight: 600 }
@@ -279,7 +282,7 @@ export default function ReportListPage() {
                     )}
                   </Box>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip label={status} size="small" sx={statusChipSx} />
+                    <Chip label={statusLabel} size="small" sx={statusChipSx} />
                     {status === 'Agreed' && (
                       <Tooltip title="Скачать отчет">
                         <span>

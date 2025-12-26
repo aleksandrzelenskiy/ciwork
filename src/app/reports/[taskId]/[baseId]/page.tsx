@@ -6,6 +6,7 @@ import React from 'react';
 import {
     Box,
     Button,
+    Chip,
     CircularProgress,
     Snackbar,
     Alert,
@@ -19,6 +20,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import FolderIcon from '@mui/icons-material/Folder';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import ReportHeader from '@/app/components/reports/ReportHeader';
@@ -27,6 +29,8 @@ import ReportIssuesPanel from '@/app/components/reports/ReportIssuesPanel';
 import ReportActions from '@/app/components/reports/ReportActions';
 import ReportFixUploader from '@/app/components/reports/ReportFixUploader';
 import type { ApiResponse, BaseStatus } from '@/app/types/reportTypes';
+import { getStatusColor } from '@/utils/statusColors';
+import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 
 type ReportPayload = {
     taskId: string;
@@ -295,7 +299,14 @@ export default function PhotoReportPage() {
                                 </Typography>
                             ) : (
                                 <Stack spacing={1}>
-                                    {relatedReports.map((related) => (
+                                    {relatedReports.map((related) => {
+                                        const normalizedStatus = normalizeStatusTitle(related.status);
+                                        const statusColor = getStatusColor(normalizedStatus);
+                                        const statusChipSx =
+                                            statusColor === 'default'
+                                                ? { fontWeight: 600 }
+                                                : { backgroundColor: statusColor, color: '#fff', fontWeight: 600 };
+                                        return (
                                         <Button
                                             key={related.baseId}
                                             component={Link}
@@ -311,14 +322,23 @@ export default function PhotoReportPage() {
                                                 py: 1,
                                             }}
                                         >
-                                            <Typography variant="body2">
-                                                БС {related.baseId}
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: 'rgba(15,23,42,0.6)' }}>
-                                                {related.status}
-                                            </Typography>
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                <FolderIcon
+                                                    fontSize="small"
+                                                    sx={{ color: statusColor === 'default' ? 'rgba(15,23,42,0.45)' : statusColor }}
+                                                />
+                                                <Typography variant="body2">
+                                                    БС {related.baseId}
+                                                </Typography>
+                                            </Stack>
+                                            <Chip
+                                                label={getStatusLabel(normalizedStatus)}
+                                                size="small"
+                                                sx={statusChipSx}
+                                            />
                                         </Button>
-                                    ))}
+                                        );
+                                    })}
                                 </Stack>
                             )}
                         </Box>

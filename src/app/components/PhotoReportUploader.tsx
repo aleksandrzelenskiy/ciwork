@@ -105,6 +105,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const cancelRef = React.useRef(false);
     const xhrRef = React.useRef<XMLHttpRequest | null>(null);
     const submitAlertTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const folderAlertTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const baseOptions = React.useMemo(() => {
         const names = bsLocations
@@ -193,6 +194,24 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             }, 3000);
         }
     }, [submitError, submitSuccess, onClose]);
+
+    React.useEffect(() => {
+        if (folderAlertTimerRef.current) {
+            clearTimeout(folderAlertTimerRef.current);
+            folderAlertTimerRef.current = null;
+        }
+        if (!folderAlert) return;
+        folderAlertTimerRef.current = setTimeout(() => {
+            setFolderAlert(null);
+            onClose();
+        }, 3000);
+        return () => {
+            if (folderAlertTimerRef.current) {
+                clearTimeout(folderAlertTimerRef.current);
+                folderAlertTimerRef.current = null;
+            }
+        };
+    }, [folderAlert, onClose]);
 
     const updateItem = React.useCallback((id: string, patch: Partial<UploadItem>) => {
         setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));

@@ -1,4 +1,6 @@
-import { Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useEffect, useState } from 'react';
 
 type ReportIssuesPanelProps = {
@@ -42,6 +44,13 @@ export default function ReportIssuesPanel({
 
     const handleAdd = () => {
         setDraft((prev) => [...prev, '']);
+    };
+
+    const handleRemove = (index: number) => {
+        setDraft((prev) => {
+            const next = prev.filter((_, idx) => idx !== index);
+            return next.length ? next : [''];
+        });
     };
 
     const handleSave = async () => {
@@ -99,19 +108,40 @@ export default function ReportIssuesPanel({
             {editing && (
                 <Stack spacing={1.5} sx={{ mt: 2 }}>
                     {draft.map((issue, idx) => (
-                        <TextField
-                            key={`draft-${idx}`}
-                            value={issue}
-                            onChange={(event) => handleChange(idx, event.target.value)}
-                            label={`Замечание ${idx + 1}`}
-                            size="small"
-                            fullWidth
-                        />
+                        <Stack key={`draft-${idx}`} direction="row" spacing={1} alignItems="center">
+                            <TextField
+                                value={issue}
+                                onChange={(event) => handleChange(idx, event.target.value)}
+                                label={`Замечание ${idx + 1}`}
+                                size="small"
+                                fullWidth
+                            />
+                            <Tooltip title="Удалить замечание">
+                                <span>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => handleRemove(idx)}
+                                        aria-label="Удалить замечание"
+                                        disabled={saving}
+                                    >
+                                        <DeleteOutlineIcon fontSize="small" />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                        </Stack>
                     ))}
                     <Stack direction="row" spacing={1}>
-                        <Button variant="outlined" onClick={handleAdd}>
-                            Добавить
-                        </Button>
+                        <Tooltip title="Добавить замечание">
+                            <span>
+                                <IconButton
+                                    onClick={handleAdd}
+                                    aria-label="Добавить замечание"
+                                    disabled={saving}
+                                >
+                                    <AddCircleOutlineOutlinedIcon />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                         <Button variant="contained" onClick={handleSave} disabled={saving}>
                             {saving ? 'Сохраняем…' : 'Сохранить'}
                         </Button>
