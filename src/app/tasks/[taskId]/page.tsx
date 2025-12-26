@@ -107,6 +107,9 @@ export default function TaskDetailPage() {
     const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false);
     const [fixDialogOpen, setFixDialogOpen] = React.useState(false);
     const [activeFixBaseId, setActiveFixBaseId] = React.useState('');
+    const [photoGuideOpen, setPhotoGuideOpen] = React.useState(false);
+    const [uploadButtonRect, setUploadButtonRect] = React.useState<DOMRect | null>(null);
+    const uploadButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
     const handleCompleteClick = React.useCallback(() => {
         setCompleteError(null);
@@ -289,16 +292,51 @@ export default function TaskDetailPage() {
         return parsed.name;
     };
 
-    const hasPhotoReport = React.useMemo(() => {
-        if (!Array.isArray(task?.photoReports)) return false;
-        return task.photoReports.some((report) => {
+    const getHasPhotoReport = React.useCallback((target: Task | null | undefined) => {
+        if (!Array.isArray(target?.photoReports)) return false;
+        return target.photoReports.some((report) => {
             const filesCount = Array.isArray(report.files) ? report.files.length : 0;
             const fixedCount = Array.isArray(report.fixedFiles) ? report.fixedFiles.length : 0;
             return filesCount + fixedCount > 0;
         });
-    }, [task?.photoReports]);
+    }, []);
+
+    const hasPhotoReport = React.useMemo(() => getHasPhotoReport(task), [getHasPhotoReport, task]);
     const showReportActions = ['Done', 'Pending', 'Issues', 'Fixed', 'Agreed'].includes(task?.status ?? '');
     const isReportReadOnly = (task?.status ?? '') === 'Agreed';
+
+    const taskTitleLine = task?.taskName || task?.taskId || 'Задача';
+    const guideText = `Нажмите для загрузки фотоотчета по задаче ${taskTitleLine}${
+        bsNumberDisplay !== '—' ? ` ${bsNumberDisplay}` : ''
+    }`;
+
+    const guidePadding = 10;
+    const guideRect = uploadButtonRect
+        ? {
+              top: Math.max(0, uploadButtonRect.top - guidePadding),
+              left: Math.max(0, uploadButtonRect.left - guidePadding),
+              width: uploadButtonRect.width + guidePadding * 2,
+              height: uploadButtonRect.height + guidePadding * 2,
+          }
+        : null;
+    const tooltipWidth = 320;
+    const tooltipHeight = 120;
+    const tooltipPosition = (() => {
+        if (!guideRect) return { top: 0, left: 0 };
+        if (typeof window === 'undefined') {
+            return { top: guideRect.top + guideRect.height + 16, left: guideRect.left };
+        }
+        const padding = 16;
+        const preferBelow = guideRect.top + guideRect.height + 16 + tooltipHeight < window.innerHeight;
+        const top = preferBelow
+            ? guideRect.top + guideRect.height + 16
+            : Math.max(padding, guideRect.top - tooltipHeight - 16);
+        const left = Math.min(
+            window.innerWidth - tooltipWidth - padding,
+            Math.max(padding, guideRect.left + guideRect.width / 2 - tooltipWidth / 2)
+        );
+        return { top, left };
+    })();
 
     const renderWorkItemsTable = (maxHeight?: number | string) => {
         if (!hasWorkItems) {
@@ -412,12 +450,42 @@ export default function TaskDetailPage() {
 
     const handleOpenUploadDialog = () => {
         setUploadDialogOpen(true);
+        setPhotoGuideOpen(false);
     };
 
     const handleCloseUploadDialog = () => {
         setUploadDialogOpen(false);
     };
 
+    React.useLayoutEffect(() => {
+        if (!photoGuideOpen) return undefined;
+
+        const updateRect = () => {
+            const node = uploadButtonRef.current;
+            if (!node) return;
+            setUploadButtonRect(node.getBoundingClientRect());
+        };
+
+        updateRect();
+        window.addEventListener('resize', updateRect);
+        window.addEventListener('scroll', updateRect, true);
+
+        return () => {
+            window.removeEventListener('resize', updateRect);
+            window.removeEventListener('scroll', updateRect, true);
+        };
+    }, [photoGuideOpen]);
+
+    React.useEffect(() => {
+        if (!photoGuideOpen) return undefined;
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setPhotoGuideOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [photoGuideOpen]);
 
     const handleCompleteConfirm = React.useCallback(async () => {
         if (!taskId) {
@@ -440,17 +508,19 @@ export default function TaskDetailPage() {
                 return;
             }
 
-            setTask((prev) => {
-                const updated = data.task as Task;
-                return prev ? { ...prev, ...updated } : updated;
-            });
+            const updatedTask = data.task as Task;
+            setTask((prev) => (prev ? { ...prev, ...updatedTask } : updatedTask));
             setCompleteConfirmOpen(false);
+            const shouldShowGuide =
+                ['Done', 'Pending', 'Issues', 'Fixed', 'Agreed'].includes(updatedTask.status ?? '') &&
+                !getHasPhotoReport(updatedTask);
+            setPhotoGuideOpen(shouldShowGuide);
         } catch (e) {
             setCompleteError(e instanceof Error ? e.message : 'Неизвестная ошибка');
         } finally {
             setCompleteLoading(false);
         }
-    }, [taskId]);
+    }, [getHasPhotoReport, taskId]);
 
     if (loading) {
         return (
@@ -844,6 +914,7 @@ export default function TaskDetailPage() {
                                             variant="contained"
                                             startIcon={hasPhotoReport ? <EditOutlinedIcon /> : <CloudUploadIcon />}
                                             onClick={handleOpenUploadDialog}
+                                            ref={uploadButtonRef}
                                             sx={{
                                                 textTransform: 'none',
                                                 borderRadius: 1.5,
@@ -1299,6 +1370,58 @@ export default function TaskDetailPage() {
                 baseId={activeFixBaseId}
                 onUploaded={() => void loadTask()}
             />
+
+            {photoGuideOpen && guideRect && (
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1500,
+                        pointerEvents: 'none',
+                    }}
+                >
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: guideRect.top,
+                            left: guideRect.left,
+                            width: guideRect.width,
+                            height: guideRect.height,
+                            borderRadius: 999,
+                            border: '2px solid rgba(255,255,255,0.95)',
+                            boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.72)',
+                            animation: 'photoGuidePulse 1.6s ease-in-out infinite',
+                            '@keyframes photoGuidePulse': {
+                                '0%': { boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.72)' },
+                                '50%': { boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.58)' },
+                                '100%': { boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.72)' },
+                            },
+                        }}
+                    />
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: tooltipPosition.top,
+                            left: tooltipPosition.left,
+                            width: tooltipWidth,
+                            maxWidth: 'calc(100vw - 32px)',
+                            p: 2,
+                            borderRadius: 3,
+                            background:
+                                'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(235,242,255,0.98))',
+                            border: '1px solid rgba(255,255,255,0.85)',
+                            boxShadow: '0 16px 50px rgba(8, 12, 24, 0.28)',
+                        }}
+                    >
+                        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
+                            Фотоотчет
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {guideText}
+                        </Typography>
+                    </Box>
+                </Box>
+            )}
 
             <Dialog
                 open={completeConfirmOpen}
