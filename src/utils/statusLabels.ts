@@ -26,15 +26,23 @@ const TITLE_CASE_MAP: Record<string, CurrentStatus> = {
     'TO DO': 'To do',
     TODO: 'To do',
     'TO-DO': 'To do',
+    'К ВЫПОЛНЕНИЮ': 'To do',
     ASSIGNED: 'Assigned',
+    'НАЗНАЧЕНА': 'Assigned',
     'IN PROGRESS': 'At work',
     'IN-PROGRESS': 'At work',
     'AT WORK': 'At work',
+    'В РАБОТЕ': 'At work',
     DONE: 'Done',
+    'ВЫПОЛНЕНО': 'Done',
     PENDING: 'Pending',
+    'НА ПРОВЕРКЕ': 'Pending',
     ISSUES: 'Issues',
+    'ЗАМЕЧАНИЯ': 'Issues',
     FIXED: 'Fixed',
+    'ИСПРАВЛЕНО': 'Fixed',
     AGREED: 'Agreed',
+    'СОГЛАСОВАНО': 'Agreed',
 };
 
 const EXTRA_STATUS_LABELS: Record<string, string> = {

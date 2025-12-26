@@ -29,8 +29,10 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 
 const getTaskStatus = (baseStatuses: BaseStatus[] = []) => {
-  const nonAgreedStatus = baseStatuses.find((bs) => bs.status !== 'Agreed');
-  return nonAgreedStatus ? nonAgreedStatus.status : 'Agreed';
+  const nonAgreedStatus = baseStatuses.find(
+    (bs) => normalizeStatusTitle(bs.status) !== 'Agreed'
+  );
+  return nonAgreedStatus ? normalizeStatusTitle(nonAgreedStatus.status) : 'Agreed';
 };
 
 const resolveStatusColor = (status: string) => {
