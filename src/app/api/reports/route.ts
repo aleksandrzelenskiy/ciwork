@@ -5,6 +5,7 @@ import dbConnect from '@/utils/mongoose';
 import Report from '@/app/models/ReportModel';
 import TaskModel from '@/app/models/TaskModel';
 import ProjectModel from '@/app/models/ProjectModel';
+import OrganizationModel from '@/app/models/OrganizationModel';
 import { GetUserContext } from '@/server-actions/user-context';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
 import { verifyInitiatorAccessToken } from '@/utils/initiatorAccessToken';
@@ -31,16 +32,18 @@ export async function GET(request: Request) {
   let isSuperAdmin = false;
   let query: Record<string, unknown> = {};
   let normalizedEmail = '';
+  let orgSlug: string | null = null;
   let taskMeta: Array<{
     taskId: string;
     bsNumber?: string;
     executorName?: string;
     projectId?: string | null;
+    orgId?: string | null;
   }> = [];
 
   if (guestAccess) {
     const taskRecord = await TaskModel.findOne({ taskId: guestAccess.taskId })
-      .select('taskId bsNumber executorName projectId initiatorEmail')
+      .select('taskId bsNumber executorName projectId initiatorEmail orgId')
       .lean();
     const initiatorEmail = taskRecord?.initiatorEmail?.trim().toLowerCase() || '';
     if (!initiatorEmail || initiatorEmail !== guestAccess.email) {
@@ -51,12 +54,18 @@ export async function GET(request: Request) {
     }
     query = { taskId: guestAccess.taskId };
     if (taskRecord) {
+      const orgId = taskRecord.orgId?.toString?.() ?? null;
+      if (orgId) {
+        const org = await OrganizationModel.findById(orgId).select('orgSlug').lean();
+        orgSlug = org?.orgSlug ?? null;
+      }
       taskMeta = [
         {
           taskId: taskRecord.taskId,
           bsNumber: taskRecord.bsNumber,
           executorName: taskRecord.executorName,
           projectId: taskRecord.projectId?.toString?.() ?? null,
+          orgId,
         },
       ];
     }
@@ -90,6 +99,8 @@ export async function GET(request: Request) {
         null;
     if (activeOrgId) {
       query.orgId = activeOrgId;
+      const org = await OrganizationModel.findById(activeOrgId).select('orgSlug').lean();
+      orgSlug = org?.orgSlug ?? null;
     }
     if (!isSuperAdmin && legacyRole === 'executor') {
       query.createdById = clerkUserId;
@@ -120,7 +131,7 @@ export async function GET(request: Request) {
   if (!isGuest) {
     taskMeta = taskIds.length
       ? await TaskModel.find({ taskId: { $in: taskIds } })
-          .select('taskId bsNumber executorName projectId')
+          .select('taskId bsNumber executorName projectId orgId')
           .lean()
       : [];
   }
@@ -131,29 +142,31 @@ export async function GET(request: Request) {
         bsNumber: task.bsNumber,
         executorName: task.executorName,
         projectId: task.projectId ? task.projectId.toString() : null,
+        orgId: task.orgId ? task.orgId.toString() : null,
       },
     ])
   );
 
-  const projectManagersMap = new Map<string, string[]>();
-  if (!isGuest) {
-    const projectIds = new Set<string>();
-    rawReports.forEach((report) => {
-      const reportProjectId = report.projectId?.toString?.() ?? null;
-      const taskProjectId = taskMetaMap.get(report.taskId)?.projectId ?? null;
-      const projectId = reportProjectId || taskProjectId;
-      if (projectId) projectIds.add(projectId);
-    });
+  const projectInfoMap = new Map<string, { managers: string[]; key?: string }>();
+  const projectIds = new Set<string>();
+  rawReports.forEach((report) => {
+    const reportProjectId = report.projectId?.toString?.() ?? null;
+    const taskProjectId = taskMetaMap.get(report.taskId)?.projectId ?? null;
+    const projectId = reportProjectId || taskProjectId;
+    if (projectId) projectIds.add(projectId);
+  });
 
-    const projects = projectIds.size > 0
-      ? await ProjectModel.find({ _id: { $in: Array.from(projectIds) } })
-          .select('managers')
-          .lean()
-      : [];
-    projects.forEach((project) => {
-      projectManagersMap.set(project._id.toString(), project.managers ?? []);
+  const projects = projectIds.size > 0
+    ? await ProjectModel.find({ _id: { $in: Array.from(projectIds) } })
+        .select('managers key')
+        .lean()
+    : [];
+  projects.forEach((project) => {
+    projectInfoMap.set(project._id.toString(), {
+      managers: project.managers ?? [],
+      key: project.key,
     });
-  }
+  });
 
   type BaseStatus = {
     baseId: string;
@@ -171,6 +184,8 @@ export async function GET(request: Request) {
     initiatorName?: string;
     createdAt: Date;
     canDelete?: boolean;
+    orgSlug?: string;
+    projectKey?: string;
     baseStatuses: BaseStatus[];
   };
 
@@ -190,10 +205,9 @@ export async function GET(request: Request) {
       report.projectId?.toString?.() ??
       taskMetaEntry?.projectId ??
       null;
-    const managers = projectId
-      ? projectManagersMap.get(projectId) ?? []
-      : [];
-    const canDelete = normalizedEmail.length > 0
+    const projectInfo = projectId ? projectInfoMap.get(projectId) : undefined;
+    const managers = !isGuest && projectInfo ? projectInfo.managers : [];
+    const canDelete = normalizedEmail.length > 0 && !isGuest
       ? managers.some(
           (manager) =>
             manager.trim().toLowerCase() === normalizedEmail
@@ -209,6 +223,8 @@ export async function GET(request: Request) {
       initiatorName: report.initiatorName,
       createdAt,
       canDelete,
+      orgSlug: orgSlug ?? undefined,
+      projectKey: projectInfo?.key,
       baseStatuses: [] as BaseStatus[],
     };
     entry.baseStatuses.push({

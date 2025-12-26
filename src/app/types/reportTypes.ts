@@ -40,6 +40,8 @@ export interface IReport {
 
 export interface ReportClient {
   taskId: string;
+  orgSlug?: string;
+  projectKey?: string;
   taskName?: string;
   bsNumber?: string;
   createdById?: string;

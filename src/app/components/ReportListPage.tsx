@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Link,
   MenuItem,
   Select,
   Stack,
@@ -19,7 +20,7 @@ import {
   Alert,
   Tooltip,
 } from '@mui/material';
-import Link from 'next/link';
+import NextLink from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import FolderIcon from '@mui/icons-material/Folder';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -238,16 +239,9 @@ export default function ReportListPage() {
           <Typography color="text.secondary">Нет отчетов по выбранным фильтрам.</Typography>
         )}
         {filtered.map((report) => {
-          const status = getTaskStatus(report.baseStatuses);
           const title = report.taskName || report.taskId;
           const titleWithBs = report.bsNumber ? `${title} ${report.bsNumber}` : title;
-          const normalizedStatus = normalizeStatusTitle(status);
-          const statusLabel = getStatusLabel(normalizedStatus);
-          const statusColor = getStatusColor(normalizedStatus);
-          const statusChipSx =
-            statusColor === 'default'
-              ? { fontWeight: 600 }
-              : { backgroundColor: statusColor, color: '#fff', fontWeight: 600 };
+          const status = getTaskStatus(report.baseStatuses);
           const reportKey = report.taskId.trim().toLowerCase();
           const isHighlighted = highlightActive && reportKey === highlightTaskId;
           return (
@@ -275,7 +269,22 @@ export default function ReportListPage() {
                       {titleWithBs}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Задача {report.taskId} · {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : '—'}
+                      Задача{' '}
+                      {report.orgSlug && report.projectKey ? (
+                        <Link
+                          component={NextLink}
+                          href={`/org/${encodeURIComponent(report.orgSlug)}/projects/${encodeURIComponent(
+                            report.projectKey
+                          )}/tasks/${encodeURIComponent(report.taskId)}`}
+                          underline="hover"
+                          color="inherit"
+                        >
+                          {report.taskId}
+                        </Link>
+                      ) : (
+                        report.taskId
+                      )}{' '}
+                      · {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : '—'}
                     </Typography>
                     {(report.executorName || report.createdByName) && (
                       <Typography variant="body2" color="text.secondary">
@@ -284,7 +293,6 @@ export default function ReportListPage() {
                     )}
                   </Box>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Chip label={statusLabel} size="small" sx={statusChipSx} />
                     {status === 'Agreed' && (
                       <Tooltip title="Скачать отчет">
                         <span>
@@ -330,7 +338,7 @@ export default function ReportListPage() {
                         <Chip
                           icon={<FolderIcon sx={{ color: resolveStatusColor(base.status) }} />}
                           label={`БС ${base.baseId}`}
-                          component={Link}
+                          component={NextLink}
                           href={`/reports/${report.taskId}/${base.baseId}${tokenParam}`}
                           clickable
                           sx={{
