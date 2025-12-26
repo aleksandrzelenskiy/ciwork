@@ -1,4 +1,5 @@
-import { Box, Typography, Stack } from '@mui/material';
+import { Box, Link, Typography, Stack } from '@mui/material';
+import NextLink from 'next/link';
 import ReportStatusPill from '@/app/components/reports/ReportStatusPill';
 
 type ReportHeaderProps = {
@@ -6,6 +7,8 @@ type ReportHeaderProps = {
     taskName?: string | null;
     bsNumber?: string | null;
     baseId: string;
+    orgSlug?: string | null;
+    projectKey?: string | null;
     createdByName?: string | null;
     createdAt?: string;
     status: string;
@@ -16,6 +19,8 @@ export default function ReportHeader({
     taskName,
     bsNumber,
     baseId,
+    orgSlug,
+    projectKey,
     createdByName,
     createdAt,
     status,
@@ -41,7 +46,22 @@ export default function ReportHeader({
                         {title}
                     </Typography>
                     <Typography variant="body2" sx={{ color: 'rgba(15,23,42,0.6)' }}>
-                        Задача {taskId} · БС {baseId}
+                        Задача{' '}
+                        {orgSlug && projectKey ? (
+                            <Link
+                                component={NextLink}
+                                href={`/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
+                                    projectKey
+                                )}/tasks/${encodeURIComponent(taskId)}`}
+                                underline="hover"
+                                color="inherit"
+                            >
+                                {taskId}
+                            </Link>
+                        ) : (
+                            taskId
+                        )}{' '}
+                        · БС {baseId}
                     </Typography>
                 </Box>
                 <ReportStatusPill status={status} />

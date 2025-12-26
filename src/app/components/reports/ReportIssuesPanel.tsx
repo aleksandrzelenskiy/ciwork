@@ -2,6 +2,7 @@ import { Box, Button, IconButton, Stack, TextField, Tooltip, Typography } from '
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useEffect, useState } from 'react';
+import { normalizeStatusTitle } from '@/utils/statusLabels';
 
 type ReportIssuesPanelProps = {
     issues: string[];
@@ -9,6 +10,7 @@ type ReportIssuesPanelProps = {
     onSave: (issues: string[]) => Promise<void>;
     canUploadFix?: boolean;
     onUploadFix?: () => void;
+    status?: string;
 };
 
 export default function ReportIssuesPanel({
@@ -17,16 +19,25 @@ export default function ReportIssuesPanel({
     onSave,
     canUploadFix,
     onUploadFix,
+    status,
 }: ReportIssuesPanelProps) {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState<string[]>(issues.length ? issues : ['']);
     const [saving, setSaving] = useState(false);
+    const isAgreed = normalizeStatusTitle(status) === 'Agreed';
+    const canEditIssues = canEdit && !isAgreed;
 
     useEffect(() => {
         if (!editing) {
             setDraft(issues.length ? issues : ['']);
         }
     }, [issues, editing]);
+
+    useEffect(() => {
+        if (isAgreed && editing) {
+            setEditing(false);
+        }
+    }, [isAgreed, editing]);
 
     const handleStartEdit = () => {
         setDraft(issues.length ? issues : ['']);
@@ -81,7 +92,7 @@ export default function ReportIssuesPanel({
                             Загрузить исправления
                         </Button>
                     )}
-                    {canEdit && !editing && (
+                    {canEditIssues && !editing && (
                         <Button size="small" variant="text" onClick={handleStartEdit}>
                             {issues.length ? 'Редактировать' : 'Добавить'}
                         </Button>
@@ -89,7 +100,7 @@ export default function ReportIssuesPanel({
                 </Stack>
             </Stack>
 
-            {!editing && (
+            {(!editing || isAgreed) && (
                 <Stack spacing={1.5} sx={{ mt: 2 }}>
                     {issues.length ? (
                         issues.map((issue, idx) => (
@@ -105,7 +116,7 @@ export default function ReportIssuesPanel({
                 </Stack>
             )}
 
-            {editing && (
+            {editing && !isAgreed && (
                 <Stack spacing={1.5} sx={{ mt: 2 }}>
                     {draft.map((issue, idx) => (
                         <Stack key={`draft-${idx}`} direction="row" spacing={1} alignItems="center">

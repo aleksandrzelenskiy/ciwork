@@ -5,6 +5,7 @@ import dbConnect from '@/utils/mongoose';
 import ReportModel from '@/app/models/ReportModel';
 import TaskModel from '@/app/models/TaskModel';
 import ProjectModel from '@/app/models/ProjectModel';
+import OrganizationModel from '@/app/models/OrganizationModel';
 import ReportDeletionLog from '@/app/models/ReportDeletionLog';
 import UserModel from '@/app/models/UserModel';
 import { createNotification } from '@/app/utils/notificationService';
@@ -52,8 +53,20 @@ export async function GET(
     }
 
     const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
-      .select('taskName bsNumber executorName initiatorEmail initiatorName')
+      .select('taskName bsNumber executorName initiatorEmail initiatorName orgId projectId')
       .lean();
+    const projectId =
+        report.projectId?.toString?.() ??
+        taskRecord?.projectId?.toString?.() ??
+        null;
+    const orgId =
+        report.orgId?.toString?.() ??
+        taskRecord?.orgId?.toString?.() ??
+        null;
+    const [project, org] = await Promise.all([
+      projectId ? ProjectModel.findById(projectId).select('key').lean() : null,
+      orgId ? OrganizationModel.findById(orgId).select('orgSlug').lean() : null,
+    ]);
 
     const url = new URL(request.url);
     const token = url.searchParams.get('token')?.trim() || '';
@@ -90,6 +103,8 @@ export async function GET(
     return NextResponse.json({
       taskId: report.taskId,
       taskName: report.taskName || taskRecord?.taskName,
+      orgSlug: org?.orgSlug ?? null,
+      projectKey: project?.key ?? null,
       bsNumber: taskRecord?.bsNumber,
       files: report.files,
       createdAt: report.createdAt,

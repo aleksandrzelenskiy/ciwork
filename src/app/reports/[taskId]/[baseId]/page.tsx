@@ -36,6 +36,8 @@ type ReportPayload = {
     taskId: string;
     taskName?: string;
     bsNumber?: string;
+    orgSlug?: string | null;
+    projectKey?: string | null;
     files: string[];
     fixedFiles: string[];
     createdAt: string;
@@ -257,6 +259,8 @@ export default function PhotoReportPage() {
                     taskName={report.taskName}
                     bsNumber={report.bsNumber}
                     baseId={baseId}
+                    orgSlug={report.orgSlug}
+                    projectKey={report.projectKey}
                     createdByName={report.executorName}
                     createdAt={report.createdAt}
                     status={report.status}
@@ -279,6 +283,7 @@ export default function PhotoReportPage() {
                             issues={report.issues || []}
                             canEdit={canEditIssues}
                             onSave={handleSaveIssues}
+                            status={report.status}
                             canUploadFix={canUploadFix}
                             onUploadFix={() => setFixDialogOpen(true)}
                         />
