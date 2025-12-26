@@ -4,6 +4,7 @@ import { Types } from 'mongoose';
 import UserModel, { type IUser } from '@/app/models/UserModel';
 import type { ApplicationStatus } from '@/app/models/ApplicationModel';
 import { createNotification } from '@/app/utils/notificationService';
+import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 
 type ObjectIdLike = Types.ObjectId | string | null | undefined;
 
@@ -153,6 +154,11 @@ export async function notifyTaskStatusChange(input: {
     projectName?: string;
     link?: string;
 }) {
+    const formatStatusLabel = (status?: string) => {
+        if (!status) return 'не указан';
+        return getStatusLabel(normalizeStatusTitle(status)) || status;
+    };
+
     const targets = [input.authorClerkId, input.executorClerkId]
         .map((v) => (typeof v === 'string' ? v.trim() : ''))
         .filter((v) => v && v !== input.triggeredByClerkId);
@@ -178,7 +184,9 @@ export async function notifyTaskStatusChange(input: {
                 recipientUserId: user._id,
                 type: 'task_status_change',
                 title: 'Статус задачи обновлён',
-                message: `Статус задачи «${input.taskName}»${bsInfo} изменён с ${input.previousStatus ?? 'не указан'} на ${input.newStatus}.`,
+                message: `Статус задачи «${input.taskName}»${bsInfo} изменён с ${formatStatusLabel(
+                    input.previousStatus
+                )} на ${formatStatusLabel(input.newStatus)}.`,
                 link,
                 orgId: input.orgId ?? undefined,
                 orgSlug: input.orgSlug ?? undefined,

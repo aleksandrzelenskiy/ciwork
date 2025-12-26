@@ -1,29 +1,33 @@
 # Базовый образ Node.js (20, Alpine)
-FROM node:20-alpine
+FROM node:20-alpine AS base
 
 # Устанавливаем необходимые шрифты
 RUN echo "https://mirror.yandex.ru/mirrors/alpine/latest-stable/main" > /etc/apk/repositories
 RUN apk update && apk add --no-cache ttf-dejavu
 
-
-# Рабочая директория в контейнере
+# ---------- deps ----------
+FROM base AS deps
 WORKDIR /app
-
-# Копируем package.json и устанавливаем зависимости
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# 4. Копируем prod-env → .env
-COPY .env.production .env
-
-# Копируем весь код в контейнер
+# ---------- build ----------
+FROM base AS build
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Сборка приложения (если используется Next.js)
 RUN npm run build
 
-# Порт, на котором будет слушать наше Next.js-приложение
-EXPOSE 3000
+# ---------- runner ----------
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+COPY --from=build /app/next.config.* ./
+COPY --from=build /app/.env.production ./.env
 
-# Запуск в production-режиме
+EXPOSE 3000
 CMD ["npm", "run", "start"]

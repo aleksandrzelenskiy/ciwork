@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "jest",
     "clean:duplicates": "ts-node --project tsconfig.json ./scripts/clean-duplicates.ts"
   },
   "dependencies": {
@@ -43,10 +44,10 @@
     "heic-convert": "^2.1.0",
     "mongodb": "^6.12.0",
     "mongoose": "^8.9.4",
-    "multer": "^1.4.5-lts.1",
-    "next": "^15.3.5",
-    "next-auth": "^4.24.11",
-    "nodemailer": "^6.10.0",
+    "multer": "^2.0.2",
+    "next": "^15.5.9",
+    "next-auth": "^4.24.13",
+    "nodemailer": "^7.0.12",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^5.3.31",
     "puppeteer": "^24.7.2",
@@ -66,6 +67,10 @@
     "xml2js": "^0.6.2",
     "zod": "^3.24.1"
   },
+  "overrides": {
+    "glob": "^10.5.0",
+    "js-yaml": "^4.1.1"
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/adm-zip": "^0.5.7",
@@ -73,11 +78,12 @@
     "@types/busboy": "^1.5.4",
     "@types/file-saver": "^2.0.7",
     "@types/heic-convert": "^2.1.0",
+    "@types/jest": "^29.5.14",
     "@types/mongodb": "^4.0.7",
     "@types/mongoose": "^5.11.97",
-    "@types/multer": "^1.4.12",
+    "@types/multer": "^2.0.0",
     "@types/node": "^20.17.19",
-    "@types/nodemailer": "^6.4.17",
+    "@types/nodemailer": "^7.0.4",
     "@types/pdf-parse": "^1.1.5",
     "@types/pdfmake": "^0.2.11",
     "@types/react": "^19",
@@ -86,7 +92,8 @@
     "@types/socket.io": "^3.0.1",
     "@types/xml2js": "^0.4.14",
     "eslint": "^9",
-    "eslint-config-next": "15.1.3",
+    "eslint-config-next": "^15.5.9",
+    "jest": "^29.7.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",

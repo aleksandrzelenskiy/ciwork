@@ -9,6 +9,8 @@ import { buildReportKey, extractUploadPayload, prepareImageBuffer, resolveStorag
 import UserModel from '@/app/models/UserModel';
 import { createNotification } from '@/app/utils/notificationService';
 import ProjectModel from '@/app/models/ProjectModel';
+import { sendEmail } from '@/utils/mailer';
+import { signInitiatorAccessToken } from '@/utils/initiatorAccessToken';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -90,9 +92,15 @@ export async function POST(request: NextRequest) {
 
     await recordStorageBytes(task.orgId, totalBytes);
 
-    const actorName = buildActorName(user);
+    const executorName =
+        typeof task.executorName === 'string' && task.executorName.trim()
+            ? task.executorName.trim()
+            : null;
+    const actorName = executorName ?? buildActorName(user);
     const actor = { id: user.id, name: actorName };
     const actorEmail = user.emailAddresses?.[0]?.emailAddress;
+    const initiatorEmailNormalized =
+        typeof task.initiatorEmail === 'string' ? task.initiatorEmail.trim().toLowerCase() : '';
     const report = await upsertReport({
         taskId: payload.taskId,
         baseId: payload.baseId,
@@ -124,8 +132,8 @@ export async function POST(request: NextRequest) {
     if (typeof task.authorEmail === 'string' && task.authorEmail.trim()) {
         recipientEmails.add(task.authorEmail.trim().toLowerCase());
     }
-    if (typeof task.initiatorEmail === 'string' && task.initiatorEmail.trim()) {
-        recipientEmails.add(task.initiatorEmail.trim().toLowerCase());
+    if (initiatorEmailNormalized) {
+        recipientEmails.add(initiatorEmailNormalized);
     }
 
     if (task.projectId) {
@@ -165,6 +173,14 @@ export async function POST(request: NextRequest) {
             );
             return !isActorByClerk && !isActorByEmail;
         });
+        const initiatorNotifiedInApp = Boolean(
+            initiatorEmailNormalized &&
+                filteredRecipients.some(
+                    (recipient) =>
+                        typeof recipient.email === 'string' &&
+                        recipient.email.trim().toLowerCase() === initiatorEmailNormalized
+                )
+        );
 
         if (filteredRecipients.length > 0) {
             const bsInfo = task.bsNumber ? ` (БС ${task.bsNumber})` : '';
@@ -194,6 +210,32 @@ export async function POST(request: NextRequest) {
                     })
                 )
             );
+        }
+
+        if (initiatorEmailNormalized && !initiatorNotifiedInApp) {
+            const frontendUrl = process.env.FRONTEND_URL || 'https://ciwork.ru';
+            const token = signInitiatorAccessToken({
+                taskId: task.taskId,
+                email: initiatorEmailNormalized,
+            });
+            const initiatorLink = `${frontendUrl}/reports/${encodeURIComponent(
+                payload.taskId
+            )}/${encodeURIComponent(payload.baseId)}?token=${encodeURIComponent(token)}`;
+            const bsInfo = task.bsNumber ? ` (БС ${task.bsNumber})` : '';
+            const baseInfo = payload.baseId ? ` БС ${payload.baseId}` : '';
+            const taskTitle = task.taskName || task.taskId;
+            const subject = `Исправления по фотоотчету${bsInfo}`;
+            const text = `${actorName} загрузил исправления по фотоотчету по задаче «${taskTitle}»${baseInfo}.`;
+            try {
+                await sendEmail({
+                    to: initiatorEmailNormalized,
+                    subject,
+                    text: `${text}\n\nСсылка: ${initiatorLink}`,
+                    html: `<p>${text}</p><p><a href="${initiatorLink}">Перейти к отчету</a></p>`,
+                });
+            } catch (error) {
+                console.error('Failed to send fix upload email to initiator', error);
+            }
         }
     }
 

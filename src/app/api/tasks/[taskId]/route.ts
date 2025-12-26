@@ -23,6 +23,7 @@ import { createNotification } from '@/app/utils/notificationService';
 import { sendEmail } from '@/utils/mailer';
 import OrganizationModel from '@/app/models/OrganizationModel';
 import ProjectModel from '@/app/models/ProjectModel';
+import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 
 interface UpdateData {
   status?: string;
@@ -440,6 +441,11 @@ export async function PATCH(
     }
     if (updateData.priority) task.priority = updateData.priority as PriorityLevel;
 
+    const formatStatusLabel = (status?: string) => {
+      if (!status) return 'не указан';
+      return getStatusLabel(normalizeStatusTitle(status)) || status;
+    };
+
     const notifyManagers = async (
         updatedTask: typeof task,
         action: 'accept' | 'reject',
@@ -459,10 +465,11 @@ export async function PATCH(
 
       const bsInfo = updatedTask.bsNumber ? ` (БС ${updatedTask.bsNumber})` : '';
       const title = action === 'accept' ? 'Исполнитель принял задачу' : 'Исполнитель отказался от задачи';
+      const statusLabel = formatStatusLabel(newStatus);
       const message =
           action === 'accept'
-              ? `${authorName} подтвердил принятие задачи «${updatedTask.taskName}»${bsInfo}. Статус: ${newStatus}.`
-              : `${authorName} отказался от задачи «${updatedTask.taskName}»${bsInfo}. Статус: ${newStatus}.`;
+              ? `${authorName} подтвердил принятие задачи «${updatedTask.taskName}»${bsInfo}. Статус: ${statusLabel}.`
+              : `${authorName} отказался от задачи «${updatedTask.taskName}»${bsInfo}. Статус: ${statusLabel}.`;
 
       const fallbackTaskId =
           typeof updatedTask.taskId === 'string' ? updatedTask.taskId.toLowerCase() : '';
@@ -706,40 +713,52 @@ export async function PATCH(
           shouldNotifyExecutorAssignment && typeof updatedTask.executorId === 'string'
               ? undefined
               : updatedTask.executorId;
-      try {
-        await notifyTaskStatusChange({
-          taskId: updatedTask.taskId,
-          taskName: updatedTask.taskName,
-          bsNumber: updatedTask.bsNumber,
-          previousStatus,
-          newStatus: updatedTask.status,
-          authorClerkId:
-              typeof updatedTask.authorId === 'string' ? updatedTask.authorId : undefined,
-          executorClerkId:
-              typeof executorForStatusNotice === 'string'
-                  ? executorForStatusNotice
-                  : undefined,
-          triggeredByClerkId: user.id,
-          triggeredByName: authorName,
-          triggeredByEmail: authorEmail ?? undefined,
-          orgId: updatedTask.orgId ? updatedTask.orgId.toString() : undefined,
-          orgSlug: storageScope.orgSlug,
-          projectRef: undefined,
-          projectKey: storageScope.projectKey,
-          projectName: undefined,
-        });
-      } catch (notifyErr) {
-        console.error('Failed to send status change notification', notifyErr);
+      if (!managerDecision) {
+        try {
+          await notifyTaskStatusChange({
+            taskId: updatedTask.taskId,
+            taskName: updatedTask.taskName,
+            bsNumber: updatedTask.bsNumber,
+            previousStatus,
+            newStatus: updatedTask.status,
+            authorClerkId:
+                typeof updatedTask.authorId === 'string' ? updatedTask.authorId : undefined,
+            executorClerkId:
+                typeof executorForStatusNotice === 'string'
+                    ? executorForStatusNotice
+                    : undefined,
+            triggeredByClerkId: user.id,
+            triggeredByName: authorName,
+            triggeredByEmail: authorEmail ?? undefined,
+            orgId: updatedTask.orgId ? updatedTask.orgId.toString() : undefined,
+            orgSlug: storageScope.orgSlug,
+            projectRef: undefined,
+            projectKey: storageScope.projectKey,
+            projectName: undefined,
+          });
+        } catch (notifyErr) {
+          console.error('Failed to send status change notification', notifyErr);
+        }
       }
 
       const initiatorEmail = updatedTask.initiatorEmail?.trim();
-      if (initiatorEmail) {
+      const initiatorEmailNormalized = initiatorEmail ? initiatorEmail.toLowerCase() : '';
+      const authorEmailNormalized =
+          typeof updatedTask.authorEmail === 'string'
+              ? updatedTask.authorEmail.trim().toLowerCase()
+              : '';
+      const shouldNotifyInitiator =
+          Boolean(initiatorEmailNormalized) &&
+          !(managerDecision && initiatorEmailNormalized === authorEmailNormalized);
+      if (shouldNotifyInitiator) {
         const bsInfo = updatedTask.bsNumber ? ` (БС ${updatedTask.bsNumber})` : '';
         const subject = `Статус задачи обновлён: ${updatedTask.taskName}${bsInfo}`;
-        const text = `Статус задачи «${updatedTask.taskName}»${bsInfo} изменён с ${previousStatus ?? 'не указан'} на ${updatedTask.status}.`;
+        const text = `Статус задачи «${updatedTask.taskName}»${bsInfo} изменён с ${formatStatusLabel(
+            previousStatus
+        )} на ${formatStatusLabel(updatedTask.status)}.`;
         try {
           await sendEmail({
-            to: initiatorEmail,
+            to: initiatorEmailNormalized,
             subject,
             text,
             html: `<p>${text}</p>`,
