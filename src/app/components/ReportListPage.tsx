@@ -34,7 +34,7 @@ const getTaskStatus = (baseStatuses: BaseStatus[] = []) => {
 };
 
 const resolveStatusColor = (status: string) => {
-  const color = getStatusColor(status);
+  const color = getStatusColor(normalizeStatusTitle(status));
   return color === 'default' ? undefined : color;
 };
 
@@ -309,22 +309,38 @@ export default function ReportListPage() {
                   </Stack>
                 </Stack>
 
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {report.baseStatuses.map((base) => (
-                    <Chip
-                      key={`${report.taskId}-${base.baseId}`}
-                      icon={<FolderIcon sx={{ color: resolveStatusColor(base.status) }} />}
-                      label={`БС ${base.baseId}`}
-                      component={Link}
-                      href={`/reports/${report.taskId}/${base.baseId}${tokenParam}`}
-                      clickable
-                      sx={{
-                        borderRadius: 999,
-                        px: 1,
-                        backgroundColor: 'rgba(15,23,42,0.04)',
-                      }}
-                    />
-                  ))}
+                <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
+                  {report.baseStatuses.map((base) => {
+                    const baseStatus = normalizeStatusTitle(base.status);
+                    const baseStatusLabel = getStatusLabel(baseStatus);
+                    const baseStatusColor = getStatusColor(baseStatus);
+                    const baseStatusChipSx =
+                      baseStatusColor === 'default'
+                        ? { fontWeight: 600 }
+                        : { backgroundColor: baseStatusColor, color: '#fff', fontWeight: 600 };
+                    return (
+                      <Stack
+                        key={`${report.taskId}-${base.baseId}`}
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                      >
+                        <Chip
+                          icon={<FolderIcon sx={{ color: resolveStatusColor(base.status) }} />}
+                          label={`БС ${base.baseId}`}
+                          component={Link}
+                          href={`/reports/${report.taskId}/${base.baseId}${tokenParam}`}
+                          clickable
+                          sx={{
+                            borderRadius: 999,
+                            px: 1,
+                            backgroundColor: 'rgba(15,23,42,0.04)',
+                          }}
+                        />
+                        <Chip label={baseStatusLabel} size="small" sx={baseStatusChipSx} />
+                      </Stack>
+                    );
+                  })}
                 </Stack>
               </Stack>
             </Box>
