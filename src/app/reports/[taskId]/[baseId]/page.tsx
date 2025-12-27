@@ -250,7 +250,7 @@ export default function PhotoReportPage() {
                 startIcon={<ArrowBackIcon />}
                 sx={{ textTransform: 'none', mb: 3 }}
             >
-                Назад к списку
+                Все фотоотчеты
             </Button>
 
             <Stack spacing={3}>

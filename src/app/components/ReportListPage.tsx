@@ -268,6 +268,11 @@ export default function ReportListPage() {
                     <Typography variant="h6" fontWeight={600}>
                       {titleWithBs}
                     </Typography>
+                    {(report.projectKey || report.projectId) && (
+                      <Typography variant="body2" color="text.secondary">
+                        Проект: {report.projectKey || report.projectId}
+                      </Typography>
+                    )}
                     <Typography variant="body2" color="text.secondary">
                       Задача{' '}
                       {report.orgSlug && report.projectKey ? (

@@ -38,6 +38,7 @@ export async function GET(request: Request) {
     bsNumber?: string;
     executorName?: string;
     projectId?: string | null;
+    initiatorEmail?: string | null;
     orgId?: string | null;
   }> = [];
 
@@ -65,6 +66,7 @@ export async function GET(request: Request) {
           bsNumber: taskRecord.bsNumber,
           executorName: taskRecord.executorName,
           projectId: taskRecord.projectId?.toString?.() ?? null,
+          initiatorEmail: taskRecord.initiatorEmail?.trim().toLowerCase() ?? null,
           orgId,
         },
       ];
@@ -97,7 +99,7 @@ export async function GET(request: Request) {
         userContext.data.activeOrgId ||
         userContext.data.activeMembership?.orgId ||
         null;
-    if (activeOrgId) {
+    if (activeOrgId && !isSuperAdmin) {
       query.orgId = activeOrgId;
       const org = await OrganizationModel.findById(activeOrgId).select('orgSlug').lean();
       orgSlug = org?.orgSlug ?? null;
@@ -131,7 +133,7 @@ export async function GET(request: Request) {
   if (!isGuest) {
     taskMeta = taskIds.length
       ? await TaskModel.find({ taskId: { $in: taskIds } })
-          .select('taskId bsNumber executorName projectId orgId')
+          .select('taskId bsNumber executorName projectId initiatorEmail orgId')
           .lean()
       : [];
   }
@@ -142,6 +144,7 @@ export async function GET(request: Request) {
         bsNumber: task.bsNumber,
         executorName: task.executorName,
         projectId: task.projectId ? task.projectId.toString() : null,
+        initiatorEmail: task.initiatorEmail?.trim().toLowerCase() ?? null,
         orgId: task.orgId ? task.orgId.toString() : null,
       },
     ])
@@ -168,6 +171,70 @@ export async function GET(request: Request) {
     });
   });
 
+  const orgSlugMap = new Map<string, string>();
+  if (isGuest) {
+    const orgId = taskMeta[0]?.orgId ?? null;
+    if (orgId && orgSlug) {
+      orgSlugMap.set(orgId.toString(), orgSlug);
+    }
+  } else if (isSuperAdmin) {
+    const orgIds = new Set<string>();
+    rawReports.forEach((report) => {
+      const reportOrgId = report.orgId?.toString?.() ?? null;
+      if (reportOrgId) orgIds.add(reportOrgId);
+    });
+    taskMeta.forEach((task) => {
+      if (task.orgId) orgIds.add(task.orgId.toString());
+    });
+    const orgs = orgIds.size > 0
+      ? await OrganizationModel.find({ _id: { $in: Array.from(orgIds) } })
+          .select('orgSlug')
+          .lean()
+      : [];
+    orgs.forEach((org) => {
+      orgSlugMap.set(org._id.toString(), org.orgSlug);
+    });
+  } else if (orgSlug && query.orgId) {
+    orgSlugMap.set(String(query.orgId), orgSlug);
+  }
+
+  const shouldFilterByManagerProjects =
+    !isGuest && !isSuperAdmin && effectiveRole === 'manager';
+  const shouldFilterByInitiator =
+    !isGuest && !isSuperAdmin && effectiveRole === 'viewer';
+
+  let visibleReports = rawReports;
+  if (shouldFilterByManagerProjects) {
+    const managerEmail = normalizedEmail;
+    visibleReports = managerEmail
+      ? visibleReports.filter((report) => {
+          const taskMetaEntry = taskMetaMap.get(report.taskId);
+          const projectId =
+            report.projectId?.toString?.() ??
+            taskMetaEntry?.projectId ??
+            null;
+          if (!projectId) return false;
+          const managers = projectInfoMap.get(projectId)?.managers ?? [];
+          return managers.some(
+            (manager) => manager.trim().toLowerCase() === managerEmail
+          );
+        })
+      : [];
+  }
+
+  if (shouldFilterByInitiator) {
+    const initiatorEmail = normalizedEmail;
+    visibleReports = initiatorEmail
+      ? visibleReports.filter((report) => {
+          const taskMetaEntry = taskMetaMap.get(report.taskId);
+          return (
+            taskMetaEntry?.initiatorEmail &&
+            taskMetaEntry.initiatorEmail === initiatorEmail
+          );
+        })
+      : [];
+  }
+
   type BaseStatus = {
     baseId: string;
     status: string;
@@ -185,13 +252,14 @@ export async function GET(request: Request) {
     createdAt: Date;
     canDelete?: boolean;
     orgSlug?: string;
+    projectId?: string;
     projectKey?: string;
     baseStatuses: BaseStatus[];
   };
 
   const taskMap = new Map<string, TaskEntry>();
 
-  rawReports.forEach((report) => {
+  visibleReports.forEach((report) => {
     const taskId = report.taskId;
     const createdAt = report.createdAt ?? new Date();
     const latestEventDate = Array.isArray(report.events) && report.events.length > 0
@@ -213,6 +281,14 @@ export async function GET(request: Request) {
             manager.trim().toLowerCase() === normalizedEmail
         )
       : false;
+    const orgIdValue =
+      report.orgId?.toString?.() ??
+      taskMetaEntry?.orgId ??
+      null;
+    const resolvedOrgSlug =
+      (orgIdValue ? orgSlugMap.get(orgIdValue) : null) ??
+      orgSlug ??
+      undefined;
     const entry = taskMap.get(taskId) ?? {
       taskId,
       taskName: report.taskName,
@@ -223,10 +299,17 @@ export async function GET(request: Request) {
       initiatorName: report.initiatorName,
       createdAt,
       canDelete,
-      orgSlug: orgSlug ?? undefined,
+      orgSlug: resolvedOrgSlug,
+      projectId: projectId ?? undefined,
       projectKey: projectInfo?.key,
       baseStatuses: [] as BaseStatus[],
     };
+    if (!entry.projectId && projectId) {
+      entry.projectId = projectId;
+    }
+    if (!entry.projectKey && projectInfo?.key) {
+      entry.projectKey = projectInfo.key;
+    }
     entry.baseStatuses.push({
       baseId: report.baseId,
       status: report.status,
