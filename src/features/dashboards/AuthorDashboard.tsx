@@ -16,7 +16,7 @@ interface AuthorDashboardProps {
   clerkUserId: string;
 }
 
-const masonrySpacing = { xs: 1, sm: 2, md: 2, lg: 2, xl: 2 };
+const masonrySpacing = { xs: 0.5, sm: 2, md: 2, lg: 2, xl: 2 };
 
 const AuthorDashboard: React.FC<AuthorDashboardProps> = ({
   role,
@@ -34,7 +34,7 @@ const AuthorDashboard: React.FC<AuthorDashboardProps> = ({
         sx={(theme) => ({
           width: '100%',
           px: {
-            xs: `calc(${theme.spacing(masonrySpacing.xs)} / 2)`,
+            xs: theme.spacing(0),
             sm: `calc(${theme.spacing(masonrySpacing.sm)} / 2)`,
             md: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
             lg: `calc(${theme.spacing(masonrySpacing.lg)} / 2)`,

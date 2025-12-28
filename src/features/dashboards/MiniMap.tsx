@@ -15,9 +15,22 @@ import { isAdminRole } from '@/app/utils/roleGuards';
 interface MiniMapProps {
   role: EffectiveOrgRole | null; // admin | manager | executor | viewer
   clerkUserId: string; // Текущий userId пользователя (из Clerk)
+  showOverlay?: boolean;
+  showCta?: boolean;
+  ctaLabel?: string;
+  ctaHref?: string;
+  mapHeight?: number;
 }
 
-export default function MiniMap({ role, clerkUserId }: MiniMapProps) {
+export default function MiniMap({
+  role,
+  clerkUserId,
+  showOverlay = true,
+  showCta = true,
+  ctaLabel = 'На карте',
+  ctaHref = '/tasks/locations',
+  mapHeight = 400,
+}: MiniMapProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +98,7 @@ export default function MiniMap({ role, clerkUserId }: MiniMapProps) {
   );
 
   return (
-    <Box sx={{ position: 'relative', width: '100%', height: 400 }}>
+    <Box sx={{ position: 'relative', width: '100%', height: mapHeight }}>
       <YMaps query={{ apikey: process.env.NEXT_PUBLIC_YANDEX_MAPS_APIKEY }}>
         <Map
           defaultState={{
@@ -123,36 +136,38 @@ export default function MiniMap({ role, clerkUserId }: MiniMapProps) {
         </Map>
       </YMaps>
 
-      {/* Полупрозрачная маска поверх карты */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.3)',
-          pointerEvents: 'none',
-        }}
-      />
+      {showOverlay && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.3)',
+            pointerEvents: 'none',
+          }}
+        />
+      )}
 
-      {/* Кнопка "View Map" по центру */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 10,
-          pointerEvents: 'auto', // чтобы кнопку можно было кликнуть
-        }}
-      >
-        <Link href='/bsmap'>
-          <Button endIcon={<MapIcon />} variant='contained'>
-            View Map
-          </Button>
-        </Link>
-      </Box>
+      {showCta && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10,
+            pointerEvents: 'auto',
+          }}
+        >
+          <Link href={ctaHref}>
+            <Button endIcon={<MapIcon />} variant='contained'>
+              {ctaLabel}
+            </Button>
+          </Link>
+        </Box>
+      )}
     </Box>
   );
 }

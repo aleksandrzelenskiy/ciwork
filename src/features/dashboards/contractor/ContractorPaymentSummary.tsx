@@ -6,15 +6,12 @@ import {
     Button,
     CircularProgress,
     Divider,
-    List,
-    ListItem,
-    ListItemText,
     Typography,
 } from '@mui/material';
-import Link from 'next/link';
 import type { Task } from '@/app/types/taskTypes';
+import ContractorPaymentDialog from '@/features/dashboards/contractor/ContractorPaymentDialog';
 
-const PAYABLE_STATUSES = new Set(['Done', 'Agreed']);
+const PAYABLE_STATUSES = new Set(['Agreed']);
 
 const formatRuble = (value: number) =>
     new Intl.NumberFormat('ru-RU', {
@@ -29,7 +26,7 @@ export default function ContractorPaymentSummary() {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [confirmingTaskIds, setConfirmingTaskIds] = useState<string[]>([]);
+    const [dialogOpen, setDialogOpen] = useState(false);
 
     useEffect(() => {
         async function fetchTasks() {
@@ -50,14 +47,13 @@ export default function ContractorPaymentSummary() {
         fetchTasks();
     }, []);
 
-    const payableTasks = useMemo(
-        () =>
-            tasks.filter(
-                (task) =>
-                    PAYABLE_STATUSES.has(task.status) &&
-                    !task.payment?.contractorConfirmedAt
-            ),
+    const agreedTasks = useMemo(
+        () => tasks.filter((task) => PAYABLE_STATUSES.has(task.status)),
         [tasks]
+    );
+    const payableTasks = useMemo(
+        () => agreedTasks.filter((task) => !task.payment?.contractorConfirmedAt),
+        [agreedTasks]
     );
 
     const awaitingOrgMark = payableTasks.filter(
@@ -72,37 +68,12 @@ export default function ContractorPaymentSummary() {
         0
     );
 
-    const handleConfirm = async (taskId: string) => {
-        if (confirmingTaskIds.includes(taskId)) return;
-        setConfirmingTaskIds((prev) => [...prev, taskId]);
-        setError(null);
-
-        try {
-            const res = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/payment`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'confirm_paid' }),
-            });
-
-            if (!res.ok) {
-                const payload = await res.json().catch(() => ({}));
-                setError(payload.error || 'Не удалось подтвердить оплату');
-                return;
-            }
-
-            const payload = await res.json();
-            setTasks((prev) =>
-                prev.map((task) =>
-                    task.taskId === taskId
-                        ? { ...task, payment: payload.payment }
-                        : task
-                )
-            );
-        } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
-        } finally {
-            setConfirmingTaskIds((prev) => prev.filter((id) => id !== taskId));
-        }
+    const handlePaymentUpdated = (taskId: string, payment: Task['payment']) => {
+        setTasks((prev) =>
+            prev.map((task) =>
+                task.taskId === taskId ? { ...task, payment } : task
+            )
+        );
     };
 
     if (loading) {
@@ -130,7 +101,7 @@ export default function ContractorPaymentSummary() {
             ) : (
                 <>
                     <Typography variant='body2' color='text.secondary' textAlign='center'>
-                        К выплате по завершенным задачам
+                        К выплате по согласованным задачам
                     </Typography>
                     <Typography variant='h4' fontWeight={600} textAlign='center' sx={{ mt: 1 }}>
                         {formatRuble(totalPayable)}
@@ -150,47 +121,18 @@ export default function ContractorPaymentSummary() {
                 </>
             )}
 
-            {awaitingConfirmation.length > 0 && (
-                <>
-                    <Divider sx={{ my: 2 }} />
-                    <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                        Подтвердите оплату
-                    </Typography>
-                    <List dense>
-                        {awaitingConfirmation.slice(0, 3).map((task) => (
-                            <ListItem
-                                key={task.taskId}
-                                secondaryAction={
-                                    <Button
-                                        size='small'
-                                        variant='outlined'
-                                        onClick={() => handleConfirm(task.taskId)}
-                                        disabled={confirmingTaskIds.includes(task.taskId)}
-                                    >
-                                        Подтвердить
-                                    </Button>
-                                }
-                            >
-                                <ListItemText
-                                    primary={task.taskName}
-                                    secondary={task.taskId}
-                                />
-                            </ListItem>
-                        ))}
-                    </List>
-                    {awaitingConfirmation.length > 3 && (
-                        <Typography variant='caption' color='text.secondary'>
-                            Есть еще задачи для подтверждения
-                        </Typography>
-                    )}
-                </>
-            )}
-
             <Box sx={{ textAlign: 'center', mt: 2 }}>
-                <Link href='/tasks'>
-                    <Button variant='text'>Показать задачи</Button>
-                </Link>
+                <Button variant='text' onClick={() => setDialogOpen(true)}>
+                    Показать задачи
+                </Button>
             </Box>
+
+            <ContractorPaymentDialog
+                open={dialogOpen}
+                onClose={() => setDialogOpen(false)}
+                tasks={agreedTasks}
+                onPaymentUpdated={handlePaymentUpdated}
+            />
         </Box>
     );
 }

@@ -27,6 +27,7 @@ import KeyboardDoubleArrowUpIcon from '@mui/icons-material/KeyboardDoubleArrowUp
 
 import { Task } from '@/app/types/taskTypes';
 import { getStatusColor } from '@/utils/statusColors';
+import { getStatusLabel } from '@/utils/statusLabels';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
 
@@ -158,7 +159,7 @@ export default function MiniTaskTable({
                 <TableCell align='center'>ID</TableCell>
                 <TableCell align='center'>Task</TableCell>
                 <TableCell align='center'>Due Date</TableCell>
-                <TableCell align='center'>Status</TableCell>
+                <TableCell align='center'>Статус</TableCell>
                 <TableCell align='center'>Priority</TableCell>
               </TableRow>
             </TableHead>
@@ -181,7 +182,7 @@ export default function MiniTaskTable({
                   </TableCell>
                   <TableCell align='center'>
                     <Chip
-                      label={task.status}
+                      label={getStatusLabel(task.status)}
                       sx={{
                         backgroundColor: getStatusColor(task.status),
                         color: '#fff',

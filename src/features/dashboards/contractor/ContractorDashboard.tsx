@@ -8,6 +8,7 @@ import MiniTaskTable from '@/features/dashboards/MiniTaskTable';
 import TaskMetricDiagram from '@/features/dashboards/TaskMetricDiagram';
 import ContractorPaymentSummary from '@/features/dashboards/contractor/ContractorPaymentSummary';
 import ContractorMarketplaceTasks from '@/features/dashboards/contractor/ContractorMarketplaceTasks';
+import ContractorReportsStatus from '@/features/dashboards/contractor/ContractorReportsStatus';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 
 interface ContractorDashboardProps {
@@ -15,7 +16,7 @@ interface ContractorDashboardProps {
     clerkUserId: string;
 }
 
-const masonrySpacing = { xs: 1, sm: 2, md: 2, lg: 2, xl: 2 };
+const masonrySpacing = { xs: 0.5, sm: 2, md: 2, lg: 2, xl: 2 };
 
 const ContractorDashboard: React.FC<ContractorDashboardProps> = ({
     role,
@@ -23,13 +24,13 @@ const ContractorDashboard: React.FC<ContractorDashboardProps> = ({
 }) => (
     <Box>
         <Typography variant='h5' gutterBottom>
-            Дашборд исполнителя
+            Dashboards (Подрядчик)
         </Typography>
         <Box
             sx={(theme) => ({
                 width: '100%',
                 px: {
-                    xs: `calc(${theme.spacing(masonrySpacing.xs)} / 2)`,
+                    xs: theme.spacing(0),
                     sm: `calc(${theme.spacing(masonrySpacing.sm)} / 2)`,
                     md: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
                     lg: `calc(${theme.spacing(masonrySpacing.lg)} / 2)`,
@@ -71,6 +72,12 @@ const ContractorDashboard: React.FC<ContractorDashboardProps> = ({
                 <Paper sx={{ p: 2 }}>
                     <Typography variant='h6'>Маркетплейс</Typography>
                     <ContractorMarketplaceTasks />
+                </Paper>
+                <Paper sx={{ p: 2 }}>
+                    <Typography variant='h6' gutterBottom>
+                        Фотоотчеты
+                    </Typography>
+                    <ContractorReportsStatus />
                 </Paper>
                 <Paper sx={{ p: 2 }}>
                     <TaskMetricDiagram role={role} clerkUserId={clerkUserId} />

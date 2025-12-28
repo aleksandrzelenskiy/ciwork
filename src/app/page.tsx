@@ -20,7 +20,7 @@ const DashboardPage: React.FC = async () => {
   const { user, effectiveOrgRole } = response.data;
 
   return (
-    <Box className='p-4 md:p-8' sx={{ minHeight: '100vh' }}>
+    <Box className='p-2 sm:p-4 md:p-8' sx={{ minHeight: '100vh' }}>
       <DashboardHome
         role={effectiveOrgRole}
         clerkUserId={user.clerkUserId}
