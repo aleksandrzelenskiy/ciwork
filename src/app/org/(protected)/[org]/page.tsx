@@ -1235,7 +1235,7 @@ export default function OrgSettingsPage() {
 
             <Grid container spacing={2}>
                 {/* ПРОЕКТЫ */}
-                <Grid xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <Card variant="outlined" sx={cardBaseSx}>
                         <CardHeader
                             sx={cardHeaderSx}
@@ -1383,7 +1383,7 @@ export default function OrgSettingsPage() {
                 </Grid>
 
                 {/* УЧАСТНИКИ */}
-                <Grid xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <Card variant="outlined" sx={cardBaseSx}>
                         <CardHeader
                             sx={cardHeaderSx}
@@ -1557,7 +1557,7 @@ export default function OrgSettingsPage() {
                 </Grid>
 
                 {/* ОТКЛИКИ */}
-                <Grid xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <Card variant="outlined" sx={cardBaseSx}>
                         <CardHeader
                             sx={cardHeaderSx}
