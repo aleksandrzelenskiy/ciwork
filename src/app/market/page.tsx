@@ -782,7 +782,7 @@ export default function MarketplacePage() {
                                 const budgetDisplay = getBudgetDisplay(task.budget, task.currency);
 
                                 return (
-                                    <Grid xs={12} md={6} key={task._id}>
+                                    <Grid size={{ xs: 12, md: 6 }} key={task._id}>
                                         <Paper
                                             sx={(theme) => ({
                                                 ...glassPaperStyles(theme),
