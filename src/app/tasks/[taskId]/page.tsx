@@ -43,6 +43,7 @@ import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import {
     Timeline,
     TimelineConnector,
@@ -310,6 +311,26 @@ export default function TaskDetailPage() {
     const showReportActions = ['Done', 'Pending', 'Issues', 'Fixed', 'Agreed'].includes(task?.status ?? '');
     const isReportReadOnly = (task?.status ?? '') === 'Agreed';
     const shouldFocusIssues = searchParams?.get('focus') === 'issues';
+    const photoReportSummaries = React.useMemo(() => {
+        if (!Array.isArray(task?.photoReports)) return [];
+        return task.photoReports
+            .map((report) => {
+                const filesCount = Array.isArray(report.files) ? report.files.length : 0;
+                const fixedCount = Array.isArray(report.fixedFiles) ? report.fixedFiles.length : 0;
+                if (filesCount + fixedCount === 0) return null;
+                const normalizedStatus = report.status ? normalizeStatusTitle(report.status) : '';
+                return {
+                    baseId: report.baseId || '—',
+                    statusLabel: report.status ? getStatusLabel(normalizedStatus) : '',
+                    statusColor: normalizedStatus ? getStatusColor(normalizedStatus) : '',
+                };
+            })
+            .filter(
+                (report): report is { baseId: string; statusLabel: string; statusColor: string } =>
+                    report !== null
+            )
+            .sort((a, b) => a.baseId.localeCompare(b.baseId, 'ru'));
+    }, [task?.photoReports]);
 
     const taskTitleLine = task?.taskName || task?.taskId || 'Задача';
     const guideText = `Нажмите для загрузки фотоотчета по задаче ${taskTitleLine}${
@@ -961,6 +982,46 @@ export default function TaskDetailPage() {
                                         useFlexGap
                                         flexWrap="wrap"
                                     >
+                                        {hasPhotoReport && photoReportSummaries.length > 0 && (
+                                            <Stack
+                                                direction="row"
+                                                spacing={1}
+                                                useFlexGap
+                                                flexWrap="wrap"
+                                                sx={{ width: '100%' }}
+                                            >
+                                                {photoReportSummaries.map((report) => (
+                                                    <Stack
+                                                        key={`photo-report-${report.baseId}`}
+                                                        direction="row"
+                                                        spacing={0.75}
+                                                        alignItems="center"
+                                                        sx={{
+                                                            px: 1,
+                                                            py: 0.5,
+                                                            borderRadius: 999,
+                                                            backgroundColor: 'rgba(15,23,42,0.04)',
+                                                        }}
+                                                    >
+                                                        <FolderOutlinedIcon fontSize="small" />
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            БС {report.baseId}
+                                                        </Typography>
+                                                        {report.statusLabel && (
+                                                            <Chip
+                                                                label={report.statusLabel}
+                                                                size="small"
+                                                                sx={{
+                                                                    bgcolor: report.statusColor,
+                                                                    color: '#fff',
+                                                                    fontWeight: 500,
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </Stack>
+                                                ))}
+                                            </Stack>
+                                        )}
                                         <Button
                                             variant="contained"
                                             startIcon={hasPhotoReport ? <EditOutlinedIcon /> : <CloudUploadIcon />}
