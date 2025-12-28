@@ -1,6 +1,6 @@
 import mongoose, { type ClientSession, Types } from 'mongoose';
-import OrgWalletModel, { type OrgWallet } from '@/app/models/OrgWalletModel';
-import OrgWalletTransactionModel from '@/app/models/OrgWalletTransactionModel';
+import OrgWalletModel, { type OrgWallet } from '@/server/models/OrgWalletModel';
+import OrgWalletTransactionModel from '@/server/models/OrgWalletTransactionModel';
 
 type EnsureOrgWalletResult = {
     wallet: OrgWallet;

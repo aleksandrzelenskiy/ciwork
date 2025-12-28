@@ -1,13 +1,13 @@
-import UserModel from '@/app/models/UserModel';
-import { createNotification } from '@/app/utils/notificationService';
-import { notifyTaskStatusChange } from '@/app/utils/taskNotifications';
+import UserModel from '@/server/models/UserModel';
+import { createNotification } from '@/server/notifications/service';
+import { notifyTaskStatusChange } from '@/server/tasks/notifications';
 
-jest.mock('@/app/models/UserModel', () => ({
+jest.mock('@/server/models/UserModel', () => ({
     __esModule: true,
     default: { find: jest.fn() },
 }));
 
-jest.mock('@/app/utils/notificationService', () => ({
+jest.mock('@/server/notifications/service', () => ({
     createNotification: jest.fn().mockResolvedValue({}),
 }));
 

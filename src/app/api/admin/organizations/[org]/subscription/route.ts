@@ -1,9 +1,9 @@
 // src/app/api/admin/organizations/[org]/subscription/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { GetUserContext } from '@/server-actions/user-context';
-import dbConnect from '@/utils/mongoose';
-import Organization from '@/app/models/OrganizationModel';
-import Subscription from '@/app/models/SubscriptionModel';
+import dbConnect from '@/server/db/mongoose';
+import Organization from '@/server/models/OrganizationModel';
+import Subscription from '@/server/models/SubscriptionModel';
 import { resolvePlanLimits } from '@/utils/billingLimits';
 
 export const runtime = 'nodejs';

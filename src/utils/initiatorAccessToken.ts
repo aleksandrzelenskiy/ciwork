@@ -1,4 +1,7 @@
+import 'server-only';
+
 import crypto from 'node:crypto';
+import { getServerEnv } from '@/config/env';
 
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
@@ -8,11 +11,15 @@ type InitiatorAccessPayload = {
     exp: number;
 };
 
-const getSecret = () =>
-    process.env.REPORT_ACCESS_SECRET ||
-    process.env.NOTIFICATIONS_SOCKET_SECRET ||
-    process.env.CLERK_SECRET_KEY ||
-    'dev-report-access-secret';
+const getSecret = () => {
+    const env = getServerEnv();
+    return (
+        env.REPORT_ACCESS_SECRET ||
+        env.NOTIFICATIONS_SOCKET_SECRET ||
+        env.CLERK_SECRET_KEY ||
+        'dev-report-access-secret'
+    );
+};
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const normalizeTaskId = (value: string) => value.trim().toUpperCase();

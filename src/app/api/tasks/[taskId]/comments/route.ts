@@ -1,12 +1,12 @@
 // app/api/tasks/[taskId]/comments/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import TaskModel from '@/app/models/TaskModel';
-import UserModel from '@/app/models/UserModel';
+import dbConnect from '@/server/db/mongoose';
+import TaskModel from '@/server/models/TaskModel';
+import UserModel from '@/server/models/UserModel';
 import { currentUser } from '@clerk/nextjs/server';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadTaskFile } from '@/utils/s3';
-import { createNotification } from '@/app/utils/notificationService';
+import { createNotification } from '@/server/notifications/service';
 import { notificationSocketGateway } from '@/server/socket/notificationSocket';
 
 export const runtime = 'nodejs';

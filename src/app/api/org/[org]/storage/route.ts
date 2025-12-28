@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import { requireOrgRole } from '@/app/utils/permissions';
-import ReportModel from '@/app/models/ReportModel';
-import Subscription from '@/app/models/SubscriptionModel';
+import dbConnect from '@/server/db/mongoose';
+import { requireOrgRole } from '@/server/org/permissions';
+import ReportModel from '@/server/models/ReportModel';
+import Subscription from '@/server/models/SubscriptionModel';
 import { ensureStorageUsage, GB_BYTES } from '@/utils/storageUsage';
 
 export const runtime = 'nodejs';

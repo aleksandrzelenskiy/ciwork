@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   Box,
   Typography,
-  Grid,
   CircularProgress,
   Alert,
   Container,
@@ -15,11 +14,12 @@ import {
   Chip,
   Button,
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import Autocomplete from '@mui/material/Autocomplete';
 import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import EngineeringIcon from '@mui/icons-material/Engineering';
-import RoleCard from '@/app/components/onboarding/RoleCard';
-import type { ProfileType } from '@/app/models/UserModel';
+import RoleCard from '@/features/onboarding/RoleCard';
+import type { ProfileType } from '@/server/models/UserModel';
 import {
   RUSSIAN_REGIONS,
   type RegionOption,
@@ -471,7 +471,7 @@ export default function OnboardingPage() {
                       wrap='nowrap'
                       sx={{ width: '100%' }}
                   >
-                    <Grid item sx={formItemWrapperSx}>
+                    <Grid sx={formItemWrapperSx}>
                       <TextField
                           label='Имя'
                           fullWidth
@@ -485,7 +485,7 @@ export default function OnboardingPage() {
                           }
                       />
                     </Grid>
-                    <Grid item sx={formItemWrapperSx}>
+                    <Grid sx={formItemWrapperSx}>
                       <TextField
                           label='Фамилия'
                           fullWidth
@@ -499,7 +499,7 @@ export default function OnboardingPage() {
                           }
                       />
                     </Grid>
-                    <Grid item sx={formItemWrapperSx}>
+                    <Grid sx={formItemWrapperSx}>
                       <TextField
                           label='Телефон'
                           fullWidth
@@ -515,10 +515,10 @@ export default function OnboardingPage() {
                           error={Boolean(showPhoneLengthError) || phoneFormatInvalid}
                           helperText={phoneHelperText}
                           placeholder='+7XXXXXXXXXX'
-                          inputProps={{ inputMode: 'tel' }}
+                          slotProps={{ htmlInput: { inputMode: 'tel' } }}
                       />
                     </Grid>
-                    <Grid item sx={formItemWrapperSx}>
+                    <Grid sx={formItemWrapperSx}>
                       <Autocomplete<RegionOption, false, false, false>
                           value={currentRegion}
                           options={RUSSIAN_REGIONS as RegionOption[]}

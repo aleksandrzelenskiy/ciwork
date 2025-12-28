@@ -1,12 +1,12 @@
 // app/api/org/[org]/members/decline/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import Organization from '@/app/models/OrganizationModel';
-import Membership from '@/app/models/MembershipModel';
+import dbConnect from '@/server/db/mongoose';
+import Organization from '@/server/models/OrganizationModel';
+import Membership from '@/server/models/MembershipModel';
 import { Types, FilterQuery } from 'mongoose';
 import { currentUser } from '@clerk/nextjs/server';
-import UserModel from '@/app/models/UserModel';
-import { createNotification } from '@/app/utils/notificationService';
+import UserModel from '@/server/models/UserModel';
+import { createNotification } from '@/server/notifications/service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
+import dbConnect from '@/server/db/mongoose';
 import { chargeHourlyOverage } from '@/utils/storageUsage';
 
 export const runtime = 'nodejs';

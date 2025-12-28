@@ -2,7 +2,7 @@
 
 'use server';
 
-import UserModel, { type IUser, type ProfileType } from 'src/app/models/UserModel';
+import UserModel, { type IUser, type ProfileType } from '/server/models/UserModel';
 import dbConnect from 'src/utils/mongoose';
 import { currentUser } from '@clerk/nextjs/server';
 
@@ -103,12 +103,11 @@ export const GetCurrentUserFromMongoDB =
         needsSave = true;
       }
       if (!user.name) {
-        const fallbackName =
+        user.name =
           `${clerkUser?.firstName ?? ''} ${clerkUser?.lastName ?? ''}`.trim() ||
           clerkUser?.username ||
           primaryEmail ||
           'Unknown User';
-        user.name = fallbackName;
         needsSave = true;
       }
       if (typeof user.phone === 'undefined') {

@@ -1,22 +1,22 @@
 // src/app/api/org/[org]/projects/[project]/tasks/[taskId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import TaskModel from '@/app/models/TaskModel';
+import dbConnect from '@/server/db/mongoose';
+import TaskModel from '@/server/models/TaskModel';
 import {
     getBsCoordinateModel,
     ensureIrkutskT2Station,
     normalizeBsNumber,
     BsCoordinate as IBaseStation,
-} from '@/app/models/BsCoordinateModel';
+} from '@/server/models/BsCoordinateModel';
 import { BASE_STATION_COLLECTIONS } from '@/app/constants/baseStations';
 import { Types } from 'mongoose';
-import { getOrgAndProjectByRef } from '../../_helpers';
+import { getOrgAndProjectByRef } from '@/server/org/project-ref';
 import {
     notifyTaskAssignment,
     notifyTaskStatusChange,
     notifyTaskUnassignment,
-} from '@/app/utils/taskNotifications';
+} from '@/server/tasks/notifications';
 import { syncBsCoordsForProject } from '@/app/utils/syncBsCoords';
 import {
     buildBsAddressFromLocations,
@@ -25,10 +25,10 @@ import {
 } from '@/utils/bsLocation';
 import { splitAttachmentsAndDocuments } from '@/utils/taskFiles';
 import { deleteTaskFolder } from '@/utils/s3';
-import TaskDeletionLog from '@/app/models/TaskDeletionLog';
+import TaskDeletionLog from '@/server/models/TaskDeletionLog';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { addReverseRelations, removeReverseRelations } from '@/app/utils/relatedTasksSync';
-import ReportModel from '@/app/models/ReportModel';
+import ReportModel from '@/server/models/ReportModel';
 
 
 export const runtime = 'nodejs';

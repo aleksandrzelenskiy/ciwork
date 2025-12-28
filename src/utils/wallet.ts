@@ -1,7 +1,7 @@
 // src/utils/wallet.ts
 import mongoose, { type ClientSession, Types } from 'mongoose';
-import WalletModel, { type Wallet } from '@/app/models/WalletModel';
-import WalletTransactionModel from '@/app/models/WalletTransactionModel';
+import WalletModel, { type Wallet } from '@/server/models/WalletModel';
+import WalletTransactionModel from '@/server/models/WalletTransactionModel';
 
 export const SIGNUP_BONUS_RUB = 1000;
 export const BID_COST_RUB = 50;

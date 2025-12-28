@@ -1,5 +1,5 @@
 // app/ncw/page.tsx
-import ClientLocalizationWrapper from '@/app/components/ClientLocalizationWrapper';
+import ClientLocalizationWrapper from '@/features/shared/ClientLocalizationWrapper';
 import { T2NcwGenerator } from '@/app/workspace/components/T2/T2NcwGenerator';
 
 export default function NcwGeneratePage() {

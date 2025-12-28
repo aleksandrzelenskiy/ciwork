@@ -1,14 +1,14 @@
 // src/app/api/notifications/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
+import dbConnect from '@/server/db/mongoose';
 import {
     countUnreadNotifications,
     fetchNotificationsForUser,
     markNotificationsAsRead,
     deleteNotifications,
     countNotificationsForUser,
-} from '@/app/utils/notificationService';
+} from '@/server/notifications/service';
 import { GetCurrentUserFromMongoDB } from '@/server-actions/users';
 
 export const runtime = 'nodejs';
@@ -100,9 +100,7 @@ export async function PATCH(req: NextRequest) {
             body.markAll === true
                 ? undefined
                 : Array.isArray(body.notificationIds)
-                ? body.notificationIds.filter(
-                      (id): id is string => typeof id === 'string' && id.length > 0
-                  )
+                ? body.notificationIds.filter((id) => id.length > 0)
                 : undefined;
 
         const modifiedCount = await markNotificationsAsRead(
@@ -140,19 +138,13 @@ export async function DELETE(req: NextRequest) {
             );
         }
 
-        let body: { notificationIds?: unknown; deleteAll?: boolean } | null = null;
-        try {
-            body = (await req.json()) as {
-                notificationIds?: unknown;
-                deleteAll?: boolean;
-            };
-        } catch {
-            body = null;
-        }
+        const body = (await req.json().catch(() => null)) as
+            | { notificationIds?: unknown; deleteAll?: boolean }
+            | null;
 
         const deleteAll = body?.deleteAll === true;
         const notificationIds =
-            deleteAll === true
+            deleteAll
                 ? undefined
                 : Array.isArray(body?.notificationIds)
                 ? (body?.notificationIds ?? []).filter(

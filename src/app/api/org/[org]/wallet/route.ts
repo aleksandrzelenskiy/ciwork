@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import { requireOrgRole } from '@/app/utils/permissions';
-import OrgWalletModel from '@/app/models/OrgWalletModel';
+import dbConnect from '@/server/db/mongoose';
+import { requireOrgRole } from '@/server/org/permissions';
+import OrgWalletModel from '@/server/models/OrgWalletModel';
 import { ensureOrgWallet } from '@/utils/orgWallet';
 
 export const runtime = 'nodejs';

@@ -21,7 +21,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/ru';
-import { PdfTemplate } from '@/app/components/PdfTemplate';
+import { PdfTemplate } from '@/features/shared/PdfTemplate';
 
 dayjs.locale('ru');
 

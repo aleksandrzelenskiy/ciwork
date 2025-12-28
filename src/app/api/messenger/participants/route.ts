@@ -1,8 +1,8 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import MembershipModel from '@/app/models/MembershipModel';
+import dbConnect from '@/server/db/mongoose';
+import MembershipModel from '@/server/models/MembershipModel';
 import { GetCurrentUserFromMongoDB } from '@/server-actions/users';
 
 type ParticipantDTO = {

@@ -3,9 +3,9 @@
 'use server';
 
 import { GetCurrentUserFromMongoDB, type GetCurrentUserResponse } from '@/server-actions/users';
-import MembershipModel, { type OrgRole } from '@/app/models/MembershipModel';
-import dbConnect from '@/utils/mongoose';
-import type { IUser } from '@/app/models/UserModel';
+import MembershipModel, { type OrgRole } from '@/server/models/MembershipModel';
+import dbConnect from '@/server/db/mongoose';
+import type { IUser } from '@/server/models/UserModel';
 
 interface MembershipSummary {
   _id: string;

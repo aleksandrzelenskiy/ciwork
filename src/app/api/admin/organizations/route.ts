@@ -1,9 +1,9 @@
 // src/app/api/admin/organizations/route.ts
 import { NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import Organization from '@/app/models/OrganizationModel';
-import Subscription from '@/app/models/SubscriptionModel';
-import OrgWalletModel from '@/app/models/OrgWalletModel';
+import dbConnect from '@/server/db/mongoose';
+import Organization from '@/server/models/OrganizationModel';
+import Subscription from '@/server/models/SubscriptionModel';
+import OrgWalletModel from '@/server/models/OrgWalletModel';
 import { GetUserContext } from '@/server-actions/user-context';
 
 export const runtime = 'nodejs';

@@ -1,15 +1,15 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import ChatConversationModel from '@/app/models/ChatConversationModel';
-import ChatMessageModel from '@/app/models/ChatMessageModel';
-import MembershipModel from '@/app/models/MembershipModel';
-import ProjectModel from '@/app/models/ProjectModel';
-import UserModel from '@/app/models/UserModel';
+import dbConnect from '@/server/db/mongoose';
+import ChatConversationModel from '@/server/models/ChatConversationModel';
+import ChatMessageModel from '@/server/models/ChatMessageModel';
+import MembershipModel from '@/server/models/MembershipModel';
+import ProjectModel from '@/server/models/ProjectModel';
+import UserModel from '@/server/models/UserModel';
 import { GetCurrentUserFromMongoDB } from '@/server-actions/users';
 import type { MessengerConversationDTO, ConversationType } from '@/app/types/messenger';
-import type { OrgRole } from '@/app/models/MembershipModel';
+import type { OrgRole } from '@/server/models/MembershipModel';
 import { notificationSocketGateway } from '@/server/socket/notificationSocket';
 import { formatNameFromEmail, normalizeEmail } from '@/utils/email';
 

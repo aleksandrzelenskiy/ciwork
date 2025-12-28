@@ -1,4 +1,4 @@
-import OrganizationsAdmin from '@/app/components/admin/OrganizationsAdmin';
+import OrganizationsAdmin from '@/features/admin/OrganizationsAdmin';
 
 export default function AdminOrganizationsPage() {
     return <OrganizationsAdmin />;

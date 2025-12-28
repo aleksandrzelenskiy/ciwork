@@ -63,8 +63,8 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import WorkspaceTaskDialog from '@/app/workspace/components/WorkspaceTaskDialog';
 import type { TaskForEdit } from '@/app/workspace/components/WorkspaceTaskDialog';
-import TaskComments from '@/app/components/TaskComments';
-import type { TaskComment } from '@/app/components/TaskComments';
+import TaskComments from '@/features/tasks/TaskComments';
+import type { TaskComment } from '@/features/tasks/TaskComments';
 import type { ParsedWorkItem } from '@/app/workspace/components/T2/T2EstimateParser';
 import { T2NcwGenerator } from '@/app/workspace/components/T2/T2NcwGenerator';
 import { getPriorityIcon, normalizePriority } from '@/utils/priorityIcons';
@@ -2800,7 +2800,7 @@ export default function TaskDetailsPage() {
                                 onKeyDown={handleSkillsInputKeyDown}
                                 placeholder="Введите навык и нажмите Enter"
                                 variant="standard"
-                                InputProps={{ disableUnderline: true }}
+                                slotProps={{ input: { disableUnderline: true } }}
                                 sx={{ minWidth: 160, flexGrow: 1 }}
                             />
                         </Box>
@@ -2816,7 +2816,7 @@ export default function TaskDetailsPage() {
                         placeholder="Например, 120000"
                         helperText="Можно оставить пустым"
                         fullWidth
-                        inputProps={{ min: 0 }}
+                        slotProps={{ htmlInput: { min: 0 } }}
                     />
                     <TextField
                         label="Информация о задаче"

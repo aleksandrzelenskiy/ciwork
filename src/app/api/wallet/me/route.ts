@@ -1,7 +1,7 @@
 // src/app/api/wallet/me/route.ts
 import { NextResponse } from 'next/server';
 import { Types } from 'mongoose';
-import dbConnect from '@/utils/mongoose';
+import dbConnect from '@/server/db/mongoose';
 import { GetUserContext } from '@/server-actions/user-context';
 import { ensureWalletWithBonus } from '@/utils/wallet';
 

@@ -1,8 +1,8 @@
 // src/app/api/bsmap/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import { getBsCoordinateModel } from '@/app/models/BsCoordinateModel';
+import dbConnect from '@/server/db/mongoose';
+import { getBsCoordinateModel } from '@/server/models/BsCoordinateModel';
 import { Types } from 'mongoose';
 
 export const runtime = 'nodejs';
@@ -156,7 +156,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
               }
             | null;
 
-        if (!body || !body.id || typeof body.id !== 'string') {
+        if (!body?.id) {
             return NextResponse.json({ error: 'Не указан идентификатор базовой станции' }, { status: 400 });
         }
 
@@ -208,7 +208,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     try {
         const body = (await request.json().catch(() => null)) as { id?: string; operator?: string } | null;
 
-        if (!body || !body.id || typeof body.id !== 'string') {
+        if (!body?.id) {
             return NextResponse.json({ error: 'Не указан идентификатор базовой станции' }, { status: 400 });
         }
 

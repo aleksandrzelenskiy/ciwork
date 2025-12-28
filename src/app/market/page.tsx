@@ -7,7 +7,6 @@ import 'dayjs/locale/ru';
 import {
     Box,
     Container,
-    Grid,
     Paper,
     Stack,
     Typography,
@@ -36,6 +35,7 @@ import {
     MenuItem,
     Autocomplete,
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -59,7 +59,7 @@ import FilterListOffIcon from '@mui/icons-material/FilterListOff';
 import type { PublicTaskStatus, TaskVisibility } from '@/app/types/taskTypes';
 import type { PriorityLevel, TaskType } from '@/app/types/taskTypes';
 import type { TaskApplication } from '@/app/types/application';
-import MarketLocations, { type MarketPublicTask } from '@/app/components/MarketLocations';
+import MarketLocations, { type MarketPublicTask } from '@/features/market/MarketLocations';
 import { REGION_MAP } from '@/app/utils/regions';
 import { getPriorityLabelRu } from '@/utils/priorityIcons';
 
@@ -690,13 +690,15 @@ export default function MarketplacePage() {
                         placeholder="Поиск по названию, адресу или описанию"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon />
-                                </InputAdornment>
-                            ),
-                            sx: { borderRadius: 3 },
+                        slotProps={{
+                            input: {
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon />
+                                    </InputAdornment>
+                                ),
+                                sx: { borderRadius: 3 },
+                            },
                         }}
                         sx={{ flexGrow: 1, minWidth: { xs: 260, sm: 320 }, maxWidth: 520 }}
                     />
@@ -780,7 +782,7 @@ export default function MarketplacePage() {
                                 const budgetDisplay = getBudgetDisplay(task.budget, task.currency);
 
                                 return (
-                                    <Grid item xs={12} md={6} key={task._id}>
+                                    <Grid xs={12} md={6} key={task._id}>
                                         <Paper
                                             sx={(theme) => ({
                                                 ...glassPaperStyles(theme),
@@ -1154,7 +1156,7 @@ export default function MarketplacePage() {
                             type="number"
                             value={applyBudget}
                             onChange={(e) => setApplyBudget(e.target.value)}
-                            inputProps={{ min: 0 }}
+                            slotProps={{ htmlInput: { min: 0 } }}
                             fullWidth
                         />
                         <DatePicker

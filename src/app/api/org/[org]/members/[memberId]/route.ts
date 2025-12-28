@@ -1,9 +1,9 @@
 // app/api/org/[org]/members/[memberId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import Membership from '@/app/models/MembershipModel';
-import { requireOrgRole } from '@/app/utils/permissions';
+import dbConnect from '@/server/db/mongoose';
+import Membership from '@/server/models/MembershipModel';
+import { requireOrgRole } from '@/server/org/permissions';
 import { Types } from 'mongoose';
 
 export const runtime = 'nodejs';

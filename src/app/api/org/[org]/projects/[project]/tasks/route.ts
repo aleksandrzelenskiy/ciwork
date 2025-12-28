@@ -1,12 +1,12 @@
 // src/app/api/org/[org]/projects/[project]/tasks/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import TaskModel from '@/app/models/TaskModel';
+import dbConnect from '@/server/db/mongoose';
+import TaskModel from '@/server/models/TaskModel';
 import { Types } from 'mongoose';
-import { getOrgAndProjectByRef } from '../_helpers';
-import { ensureIrkutskT2Station } from '@/app/models/BsCoordinateModel';
-import { notifyTaskAssignment } from '@/app/utils/taskNotifications';
+import { getOrgAndProjectByRef } from '@/server/org/project-ref';
+import { ensureIrkutskT2Station } from '@/server/models/BsCoordinateModel';
+import { notifyTaskAssignment } from '@/server/tasks/notifications';
 import { syncBsCoordsForProject } from '@/app/utils/syncBsCoords';
 import { buildBsAddressFromLocations, sanitizeBsLocationAddresses } from '@/utils/bsLocation';
 import { splitAttachmentsAndDocuments } from '@/utils/taskFiles';

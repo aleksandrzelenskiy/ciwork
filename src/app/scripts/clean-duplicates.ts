@@ -1,4 +1,4 @@
-import dbConnect from '@/utils/mongoose';
+import dbConnect from '@/server/db/mongoose';
 import { getDefaultBsCoordinateModel, BsCoordinate as IBaseStation } from '../models/BsCoordinateModel';
 import mongoose from 'mongoose';
 

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { Types } from 'mongoose';
-import dbConnect from '@/utils/mongoose';
-import UserModel, { type ProfileType } from '@/app/models/UserModel';
+import dbConnect from '@/server/db/mongoose';
+import UserModel, { type ProfileType } from '@/server/models/UserModel';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { ensureWalletWithBonus } from '@/utils/wallet';
 

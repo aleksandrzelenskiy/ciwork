@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import ReportModel from '@/app/models/ReportModel';
-import TaskModel from '@/app/models/TaskModel';
+import { NextRequest } from 'next/server';
+import { jsonData, jsonError } from '@/server/http/response';
+import dbConnect from '@/server/db/mongoose';
 import { currentUser } from '@clerk/nextjs/server';
-import { deleteTaskFile } from '@/utils/s3';
+import { deleteReportFile } from '@/server/reports/files';
 
 export async function DELETE(
     request: NextRequest,
@@ -13,86 +12,23 @@ export async function DELETE(
         await dbConnect();
 
         const { taskId, baseId } = await params;
-        const taskIdDecoded = decodeURIComponent(taskId).toUpperCase();
-        const baseIdDecoded = decodeURIComponent(baseId);
-
-        if (!taskIdDecoded || !baseIdDecoded) {
-            return NextResponse.json({ error: 'Missing parameters in URL' }, { status: 400 });
-        }
 
         const user = await currentUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Пользователь не авторизован' }, { status: 401 });
-        }
 
         const body = (await request.json().catch(() => ({}))) as { url?: string };
-        const targetUrl = typeof body.url === 'string' ? body.url.trim() : '';
-        if (!targetUrl) {
-            return NextResponse.json({ error: 'URL файла обязателен' }, { status: 400 });
-        }
-
-        const report = await ReportModel.findOne({
-            baseId: baseIdDecoded,
-            taskId: taskIdDecoded,
+        const result = await deleteReportFile({
+            taskId,
+            baseId,
+            url: body.url,
+            user,
         });
-
-        if (!report) {
-            return NextResponse.json({ error: 'Отчёт не найден' }, { status: 404 });
+        if (!result.ok) {
+            return jsonError(result.error, result.status);
         }
 
-        const beforeFiles = Array.isArray(report.files) ? (report.files as string[]) : [];
-        const beforeFixedFiles = Array.isArray(report.fixedFiles)
-            ? (report.fixedFiles as string[])
-            : [];
-        const wasInMain = beforeFiles.includes(targetUrl);
-        const wasInFix = beforeFixedFiles.includes(targetUrl);
-
-        if (!wasInMain && !wasInFix) {
-            return NextResponse.json({ error: 'Файл не найден в отчёте' }, { status: 404 });
-        }
-
-        report.files = beforeFiles.filter((url) => url !== targetUrl);
-        report.fixedFiles = beforeFixedFiles.filter((url) => url !== targetUrl);
-        report.events = Array.isArray(report.events) ? report.events : [];
-        report.events.push({
-            action: 'PHOTO_REMOVED',
-            author: `${user.firstName || 'Unknown'} ${user.lastName || ''}`.trim(),
-            authorId: user.id,
-            date: new Date(),
-            details: {
-                removedFrom: wasInMain ? 'main' : 'fix',
-                url: targetUrl,
-            },
-        });
-
-        await report.save();
-        await deleteTaskFile(targetUrl);
-
-        const task = await TaskModel.findOne({ taskId: taskIdDecoded }).select('status events').exec();
-        if (task && task.status !== 'Done') {
-            if (!Array.isArray(task.events)) task.events = [];
-            task.events.push({
-                action: 'STATUS_CHANGED',
-                author: `${user.firstName || 'Unknown'} ${user.lastName || ''}`.trim(),
-                authorId: user.id,
-                date: new Date(),
-                details: {
-                    oldStatus: task.status,
-                    newStatus: 'Done',
-                    comment: 'Статус изменен после удаления фотоотчета',
-                },
-            });
-            task.status = 'Done';
-            await task.save();
-        }
-
-        return NextResponse.json({
-            success: true,
-            files: report.files,
-            fixedFiles: report.fixedFiles,
-        });
+        return jsonData(result.data);
     } catch (error) {
         console.error('Ошибка при удалении файла отчёта:', error);
-        return NextResponse.json({ error: 'Не удалось удалить файл' }, { status: 500 });
+        return jsonError('Не удалось удалить файл', 500);
     }
 }

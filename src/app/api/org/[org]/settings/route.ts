@@ -1,9 +1,9 @@
 // src/app/api/org/[org]/settings/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import Organization, { CompanyProfile } from '@/app/models/OrganizationModel';
-import { requireOrgRole } from '@/app/utils/permissions';
+import dbConnect from '@/server/db/mongoose';
+import Organization, { CompanyProfile } from '@/server/models/OrganizationModel';
+import { requireOrgRole } from '@/server/org/permissions';
 
 type OrgPlan = 'basic' | 'pro' | 'business' | 'enterprise';
 type LegalForm = 'ООО' | 'ИП' | 'АО' | 'ЗАО';

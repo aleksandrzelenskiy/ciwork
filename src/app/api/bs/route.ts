@@ -1,8 +1,8 @@
 // app/api/bs/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getDefaultBsCoordinateModel, normalizeBsNumber, normalizeCoords } from '@/app/models/BsCoordinateModel';
-import dbConnect from '@/utils/mongoose';
+import { getDefaultBsCoordinateModel, normalizeBsNumber, normalizeCoords } from '@/server/models/BsCoordinateModel';
+import dbConnect from '@/server/db/mongoose';
 
 export async function GET() {
   try {

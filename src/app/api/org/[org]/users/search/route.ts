@@ -1,9 +1,9 @@
 // app/api/org/[org]/users/search/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import UserModel from '@/app/models/UserModel';
-import { requireOrgRole } from '@/app/utils/permissions';
+import dbConnect from '@/server/db/mongoose';
+import UserModel from '@/server/models/UserModel';
+import { requireOrgRole } from '@/server/org/permissions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

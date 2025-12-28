@@ -4,10 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-import dbConnect from '@/utils/mongoose';
-import TaskModel from '@/app/models/TaskModel';
-import UserModel from '@/app/models/UserModel';
-import Report from '@/app/models/ReportModel';
+import dbConnect from '@/server/db/mongoose';
+import TaskModel from '@/server/models/TaskModel';
+import UserModel from '@/server/models/UserModel';
 import { currentUser } from '@clerk/nextjs/server';
 import type { PriorityLevel } from '@/app/types/taskTypes';
 import { generateClosingDocumentsExcel } from '@/utils/generateExcel';
@@ -16,14 +15,14 @@ import {
     notifyTaskAssignment,
     notifyTaskStatusChange,
     notifyTaskUnassignment,
-} from '@/app/utils/taskNotifications';
+} from '@/server/tasks/notifications';
 import { splitAttachmentsAndDocuments } from '@/utils/taskFiles';
-import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
-import { createNotification } from '@/app/utils/notificationService';
-import { sendEmail } from '@/utils/mailer';
-import OrganizationModel from '@/app/models/OrganizationModel';
-import ProjectModel from '@/app/models/ProjectModel';
+import { createNotification } from '@/server/notifications/service';
+import { sendEmail } from '@/server/email/mailer';
+import OrganizationModel from '@/server/models/OrganizationModel';
+import ProjectModel from '@/server/models/ProjectModel';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
+import { getTaskDetails } from '@/server/tasks/service';
 
 interface UpdateData {
   status?: string;
@@ -121,37 +120,15 @@ export async function GET(
   try {
     await connectToDatabase();
     const { taskId } = await context.params;
-    if (!taskId)
-      return NextResponse.json({ error: 'No taskId provided' }, { status: 400 });
+    const result = await getTaskDetails(taskId);
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: result.status ?? 500 }
+      );
+    }
 
-    const taskIdUpper = taskId.toUpperCase();
-    const task = await TaskModel.findOne({ taskId: taskIdUpper });
-    if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-
-    await task.populate({
-      path: 'relatedTasks',
-      select: 'taskId taskName bsNumber status priority',
-    });
-
-    const photoReports = await Report.find({ taskId: taskIdUpper });
-
-    const baseTask = task.toObject();
-    const { attachments } = splitAttachmentsAndDocuments(
-        baseTask.attachments,
-        baseTask.documents
-    );
-
-    const normalizedRelatedTasks = normalizeRelatedTasks(task.relatedTasks);
-
-    return NextResponse.json({
-      task: {
-        ...baseTask,
-        relatedTasks: normalizedRelatedTasks,
-        attachments,
-        documents: undefined,
-        photoReports: photoReports || [],
-      },
-    });
+    return NextResponse.json({ task: result.task });
   } catch (err) {
     console.error('GET task error:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

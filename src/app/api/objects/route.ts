@@ -1,8 +1,8 @@
 // src/app/api/objects/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
+import dbConnect from '@/server/db/mongoose';
 import mongoose from 'mongoose';
-import { getBsCoordinateModel, normalizeBsNumber } from '@/app/models/BsCoordinateModel';
+import { getBsCoordinateModel, normalizeBsNumber } from '@/server/models/BsCoordinateModel';
 import { BASE_STATION_COLLECTIONS } from '@/app/constants/baseStations';
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 

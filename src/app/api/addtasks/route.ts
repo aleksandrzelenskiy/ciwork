@@ -1,11 +1,11 @@
 // app/api/addTasks/route.ts
 import { NextResponse } from 'next/server';
-import Task from '@/app/models/TaskModel';
-import { getDefaultBsCoordinateModel, normalizeBsNumber as normalizeBsNumberModel } from '@/app/models/BsCoordinateModel';
-import dbConnect from '@/utils/mongoose';
+import Task from '@/server/models/TaskModel';
+import { getDefaultBsCoordinateModel, normalizeBsNumber as normalizeBsNumberModel } from '@/server/models/BsCoordinateModel';
+import dbConnect from '@/server/db/mongoose';
 import { PriorityLevel, WorkItem } from '@/app/types/taskTypes';
 import { v4 as uuidv4 } from 'uuid';
-import { sendEmail } from '@/utils/mailer';
+import { sendEmail } from '@/server/email/mailer';
 import { uploadTaskFile } from '@/utils/s3';
 
 /**

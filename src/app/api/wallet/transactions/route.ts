@@ -1,9 +1,9 @@
 // src/app/api/wallet/transactions/route.ts
 import { NextResponse } from 'next/server';
 import { Types } from 'mongoose';
-import dbConnect from '@/utils/mongoose';
+import dbConnect from '@/server/db/mongoose';
 import { GetUserContext } from '@/server-actions/user-context';
-import WalletTransactionModel from '@/app/models/WalletTransactionModel';
+import WalletTransactionModel from '@/server/models/WalletTransactionModel';
 import { ensureWalletWithBonus } from '@/utils/wallet';
 
 export const runtime = 'nodejs';

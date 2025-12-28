@@ -1,8 +1,8 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import ChatMessageModel from '@/app/models/ChatMessageModel';
-import ChatConversationModel from '@/app/models/ChatConversationModel';
+import ChatMessageModel from '@/server/models/ChatMessageModel';
+import ChatConversationModel from '@/server/models/ChatConversationModel';
 import { GetCurrentUserFromMongoDB } from '@/server-actions/users';
 import {
     chatMessageToDTO,
@@ -12,7 +12,7 @@ import {
     requireConversationAccess,
     type AccessContext,
     type ChatMessageLike,
-} from '@/app/api/messenger/_helpers';
+} from '@/server/messenger/helpers';
 import { notificationSocketGateway } from '@/server/socket/notificationSocket';
 
 export async function POST(request: Request) {

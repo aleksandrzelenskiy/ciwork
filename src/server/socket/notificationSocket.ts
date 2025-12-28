@@ -1,6 +1,6 @@
 // src/server/socket/notificationSocket.ts
 
-// src/server/socket/notificationSocket.ts
+import 'server-only';
 
 import { Server as SocketIOServer, type Socket } from 'socket.io';
 import { NOTIFICATIONS_SOCKET_PATH } from '@/config/socket';
@@ -12,8 +12,8 @@ import type {
     NotificationUnreadEventPayload,
 } from '@/app/types/notifications';
 import { verifySocketToken } from '@/server/socket/token';
-import UserModel from '@/app/models/UserModel';
-import dbConnect from '@/utils/mongoose';
+import UserModel from '@/server/models/UserModel';
+import dbConnect from '@/server/db/mongoose';
 
 const USER_ROOM_PREFIX = 'notification:user:';
 const TASK_ROOM_PREFIX = 'task:';

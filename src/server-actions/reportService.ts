@@ -1,5 +1,5 @@
-import ReportModel from '@/app/models/ReportModel';
-import TaskModel from '@/app/models/TaskModel';
+import ReportModel from '@/server/models/ReportModel';
+import TaskModel from '@/server/models/TaskModel';
 import type { IEvent } from '@/app/types/reportTypes';
 
 type Actor = {

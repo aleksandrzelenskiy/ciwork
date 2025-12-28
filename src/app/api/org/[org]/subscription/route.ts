@@ -1,9 +1,9 @@
 // src/app/api/org/[org]/subscription/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import Subscription from '@/app/models/SubscriptionModel';
-import { requireOrgRole } from '@/app/utils/permissions';
+import dbConnect from '@/server/db/mongoose';
+import Subscription from '@/server/models/SubscriptionModel';
+import { requireOrgRole } from '@/server/org/permissions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

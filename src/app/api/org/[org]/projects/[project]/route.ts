@@ -2,10 +2,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import Project from '@/app/models/ProjectModel';
-import { requireOrgRole } from '@/app/utils/permissions';
-import Membership from '@/app/models/MembershipModel';
+import dbConnect from '@/server/db/mongoose';
+import Project from '@/server/models/ProjectModel';
+import { requireOrgRole } from '@/server/org/permissions';
+import Membership from '@/server/models/MembershipModel';
 import { Types } from 'mongoose';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
@@ -191,8 +191,7 @@ export async function PATCH(
 
         if (Array.isArray(body.managers)) {
             const normalizedManagers = normalizeEmailsArray(body.managers);
-            const managerEmails = await resolveManagerEmails(org._id, normalizedManagers, email);
-            update.managers = managerEmails;
+            update.managers = await resolveManagerEmails(org._id, normalizedManagers, email);
         }
 
         if (Object.keys(update).length === 0) {

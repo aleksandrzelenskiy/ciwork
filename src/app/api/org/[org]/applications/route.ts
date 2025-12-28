@@ -2,11 +2,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import { Types } from 'mongoose';
-import dbConnect from '@/utils/mongoose';
-import ApplicationModel from '@/app/models/ApplicationModel';
-import TaskModel from '@/app/models/TaskModel';
-import ProjectModel from '@/app/models/ProjectModel';
-import { requireOrgRole } from '@/app/utils/permissions';
+import dbConnect from '@/server/db/mongoose';
+import ApplicationModel from '@/server/models/ApplicationModel';
+import TaskModel from '@/server/models/TaskModel';
+import ProjectModel from '@/server/models/ProjectModel';
+import { requireOrgRole } from '@/server/org/permissions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

@@ -7,8 +7,8 @@ import {
     Tabs,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import OrganizationsAdmin from '@/app/components/admin/OrganizationsAdmin';
-import UsersAdmin from '@/app/components/admin/UsersAdmin';
+import OrganizationsAdmin from '@/features/admin/OrganizationsAdmin';
+import UsersAdmin from '@/features/admin/UsersAdmin';
 
 type AdminTab = 'organizations' | 'users';
 

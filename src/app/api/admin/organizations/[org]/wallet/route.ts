@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GetUserContext } from '@/server-actions/user-context';
-import dbConnect from '@/utils/mongoose';
-import Organization from '@/app/models/OrganizationModel';
-import OrgWalletModel from '@/app/models/OrgWalletModel';
-import OrgWalletTransactionModel from '@/app/models/OrgWalletTransactionModel';
+import dbConnect from '@/server/db/mongoose';
+import Organization from '@/server/models/OrganizationModel';
+import OrgWalletModel from '@/server/models/OrgWalletModel';
+import OrgWalletTransactionModel from '@/server/models/OrgWalletTransactionModel';
 import { ensureOrgWallet } from '@/utils/orgWallet';
 import { Types } from 'mongoose';
 

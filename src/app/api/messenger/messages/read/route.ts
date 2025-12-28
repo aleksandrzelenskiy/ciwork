@@ -1,7 +1,7 @@
 'use server';
 
 import { NextResponse } from 'next/server';
-import ChatMessageModel from '@/app/models/ChatMessageModel';
+import ChatMessageModel from '@/server/models/ChatMessageModel';
 import { GetCurrentUserFromMongoDB } from '@/server-actions/users';
 import {
     findUserIdsByEmails,
@@ -9,7 +9,7 @@ import {
     normalizeEmail,
     requireConversationAccess,
     type AccessContext,
-} from '@/app/api/messenger/_helpers';
+} from '@/server/messenger/helpers';
 import { notificationSocketGateway } from '@/server/socket/notificationSocket';
 
 export async function POST(request: Request) {

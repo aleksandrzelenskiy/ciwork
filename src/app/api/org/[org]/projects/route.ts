@@ -3,12 +3,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import Project from '@/app/models/ProjectModel';
-import Subscription from '@/app/models/SubscriptionModel';
-import Membership from '@/app/models/MembershipModel';
+import dbConnect from '@/server/db/mongoose';
+import Project from '@/server/models/ProjectModel';
+import Subscription from '@/server/models/SubscriptionModel';
+import Membership from '@/server/models/MembershipModel';
 import { consumeUsageSlot } from '@/utils/billingLimits';
-import { requireOrgRole } from '@/app/utils/permissions';
+import { requireOrgRole } from '@/server/org/permissions';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
 

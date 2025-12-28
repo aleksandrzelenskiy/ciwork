@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import { requireOrgRole } from '@/app/utils/permissions';
-import OrgWalletTransactionModel from '@/app/models/OrgWalletTransactionModel';
+import dbConnect from '@/server/db/mongoose';
+import { requireOrgRole } from '@/server/org/permissions';
+import OrgWalletTransactionModel from '@/server/models/OrgWalletTransactionModel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

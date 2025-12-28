@@ -1,11 +1,11 @@
 // app/api/tasks/[taskId]/publish/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import dbConnect from '@/utils/mongoose';
-import TaskModel from '@/app/models/TaskModel';
+import dbConnect from '@/server/db/mongoose';
+import TaskModel from '@/server/models/TaskModel';
 import { GetUserContext } from '@/server-actions/user-context';
 import { ensurePublicTaskSlot } from '@/utils/publicTasks';
-import { notifyTaskPublished } from '@/app/utils/taskNotifications';
+import { notifyTaskPublished } from '@/server/tasks/notifications';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

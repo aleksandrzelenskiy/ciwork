@@ -1,10 +1,10 @@
 // src/app/api/org/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import Organization from '@/app/models/OrganizationModel';
-import Membership from '@/app/models/MembershipModel';
-import Subscription from '@/app/models/SubscriptionModel';
+import dbConnect from '@/server/db/mongoose';
+import Organization from '@/server/models/OrganizationModel';
+import Membership from '@/server/models/MembershipModel';
+import Subscription from '@/server/models/SubscriptionModel';
 import { slugify } from '@/app/utils/slugify';
 
 export const runtime = 'nodejs';

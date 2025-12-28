@@ -1,4 +1,6 @@
 // src/utils/s3.ts
+import 'server-only';
+
 import {
   S3Client,
   PutObjectCommand,
@@ -13,19 +15,22 @@ import fs from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
 import { createGunzip } from 'zlib';
+import { getServerEnv } from '@/config/env';
 
 // --- ENV config ---
-const BUCKET = process.env.AWS_S3_BUCKET;
-const REGION = process.env.AWS_S3_REGION;
-const ENDPOINT = process.env.AWS_S3_ENDPOINT;
-const ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
-const SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
-const INVENTORY_BUCKET = process.env.AWS_S3_INVENTORY_BUCKET;
-const INVENTORY_PREFIX = process.env.AWS_S3_INVENTORY_PREFIX;
+const env = getServerEnv();
+const BUCKET = env.AWS_S3_BUCKET;
+const REGION = env.AWS_S3_REGION;
+const ENDPOINT = env.AWS_S3_ENDPOINT;
+const ACCESS_KEY_ID = env.AWS_ACCESS_KEY_ID;
+const SECRET_ACCESS_KEY = env.AWS_SECRET_ACCESS_KEY;
+const INVENTORY_BUCKET = env.AWS_S3_INVENTORY_BUCKET;
+const INVENTORY_PREFIX = env.AWS_S3_INVENTORY_PREFIX;
 
 const useS3 = !!(BUCKET && REGION && ENDPOINT && ACCESS_KEY_ID && SECRET_ACCESS_KEY);
 
 let s3: S3Client | null = null;
+const shouldLogStorageMode = process.env.NODE_ENV !== 'test';
 
 if (useS3) {
   s3 = new S3Client({
@@ -37,9 +42,13 @@ if (useS3) {
       secretAccessKey: SECRET_ACCESS_KEY!,
     },
   });
-  console.log('✅ Using S3 storage');
+  if (shouldLogStorageMode) {
+    console.log('✅ Using S3 storage');
+  }
 } else {
-  console.log('⚙️ Using local file storage (no S3 config found)');
+  if (shouldLogStorageMode) {
+    console.log('⚙️ Using local file storage (no S3 config found)');
+  }
 }
 
 /** Универсальный публичный URL для ключа */

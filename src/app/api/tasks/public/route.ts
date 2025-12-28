@@ -1,9 +1,9 @@
 // app/api/tasks/public/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import dbConnect from '@/utils/mongoose';
-import TaskModel from '@/app/models/TaskModel';
-import ApplicationModel from '@/app/models/ApplicationModel';
+import dbConnect from '@/server/db/mongoose';
+import TaskModel from '@/server/models/TaskModel';
+import ApplicationModel from '@/server/models/ApplicationModel';
 import { GetUserContext } from '@/server-actions/user-context';
 
 export const runtime = 'nodejs';

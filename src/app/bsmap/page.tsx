@@ -1,7 +1,7 @@
 'use client';
 
 import { Box } from '@mui/material';
-import BSMap from '@/app/components/BSMap';
+import BSMap from '@/features/maps/BSMap';
 
 export default function BsMapPage() {
     return (

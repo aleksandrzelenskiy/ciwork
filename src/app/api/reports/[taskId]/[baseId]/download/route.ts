@@ -1,132 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import ReportModel from '@/app/models/ReportModel';
-import TaskModel from '@/app/models/TaskModel';
+import { jsonError } from '@/server/http/response';
+import dbConnect from '@/server/db/mongoose';
 import { currentUser } from '@clerk/nextjs/server';
-import { verifyInitiatorAccessToken } from '@/utils/initiatorAccessToken';
-import archiver from 'archiver';
-import path from 'path';
+import { downloadBaseReportZip } from '@/server/reports/download';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const filenameFromUrl = (fileUrl: string) => {
-    try {
-        const url = new URL(fileUrl);
-        const pathname = url.pathname.split('?')[0];
-        return decodeURIComponent(path.basename(pathname));
-    } catch {
-        return path.basename(fileUrl);
-    }
-};
 
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ taskId: string; baseId: string }> }
 ) {
     const { taskId, baseId } = await params;
-    const taskIdDecoded = decodeURIComponent(taskId).toUpperCase();
-    const baseIdDecoded = decodeURIComponent(baseId);
 
     try {
-        if (!taskIdDecoded || !baseIdDecoded) {
-            return NextResponse.json(
-                { error: 'Missing required parameters' },
-                { status: 400 }
-            );
-        }
-
         await dbConnect();
 
         const url = new URL(request.url);
         const token = url.searchParams.get('token')?.trim() || '';
-        const guestAccess = token ? verifyInitiatorAccessToken(token) : null;
-        if (guestAccess) {
-            const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
-                .select('initiatorEmail')
-                .lean();
-            const initiatorEmail = taskRecord?.initiatorEmail?.trim().toLowerCase() || '';
-            if (
-                guestAccess.taskId !== taskIdDecoded ||
-                !initiatorEmail ||
-                initiatorEmail !== guestAccess.email
-            ) {
-                return NextResponse.json(
-                    { error: 'Недостаточно прав для скачивания отчёта' },
-                    { status: 403 }
-                );
-            }
-        } else {
-            const user = await currentUser();
-            if (!user) {
-                return NextResponse.json(
-                    { error: 'Пользователь не авторизован' },
-                    { status: 401 }
-                );
-            }
-        }
-        const report = await ReportModel.findOne({
-            taskId: taskIdDecoded,
-            baseId: baseIdDecoded,
-        }).lean();
-
-        if (!report || Array.isArray(report)) {
-            return NextResponse.json({ error: 'Report not found.' }, { status: 404 });
+        const user = await currentUser();
+        const result = await downloadBaseReportZip({
+            taskId,
+            baseId,
+            token,
+            user,
+        });
+        if (!result.ok) {
+            return jsonError(result.error, result.status);
         }
 
-        const allFiles = [...(report.files ?? []), ...(report.fixedFiles ?? [])];
-        if (allFiles.length === 0) {
-            return NextResponse.json(
-                { error: 'No files available for download.' },
-                { status: 400 }
-            );
-        }
-
-        const archive = archiver('zip', { zlib: { level: 9 } });
-        archive.on('error', (err) => {
-            throw err;
-        });
-
-        const headers = new Headers({
-            'Content-Type': 'application/zip',
-            'Content-Disposition': `attachment; filename="report-${baseIdDecoded}.zip"`,
-        });
-
-        const webStream = new ReadableStream({
-            start(controller) {
-                archive.on('data', (chunk) => {
-                    controller.enqueue(chunk);
-                });
-                archive.on('end', () => {
-                    controller.close();
-                });
-                archive.on('error', (err) => {
-                    controller.error(err);
-                });
-
-                (async () => {
-                    for (const fileUrl of allFiles) {
-                        const response = await fetch(fileUrl);
-                        if (!response.ok) {
-                            throw new Error(`Failed to fetch ${fileUrl}`);
-                        }
-                        const arrayBuffer = await response.arrayBuffer();
-                        const name = filenameFromUrl(fileUrl);
-                        archive.append(Buffer.from(arrayBuffer), { name });
-                    }
-                    await archive.finalize();
-                })().catch((err) => {
-                    controller.error(err);
-                });
-            },
-        });
-
-        return new NextResponse(webStream, { headers });
+        return new NextResponse(result.data.webStream, { headers: result.data.headers });
     } catch (error) {
         console.error('Error:', error);
-        return NextResponse.json(
-            { error: 'Internal Server Error.' },
-            { status: 500 }
-        );
+        return jsonError('Internal Server Error.', 500);
     }
 }

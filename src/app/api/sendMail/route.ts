@@ -1,6 +1,6 @@
 // app/api/sendMail/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { sendEmail } from '@/utils/mailer';
+import { sendEmail } from '@/server/email/mailer';
 
 export async function GET() {
   // Пример: проверка, что роут жив

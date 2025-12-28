@@ -1,6 +1,6 @@
 // src/app/utils/seats.ts
 import { Types } from 'mongoose';
-import Membership from '@/app/models/MembershipModel';
+import Membership from '@/server/models/MembershipModel';
 import { loadPlanForOrg } from '@/utils/billingLimits';
 
 export type OrgId = Types.ObjectId | string;

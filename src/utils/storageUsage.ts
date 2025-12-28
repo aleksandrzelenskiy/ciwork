@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
-import StorageUsageModel from '@/app/models/StorageUsageModel';
-import StorageBillingModel from '@/app/models/StorageBillingModel';
-import OrgWalletModel from '@/app/models/OrgWalletModel';
+import StorageUsageModel from '@/server/models/StorageUsageModel';
+import StorageBillingModel from '@/server/models/StorageBillingModel';
+import OrgWalletModel from '@/server/models/OrgWalletModel';
 import { debitOrgWallet, ensureOrgWallet, withOrgWalletTransaction } from '@/utils/orgWallet';
 
 export type OrgId = Types.ObjectId | string;

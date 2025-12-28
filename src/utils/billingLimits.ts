@@ -1,8 +1,8 @@
 // src/utils/billingLimits.ts
 import type { ClientSession } from 'mongoose';
 import { Types } from 'mongoose';
-import Subscription, { type SubscriptionPlan } from '@/app/models/SubscriptionModel';
-import BillingUsageModel, { type BillingPeriod, type BillingUsage } from '@/app/models/BillingUsageModel';
+import Subscription, { type SubscriptionPlan } from '@/server/models/SubscriptionModel';
+import BillingUsageModel, { type BillingPeriod, type BillingUsage } from '@/server/models/BillingUsageModel';
 
 export type OrgId = Types.ObjectId | string;
 

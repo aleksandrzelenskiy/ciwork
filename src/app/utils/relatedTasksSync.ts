@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import TaskModel from '@/app/models/TaskModel';
+import TaskModel from '@/server/models/TaskModel';
 
 export async function addReverseRelations(taskId: Types.ObjectId, relatedIds: string[]): Promise<void> {
     const currentStr = taskId.toHexString();

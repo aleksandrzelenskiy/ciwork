@@ -2,9 +2,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import Membership, { OrgRole } from '@/app/models/MembershipModel';
-import { requireOrgRole } from '@/app/utils/permissions';
+import dbConnect from '@/server/db/mongoose';
+import Membership, { OrgRole } from '@/server/models/MembershipModel';
+import { requireOrgRole } from '@/server/org/permissions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

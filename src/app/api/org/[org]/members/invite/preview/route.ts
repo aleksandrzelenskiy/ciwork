@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import Organization from '@/app/models/OrganizationModel';
-import Membership from '@/app/models/MembershipModel';
+import dbConnect from '@/server/db/mongoose';
+import Organization from '@/server/models/OrganizationModel';
+import Membership from '@/server/models/MembershipModel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

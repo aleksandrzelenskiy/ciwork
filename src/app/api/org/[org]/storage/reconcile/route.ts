@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import { requireOrgRole } from '@/app/utils/permissions';
-import StorageUsageModel from '@/app/models/StorageUsageModel';
+import { requireOrgRole } from '@/server/org/permissions';
+import StorageUsageModel from '@/server/models/StorageUsageModel';
 import { sumStorageBytes } from '@/utils/s3';
 
 export const runtime = 'nodejs';

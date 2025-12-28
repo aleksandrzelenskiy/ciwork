@@ -2,8 +2,8 @@
 'use server';
 
 import { Task } from '@/app/types/taskTypes';
-import TaskModel from '@/app/models/TaskModel';
-import dbConnect from '@/utils/mongoose';
+import TaskModel from '@/server/models/TaskModel';
+import dbConnect from '@/server/db/mongoose';
 
 export const createTask = async (taskData: Omit<Task, 'createdAt'>) => {
   await dbConnect();

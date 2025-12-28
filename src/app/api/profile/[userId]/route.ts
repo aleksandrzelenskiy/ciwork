@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import dbConnect from '@/utils/mongoose';
-import UserModel from '@/app/models/UserModel';
+import dbConnect from '@/server/db/mongoose';
+import UserModel from '@/server/models/UserModel';
 import { GetCurrentUserFromMongoDB } from '@/server-actions/users';
 
 export const runtime = 'nodejs';

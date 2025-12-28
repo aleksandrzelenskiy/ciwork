@@ -1,11 +1,18 @@
 // src/server/socket/token.ts
 
-import crypto from 'node:crypto';
+import 'server-only';
 
-const getSecret = () =>
-    process.env.NOTIFICATIONS_SOCKET_SECRET ||
-    process.env.CLERK_SECRET_KEY ||
-    'dev-notifications-socket-secret';
+import crypto from 'node:crypto';
+import { getServerEnv } from '@/config/env';
+
+const getSecret = () => {
+    const env = getServerEnv();
+    return (
+        env.NOTIFICATIONS_SOCKET_SECRET ||
+        env.CLERK_SECRET_KEY ||
+        'dev-notifications-socket-secret'
+    );
+};
 
 const TOKEN_TTL_MS = 1000 * 60 * 30; // 30 минут
 
@@ -53,7 +60,7 @@ export const verifySocketToken = (token: string): string | null => {
         return null;
     }
     const payload = decode(encodedPayload);
-    if (!payload || typeof payload.userId !== 'string') {
+    if (!payload || !payload.userId) {
         return null;
     }
     if (payload.exp < Date.now()) {

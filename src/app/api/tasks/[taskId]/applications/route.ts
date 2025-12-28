@@ -1,15 +1,15 @@
 // app/api/tasks/[taskId]/applications/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import dbConnect from '@/utils/mongoose';
-import TaskModel from '@/app/models/TaskModel';
-import ApplicationModel from '@/app/models/ApplicationModel';
+import dbConnect from '@/server/db/mongoose';
+import TaskModel from '@/server/models/TaskModel';
+import ApplicationModel from '@/server/models/ApplicationModel';
 import { GetUserContext } from '@/server-actions/user-context';
-import type { ApplicationStatus } from '@/app/models/ApplicationModel';
-import UserModel from '@/app/models/UserModel';
-import MembershipModel from '@/app/models/MembershipModel';
-import OrganizationModel from '@/app/models/OrganizationModel';
-import ProjectModel from '@/app/models/ProjectModel';
+import type { ApplicationStatus } from '@/server/models/ApplicationModel';
+import UserModel from '@/server/models/UserModel';
+import MembershipModel from '@/server/models/MembershipModel';
+import OrganizationModel from '@/server/models/OrganizationModel';
+import ProjectModel from '@/server/models/ProjectModel';
 import { ensureSeatAvailable } from '@/utils/seats';
 import { debitForBid, BID_COST_RUB } from '@/utils/wallet';
 import {
@@ -18,7 +18,7 @@ import {
     notifyTaskAssignment,
     notifyTaskUnassignment,
     notifyTaskStatusChange,
-} from '@/app/utils/taskNotifications';
+} from '@/server/tasks/notifications';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

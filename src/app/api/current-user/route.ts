@@ -2,8 +2,8 @@
 import { NextResponse } from 'next/server';
 import { GetUserContext } from '@/server-actions/user-context';
 import { currentUser } from '@clerk/nextjs/server';
-import dbConnect from '@/utils/mongoose';
-import UserModel from '@/app/models/UserModel';
+import dbConnect from '@/server/db/mongoose';
+import UserModel from '@/server/models/UserModel';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 
 export async function GET() {

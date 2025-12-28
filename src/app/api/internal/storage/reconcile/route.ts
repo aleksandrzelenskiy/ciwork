@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '@/utils/mongoose';
-import OrganizationModel from '@/app/models/OrganizationModel';
-import StorageUsageModel from '@/app/models/StorageUsageModel';
+import dbConnect from '@/server/db/mongoose';
+import OrganizationModel from '@/server/models/OrganizationModel';
+import StorageUsageModel from '@/server/models/StorageUsageModel';
 import { sumStorageBytesByOrg } from '@/utils/s3';
 
 export const runtime = 'nodejs';

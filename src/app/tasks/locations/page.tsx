@@ -1,7 +1,7 @@
 'use client';
 
 import { Box } from '@mui/material';
-import TasksLocation from '@/app/components/TasksLocation';
+import TasksLocation from '@/features/tasks/TasksLocation';
 
 export default function TasksLocationsPage() {
     return (

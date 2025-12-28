@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from 'react';
 import { useUser } from '@clerk/nextjs';
-import type { ProfileType } from '@/app/models/UserModel';
+import type { ProfileType } from '@/server/models/UserModel';
 import {
     Box,
     CssBaseline,
@@ -37,10 +37,10 @@ import Badge from '@mui/material/Badge'
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import { useRouter, usePathname } from 'next/navigation';
 import { fetchUserContext } from '@/app/utils/userContext';
-import NavigationMenu from '@/app/components/NavigationMenu';
-import NotificationBell from '@/app/components/NotificationBell';
-import MessengerTrigger from '@/app/components/MessengerTrigger';
-import RubleAmount from '@/app/components/RubleAmount';
+import NavigationMenu from '@/features/shared/NavigationMenu';
+import NotificationBell from '@/features/messenger/NotificationBell';
+import MessengerTrigger from '@/features/messenger/MessengerTrigger';
+import RubleAmount from '@/features/shared/RubleAmount';
 import dayjs from 'dayjs';
 
 export default function ClientApp({ children }: { children: React.ReactNode }) {
@@ -470,17 +470,19 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                   onClose={handleWalletClose}
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                   transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                  PaperProps={{
-                    sx: {
-                      minWidth: 280,
-                      p: 2,
-                      border: `1px solid ${appBarBorder}`,
-                      boxShadow: appBarShadow,
-                      borderRadius: 3,
-                      backdropFilter: 'blur(18px)',
-                      background: isDarkMode
-                        ? 'linear-gradient(145deg, rgba(17,20,28,0.96), rgba(12,15,23,0.92))'
-                        : 'linear-gradient(145deg, rgba(255,255,255,0.98), rgba(239,244,255,0.96))',
+                  slotProps={{
+                    paper: {
+                      sx: {
+                        minWidth: 280,
+                        p: 2,
+                        border: `1px solid ${appBarBorder}`,
+                        boxShadow: appBarShadow,
+                        borderRadius: 3,
+                        backdropFilter: 'blur(18px)',
+                        background: isDarkMode
+                          ? 'linear-gradient(145deg, rgba(17,20,28,0.96), rgba(12,15,23,0.92))'
+                          : 'linear-gradient(145deg, rgba(255,255,255,0.98), rgba(239,244,255,0.96))',
+                      },
                     },
                   }}
                 >

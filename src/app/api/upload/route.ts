@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import TaskModel from '@/app/models/TaskModel';
-import UserModel from '@/app/models/UserModel';
-import dbConnect from '@/utils/mongoose';
+import TaskModel from '@/server/models/TaskModel';
+import UserModel from '@/server/models/UserModel';
+import dbConnect from '@/server/db/mongoose';
 import {
     uploadBuffer,
     deleteTaskFile,

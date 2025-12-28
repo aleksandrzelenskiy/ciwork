@@ -7,10 +7,11 @@ import {
     Box, Card, CardHeader, CardContent, Stack,
     Snackbar, Alert, Table, TableHead, TableRow, TableCell,
     TableBody, Chip, IconButton, Tooltip, Typography,
-    CircularProgress, Grid, Dialog, DialogTitle, DialogContent, DialogActions,
+    CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions,
     TextField, Button,
     MenuItem,
 } from '@mui/material';
+import Grid from '@mui/material/Grid2';
 import { useTheme } from '@mui/material/styles';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
@@ -36,9 +37,9 @@ import OrgSetDialog, {
     defaultOrgSettings,
 } from '@/app/workspace/components/OrgSetDialog';
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
-import OrgWalletCard from '@/app/components/org/OrgWalletCard';
-import OrgWalletTransactionsDialog from '@/app/components/org/OrgWalletTransactionsDialog';
-import OrgStorageUsageCard from '@/app/components/org/OrgStorageUsageCard';
+import OrgWalletCard from '@/features/org/OrgWalletCard';
+import OrgWalletTransactionsDialog from '@/features/org/OrgWalletTransactionsDialog';
+import OrgStorageUsageCard from '@/features/org/OrgStorageUsageCard';
 
 type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
 type MemberStatus = 'active' | 'invited';
@@ -1234,7 +1235,7 @@ export default function OrgSettingsPage() {
 
             <Grid container spacing={2}>
                 {/* ПРОЕКТЫ */}
-                <Grid item xs={12}>
+                <Grid xs={12}>
                     <Card variant="outlined" sx={cardBaseSx}>
                         <CardHeader
                             sx={cardHeaderSx}
@@ -1382,7 +1383,7 @@ export default function OrgSettingsPage() {
                 </Grid>
 
                 {/* УЧАСТНИКИ */}
-                <Grid item xs={12}>
+                <Grid xs={12}>
                     <Card variant="outlined" sx={cardBaseSx}>
                         <CardHeader
                             sx={cardHeaderSx}
@@ -1556,7 +1557,7 @@ export default function OrgSettingsPage() {
                 </Grid>
 
                 {/* ОТКЛИКИ */}
-                <Grid item xs={12}>
+                <Grid xs={12}>
                     <Card variant="outlined" sx={cardBaseSx}>
                         <CardHeader
                             sx={cardHeaderSx}
@@ -1695,13 +1696,15 @@ export default function OrgSettingsPage() {
                 onClose={() => setInviteOpen(false)}
                 maxWidth="sm"
                 fullWidth
-                PaperProps={{
-                    sx: {
-                        backdropFilter: 'blur(24px)',
-                        backgroundColor: cardBg,
-                        border: `1px solid ${cardBorder}`,
-                        boxShadow: cardShadow,
-                        borderRadius: 4,
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: 4,
+                        },
                     },
                 }}
             >
@@ -1761,13 +1764,15 @@ export default function OrgSettingsPage() {
             <Dialog
                 open={roleDialogOpen}
                 onClose={() => setRoleDialogOpen(false)}
-                PaperProps={{
-                    sx: {
-                        backdropFilter: 'blur(24px)',
-                        backgroundColor: cardBg,
-                        border: `1px solid ${cardBorder}`,
-                        boxShadow: cardShadow,
-                        borderRadius: 4,
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: 4,
+                        },
                     },
                 }}
             >
@@ -1837,13 +1842,15 @@ export default function OrgSettingsPage() {
             <Dialog
                 open={removeOpen}
                 onClose={removing ? undefined : closeRemoveDialog}
-                PaperProps={{
-                    sx: {
-                        backdropFilter: 'blur(24px)',
-                        backgroundColor: cardBg,
-                        border: `1px solid ${cardBorder}`,
-                        boxShadow: cardShadow,
-                        borderRadius: 4,
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: 4,
+                        },
                     },
                 }}
             >
@@ -1874,13 +1881,15 @@ export default function OrgSettingsPage() {
             <Dialog
                 open={removeProjectOpen}
                 onClose={removingProject ? undefined : closeRemoveProjectDialog}
-                PaperProps={{
-                    sx: {
-                        backdropFilter: 'blur(24px)',
-                        backgroundColor: cardBg,
-                        border: `1px solid ${cardBorder}`,
-                        boxShadow: cardShadow,
-                        borderRadius: 4,
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: 4,
+                        },
                     },
                 }}
             >
@@ -1910,13 +1919,15 @@ export default function OrgSettingsPage() {
             <Dialog
                 open={removeApplicationOpen}
                 onClose={removingApplication ? undefined : closeRemoveApplicationDialog}
-                PaperProps={{
-                    sx: {
-                        backdropFilter: 'blur(24px)',
-                        backgroundColor: cardBg,
-                        border: `1px solid ${cardBorder}`,
-                        boxShadow: cardShadow,
-                        borderRadius: 4,
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: 4,
+                        },
                     },
                 }}
             >

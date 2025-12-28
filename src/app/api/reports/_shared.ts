@@ -1,9 +1,11 @@
+import 'server-only';
+
 import sharp from 'sharp';
 import ExifReader from 'exifreader';
 import { v4 as uuidv4 } from 'uuid';
 import heicConvert from 'heic-convert';
-import OrganizationModel from '@/app/models/OrganizationModel';
-import ProjectModel from '@/app/models/ProjectModel';
+import OrganizationModel from '@/server/models/OrganizationModel';
+import ProjectModel from '@/server/models/ProjectModel';
 
 export type UploadPayload = {
     taskId: string;

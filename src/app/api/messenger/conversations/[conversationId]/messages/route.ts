@@ -1,13 +1,13 @@
 'use server';
 
 import { NextResponse, type NextRequest } from 'next/server';
-import ChatMessageModel from '@/app/models/ChatMessageModel';
+import ChatMessageModel from '@/server/models/ChatMessageModel';
 import { GetCurrentUserFromMongoDB } from '@/server-actions/users';
 import {
     chatMessageToDTO,
     requireConversationAccess,
     type ChatMessageLike,
-} from '@/app/api/messenger/_helpers';
+} from '@/server/messenger/helpers';
 
 export async function GET(
     _request: NextRequest,
