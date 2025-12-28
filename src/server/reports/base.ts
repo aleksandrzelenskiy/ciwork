@@ -10,6 +10,7 @@ import ReportDeletionLog from '@/server/models/ReportDeletionLog';
 import UserModel from '@/server/models/UserModel';
 import { createNotification } from '@/server/notifications/service';
 import { GetUserContext } from '@/server-actions/user-context';
+import { getAggregatedReportStatus } from '@/server-actions/reportService';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
 import { verifyInitiatorAccessToken } from '@/utils/initiatorAccessToken';
 import {
@@ -233,7 +234,10 @@ export const updateReport = async ({
     await report.save();
 
     const relatedTask = await TaskModel.findOne({ taskId: report.taskId });
-    if (relatedTask && relatedTask.status !== report.status) {
+    const aggregatedStatus = relatedTask
+        ? await getAggregatedReportStatus(report.taskId)
+        : null;
+    if (relatedTask && aggregatedStatus && relatedTask.status !== aggregatedStatus) {
         const allowedPublicStatuses = new Set([
             'open',
             'in_review',
@@ -244,7 +248,7 @@ export const updateReport = async ({
             relatedTask.publicStatus = 'closed';
         }
         const oldTaskStatus = relatedTask.status;
-        relatedTask.status = report.status;
+        relatedTask.status = aggregatedStatus;
 
         relatedTask.events = relatedTask.events || [];
         relatedTask.events.push({
@@ -254,8 +258,8 @@ export const updateReport = async ({
             date: new Date(),
             details: {
                 oldStatus: oldTaskStatus,
-                newStatus: report.status,
-                comment: 'Статус синхронизирован с фотоотчетом',
+                newStatus: aggregatedStatus,
+                comment: 'Статус синхронизирован с фотоотчетами',
             },
         });
 

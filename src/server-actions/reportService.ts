@@ -10,6 +10,27 @@ type Actor = {
 type ReportStatus = 'Pending' | 'Issues' | 'Fixed' | 'Agreed';
 
 const ensureEventArray = (events?: IEvent[]) => (Array.isArray(events) ? events : []);
+const REPORT_STATUS_PRIORITY: ReportStatus[] = ['Issues', 'Pending', 'Fixed', 'Agreed'];
+
+const normalizeReportStatus = (status?: string): ReportStatus | null => {
+    if (!status) return null;
+    const trimmed = status.trim();
+    if (trimmed === 'Pending' || trimmed === 'Issues' || trimmed === 'Fixed' || trimmed === 'Agreed') {
+        return trimmed;
+    }
+    return null;
+};
+
+const resolveAggregatedReportStatus = (statuses: Array<string | null | undefined>) => {
+    const normalizedStatuses = statuses
+        .map((status) => normalizeReportStatus(status ?? undefined))
+        .filter(Boolean) as ReportStatus[];
+    if (normalizedStatuses.length === 0) return null;
+    for (const priority of REPORT_STATUS_PRIORITY) {
+        if (normalizedStatuses.includes(priority)) return priority;
+    }
+    return null;
+};
 
 export const findReport = async (taskId: string, baseId: string) =>
     ReportModel.findOne({ taskId, baseId });
@@ -136,6 +157,13 @@ export const updateReportIssues = async (params: {
     return report;
 };
 
+export const getAggregatedReportStatus = async (taskId: string) => {
+    const reports = await ReportModel.find({ taskId }).select('status').lean();
+    return resolveAggregatedReportStatus(
+        reports.map((report) => (typeof report.status === 'string' ? report.status : null))
+    );
+};
+
 export const syncTaskStatus = async (params: {
     taskId: string;
     status: ReportStatus;
@@ -150,9 +178,11 @@ export const syncTaskStatus = async (params: {
         // normalize legacy/invalid values to a valid enum before save
         task.publicStatus = 'closed';
     }
+    const aggregatedStatus = await getAggregatedReportStatus(taskId);
+    const nextStatus = aggregatedStatus ?? status;
     const oldStatus = task.status;
-    if (oldStatus === status) return task;
-    task.status = status;
+    if (oldStatus === nextStatus) return task;
+    task.status = nextStatus;
     if (!Array.isArray(task.events)) task.events = [];
     task.events.push({
         action: 'STATUS_CHANGED',
@@ -161,7 +191,7 @@ export const syncTaskStatus = async (params: {
         date: new Date(),
         details: {
             oldStatus,
-            newStatus: status,
+            newStatus: nextStatus,
             comment,
         },
     });

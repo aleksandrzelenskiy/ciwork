@@ -480,10 +480,12 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
           borderRadius: 3,
           border: `1px solid ${cellBorder}`,
           boxShadow: containerShadow,
-          overflow: 'hidden',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          WebkitOverflowScrolling: 'touch',
         }}
       >
-          <Table>
+          <Table sx={{ minWidth: 960 }}>
             <TableHead>
               <TableRow sx={{ backgroundColor: headBg }}>
                 {columnVisibility.taskId && (

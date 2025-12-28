@@ -5,6 +5,7 @@ import ReportModel from '@/server/models/ReportModel';
 import UserModel from '@/server/models/UserModel';
 import { createNotification } from '@/server/notifications/service';
 import { sendEmail } from '@/server/email/mailer';
+import { getAggregatedReportStatus } from '@/server-actions/reportService';
 import { signInitiatorAccessToken } from '@/utils/initiatorAccessToken';
 import { getServerEnv } from '@/config/env';
 
@@ -64,7 +65,8 @@ export const submitReport = async (payload: SubmitPayload, actor: ActorContext) 
 
     const actorName = task.executorName?.trim() || actor.name || 'Исполнитель';
     const oldStatus = task.status;
-    const newStatus = 'Pending';
+    const aggregatedStatus = await getAggregatedReportStatus(taskId);
+    const newStatus = aggregatedStatus ?? 'Pending';
 
     await TaskModel.updateOne(
         { taskId },
