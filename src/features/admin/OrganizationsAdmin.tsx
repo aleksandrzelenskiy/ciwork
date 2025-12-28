@@ -113,7 +113,7 @@ export default function OrganizationsAdmin() {
     const [selectedOrg, setSelectedOrg] = React.useState<OrganizationRow | null>(null);
     const [selectedPlan, setSelectedPlan] = React.useState<Plan>('basic');
     const [selectedStatus, setSelectedStatus] = React.useState<SubStatus>('inactive');
-    const [walletBalanceInput, setWalletBalanceInput] = React.useState('0');
+    const [walletTopUpInput, setWalletTopUpInput] = React.useState('0');
     const [dialogError, setDialogError] = React.useState<string | null>(null);
     const [saving, setSaving] = React.useState(false);
 
@@ -150,9 +150,7 @@ export default function OrganizationsAdmin() {
         setSelectedOrg(org);
         setSelectedPlan(org.plan);
         setSelectedStatus(org.status);
-        setWalletBalanceInput(
-            typeof org.walletBalance === 'number' ? String(org.walletBalance) : '0'
-        );
+        setWalletTopUpInput('0');
         setDialogError(null);
     };
 
@@ -167,14 +165,14 @@ export default function OrganizationsAdmin() {
         setSaving(true);
         setDialogError(null);
         try {
-            const nextWalletBalance = Number(walletBalanceInput);
-            if (Number.isFinite(nextWalletBalance)) {
+            const topUpAmount = Number(walletTopUpInput);
+            if (Number.isFinite(topUpAmount) && topUpAmount > 0) {
                 const walletRes = await fetch(
                     `/api/admin/organizations/${encodeURIComponent(selectedOrg.orgSlug)}/wallet`,
                     {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ balance: nextWalletBalance }),
+                        body: JSON.stringify({ delta: topUpAmount }),
                     }
                 );
                 if (!walletRes.ok) {
@@ -223,7 +221,11 @@ export default function OrganizationsAdmin() {
                               periodStart: payload.subscription.periodStart,
                               periodEnd: payload.subscription.periodEnd,
                               updatedAt: payload.subscription.updatedAt,
-                              walletBalance: Number(walletBalanceInput),
+                              walletBalance:
+                                  (item.walletBalance ?? 0) +
+                                  (Number.isFinite(topUpAmount) && topUpAmount > 0
+                                      ? topUpAmount
+                                      : 0),
                           }
                         : item
                 )
@@ -422,13 +424,19 @@ export default function OrganizationsAdmin() {
                                     ))}
                                 </Select>
                             </FormControl>
+                            <Typography variant="body2" color="text.secondary">
+                                Текущий баланс:{' '}
+                                {Number.isFinite(selectedOrg.walletBalance)
+                                    ? `${selectedOrg.walletBalance} ${selectedOrg.walletCurrency || 'RUB'}`
+                                    : '—'}
+                            </Typography>
                             <TextField
-                                label="Баланс (RUB)"
+                                label="Сумма пополнения (RUB)"
                                 type="number"
-                                value={walletBalanceInput}
-                                onChange={(event) => setWalletBalanceInput(event.target.value)}
+                                value={walletTopUpInput}
+                                onChange={(event) => setWalletTopUpInput(event.target.value)}
                                 size="small"
-                                inputProps={{ min: 0, step: 1 }}
+                                inputProps={{ min: 1, step: 1 }}
                             />
                             {dialogError && <Alert severity="error">{dialogError}</Alert>}
                         </Stack>
