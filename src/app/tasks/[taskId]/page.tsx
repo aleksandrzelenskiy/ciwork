@@ -35,13 +35,13 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
 import TocOutlinedIcon from '@mui/icons-material/TocOutlined';
 import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import HistoryIcon from '@mui/icons-material/History';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import PhotoLibraryOutlinedIcon from '@mui/icons-material/PhotoLibraryOutlined';
 import {
     Timeline,
     TimelineConnector,
@@ -60,7 +60,6 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 import TaskComments, { type TaskComment } from '@/features/tasks/TaskComments';
 import PhotoReportUploader from '@/features/tasks/PhotoReportUploader';
-import ReportFixUploader from '@/features/reports/ReportFixUploader';
 import ReportSummaryList from '@/features/reports/ReportSummaryList';
 import { fetchUserContext } from '@/app/utils/userContext';
 import type { Task, WorkItem, TaskEvent } from '@/app/types/taskTypes';
@@ -107,8 +106,6 @@ export default function TaskDetailPage() {
     const [completeLoading, setCompleteLoading] = React.useState(false);
     const [completeError, setCompleteError] = React.useState<string | null>(null);
     const [uploadDialogOpen, setUploadDialogOpen] = React.useState(false);
-    const [fixDialogOpen, setFixDialogOpen] = React.useState(false);
-    const [activeFixBaseId, setActiveFixBaseId] = React.useState('');
     const [photoGuideOpen, setPhotoGuideOpen] = React.useState(false);
     const [issuesGuideOpen, setIssuesGuideOpen] = React.useState(false);
     const [issuesGuideRect, setIssuesGuideRect] = React.useState<DOMRect | null>(null);
@@ -121,16 +118,6 @@ export default function TaskDetailPage() {
         setCompleteError(null);
         setCompleteConfirmOpen(true);
     }, []);
-
-    const handleOpenFixDialog = (baseId: string) => {
-        setActiveFixBaseId(baseId);
-        setFixDialogOpen(true);
-    };
-
-    const handleCloseFixDialog = () => {
-        setFixDialogOpen(false);
-        setActiveFixBaseId('');
-    };
 
     const formatDate = (v?: string | Date) => {
         if (!v) return '—';
@@ -988,44 +975,10 @@ export default function TaskDetailPage() {
                                     </Button>
                                 </Box>
                             )}
-                            {showReportActions && (
-                                <Box sx={{ pt: 0.5 }}>
-                                    <Divider sx={{ mb: 1.5 }} />
-                                    <Stack
-                                        direction={{ xs: 'column', sm: 'row' }}
-                                        spacing={1}
-                                        useFlexGap
-                                        flexWrap="wrap"
-                                    >
-                                        {hasPhotoReport && reportSummaryItems.length > 0 && (
-                                            <ReportSummaryList
-                                                items={reportSummaryItems}
-                                                taskId={reportTaskId}
-                                                mode="pill"
-                                            />
-                                        )}
-                                        {!hasPhotoReport && (
-                                            <Button
-                                                variant="contained"
-                                                startIcon={<CloudUploadIcon />}
-                                                onClick={handleOpenUploadDialog}
-                                                ref={uploadButtonRef}
-                                                sx={{
-                                                    textTransform: 'none',
-                                                    borderRadius: 1.5,
-                                                    fontWeight: 700,
-                                                }}
-                                            >
-                                                {isReportReadOnly ? 'Посмотреть отчет' : 'Загрузить фото'}
-                                            </Button>
-                                        )}
-                                    </Stack>
-                                </Box>
-                            )}
                         </Stack>
                     </CardItem>
 
-                    {issueReports.length > 0 && (
+                    {showReportActions && (
                         <CardItem ref={issuesSectionRef} sx={{ minWidth: 0 }}>
                             <Typography
                                 variant="subtitle1"
@@ -1033,79 +986,34 @@ export default function TaskDetailPage() {
                                 gutterBottom
                                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                             >
-                                <ErrorOutlineIcon fontSize="small" />
-                                Замечания по фотоотчетам
+                                <PhotoLibraryOutlinedIcon fontSize="small" />
+                                Фотоотчеты
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
-                            <Stack spacing={2}>
-                                {issueReports.map((report) => {
-                                    const statusLabel = report.status
-                                        ? getStatusLabel(normalizeStatusTitle(report.status))
-                                        : '';
-                                    return (
-                                        <Box
-                                            key={report._id}
-                                            sx={{
-                                                borderRadius: 2,
-                                                border: '1px solid rgba(15,23,42,0.08)',
-                                                p: 1.5,
-                                                backgroundColor: 'rgba(248,250,252,0.8)',
-                                            }}
-                                        >
-                                            <Stack
-                                                direction="row"
-                                                alignItems="center"
-                                                justifyContent="space-between"
-                                                spacing={1}
-                                            >
-                                                <Typography variant="body1" fontWeight={600}>
-                                                    БС {report.baseId || '—'}
-                                                </Typography>
-                                                {statusLabel && (
-                                                    <Chip label={statusLabel} size="small" sx={{ fontWeight: 500 }} />
-                                                )}
-                                            </Stack>
-                                            <Typography variant="caption" color="text.secondary">
-                                                Отчет от {formatDate(report.createdAt)}
-                                            </Typography>
-                                            <Stack spacing={0.5} sx={{ mt: 1 }}>
-                                                {report.issues.map((issue, idx) => (
-                                                    <Typography
-                                                        key={`${report._id}-issue-${idx}`}
-                                                        variant="body2"
-                                                    >
-                                                        {idx + 1}. {issue}
-                                                    </Typography>
-                                                ))}
-                                            </Stack>
-                                            <Stack
-                                                direction={{ xs: 'column', sm: 'row' }}
-                                                spacing={1}
-                                                sx={{ mt: 1.5 }}
-                                            >
-                                                <Button
-                                                    component={Link}
-                                                    href={`/reports/${encodeURIComponent(
-                                                        reportTaskId
-                                                    )}/${encodeURIComponent(report.baseId)}`}
-                                                    variant="outlined"
-                                                    size="small"
-                                                    sx={{ textTransform: 'none' }}
-                                                >
-                                                    Открыть отчет
-                                                </Button>
-                                                <Button
-                                                    variant="contained"
-                                                    size="small"
-                                                    onClick={() => handleOpenFixDialog(report.baseId)}
-                                                    sx={{ textTransform: 'none' }}
-                                                >
-                                                    Загрузить исправления
-                                                </Button>
-                                            </Stack>
-                                        </Box>
-                                    );
-                                })}
+                            <Stack
+                                direction={{ xs: 'column', sm: 'row' }}
+                                spacing={1}
+                                useFlexGap
+                                flexWrap="wrap"
+                            >
+                                {hasPhotoReport && reportSummaryItems.length > 0 && (
+                                    <ReportSummaryList items={reportSummaryItems} taskId={reportTaskId} mode="pill" />
+                                )}
+                                {!hasPhotoReport && (
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<CloudUploadIcon />}
+                                        onClick={handleOpenUploadDialog}
+                                        ref={uploadButtonRef}
+                                        sx={{
+                                            textTransform: 'none',
+                                            borderRadius: 1.5,
+                                            fontWeight: 700,
+                                        }}
+                                    >
+                                        {isReportReadOnly ? 'Посмотреть отчет' : 'Загрузить фото'}
+                                    </Button>
+                                )}
                             </Stack>
                         </CardItem>
                     )}
@@ -1457,13 +1365,6 @@ export default function TaskDetailPage() {
                     void refreshReportSummaries();
                 }}
                 readOnly={isReportReadOnly}
-            />
-            <ReportFixUploader
-                open={fixDialogOpen}
-                onClose={handleCloseFixDialog}
-                taskId={reportTaskId}
-                baseId={activeFixBaseId}
-                onUploaded={() => void loadTask()}
             />
 
             {photoGuideOpen && guideRect && (
