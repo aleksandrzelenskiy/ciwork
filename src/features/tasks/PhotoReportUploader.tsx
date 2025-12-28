@@ -191,13 +191,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             }, 3000);
             return;
         }
-        if (submitError) {
-            submitAlertTimerRef.current = setTimeout(() => {
-                setSubmitError(null);
-                setAutoClosed(true);
-                onClose();
-            }, 3000);
-        }
     }, [submitError, submitSuccess, onClose, onSubmitted]);
 
     React.useEffect(() => {
@@ -208,8 +201,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         if (!folderAlert) return;
         folderAlertTimerRef.current = setTimeout(() => {
             setFolderAlert(null);
-            setAutoClosed(true);
-            onClose();
         }, 3000);
         return () => {
             if (folderAlertTimerRef.current) {
