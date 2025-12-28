@@ -187,6 +187,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 setSubmitSuccess(null);
                 setAutoClosed(true);
                 onClose();
+                onSubmitted?.();
             }, 3000);
             return;
         }
@@ -197,7 +198,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 onClose();
             }, 3000);
         }
-    }, [submitError, submitSuccess, onClose]);
+    }, [submitError, submitSuccess, onClose, onSubmitted]);
 
     React.useEffect(() => {
         if (folderAlertTimerRef.current) {
@@ -589,7 +590,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 return;
             }
             setSubmitSuccess(data.message || 'Фотоотчет отправлен менеджеру');
-            onSubmitted?.();
         } catch (error) {
             setSubmitError(error instanceof Error ? error.message : 'Ошибка отправки');
         } finally {
