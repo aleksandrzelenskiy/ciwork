@@ -81,6 +81,13 @@ export interface RelatedTaskRef {
   status?: CurrentStatus;
 }
 
+export interface TaskPayment {
+  orgMarkedPaidAt?: Date | string;
+  orgMarkedPaidBy?: string;
+  contractorConfirmedAt?: Date | string;
+  contractorConfirmedBy?: string;
+}
+
 export interface Task {
   _id?: string;
   orgId?: string;
@@ -142,6 +149,7 @@ export interface Task {
   ncwUrl?: string;
   workCompletionDate?:  Date | string;
   closingDocumentsUrl?: string;
+  payment?: TaskPayment;
 
   objectDetails: {
     name: string;

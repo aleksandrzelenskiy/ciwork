@@ -33,6 +33,9 @@ import { isAdminRole } from '@/app/utils/roleGuards';
 interface MiniTaskTableProps {
   role: EffectiveOrgRole | null;
   clerkUserId: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  maxItems?: number;
 }
 
 // Функция для выбора иконки по приоритету
@@ -54,6 +57,9 @@ function getPriorityIcon(priority: string) {
 export default function MiniTaskTable({
   role,
   clerkUserId,
+  ctaLabel,
+  ctaHref,
+  maxItems,
 }: MiniTaskTableProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,8 +105,11 @@ export default function MiniTaskTable({
     );
   }, [filteredTasks]);
 
-  // 4. Берём только первые 5 для отображения
-  const lastFive = sortedTasks.slice(0, 5);
+  const rowLimit = maxItems ?? 5;
+  // 4. Берём только первые N для отображения
+  const lastFive = sortedTasks.slice(0, rowLimit);
+  const tableMaxHeight =
+    rowLimit >= 5 ? 310 : Math.max(210, 70 + rowLimit * 48);
 
   if (loading) {
     return (
@@ -137,12 +146,12 @@ export default function MiniTaskTable({
       <Box
         sx={{
           position: 'relative',
-          maxHeight: 310,
-          overflow: 'hidden',
-          mb: 2,
-        }}
-      >
-        <TableContainer component={Paper} sx={{ maxHeight: 310 }}>
+        maxHeight: tableMaxHeight,
+        overflow: 'hidden',
+        mb: 2,
+      }}
+    >
+        <TableContainer component={Paper} sx={{ maxHeight: tableMaxHeight }}>
           <Table size='small' stickyHeader>
             <TableHead>
               <TableRow>
@@ -199,22 +208,22 @@ export default function MiniTaskTable({
             bottom: 0,
             left: 0,
             right: 0,
-            height: 40,
-            background: 'linear-gradient(rgba(255,255,255,0), #fff 80%)',
-            pointerEvents: 'none',
-          }}
-        />
-      </Box>
+        height: 40,
+        background: 'linear-gradient(rgba(255,255,255,0), #fff 80%)',
+        pointerEvents: 'none',
+      }}
+    />
+  </Box>
 
       <Box
         sx={{
           textAlign: 'center',
         }}
       >
-        <Link href='/tasks'>
-          <Button variant='text'>All Tasks</Button>
-        </Link>
-      </Box>
+      <Link href={ctaHref ?? '/tasks'}>
+        <Button variant='text'>{ctaLabel ?? 'All Tasks'}</Button>
+      </Link>
     </Box>
-  );
+  </Box>
+);
 }

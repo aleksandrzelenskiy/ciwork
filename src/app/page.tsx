@@ -3,6 +3,7 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { GetUserContext } from '@/server-actions/user-context';
+import DashboardHome from '@/features/dashboards/DashboardHome';
 
 const DashboardPage: React.FC = async () => {
   const response = await GetUserContext();
@@ -16,21 +17,15 @@ const DashboardPage: React.FC = async () => {
     );
   }
 
+  const { user, effectiveOrgRole } = response.data;
+
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        p: 4,
-      }}
-    >
-      <Typography variant='h5' component='h1'>
-        Главная страница обновляется. Мы готовим новый интерфейс под роли
-        пользователей.
-      </Typography>
+    <Box className='p-4 md:p-8' sx={{ minHeight: '100vh' }}>
+      <DashboardHome
+        role={effectiveOrgRole}
+        clerkUserId={user.clerkUserId}
+        profileType={user.profileType ?? null}
+      />
     </Box>
   );
 };

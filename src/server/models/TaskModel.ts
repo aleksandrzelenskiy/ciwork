@@ -120,6 +120,12 @@ const TaskSchema = new Schema<Task & Document>({
   ncwUrl: { type: String, required: false, default: '' },        // ссылка на PDF в S3
   workCompletionDate: { type: Date, required: false },           // дата окончания работ (= дата уведомления)
   closingDocumentsUrl: { type: String },
+  payment: {
+    orgMarkedPaidAt: { type: Date },
+    orgMarkedPaidBy: { type: String },
+    contractorConfirmedAt: { type: Date },
+    contractorConfirmedBy: { type: String },
+  },
 
   // История событий
   events: [
