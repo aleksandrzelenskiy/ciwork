@@ -77,6 +77,45 @@ function toObjectId(id: unknown): Types.ObjectId {
     return new Types.ObjectId(String(id));
 }
 
+type OrgDocLean = {
+    _id: unknown;
+    orgSlug?: string;
+    name?: string;
+};
+
+type ProjectDocLean = {
+    _id: unknown;
+    key?: string;
+    name?: string;
+    regionCode?: string;
+    operator?: string;
+};
+
+type OrgProjectRelOk = { orgDoc: OrgDocLean; projectDoc: ProjectDocLean };
+type OrgProjectRelErr = { error: string };
+
+function isOrgProjectRelOk(value: unknown): value is OrgProjectRelOk {
+    if (!value || typeof value !== 'object') return false;
+    const obj = value as Record<string, unknown>;
+    if (!('orgDoc' in obj) || !('projectDoc' in obj)) return false;
+    const orgDoc = obj.orgDoc as Record<string, unknown> | null;
+    const projectDoc = obj.projectDoc as Record<string, unknown> | null;
+    return Boolean(
+        orgDoc &&
+            typeof orgDoc === 'object' &&
+            '_id' in orgDoc &&
+            projectDoc &&
+            typeof projectDoc === 'object' &&
+            '_id' in projectDoc
+    );
+}
+
+function getOrgProjectError(value: unknown): string | undefined {
+    if (!value || typeof value !== 'object') return undefined;
+    const obj = value as Partial<OrgProjectRelErr>;
+    return typeof obj.error === 'string' ? obj.error : undefined;
+}
+
 function getDocObjectId(doc: unknown): Types.ObjectId | null {
     if (!doc || typeof doc !== 'object') return null;
     const rawId = (doc as { _id?: unknown })._id;
@@ -152,11 +191,13 @@ export async function GET(
 
         const { org, project } = await ctx.params;
 
-        const rel = await getOrgAndProjectByRef(org, project);
-        if ('error' in rel) {
-            console.warn('[GET tasks] not found:', { org, project, reason: rel.error });
-            return NextResponse.json({ error: rel.error }, { status: 404 });
+        const relUnknown = (await getOrgAndProjectByRef(org, project)) as unknown;
+        if (!isOrgProjectRelOk(relUnknown)) {
+            const reason = getOrgProjectError(relUnknown) ?? 'Org or project not found';
+            console.warn('[GET tasks] not found:', { org, project, reason });
+            return NextResponse.json({ error: reason }, { status: 404 });
         }
+        const rel = relUnknown;
 
         const orgObjId = getDocObjectId(rel.orgDoc);
         const projectObjId = getDocObjectId(rel.projectDoc);
@@ -234,11 +275,13 @@ export async function POST(
             return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
         }
 
-        const rel = await getOrgAndProjectByRef(org, project);
-        if ('error' in rel) {
-            console.warn('[POST tasks] not found:', { org, project, reason: rel.error });
-            return NextResponse.json({ error: rel.error }, { status: 404 });
+        const relUnknown = (await getOrgAndProjectByRef(org, project)) as unknown;
+        if (!isOrgProjectRelOk(relUnknown)) {
+            const reason = getOrgProjectError(relUnknown) ?? 'Org or project not found';
+            console.warn('[POST tasks] not found:', { org, project, reason });
+            return NextResponse.json({ error: reason }, { status: 404 });
         }
+        const rel = relUnknown;
 
         const orgObjId = getDocObjectId(rel.orgDoc);
         const projectObjId = getDocObjectId(rel.projectDoc);
