@@ -1,5 +1,5 @@
 import dbConnect from '@/server/db/mongoose';
-import { getDefaultBsCoordinateModel, BsCoordinate as IBaseStation } from '../models/BsCoordinateModel';
+import { getDefaultBsCoordinateModel, BsCoordinate as IBaseStation } from '@/server/models/BsCoordinateModel';
 import mongoose from 'mongoose';
 
 async function cleanDuplicates() {
