@@ -5,6 +5,7 @@ import { Box, Chip, CircularProgress, Typography } from '@mui/material';
 import type { ReportClient } from '@/app/types/reportTypes';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { getStatusColor } from '@/utils/statusColors';
+import { fetchUserContext } from '@/app/utils/userContext';
 
 const REPORT_STATUSES = ['Pending', 'Issues', 'Fixed', 'Agreed'] as const;
 
@@ -14,11 +15,19 @@ export default function ContractorReportsStatus() {
     const [reports, setReports] = useState<ReportClient[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [clerkUserId, setClerkUserId] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchReports() {
             try {
-                const res = await fetch('/api/reports');
+                const [userContext, reportsResponse] = await Promise.all([
+                    fetchUserContext(),
+                    fetch('/api/reports'),
+                ]);
+                const userId = (userContext?.user as { clerkUserId?: string })?.clerkUserId ?? null;
+                setClerkUserId(userId);
+
+                const res = reportsResponse;
                 if (!res.ok) {
                     setError('Ошибка при загрузке фотоотчетов');
                     return;
@@ -41,7 +50,11 @@ export default function ContractorReportsStatus() {
             Fixed: 0,
             Agreed: 0,
         };
-        reports.forEach((report) => {
+        const filteredReports = clerkUserId
+            ? reports.filter((report) => report.createdById === clerkUserId)
+            : reports;
+
+        filteredReports.forEach((report) => {
             report.baseStatuses?.forEach((base) => {
                 const status = base.status as ReportStatus;
                 if (status in counts) {
@@ -50,9 +63,9 @@ export default function ContractorReportsStatus() {
             });
         });
         return counts;
-    }, [reports]);
+    }, [reports, clerkUserId]);
 
-    if (loading) {
+    if (loading || !clerkUserId) {
         return (
             <Box display='flex' justifyContent='center' alignItems='center' minHeight={120}>
                 <CircularProgress />
