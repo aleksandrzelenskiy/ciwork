@@ -18,7 +18,7 @@ import {
   dropTargetForElements,
   monitorForElements,
 } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { Task } from '../types/taskTypes';
+import { Task } from '@/app/types/taskTypes';
 import {
   KeyboardDoubleArrowUp as KeyboardDoubleArrowUpIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,

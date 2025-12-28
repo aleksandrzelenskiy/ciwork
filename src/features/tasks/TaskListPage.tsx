@@ -34,7 +34,7 @@ import {
 import Pagination from '@mui/material/Pagination';
 import { useTheme } from '@mui/material/styles';
 import { ViewColumn as ViewColumnIcon } from '@mui/icons-material';
-import { Task } from '../types/taskTypes';
+import { Task } from '@/app/types/taskTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { useRouter } from 'next/navigation';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
