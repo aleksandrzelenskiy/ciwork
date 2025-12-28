@@ -615,9 +615,7 @@ export default function OnboardingPage() {
                       >
                         {ROLE_OPTIONS.map((option) => (
                             <Grid
-                                item
-                                xs={12}
-                                sm={6}
+                                size={{ xs: 12, sm: 6 }}
                                 key={option.type}
                                 sx={{
                                   display: 'flex',
