@@ -2,8 +2,8 @@
 
 'use server';
 
-import UserModel, { type IUser, type ProfileType } from '/server/models/UserModel';
-import dbConnect from 'src/utils/mongoose';
+import UserModel, { type IUser, type ProfileType } from '@/server/models/UserModel';
+import dbConnect from '@/server/db/mongoose';
 import { currentUser } from '@clerk/nextjs/server';
 
 dbConnect();

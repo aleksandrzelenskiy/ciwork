@@ -32,8 +32,8 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ViewColumnOutlinedIcon from '@mui/icons-material/ViewColumnOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 
-import TaskListPage, { TaskListPageHandle } from '../components/TaskListPage';
-import TaskColumnPage from '../components/TaskColumnPage';
+import TaskListPage, { TaskListPageHandle } from '@/features/tasks/TaskListPage';
+import TaskColumnPage from '@/features/tasks/TaskColumnPage';
 import { fetchUserContext, resolveRoleFromContext } from '@/app/utils/userContext';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { defaultTaskFilters, type TaskFilterOptions, type TaskFilters } from '@/app/types/taskFilters';
@@ -184,7 +184,7 @@ export default function TasksPage() {
             const value = event.target.value;
             setFilters((prev) => ({
                 ...prev,
-                [key]: typeof value === 'string' ? value : '',
+                [key]: value,
             }));
         };
 

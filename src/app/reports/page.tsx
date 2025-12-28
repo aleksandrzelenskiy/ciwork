@@ -1,4 +1,4 @@
-import ReportListPage from '../components/ReportListPage';
+import ReportListPage from '@/features/reports/ReportListPage';
 
 const TasksPage = () => {
   return <ReportListPage />;
