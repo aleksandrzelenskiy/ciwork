@@ -76,6 +76,13 @@ function toObjectId(id: unknown): Types.ObjectId {
     if (id instanceof Types.ObjectId) return id;
     return new Types.ObjectId(String(id));
 }
+
+function getDocObjectId(doc: unknown): Types.ObjectId | null {
+    if (!doc || typeof doc !== 'object') return null;
+    const rawId = (doc as { _id?: unknown })._id;
+    if (!rawId) return null;
+    return toObjectId(rawId);
+}
   
 type WorkItemInput = {
     workType: string;
@@ -151,8 +158,11 @@ export async function GET(
             return NextResponse.json({ error: rel.error }, { status: 404 });
         }
 
-        const orgObjId = new Types.ObjectId(String(rel.orgDoc!._id));
-        const projectObjId = new Types.ObjectId(String(rel.projectDoc!._id));
+        const orgObjId = getDocObjectId(rel.orgDoc);
+        const projectObjId = getDocObjectId(rel.projectDoc);
+        if (!orgObjId || !projectObjId) {
+            return NextResponse.json({ error: 'Org or project not found' }, { status: 404 });
+        }
 
         const { searchParams } = new URL(req.url);
         const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1);
