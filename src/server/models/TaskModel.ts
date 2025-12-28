@@ -3,7 +3,7 @@ import 'server-only';
 // src/server/models/TaskModel.ts
 
 import mongoose, { Schema, Document, model } from 'mongoose';
-import { Task, PriorityLevel, CurrentStatus } from '../types/taskTypes';
+import { Task, PriorityLevel, CurrentStatus } from '@/app/types/taskTypes';
 
 const TaskSchema = new Schema<Task & Document>({
   orgId: { type: Schema.Types.ObjectId, ref: 'Organization', required: false, index: true },
