@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     const result = await handleFixUpload(request, user);
     if (!result.ok) {
-        return jsonError(result.error, result.status, result.data);
+        return jsonError(result.error ?? 'Unknown error', result.status ?? 500, result.data);
     }
 
     return jsonData(result.data);
