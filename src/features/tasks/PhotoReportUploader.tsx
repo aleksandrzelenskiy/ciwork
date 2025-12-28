@@ -98,6 +98,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const [deleteTarget, setDeleteTarget] = React.useState<{ baseId: string; url: string } | null>(null);
     const [deleteLoading, setDeleteLoading] = React.useState(false);
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
+    const [autoClosed, setAutoClosed] = React.useState(false);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -159,6 +160,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
 
     React.useEffect(() => {
         if (open) {
+            setAutoClosed(false);
             resetState();
         }
     }, [open, resetState]);
@@ -183,6 +185,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         if (submitSuccess) {
             submitAlertTimerRef.current = setTimeout(() => {
                 setSubmitSuccess(null);
+                setAutoClosed(true);
                 onClose();
             }, 3000);
             return;
@@ -190,6 +193,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         if (submitError) {
             submitAlertTimerRef.current = setTimeout(() => {
                 setSubmitError(null);
+                setAutoClosed(true);
                 onClose();
             }, 3000);
         }
@@ -203,6 +207,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         if (!folderAlert) return;
         folderAlertTimerRef.current = setTimeout(() => {
             setFolderAlert(null);
+            setAutoClosed(true);
             onClose();
         }, 3000);
         return () => {
@@ -596,7 +601,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
 
     return (
         <Dialog
-            open={open}
+            open={open && !autoClosed}
             onClose={handleDialogClose}
             fullWidth
             maxWidth="md"

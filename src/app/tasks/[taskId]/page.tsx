@@ -3,7 +3,7 @@
 'use client';
 
 import React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
     Accordion,
     AccordionDetails,
@@ -88,6 +88,7 @@ export default function TaskDetailPage() {
     const params = useParams<{ taskId: string }>();
     const taskId = params?.taskId?.trim() || '';
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const pageGutter = { xs: 1.5, sm: 2.5, md: 3, lg: 3.5, xl: 4 };
 
@@ -108,8 +109,12 @@ export default function TaskDetailPage() {
     const [fixDialogOpen, setFixDialogOpen] = React.useState(false);
     const [activeFixBaseId, setActiveFixBaseId] = React.useState('');
     const [photoGuideOpen, setPhotoGuideOpen] = React.useState(false);
+    const [issuesGuideOpen, setIssuesGuideOpen] = React.useState(false);
+    const [issuesGuideRect, setIssuesGuideRect] = React.useState<DOMRect | null>(null);
     const [uploadButtonRect, setUploadButtonRect] = React.useState<DOMRect | null>(null);
     const uploadButtonRef = React.useRef<HTMLButtonElement | null>(null);
+    const issuesSectionRef = React.useRef<HTMLDivElement | null>(null);
+    const hasOpenedIssuesGuide = React.useRef(false);
 
     const handleCompleteClick = React.useCallback(() => {
         setCompleteError(null);
@@ -304,6 +309,7 @@ export default function TaskDetailPage() {
     const hasPhotoReport = React.useMemo(() => getHasPhotoReport(task), [getHasPhotoReport, task]);
     const showReportActions = ['Done', 'Pending', 'Issues', 'Fixed', 'Agreed'].includes(task?.status ?? '');
     const isReportReadOnly = (task?.status ?? '') === 'Agreed';
+    const shouldFocusIssues = searchParams?.get('focus') === 'issues';
 
     const taskTitleLine = task?.taskName || task?.taskId || 'Задача';
     const guideText = `Нажмите для загрузки фотоотчета по задаче ${taskTitleLine}${
@@ -337,6 +343,7 @@ export default function TaskDetailPage() {
         );
         return { top, left };
     })();
+    const issuesHighlightPadding = 12;
 
     const renderWorkItemsTable = (maxHeight?: number | string) => {
         if (!hasWorkItems) {
@@ -486,6 +493,50 @@ export default function TaskDetailPage() {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [photoGuideOpen]);
+
+    React.useLayoutEffect(() => {
+        if (!issuesGuideOpen) return undefined;
+
+        const updateRect = () => {
+            const node = issuesSectionRef.current;
+            if (!node) return;
+            setIssuesGuideRect(node.getBoundingClientRect());
+        };
+
+        updateRect();
+        window.addEventListener('resize', updateRect);
+        window.addEventListener('scroll', updateRect, true);
+
+        return () => {
+            window.removeEventListener('resize', updateRect);
+            window.removeEventListener('scroll', updateRect, true);
+        };
+    }, [issuesGuideOpen, issueReports.length]);
+
+    React.useEffect(() => {
+        if (!issuesGuideOpen) return undefined;
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIssuesGuideOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [issuesGuideOpen]);
+
+    React.useEffect(() => {
+        if (!shouldFocusIssues || issueReports.length === 0) return;
+        if (hasOpenedIssuesGuide.current) return;
+        const node = issuesSectionRef.current;
+        if (!node || typeof window === 'undefined') return;
+
+        hasOpenedIssuesGuide.current = true;
+        setPhotoGuideOpen(false);
+        const offset = 24;
+        const top = node.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: Math.max(0, top - offset), behavior: 'smooth' });
+        setIssuesGuideOpen(true);
+    }, [issueReports.length, shouldFocusIssues]);
 
     const handleCompleteConfirm = React.useCallback(async () => {
         if (!taskId) {
@@ -934,7 +985,7 @@ export default function TaskDetailPage() {
                     </CardItem>
 
                     {issueReports.length > 0 && (
-                        <CardItem sx={{ minWidth: 0 }}>
+                        <CardItem ref={issuesSectionRef} sx={{ minWidth: 0 }}>
                             <Typography
                                 variant="subtitle1"
                                 fontWeight={600}
@@ -1421,6 +1472,32 @@ export default function TaskDetailPage() {
                             {guideText}
                         </Typography>
                     </Box>
+                </Box>
+            )}
+
+            {issuesGuideOpen && issuesGuideRect && (
+                <Box
+                    sx={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 1490,
+                        pointerEvents: 'auto',
+                    }}
+                    onClick={() => setIssuesGuideOpen(false)}
+                >
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: issuesGuideRect.top - issuesHighlightPadding,
+                            left: issuesGuideRect.left - issuesHighlightPadding,
+                            width: issuesGuideRect.width + issuesHighlightPadding * 2,
+                            height: issuesGuideRect.height + issuesHighlightPadding * 2,
+                            borderRadius: 16,
+                            border: '2px solid rgba(255,255,255,0.95)',
+                            boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.72)',
+                            pointerEvents: 'none',
+                        }}
+                    />
                 </Box>
             )}
 

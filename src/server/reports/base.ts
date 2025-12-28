@@ -292,9 +292,13 @@ export const updateReport = async ({
             const bsInfo = relatedTask.bsNumber ? ` (БС ${relatedTask.bsNumber})` : '';
             const baseInfo = baseIdDecoded ? ` БС ${baseIdDecoded}` : '';
             const taskTitle = relatedTask.taskName || relatedTask.taskId;
-            const link = `/reports/${encodeURIComponent(
+            const reportLink = `/reports/${encodeURIComponent(
                 taskIdDecoded
             )}/${encodeURIComponent(baseIdDecoded)}`;
+            const issuesLink = `/tasks/${encodeURIComponent(
+                taskIdDecoded.toLowerCase()
+            )}?focus=issues`;
+            const link = shouldNotifyIssues ? issuesLink : reportLink;
 
             const metadata = {
                 taskId: relatedTask.taskId,
