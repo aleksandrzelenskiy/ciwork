@@ -202,7 +202,7 @@ export async function GET(
             TaskModel.countDocuments(filter),
         ]);
 
-        const normalizedItems = items.map((task) => {
+        const normalizedItems = items.map((task: Record<string, unknown>) => {
             const { attachments, documents } = splitAttachmentsAndDocuments(
                 (task as { attachments?: unknown }).attachments,
                 (task as { documents?: unknown }).documents
