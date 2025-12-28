@@ -6,7 +6,6 @@ import React from 'react';
 import {
     Box,
     Button,
-    Chip,
     CircularProgress,
     Snackbar,
     Alert,
@@ -20,7 +19,6 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
-import FolderIcon from '@mui/icons-material/Folder';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import ReportHeader from '@/features/reports/ReportHeader';
@@ -28,9 +26,11 @@ import ReportGallery from '@/features/reports/ReportGallery';
 import ReportIssuesPanel from '@/features/reports/ReportIssuesPanel';
 import ReportActions from '@/features/reports/ReportActions';
 import ReportFixUploader from '@/features/reports/ReportFixUploader';
-import type { ApiResponse, BaseStatus } from '@/app/types/reportTypes';
-import { getStatusColor } from '@/utils/statusColors';
-import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
+import PhotoReportUploader from '@/features/tasks/PhotoReportUploader';
+import type { PhotoReport } from '@/app/types/taskTypes';
+import { usePhotoReports } from '@/hooks/usePhotoReports';
+import ReportSummaryList from '@/features/reports/ReportSummaryList';
+import { getPhotoReportPermissions } from '@/utils/photoReportState';
 
 type ReportPayload = {
     taskId: string;
@@ -47,8 +47,6 @@ type ReportPayload = {
     role?: string | null;
 };
 
-type RelatedReport = BaseStatus;
-
 export default function PhotoReportPage() {
     const { taskId, baseId } = useParams() as { taskId: string; baseId: string };
     const searchParams = useSearchParams();
@@ -57,13 +55,13 @@ export default function PhotoReportPage() {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
     const [report, setReport] = React.useState<ReportPayload | null>(null);
-    const [relatedReports, setRelatedReports] = React.useState<RelatedReport[]>([]);
     const [alertState, setAlertState] = React.useState<{
         open: boolean;
         message: string;
         severity: 'success' | 'error' | 'info' | 'warning';
     }>({ open: false, message: '', severity: 'success' });
     const [fixDialogOpen, setFixDialogOpen] = React.useState(false);
+    const [editDialogOpen, setEditDialogOpen] = React.useState(false);
     const [approveDialogOpen, setApproveDialogOpen] = React.useState(false);
     const [approving, setApproving] = React.useState(false);
     const [downloading, setDownloading] = React.useState(false);
@@ -97,48 +95,47 @@ export default function PhotoReportPage() {
         }
     }, [taskId, baseId, tokenParam]);
 
-    const fetchRelatedReports = React.useCallback(async () => {
-        try {
-            const response = await fetch(token ? `/api/reports?token=${encodeURIComponent(token)}` : '/api/reports');
-            const data = (await response.json().catch(() => null)) as ApiResponse | null;
-            if (!response.ok || !data || !Array.isArray(data.reports)) {
-                setRelatedReports([]);
-                return;
-            }
-            const currentTaskId = taskId.toUpperCase();
-            const taskEntry = data.reports.find(
-                (entry) => entry.taskId?.toUpperCase() === currentTaskId
-            );
-            const baseStatuses = Array.isArray(taskEntry?.baseStatuses)
-                ? taskEntry.baseStatuses
-                : [];
-            const normalizedBaseId = baseId.toLowerCase();
-            const sorted = baseStatuses
-                .filter((base) => base.baseId?.toLowerCase() !== normalizedBaseId)
-                .sort((a, b) => {
-                    const aTime = a.latestStatusChangeDate
-                        ? new Date(a.latestStatusChangeDate).getTime()
-                        : 0;
-                    const bTime = b.latestStatusChangeDate
-                        ? new Date(b.latestStatusChangeDate).getTime()
-                        : 0;
-                    return bTime - aTime;
-                });
-            setRelatedReports(sorted);
-        } catch {
-            setRelatedReports([]);
-        }
-    }, [taskId, baseId, token]);
-
     React.useEffect(() => {
         void fetchReport();
-        void fetchRelatedReports();
-    }, [fetchReport, fetchRelatedReports]);
+    }, [fetchReport]);
 
-    const canApprove = report?.role === 'admin' || report?.role === 'manager' || report?.role === 'viewer';
-    const canEditIssues = canApprove;
-    const canUploadFix = report?.role === 'executor';
-    const canDownload = report?.status === 'Agreed';
+    const { data: reportSummaries, refresh: refreshReportSummaries } = usePhotoReports(taskId, token);
+    const permissions = getPhotoReportPermissions({
+        role: report?.role ?? null,
+        status: report?.status ?? '',
+    });
+    const canApprove = permissions.canApprove;
+    const canEditIssues = permissions.canApprove;
+    const canUploadFix = permissions.canUploadFix;
+    const canDownload = permissions.canDownload;
+    const canEditReport = permissions.canEdit;
+
+    const baseOptions = React.useMemo(() => {
+        const ids = [baseId, ...reportSummaries.map((item) => item.baseId)].filter(Boolean);
+        return Array.from(new Set(ids));
+    }, [baseId, reportSummaries]);
+
+    const editLocations = React.useMemo(
+        () => baseOptions.map((id) => ({ name: id })),
+        [baseOptions]
+    );
+
+    const editPhotoReports = React.useMemo(() => {
+        if (!report) return [];
+        const createdAt = report.createdAt ? new Date(report.createdAt) : new Date();
+        return [
+            {
+                _id: `${report.taskId}-${baseId}`,
+                taskId: report.taskId,
+                baseId,
+                status: report.status,
+                createdAt,
+                files: report.files,
+                fixedFiles: report.fixedFiles,
+                issues: report.issues,
+            },
+        ] as PhotoReport[];
+    }, [report, baseId]);
 
     const handleApproveRequest = () => {
         setApproveDialogOpen(true);
@@ -282,8 +279,10 @@ export default function PhotoReportPage() {
                             status={report.status}
                             canApprove={canApprove}
                             canUploadFix={canUploadFix}
+                            canEdit={canEditReport}
                             onApprove={handleApproveRequest}
                             onUploadFix={() => setFixDialogOpen(true)}
+                            onEdit={() => setEditDialogOpen(true)}
                         />
                         <Box
                             sx={{
@@ -294,56 +293,16 @@ export default function PhotoReportPage() {
                             }}
                         >
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                                Связанные отчеты
+                                Фотоотчеты по задаче
                             </Typography>
-                            {relatedReports.length === 0 ? (
-                                <Typography variant="body2" sx={{ color: 'rgba(15,23,42,0.6)' }}>
-                                    Нет других фотоотчетов по этой задаче.
-                                </Typography>
-                            ) : (
-                                <Stack spacing={1}>
-                                    {relatedReports.map((related) => {
-                                        const normalizedStatus = normalizeStatusTitle(related.status);
-                                        const statusColor = getStatusColor(normalizedStatus);
-                                        const statusChipSx =
-                                            statusColor === 'default'
-                                                ? { fontWeight: 600 }
-                                                : { backgroundColor: statusColor, color: '#fff', fontWeight: 600 };
-                                        return (
-                                        <Button
-                                            key={related.baseId}
-                                            component={Link}
-                                            href={`/reports/${encodeURIComponent(
-                                                taskId
-                                            )}/${encodeURIComponent(related.baseId)}${tokenParam}`}
-                                            variant="outlined"
-                                            sx={{
-                                                justifyContent: 'space-between',
-                                                textTransform: 'none',
-                                                borderRadius: 2,
-                                                px: 2,
-                                                py: 1,
-                                            }}
-                                        >
-                                            <Stack direction="row" spacing={1} alignItems="center">
-                                                <FolderIcon
-                                                    fontSize="small"
-                                                    sx={{ color: statusColor === 'default' ? 'rgba(15,23,42,0.45)' : statusColor }}
-                                                />
-                                                <Typography variant="body2">
-                                                    БС {related.baseId}
-                                                </Typography>
-                                            </Stack>
-                                            <Chip
-                                                label={getStatusLabel(normalizedStatus)}
-                                                size="small"
-                                                sx={statusChipSx}
-                                            />
-                                        </Button>
-                                        );
-                                    })}
-                                </Stack>
-                            )}
+                            <ReportSummaryList
+                                items={reportSummaries}
+                                taskId={taskId}
+                                token={token}
+                                mode="list"
+                                activeBaseId={baseId}
+                                emptyText="Нет фотоотчетов по этой задаче."
+                            />
                         </Box>
                         {canDownload && (
                             <Button
@@ -365,7 +324,24 @@ export default function PhotoReportPage() {
                 onClose={() => setFixDialogOpen(false)}
                 taskId={report.taskId}
                 baseId={baseId}
-                onUploaded={() => void fetchReport()}
+                onUploaded={() => {
+                    void fetchReport();
+                    void refreshReportSummaries();
+                }}
+            />
+            <PhotoReportUploader
+                open={editDialogOpen}
+                onClose={() => setEditDialogOpen(false)}
+                taskId={report.taskId}
+                taskName={report.taskName}
+                bsLocations={editLocations}
+                photoReports={editPhotoReports}
+                onSubmitted={() => {
+                    void fetchReport();
+                    void refreshReportSummaries();
+                }}
+                readOnly={!canEditReport}
+                initialBaseId={baseId}
             />
             <Dialog
                 open={approveDialogOpen}

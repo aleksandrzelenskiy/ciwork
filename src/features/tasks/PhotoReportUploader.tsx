@@ -56,6 +56,7 @@ type PhotoReportUploaderProps = {
     taskName?: string | null;
     bsLocations?: BaseLocation[];
     photoReports?: PhotoReport[];
+    initialBaseId?: string;
     onSubmitted?: () => void;
     readOnly?: boolean;
 };
@@ -78,6 +79,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         taskName,
         bsLocations = [],
         photoReports = [],
+        initialBaseId,
         onSubmitted,
         readOnly = false,
     } = props;
@@ -158,12 +160,56 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setExistingFilesByBase(initialExistingFilesByBase);
     }, [initialExistingFilesByBase, initialFolderState]);
 
+    const loadExistingFiles = React.useCallback(
+        async (baseId: string) => {
+            if (!taskId || !baseId) return;
+            setExistingLoading(true);
+            setExistingError(null);
+            try {
+                const res = await fetch(
+                    `/api/reports/${encodeURIComponent(taskId)}/${encodeURIComponent(baseId)}`,
+                    { cache: 'no-store' }
+                );
+                if (res.status === 404) {
+                    setExistingFilesByBase((prev) => ({ ...prev, [baseId]: [] }));
+                    setFolderState((prev) => ({
+                        ...prev,
+                        [baseId]: { uploaded: false, fileCount: 0 },
+                    }));
+                    return;
+                }
+                const data = (await res.json().catch(() => ({}))) as { files?: string[]; error?: string };
+                if (!res.ok) {
+                    setExistingError(data.error || 'Не удалось загрузить фотоотчет');
+                    return;
+                }
+                const files = Array.isArray(data.files) ? data.files.filter(Boolean) : [];
+                setExistingFilesByBase((prev) => ({ ...prev, [baseId]: files }));
+                setFolderState((prev) => ({
+                    ...prev,
+                    [baseId]: { uploaded: files.length > 0, fileCount: files.length },
+                }));
+            } catch (error) {
+                setExistingError(error instanceof Error ? error.message : 'Ошибка загрузки фотоотчета');
+            } finally {
+                setExistingLoading(false);
+            }
+        },
+        [taskId]
+    );
+
     React.useEffect(() => {
         if (open) {
             setAutoClosed(false);
             resetState();
+            const normalizedBaseId = initialBaseId?.trim();
+            if (normalizedBaseId) {
+                setActiveBase(normalizedBaseId);
+                setView('upload');
+                void loadExistingFiles(normalizedBaseId);
+            }
         }
-    }, [open, resetState]);
+    }, [open, resetState, initialBaseId, loadExistingFiles]);
 
     React.useEffect(() => {
         if (!open && !uploading && !submitLoading) {
@@ -463,44 +509,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setView('upload');
         void loadExistingFiles(baseId);
     };
-
-    const loadExistingFiles = React.useCallback(
-        async (baseId: string) => {
-            if (!taskId || !baseId) return;
-            setExistingLoading(true);
-            setExistingError(null);
-            try {
-                const res = await fetch(
-                    `/api/reports/${encodeURIComponent(taskId)}/${encodeURIComponent(baseId)}`,
-                    { cache: 'no-store' }
-                );
-                if (res.status === 404) {
-                    setExistingFilesByBase((prev) => ({ ...prev, [baseId]: [] }));
-                    setFolderState((prev) => ({
-                        ...prev,
-                        [baseId]: { uploaded: false, fileCount: 0 },
-                    }));
-                    return;
-                }
-                const data = (await res.json().catch(() => ({}))) as { files?: string[]; error?: string };
-                if (!res.ok) {
-                    setExistingError(data.error || 'Не удалось загрузить фотоотчет');
-                    return;
-                }
-                const files = Array.isArray(data.files) ? data.files.filter(Boolean) : [];
-                setExistingFilesByBase((prev) => ({ ...prev, [baseId]: files }));
-                setFolderState((prev) => ({
-                    ...prev,
-                    [baseId]: { uploaded: files.length > 0, fileCount: files.length },
-                }));
-            } catch (error) {
-                setExistingError(error instanceof Error ? error.message : 'Ошибка загрузки фотоотчета');
-            } finally {
-                setExistingLoading(false);
-            }
-        },
-        [taskId]
-    );
 
     const handleDeleteExisting = (baseId: string, url: string) => {
         if (readOnly) return;

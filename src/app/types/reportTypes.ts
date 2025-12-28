@@ -7,6 +7,14 @@ export interface BaseStatus {
   fileCount?: number;
 }
 
+export interface PhotoReportSummary {
+  baseId: string;
+  status: string;
+  filesCount: number;
+  fixedCount: number;
+  updatedAt?: string;
+}
+
 export interface IEvent {
   action: string;
   author: string;

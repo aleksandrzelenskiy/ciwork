@@ -1,24 +1,30 @@
 import { Box, Button, Stack } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 
 type ReportActionsProps = {
     status: string;
     canApprove: boolean;
     canUploadFix: boolean;
+    canEdit: boolean;
     onApprove: () => void;
     onUploadFix: () => void;
+    onEdit: () => void;
 };
 
 export default function ReportActions({
     status,
     canApprove,
     canUploadFix,
+    canEdit,
     onApprove,
     onUploadFix,
+    onEdit,
 }: ReportActionsProps) {
     const showApprove = canApprove && status !== 'Agreed';
     const showFixUpload = canUploadFix && (status === 'Issues' || status === 'Fixed');
+    const showEdit = canEdit && status !== 'Agreed';
 
     return (
         <Box
@@ -30,6 +36,16 @@ export default function ReportActions({
             }}
         >
             <Stack spacing={1.5}>
+                {showEdit && (
+                    <Button
+                        variant="contained"
+                        startIcon={<EditOutlinedIcon />}
+                        onClick={onEdit}
+                        sx={{ textTransform: 'none', borderRadius: 999 }}
+                    >
+                        Редактировать
+                    </Button>
+                )}
                 {showApprove && (
                     <Button
                         variant="contained"
