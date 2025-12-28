@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
         }
 
         const userObjectId = new mongoose.Types.ObjectId(currentUserId);
-        const taskIds = tasks.map((task) => task._id);
+        const taskIds = tasks.map((task: { _id: mongoose.Types.ObjectId }) => task._id);
 
         const myApplications = await ApplicationModel.find({
             taskId: { $in: taskIds },
@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
             });
         });
 
-        const enriched = tasks.map((task) => ({
+        const enriched = tasks.map((task: { _id: mongoose.Types.ObjectId }) => ({
             ...task,
             myApplication: appMap.get(task._id.toString()) || null,
         }));
