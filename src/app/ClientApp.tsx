@@ -46,6 +46,7 @@ import dayjs from 'dayjs';
 export default function ClientApp({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   const [profileSetupCompleted, setProfileSetupCompleted] = useState<boolean | null>(null);
+  const [profileType, setProfileType] = useState<ProfileType | null>(null);
   const [walletAnchor, setWalletAnchor] = useState<null | HTMLElement>(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
@@ -96,6 +97,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
           typeof setupCompleted === 'boolean' ? setupCompleted : null;
 
         setProfileSetupCompleted(normalizedSetupCompleted);
+        setProfileType(resolvedProfileType ?? null);
         const onboardingCompleteRedirect =
           resolvedProfileType === 'employer' ? '/org/new' : '/';
 
@@ -107,6 +109,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
         }
       } else {
         setProfileSetupCompleted(null);
+        setProfileType(null);
       }
     };
 
@@ -201,6 +204,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
   const walletMenuOpen = Boolean(walletAnchor);
   const walletCurrency = normalizeCurrency(walletInfo?.currency);
   const isWalletRuble = walletCurrency === 'RUB';
+  const isContractor = profileType === 'contractor';
 
   type WalletResponse =
       | { balance: number; bonusBalance: number; total: number; currency?: string }
@@ -452,195 +456,201 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                         )}
                       </IconButton>
                       <MessengerTrigger buttonSx={toolbarIconButtonSx} />
-                      <IconButton
-                        color='inherit'
-                        sx={toolbarIconButtonSx}
-                        aria-label='Баланс'
-                        onClick={handleWalletClick}
-                      >
-                        <AccountBalanceWalletIcon fontSize='small' />
-                      </IconButton>
+                      {isContractor ? (
+                        <IconButton
+                          color='inherit'
+                          sx={toolbarIconButtonSx}
+                          aria-label='Баланс'
+                          onClick={handleWalletClick}
+                        >
+                          <AccountBalanceWalletIcon fontSize='small' />
+                        </IconButton>
+                      ) : null}
                       <NotificationBell buttonSx={toolbarIconButtonSx} />
                     </Box>
                   </Toolbar>
                 </AppBar>
-                <MuiMenu
-                  anchorEl={walletAnchor}
-                  open={walletMenuOpen}
-                  onClose={handleWalletClose}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                  slotProps={{
-                    paper: {
-                      sx: {
-                        minWidth: 280,
-                        p: 2,
-                        border: `1px solid ${appBarBorder}`,
-                        boxShadow: appBarShadow,
-                        borderRadius: 3,
-                        backdropFilter: 'blur(18px)',
-                        background: isDarkMode
-                          ? 'linear-gradient(145deg, rgba(17,20,28,0.96), rgba(12,15,23,0.92))'
-                          : 'linear-gradient(145deg, rgba(255,255,255,0.98), rgba(239,244,255,0.96))',
-                      },
-                    },
-                  }}
-                >
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
+                {isContractor ? (
+                  <>
+                    <MuiMenu
+                      anchorEl={walletAnchor}
+                      open={walletMenuOpen}
+                      onClose={handleWalletClose}
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                      slotProps={{
+                        paper: {
+                          sx: {
+                            minWidth: 280,
+                            p: 2,
+                            border: `1px solid ${appBarBorder}`,
+                            boxShadow: appBarShadow,
+                            borderRadius: 3,
+                            backdropFilter: 'blur(18px)',
+                            background: isDarkMode
+                              ? 'linear-gradient(145deg, rgba(17,20,28,0.96), rgba(12,15,23,0.92))'
+                              : 'linear-gradient(145deg, rgba(255,255,255,0.98), rgba(239,244,255,0.96))',
+                          },
+                        },
                       }}
                     >
-                      <Typography variant='subtitle1' sx={{ letterSpacing: '0.02em', fontWeight: 700 }}>
-                        Баланс
-                      </Typography>
-                      <Typography
-                        variant='caption'
-                        color='text.secondary'
-                        sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.08em' }}
-                      >
-                        {walletCurrency}
-                      </Typography>
-                    </Box>
-                    {walletLoading ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <CircularProgress size={18} />
-                        <Typography variant='body2'>Загрузка…</Typography>
-                      </Box>
-                    ) : walletError ? (
-                      <Typography variant='body2' color='error'>
-                        {walletError}
-                      </Typography>
-                    ) : walletInfo ? (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        {isWalletRuble ? (
-                          <RubleAmount
-                            value={walletInfo.total ?? 0}
-                            variant='h4'
-                            fontWeight={800}
-                            iconSize={22}
-                          />
-                        ) : (
-                          <Typography variant='h4' sx={{ lineHeight: 1.1, fontWeight: 700 }}>
-                            {formatForeignCurrency(walletInfo.total ?? 0, walletCurrency)}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <Typography variant='subtitle1' sx={{ letterSpacing: '0.02em', fontWeight: 700 }}>
+                            Баланс
                           </Typography>
-                        )}
-                        <Typography variant='caption' color='text.secondary' sx={{ letterSpacing: '0.03em' }}>
-                          Основной баланс
-                        </Typography>
-                      </Box>
-                    ) : null}
-                    <Divider sx={{ opacity: 0.7 }} />
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1 }}>
-                      <Button
-                        variant='contained'
-                        size='small'
-                        fullWidth
-                        onClick={() => {
-                          handleWalletClose();
-                          void handleOpenTransactions();
-                        }}
-                      >
-                        Транзакции
-                      </Button>
-                      <Button
-                        variant='outlined'
-                        size='small'
-                        fullWidth
-                        onClick={() =>
-                          setWalletError((prev) => prev ?? 'Пополнение скоро будет доступно')
-                        }
-                      >
-                        Пополнить
-                      </Button>
-                    </Box>
-                  </Box>
-                </MuiMenu>
-                <Dialog
-                  open={transactionsOpen}
-                  onClose={handleCloseTransactions}
-                  fullWidth
-                  maxWidth='sm'
-                >
-                  <DialogTitle>Транзакции баланса</DialogTitle>
-                  <DialogContent dividers>
-                    {transactionsLoading ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
-                        <CircularProgress size={18} />
-                        <Typography variant='body2'>Загрузка…</Typography>
-                      </Box>
-                    ) : transactionsError ? (
-                      <Typography color='error'>{transactionsError}</Typography>
-                    ) : transactions.length === 0 ? (
-                      <Typography variant='body2'>Нет транзакций.</Typography>
-                    ) : (
-                      <List>
-                        {transactions.map((tx) => {
-                          const amount = Math.abs(tx.amount ?? 0);
-                          const amountColor = tx.type === 'credit' ? 'success.main' : 'error.main';
-                          const amountSign = tx.type === 'credit' ? 'positive' : 'negative';
-                          const ts =
-                            tx.createdAt && dayjs(tx.createdAt).isValid()
-                              ? dayjs(tx.createdAt).format('DD.MM.YYYY HH:mm')
-                              : '';
-                          return (
-                            <ListItem
-                              key={tx.id}
-                              divider
-                              sx={{ alignItems: 'flex-start', gap: 1 }}
-                            >
-                              <ListItemText
-                                primary={
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      justifyContent: 'space-between',
-                                      gap: 1,
-                                      alignItems: 'center',
-                                    }}
-                                  >
-                                    <Typography
-                                      variant='body1'
-                                      color={amountColor}
-                                      sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 0.25 }}
-                                    >
-                                      {isWalletRuble ? (
-                                        <RubleAmount
-                                          value={amount}
-                                          sign={amountSign}
-                                          variant='body1'
-                                          color='inherit'
-                                          fontWeight={600}
-                                          iconSize={16}
-                                        />
-                                      ) : (
-                                        `${amountSign === 'positive' ? '+ ' : '- '}${formatForeignCurrency(amount, walletCurrency)}`
-                                      )}
-                                    </Typography>
-                                    <Typography variant='caption' color='text.secondary'>
-                                      {ts}
-                                    </Typography>
-                                  </Box>
-                                }
-                                secondary={
-                                  <Typography variant='body2' color='text.secondary'>
-                                    {tx.source}
-                                  </Typography>
-                                }
+                          <Typography
+                            variant='caption'
+                            color='text.secondary'
+                            sx={{ textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.08em' }}
+                          >
+                            {walletCurrency}
+                          </Typography>
+                        </Box>
+                        {walletLoading ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CircularProgress size={18} />
+                            <Typography variant='body2'>Загрузка…</Typography>
+                          </Box>
+                        ) : walletError ? (
+                          <Typography variant='body2' color='error'>
+                            {walletError}
+                          </Typography>
+                        ) : walletInfo ? (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            {isWalletRuble ? (
+                              <RubleAmount
+                                value={walletInfo.total ?? 0}
+                                variant='h4'
+                                fontWeight={800}
+                                iconSize={22}
                               />
-                            </ListItem>
-                          );
-                        })}
-                      </List>
-                    )}
-                  </DialogContent>
-                  <DialogActions>
-                    <Button onClick={handleCloseTransactions}>Закрыть</Button>
-                  </DialogActions>
-                </Dialog>
+                            ) : (
+                              <Typography variant='h4' sx={{ lineHeight: 1.1, fontWeight: 700 }}>
+                                {formatForeignCurrency(walletInfo.total ?? 0, walletCurrency)}
+                              </Typography>
+                            )}
+                            <Typography variant='caption' color='text.secondary' sx={{ letterSpacing: '0.03em' }}>
+                              Основной баланс
+                            </Typography>
+                          </Box>
+                        ) : null}
+                        <Divider sx={{ opacity: 0.7 }} />
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1 }}>
+                          <Button
+                            variant='contained'
+                            size='small'
+                            fullWidth
+                            onClick={() => {
+                              handleWalletClose();
+                              void handleOpenTransactions();
+                            }}
+                          >
+                            Транзакции
+                          </Button>
+                          <Button
+                            variant='outlined'
+                            size='small'
+                            fullWidth
+                            onClick={() =>
+                              setWalletError((prev) => prev ?? 'Пополнение скоро будет доступно')
+                            }
+                          >
+                            Пополнить
+                          </Button>
+                        </Box>
+                      </Box>
+                    </MuiMenu>
+                    <Dialog
+                      open={transactionsOpen}
+                      onClose={handleCloseTransactions}
+                      fullWidth
+                      maxWidth='sm'
+                    >
+                      <DialogTitle>Транзакции баланса</DialogTitle>
+                      <DialogContent dividers>
+                        {transactionsLoading ? (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+                            <CircularProgress size={18} />
+                            <Typography variant='body2'>Загрузка…</Typography>
+                          </Box>
+                        ) : transactionsError ? (
+                          <Typography color='error'>{transactionsError}</Typography>
+                        ) : transactions.length === 0 ? (
+                          <Typography variant='body2'>Нет транзакций.</Typography>
+                        ) : (
+                          <List>
+                            {transactions.map((tx) => {
+                              const amount = Math.abs(tx.amount ?? 0);
+                              const amountColor = tx.type === 'credit' ? 'success.main' : 'error.main';
+                              const amountSign = tx.type === 'credit' ? 'positive' : 'negative';
+                              const ts =
+                                tx.createdAt && dayjs(tx.createdAt).isValid()
+                                  ? dayjs(tx.createdAt).format('DD.MM.YYYY HH:mm')
+                                  : '';
+                              return (
+                                <ListItem
+                                  key={tx.id}
+                                  divider
+                                  sx={{ alignItems: 'flex-start', gap: 1 }}
+                                >
+                                  <ListItemText
+                                    primary={
+                                      <Box
+                                        sx={{
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          gap: 1,
+                                          alignItems: 'center',
+                                        }}
+                                      >
+                                        <Typography
+                                          variant='body1'
+                                          color={amountColor}
+                                          sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 0.25 }}
+                                        >
+                                          {isWalletRuble ? (
+                                            <RubleAmount
+                                              value={amount}
+                                              sign={amountSign}
+                                              variant='body1'
+                                              color='inherit'
+                                              fontWeight={600}
+                                              iconSize={16}
+                                            />
+                                          ) : (
+                                            `${amountSign === 'positive' ? '+ ' : '- '}${formatForeignCurrency(amount, walletCurrency)}`
+                                          )}
+                                        </Typography>
+                                        <Typography variant='caption' color='text.secondary'>
+                                          {ts}
+                                        </Typography>
+                                      </Box>
+                                    }
+                                    secondary={
+                                      <Typography variant='body2' color='text.secondary'>
+                                        {tx.source}
+                                      </Typography>
+                                    }
+                                  />
+                                </ListItem>
+                              );
+                            })}
+                          </List>
+                        )}
+                      </DialogContent>
+                      <DialogActions>
+                        <Button onClick={handleCloseTransactions}>Закрыть</Button>
+                      </DialogActions>
+                    </Dialog>
+                  </>
+                ) : null}
                 {/* Sidebar Drawer */}
                 <Drawer
                   open={open}
