@@ -30,7 +30,7 @@ import PhotoReportUploader from '@/features/tasks/PhotoReportUploader';
 import type { PhotoReport } from '@/app/types/taskTypes';
 import { usePhotoReports } from '@/hooks/usePhotoReports';
 import ReportSummaryList from '@/features/reports/ReportSummaryList';
-import { getPhotoReportPermissions } from '@/utils/photoReportState';
+import { getPhotoReportPermissions, type PhotoReportRole } from '@/utils/photoReportState';
 
 type ReportPayload = {
     taskId: string;
@@ -44,7 +44,7 @@ type ReportPayload = {
     executorName?: string;
     status: string;
     issues: string[];
-    role?: string | null;
+    role?: PhotoReportRole;
 };
 
 export default function PhotoReportPage() {
