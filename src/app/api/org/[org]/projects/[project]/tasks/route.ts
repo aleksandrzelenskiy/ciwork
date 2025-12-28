@@ -240,8 +240,11 @@ export async function POST(
             return NextResponse.json({ error: rel.error }, { status: 404 });
         }
 
-        const orgObjId = new Types.ObjectId(String(rel.orgDoc!._id));
-        const projectObjId = new Types.ObjectId(String(rel.projectDoc!._id));
+        const orgObjId = getDocObjectId(rel.orgDoc);
+        const projectObjId = getDocObjectId(rel.projectDoc);
+        if (!orgObjId || !projectObjId) {
+            return NextResponse.json({ error: 'Org or project not found' }, { status: 404 });
+        }
 
         const {
             taskId,
