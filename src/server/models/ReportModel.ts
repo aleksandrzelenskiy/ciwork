@@ -2,7 +2,7 @@ import 'server-only';
 
 // src/server/models/ReportModel.ts
 import mongoose, { Schema } from 'mongoose';
-import { IReport, IEvent } from '../types/reportTypes';
+import { IReport, IEvent } from '@/app/types/reportTypes';
 
 // Schema for a single history event (Event).
 const EventSchema = new Schema<IEvent>(
