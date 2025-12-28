@@ -8,7 +8,7 @@ import {
     Divider,
     Typography,
 } from '@mui/material';
-import type { Task } from '@/app/types/taskTypes';
+import type { Task, TaskPayment } from '@/app/types/taskTypes';
 import ContractorPaymentDialog from '@/features/dashboards/contractor/ContractorPaymentDialog';
 
 const PAYABLE_STATUSES = new Set(['Agreed']);
@@ -68,10 +68,10 @@ export default function ContractorPaymentSummary() {
         0
     );
 
-    const handlePaymentUpdated = (taskId: string, payment: Task['payment']) => {
+    const handlePaymentUpdated = (taskId: string, payment: TaskPayment | null) => {
         setTasks((prev) =>
             prev.map((task) =>
-                task.taskId === taskId ? { ...task, payment } : task
+                task.taskId === taskId ? { ...task, payment: payment ?? undefined } : task
             )
         );
     };
