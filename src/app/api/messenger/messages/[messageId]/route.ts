@@ -1,6 +1,6 @@
 'use server';
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import ChatMessageModel from '@/server/models/ChatMessageModel';
 import ChatConversationModel from '@/server/models/ChatConversationModel';
 import { GetCurrentUserFromMongoDB } from '@/server-actions/users';
@@ -16,9 +16,10 @@ import { notificationSocketGateway } from '@/server/socket/notificationSocket';
 const CAN_DELETE_ROLES = new Set(['owner', 'org_admin']);
 
 export async function DELETE(
-    _request: Request,
-    { params }: { params: { messageId: string } }
+    _request: NextRequest,
+    { params }: { params: Promise<{ messageId: string }> }
 ) {
+    const { messageId } = await params;
     const currentUser = await GetCurrentUserFromMongoDB();
     if (!currentUser.success) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,12 +30,12 @@ export async function DELETE(
         return NextResponse.json({ error: 'Email отсутствует' }, { status: 400 });
     }
 
-    const messageId = params?.messageId?.trim() ?? '';
-    if (!messageId) {
+    const normalizedMessageId = messageId?.trim() ?? '';
+    if (!normalizedMessageId) {
         return NextResponse.json({ error: 'messageId обязателен' }, { status: 400 });
     }
 
-    const message = await ChatMessageModel.findById(messageId).lean().exec();
+    const message = await ChatMessageModel.findById(normalizedMessageId).lean().exec();
     if (!message) {
         return NextResponse.json({ error: 'Сообщение не найдено' }, { status: 404 });
     }
@@ -58,7 +59,7 @@ export async function DELETE(
         return NextResponse.json({ error: 'Недостаточно прав для удаления' }, { status: 403 });
     }
 
-    await ChatMessageModel.deleteOne({ _id: messageId }).exec();
+    await ChatMessageModel.deleteOne({ _id: normalizedMessageId }).exec();
 
     await ChatConversationModel.findByIdAndUpdate(access.conversationId, {
         $set: { updatedAt: new Date() },
@@ -74,7 +75,7 @@ export async function DELETE(
         access.conversationId,
         {
             conversationId: access.conversationId,
-            messageId,
+            messageId: normalizedMessageId,
             readBy: Array.isArray(message.readBy) ? message.readBy : [],
             deletedBy: userEmail,
         },
@@ -84,7 +85,7 @@ export async function DELETE(
     return NextResponse.json({
         ok: true,
         conversationId: access.conversationId,
-        messageId,
+        messageId: normalizedMessageId,
         readBy: Array.isArray(message.readBy) ? message.readBy : [],
     });
 }
