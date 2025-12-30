@@ -73,6 +73,12 @@ type OrgSetDialogProps = {
 };
 
 const LEGAL_FORMS: OrgSettingsFormValues['legalForm'][] = ['ООО', 'ИП', 'АО', 'ЗАО'];
+const PLAN_OPTIONS: { value: OrgSettingsFormValues['plan']; label: string }[] = [
+    { value: 'basic', label: 'Basic' },
+    { value: 'pro', label: 'Pro' },
+    { value: 'business', label: 'Business' },
+    { value: 'enterprise', label: 'Enterprise' },
+];
 
 export default function OrgSetDialog({
                                          open,
@@ -119,6 +125,38 @@ export default function OrgSetDialog({
     const requisitesTitle = form.organizationName?.trim() || initialValues?.organizationName?.trim() || 'организации';
 
     const isIndividualEntrepreneur = form.legalForm === 'ИП';
+    const requisitesComplete = React.useMemo(() => {
+        const requiredBase = [
+            form.organizationName,
+            form.legalAddress,
+            form.inn,
+            form.ogrn,
+            form.bik,
+            form.bankName,
+            form.correspondentAccount,
+            form.settlementAccount,
+            form.contacts,
+        ];
+        if (!isIndividualEntrepreneur) {
+            requiredBase.push(form.kpp, form.directorTitle, form.directorName, form.directorBasis);
+        }
+        return requiredBase.every((value) => value?.trim());
+    }, [
+        form.organizationName,
+        form.legalAddress,
+        form.inn,
+        form.ogrn,
+        form.bik,
+        form.bankName,
+        form.correspondentAccount,
+        form.settlementAccount,
+        form.contacts,
+        form.kpp,
+        form.directorTitle,
+        form.directorName,
+        form.directorBasis,
+        isIndividualEntrepreneur,
+    ]);
 
     return (
         <Dialog
@@ -157,6 +195,27 @@ export default function OrgSetDialog({
                         }}
                     >
                         <Stack spacing={2}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel id="plan-label">Тариф</InputLabel>
+                                <Select
+                                    labelId="plan-label"
+                                    label="Тариф"
+                                    value={form.plan}
+                                    onChange={(event) =>
+                                        setForm((prev) => ({
+                                            ...prev,
+                                            plan: event.target.value as OrgSettingsFormValues['plan'],
+                                        }))
+                                    }
+                                    disabled={loading}
+                                >
+                                    {PLAN_OPTIONS.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                             <FormControl fullWidth size="small">
                                 <InputLabel id="legal-form-label">Форма</InputLabel>
                                 <Select
@@ -335,12 +394,15 @@ export default function OrgSetDialog({
                                         </Tooltip>
                                     )}
                                 </Typography>
-                                {hasExistingData && <DoneIcon color="success" fontSize="small" />}
+                                {hasExistingData && requisitesComplete && (
+                                    <DoneIcon color="success" fontSize="small" />
+                                )}
                             </Stack>
                         </AccordionSummary>
                         <AccordionDetails>
                             {hasExistingData ? (
                                 <Stack spacing={1.5} sx={{ mt: 1 }}>
+                                    <Typography variant="body2"><strong>Тариф:</strong> {form.plan?.toUpperCase() || '—'}</Typography>
                                     <Typography variant="body2"><strong>Форма:</strong> {form.legalForm || '—'}</Typography>
                                     <Typography variant="body2"><strong>Наименование:</strong> {form.organizationName || '—'}</Typography>
                                     <Typography variant="body2"><strong>Юр. адрес:</strong> {form.legalAddress || '—'}</Typography>

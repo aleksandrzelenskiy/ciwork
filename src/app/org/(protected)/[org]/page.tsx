@@ -11,7 +11,7 @@ import {
     TextField, Button,
     MenuItem,
 } from '@mui/material';
-import Grid from '@mui/material/Grid2';
+import Masonry from '@mui/lab/Masonry';
 import { useTheme } from '@mui/material/styles';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
@@ -26,6 +26,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PreviewIcon from '@mui/icons-material/Preview';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
 import InviteMemberForm from '@/app/workspace/components/InviteMemberForm';
 import ProjectDialog, {
@@ -37,7 +38,6 @@ import OrgSetDialog, {
     defaultOrgSettings,
 } from '@/app/workspace/components/OrgSetDialog';
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
-import OrgWalletCard from '@/features/org/OrgWalletCard';
 import OrgWalletTransactionsDialog from '@/features/org/OrgWalletTransactionsDialog';
 import OrgStorageUsageCard from '@/features/org/OrgStorageUsageCard';
 
@@ -199,6 +199,9 @@ export default function OrgSettingsPage() {
     const [walletTx, setWalletTx] = React.useState<OrgWalletTx[]>([]);
     const [walletTxLoading, setWalletTxLoading] = React.useState(false);
     const [walletTxError, setWalletTxError] = React.useState<string | null>(null);
+    const [projectsDialogOpen, setProjectsDialogOpen] = React.useState(false);
+    const [membersDialogOpen, setMembersDialogOpen] = React.useState(false);
+    const [applicationsDialogOpen, setApplicationsDialogOpen] = React.useState(false);
 
     // диалог приглашения
     const [inviteOpen, setInviteOpen] = React.useState(false);
@@ -841,6 +844,7 @@ export default function OrgSettingsPage() {
         borderBottomLeftRadius: 16,
         borderBottomRightRadius: 16,
     };
+    const masonrySpacing = { xs: 1.5, sm: 2, md: 2.5 };
     const renderStatusPanel = (content: React.ReactNode) => (
         <Box sx={pageWrapperSx}>
             <Box sx={{ maxWidth: 720, mx: 'auto', width: '100%' }}>
@@ -871,6 +875,7 @@ export default function OrgSettingsPage() {
             ? 'Проверяем статус подписки…'
             : 'Добавление участников доступно после активации подписки'
         : 'Пригласить участника';
+    const showNotificationsCard = Boolean(walletError || orgSettingsError);
     const projectsLimitLabel = subscription?.projectsLimit ? String(subscription.projectsLimit) : 'XX';
     const activeProjectsCount = projects.length;
     const seatsLabel = typeof subscription?.seats === 'number' ? subscription.seats : '—';
@@ -930,6 +935,14 @@ export default function OrgSettingsPage() {
         }
         return map;
     })();
+    const invitedMembersCount = React.useMemo(
+        () => members.filter((m) => m.status === 'invited').length,
+        [members]
+    );
+    const activeMembersCount = members.length - invitedMembersCount;
+    const projectPreview = projects.slice(0, 3);
+    const membersPreview = members.slice(0, 3);
+    const applicationsPreview = applications.slice(0, 3);
     if (!accessChecked) {
         return renderStatusPanel(
             <Stack direction="row" spacing={1.5} alignItems="center">
@@ -1071,171 +1084,509 @@ export default function OrgSettingsPage() {
                         </Stack>
                     </Stack>
 
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mt: { xs: 2.5, md: 3 } }}>
-                        <Box sx={statCardSx}>
-                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                Активные проекты
-                            </Typography>
-                            <Typography variant="h4" fontWeight={700} color={textPrimary}>
-                                {activeProjectsCount}
-                            </Typography>
-                            <Typography variant="body2" color={textSecondary}>
-                                из {projectsLimitLabel} доступных
-                            </Typography>
-                        </Box>
-                        <Box sx={statCardSx}>
-                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                Рабочих мест
-                            </Typography>
-                            <Typography variant="h4" fontWeight={700} color={textPrimary}>
-                                {members.length}
-                            </Typography>
-                            <Typography variant="body2" color={textSecondary}>
-                                Всего {seatsLabel}
-                            </Typography>
-                        </Box>
-                        <Box sx={statCardSx}>
-                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                Статус подписки
-                            </Typography>
-                            <Typography variant="h6" fontWeight={600} sx={{ color: subscriptionStatusColor }}>
-                                {subscriptionStatusLabel}
-                            </Typography>
-                            <Typography variant="body2" color={textSecondary}>
-                                {subscriptionStatusDescription}
-                            </Typography>
-                        </Box>
-                        <Box sx={statCardSx}>
-                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                Ваша роль
-                            </Typography>
-                            <Typography variant="h6" fontWeight={600} color={textPrimary}>
-                                {roleLabelRu}
-                            </Typography>
-                            <Typography variant="body2" color={textSecondary}>
-                                Организация {orgName || org}
-                            </Typography>
-                        </Box>
-                        <OrgWalletCard
-                            balance={walletInfo?.balance ?? 0}
-                            currency={walletInfo?.currency ?? 'RUB'}
-                            loading={walletLoading}
-                            onOpen={() => {
-                                setWalletDialogOpen(true);
-                                void fetchWalletTransactions();
-                            }}
-                        />
-                    </Stack>
                 </Box>
 
-                {org && (
-                    <Box sx={{ mt: { xs: 2.5, md: 3 } }}>
-                        <OrgStorageUsageCard
-                            orgSlug={org}
-                            cardSx={cardBaseSx}
-                            cardHeaderSx={cardHeaderSx}
-                            cardContentSx={cardContentSx}
-                        />
-                    </Box>
-                )}
-
-                {subscriptionError && (
-                    <Alert severity="error" sx={{ ...getAlertSx('error'), mb: 2 }}>
-                        Не удалось получить статус подписки: {subscriptionError}
-                    </Alert>
-                )}
-
-                {walletError && (
-                    <Alert severity="warning" sx={{ ...getAlertSx('warning'), mb: 2 }}>
-                        Не удалось загрузить баланс: {walletError}
-                    </Alert>
-                )}
-
-                {!subscriptionError && subscriptionLoading && (
-                    <Alert severity="info" sx={{ ...getAlertSx('info'), mb: 2 }}>
-                        Проверяем статус подписки…
-                    </Alert>
-                )}
-
-                {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && (
-                    <Alert severity="warning" sx={{ ...getAlertSx('warning'), mb: 2 }}>
-                        <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            spacing={2}
-                            alignItems={{ xs: 'flex-start', sm: 'center' }}
-                            justifyContent="space-between"
-                        >
-                            <Box>
-                                <Typography fontWeight={600} color={textPrimary}>
-                                    Подписка не активна.
-                                </Typography>
-                                {isTrialExpired && formattedTrialEnd && (
-                                    <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                        Пробный период завершился {formattedTrialEnd}.
+                <Box
+                    sx={(theme) => ({
+                        width: '100%',
+                        px: {
+                            xs: `calc(${theme.spacing(masonrySpacing.xs)} / 2)`,
+                            sm: `calc(${theme.spacing(masonrySpacing.sm)} / 2)`,
+                            md: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
+                            lg: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
+                        },
+                        boxSizing: 'border-box',
+                    })}
+                >
+                    <Masonry
+                        columns={{ xs: 1, sm: 1, md: 2, lg: 3 }}
+                        spacing={masonrySpacing}
+                        sx={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            '& > *': { boxSizing: 'border-box' },
+                        }}
+                    >
+                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                            <Stack spacing={2}>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Ключевые показатели
                                     </Typography>
-                                )}
-                                <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                    Получите бесплатный пробный период на 10 дней с тарифом PRO.
-                                </Typography>
-                                {!canStartTrial && (
-                                    <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                        Обратитесь к владельцу организации, чтобы активировать подписку.
-                                    </Typography>
-                                )}
-                            </Box>
-                            {canStartTrial && (
-                                <Button
-                                    variant="contained"
-                                    onClick={handleStartTrial}
-                                    disabled={startTrialLoading}
+                                    <Tooltip title="Обновить">
+                                        <span>
+                                            <IconButton onClick={handleRefreshClick} disabled={projectsLoading || loading}>
+                                                <RefreshIcon />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                </Stack>
+                                <Box
                                     sx={{
-                                        ...actionButtonBaseSx,
-                                        px: { xs: 2.25, md: 2.75 },
-                                        py: 0.9,
-                                        backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
-                                        color: '#2f1000',
+                                        display: 'grid',
+                                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+                                        gap: 1.5,
                                     }}
                                 >
-                                    {startTrialLoading ? 'Запускаем…' : 'Активировать'}
-                                </Button>
-                            )}
-                        </Stack>
-                    </Alert>
-                )}
+                                    <Box sx={statCardSx}>
+                                        <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                                            Активные проекты
+                                        </Typography>
+                                        <Typography variant="h4" fontWeight={700} color={textPrimary}>
+                                            {activeProjectsCount}
+                                        </Typography>
+                                        <Typography variant="body2" color={textSecondary}>
+                                            из {projectsLimitLabel} доступных
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={statCardSx}>
+                                        <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                                            Рабочих мест
+                                        </Typography>
+                                        <Typography variant="h4" fontWeight={700} color={textPrimary}>
+                                            {members.length}
+                                        </Typography>
+                                        <Typography variant="body2" color={textSecondary}>
+                                            Всего {seatsLabel}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={statCardSx}>
+                                        <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                                            Статус подписки
+                                        </Typography>
+                                        <Typography variant="h6" fontWeight={600} sx={{ color: subscriptionStatusColor }}>
+                                            {subscriptionStatusLabel}
+                                        </Typography>
+                                        <Typography variant="body2" color={textSecondary}>
+                                            {subscriptionStatusDescription}
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={statCardSx}>
+                                        <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                                            Ваша роль
+                                        </Typography>
+                                        <Typography variant="h6" fontWeight={600} color={textPrimary}>
+                                            {roleLabelRu}
+                                        </Typography>
+                                        <Typography variant="body2" color={textSecondary}>
+                                            Организация {orgName || org}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                                <Stack spacing={1.5}>
+                                    {subscriptionError && (
+                                        <Alert severity="error" sx={getAlertSx('error')}>
+                                            Не удалось получить статус подписки: {subscriptionError}
+                                        </Alert>
+                                    )}
+                                    {!subscriptionError && subscriptionLoading && (
+                                        <Alert severity="info" sx={getAlertSx('info')}>
+                                            Проверяем статус подписки…
+                                        </Alert>
+                                    )}
+                                    {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && (
+                                        <Alert severity="warning" sx={getAlertSx('warning')}>
+                                            <Stack
+                                                direction={{ xs: 'column', sm: 'row' }}
+                                                spacing={2}
+                                                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                                justifyContent="space-between"
+                                            >
+                                                <Box>
+                                                    <Typography fontWeight={600} color={textPrimary}>
+                                                        Подписка не активна.
+                                                    </Typography>
+                                                    {isTrialExpired && formattedTrialEnd && (
+                                                        <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
+                                                            Пробный период завершился {formattedTrialEnd}.
+                                                        </Typography>
+                                                    )}
+                                                    <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
+                                                        Получите бесплатный пробный период на 10 дней с тарифом PRO.
+                                                    </Typography>
+                                                    {!canStartTrial && (
+                                                        <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
+                                                            Обратитесь к владельцу организации, чтобы активировать подписку.
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                                {canStartTrial && (
+                                                    <Button
+                                                        variant="contained"
+                                                        onClick={handleStartTrial}
+                                                        disabled={startTrialLoading}
+                                                        sx={{
+                                                            ...actionButtonBaseSx,
+                                                            px: { xs: 2.25, md: 2.75 },
+                                                            py: 0.9,
+                                                            backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
+                                                            color: '#2f1000',
+                                                        }}
+                                                    >
+                                                        {startTrialLoading ? 'Запускаем…' : 'Активировать'}
+                                                    </Button>
+                                                )}
+                                            </Stack>
+                                        </Alert>
+                                    )}
+                                    {!subscriptionError && !subscriptionLoading && isTrialActive && (
+                                        <Alert severity="info" sx={getAlertSx('info')}>
+                                            Пробный период активен до {formattedTrialEnd ?? '—'}
+                                            {typeof trialDaysLeft === 'number' && (
+                                                <Typography component="span" sx={{ ml: 0.5 }}>
+                                                    (осталось {trialDaysLeft} дн.)
+                                                </Typography>
+                                            )}
+                                        </Alert>
+                                    )}
+                                </Stack>
+                            </Stack>
+                        </Box>
 
-                {!subscriptionError && !subscriptionLoading && isTrialActive && (
-                    <Alert severity="info" sx={{ ...getAlertSx('info'), mb: 2 }}>
-                        Пробный период активен до {formattedTrialEnd ?? '—'}
-                        {typeof trialDaysLeft === 'number' && (
-                            <Typography component="span" sx={{ ml: 0.5 }}>
-                                (осталось {trialDaysLeft} дн.)
-                            </Typography>
+                        {showNotificationsCard && (
+                            <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                                <Stack spacing={1.5}>
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Уведомления
+                                    </Typography>
+                                    {walletError && (
+                                        <Alert severity="warning" sx={getAlertSx('warning')}>
+                                            Не удалось загрузить баланс: {walletError}
+                                        </Alert>
+                                    )}
+                                    {orgSettingsError && (
+                                        <Alert
+                                            severity="warning"
+                                            variant="outlined"
+                                            sx={getAlertSx('warning')}
+                                            action={
+                                                <Button
+                                                    color="inherit"
+                                                    size="small"
+                                                    onClick={() => void fetchOrgSettings()}
+                                                    disabled={orgSettingsLoading}
+                                                >
+                                                    Повторить
+                                                </Button>
+                                            }
+                                        >
+                                            Не удалось загрузить реквизиты: {orgSettingsError}
+                                        </Alert>
+                                    )}
+                                </Stack>
+                            </Box>
                         )}
-                    </Alert>
-                )}
-                {orgSettingsError && (
-                    <Alert
-                        severity="warning"
-                        variant="outlined"
-                        sx={{ ...getAlertSx('warning'), mb: 2 }}
-                        action={
-                            <Button
-                                color="inherit"
-                                size="small"
-                                onClick={() => void fetchOrgSettings()}
-                                disabled={orgSettingsLoading}
-                            >
-                                Повторить
-                            </Button>
-                        }
-                    >
-                        Не удалось загрузить реквизиты: {orgSettingsError}
-                    </Alert>
-                )}
 
-            <Grid container spacing={2}>
-                {/* ПРОЕКТЫ */}
-                <Grid size={{ xs: 12 }}>
+                        {org && (
+                            <Box>
+                                <OrgStorageUsageCard
+                                    orgSlug={org}
+                                    cardSx={cardBaseSx}
+                                    cardHeaderSx={cardHeaderSx}
+                                    cardContentSx={cardContentSx}
+                                />
+                            </Box>
+                        )}
+
+                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                            <Stack spacing={1.5}>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <AccountBalanceWalletIcon fontSize="small" />
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Баланс организации
+                                    </Typography>
+                                </Stack>
+                                <Typography variant="h4" fontWeight={700}>
+                                    {walletLoading
+                                        ? '—'
+                                        : `${(walletInfo?.balance ?? 0).toFixed(2)} ${walletInfo?.currency ?? 'RUB'}`}
+                                </Typography>
+                                <Typography variant="body2" color={textSecondary}>
+                                    Списания за хранение рассчитываются почасово.
+                                </Typography>
+                                <Button
+                                    variant="outlined"
+                                    onClick={() => {
+                                        setWalletDialogOpen(true);
+                                        void fetchWalletTransactions();
+                                    }}
+                                    sx={{ borderRadius: 999, textTransform: 'none', alignSelf: 'flex-start' }}
+                                >
+                                    История операций
+                                </Button>
+                            </Stack>
+                        </Box>
+
+                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                            <Stack spacing={2}>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Проекты
+                                    </Typography>
+                                    <Stack direction="row" spacing={1}>
+                                        <Tooltip title="Открыть список">
+                                            <span>
+                                                <IconButton onClick={() => setProjectsDialogOpen(true)}>
+                                                    <PreviewIcon />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                        <Tooltip title="К проектам">
+                                            <span>
+                                                <IconButton onClick={goToProjectsPage}>
+                                                    <DriveFileMoveIcon />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Stack>
+                                </Stack>
+                                <Typography variant="body2" color={textSecondary}>
+                                    Активных проектов: {activeProjectsCount} из {projectsLimitLabel}.
+                                </Typography>
+                                {projectsLoading ? (
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <CircularProgress size={18} />
+                                        <Typography variant="body2">Загружаем проекты…</Typography>
+                                    </Stack>
+                                ) : projectPreview.length > 0 ? (
+                                    <Stack spacing={1}>
+                                        {projectPreview.map((project) => (
+                                            <Box
+                                                key={project._id}
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    p: 1.25,
+                                                    border: `1px solid ${cardBorder}`,
+                                                    backgroundColor: isDarkMode
+                                                        ? 'rgba(12,16,26,0.7)'
+                                                        : 'rgba(255,255,255,0.7)',
+                                                }}
+                                            >
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {project.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {project.key} · {project.regionCode || '—'}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Stack>
+                                ) : (
+                                    <Typography variant="body2" color={textSecondary}>
+                                        Проектов пока нет.
+                                    </Typography>
+                                )}
+                                <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                                    <Button
+                                        variant="contained"
+                                        onClick={() => setProjectsDialogOpen(true)}
+                                        sx={{ borderRadius: 999, textTransform: 'none' }}
+                                    >
+                                        Открыть список
+                                    </Button>
+                                    <Tooltip title={creationTooltip} disableHoverListener={!disableCreationActions}>
+                                        <span>
+                                            <Button
+                                                variant="outlined"
+                                                onClick={() => openProjectDialog()}
+                                                disabled={disableCreationActions}
+                                                sx={{ borderRadius: 999, textTransform: 'none' }}
+                                            >
+                                                Создать проект
+                                            </Button>
+                                        </span>
+                                    </Tooltip>
+                                </Stack>
+                            </Stack>
+                        </Box>
+
+                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                            <Stack spacing={2}>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Участники
+                                    </Typography>
+                                    <Stack direction="row" spacing={1}>
+                                        <Tooltip title="Открыть список">
+                                            <span>
+                                                <IconButton onClick={() => setMembersDialogOpen(true)}>
+                                                    <PreviewIcon />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                        <Tooltip title={inviteTooltip}>
+                                            <span>
+                                                <IconButton
+                                                    onClick={() => {
+                                                        if (disableCreationActions) return;
+                                                        setInviteExistingEmails(members.map((m) => m.userEmail.toLowerCase()));
+                                                        setInviteOpen(true);
+                                                    }}
+                                                    disabled={disableCreationActions}
+                                                >
+                                                    <PersonAddIcon />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Stack>
+                                </Stack>
+                                <Typography variant="body2" color={textSecondary}>
+                                    Активных: {activeMembersCount}, приглашённых: {invitedMembersCount}.
+                                </Typography>
+                                {loading ? (
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <CircularProgress size={18} />
+                                        <Typography variant="body2">Загружаем участников…</Typography>
+                                    </Stack>
+                                ) : membersPreview.length > 0 ? (
+                                    <Stack spacing={1}>
+                                        {membersPreview.map((member) => (
+                                            <Box
+                                                key={member._id}
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    p: 1.25,
+                                                    border: `1px solid ${cardBorder}`,
+                                                    backgroundColor: isDarkMode
+                                                        ? 'rgba(12,16,26,0.7)'
+                                                        : 'rgba(255,255,255,0.7)',
+                                                }}
+                                            >
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {member.userName || 'Без имени'}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {member.userEmail} · {roleLabel(member.role)}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Stack>
+                                ) : (
+                                    <Typography variant="body2" color={textSecondary}>
+                                        Участников пока нет.
+                                    </Typography>
+                                )}
+                                <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                                    <Button
+                                        variant="contained"
+                                        onClick={() => setMembersDialogOpen(true)}
+                                        sx={{ borderRadius: 999, textTransform: 'none' }}
+                                    >
+                                        Открыть список
+                                    </Button>
+                                    <Tooltip title={inviteTooltip} disableHoverListener={!disableCreationActions}>
+                                        <span>
+                                            <Button
+                                                variant="outlined"
+                                                onClick={() => {
+                                                    if (disableCreationActions) return;
+                                                    setInviteExistingEmails(members.map((m) => m.userEmail.toLowerCase()));
+                                                    setInviteOpen(true);
+                                                }}
+                                                disabled={disableCreationActions}
+                                                sx={{ borderRadius: 999, textTransform: 'none' }}
+                                            >
+                                                Пригласить
+                                            </Button>
+                                        </span>
+                                    </Tooltip>
+                                </Stack>
+                            </Stack>
+                        </Box>
+
+                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                            <Stack spacing={2}>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Отклики на задачи
+                                    </Typography>
+                                    <Stack direction="row" spacing={1}>
+                                        <Tooltip title="Открыть список">
+                                            <span>
+                                                <IconButton onClick={() => setApplicationsDialogOpen(true)}>
+                                                    <PreviewIcon />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                        <Tooltip title="Обновить">
+                                            <span>
+                                                <IconButton onClick={() => void fetchApplications()} disabled={applicationsLoading}>
+                                                    <RefreshIcon />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Stack>
+                                </Stack>
+                                <Typography variant="body2" color={textSecondary}>
+                                    Всего заявок: {applications.length}.
+                                </Typography>
+                                {applicationsLoading ? (
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <CircularProgress size={18} />
+                                        <Typography variant="body2">Загружаем отклики…</Typography>
+                                    </Stack>
+                                ) : applicationsPreview.length > 0 ? (
+                                    <Stack spacing={1}>
+                                        {applicationsPreview.map((app) => (
+                                            <Box
+                                                key={app._id}
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    p: 1.25,
+                                                    border: `1px solid ${cardBorder}`,
+                                                    backgroundColor: isDarkMode
+                                                        ? 'rgba(12,16,26,0.7)'
+                                                        : 'rgba(255,255,255,0.7)',
+                                                }}
+                                            >
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {app.taskName}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {app.contractorName || app.contractorEmail || 'Без кандидата'} · {app.status}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Stack>
+                                ) : (
+                                    <Typography variant="body2" color={textSecondary}>
+                                        Откликов пока нет.
+                                    </Typography>
+                                )}
+                                <Button
+                                    variant="contained"
+                                    onClick={() => setApplicationsDialogOpen(true)}
+                                    sx={{ borderRadius: 999, textTransform: 'none', alignSelf: 'flex-start' }}
+                                >
+                                    Открыть список
+                                </Button>
+                            </Stack>
+                        </Box>
+                    </Masonry>
+                </Box>
+
+            {/* Диалоги таблиц */}
+            <Dialog
+                open={projectsDialogOpen}
+                onClose={() => setProjectsDialogOpen(false)}
+                maxWidth="lg"
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: 4,
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                    Проекты организации
+                </DialogTitle>
+                <DialogContent dividers sx={{ backgroundColor: cardContentSx.backgroundColor }}>
                     <Card variant="outlined" sx={cardBaseSx}>
                         <CardHeader
                             sx={cardHeaderSx}
@@ -1369,8 +1720,8 @@ export default function OrgSettingsPage() {
                                                     <Typography color="text.secondary">
                                                         Проектов пока нет. Чтобы создать нажмите
                                                         <IconButton onClick={() => openProjectDialog()} disabled={disableCreationActions}>
-                                                        <CreateNewFolderIcon />
-                                                    </IconButton>
+                                                            <CreateNewFolderIcon />
+                                                        </IconButton>
                                                     </Typography>
                                                 </TableCell>
                                             </TableRow>
@@ -1380,10 +1731,38 @@ export default function OrgSettingsPage() {
                             )}
                         </CardContent>
                     </Card>
-                </Grid>
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
+                        borderTop: `1px solid ${cardBorder}`,
+                    }}
+                >
+                    <Button onClick={() => setProjectsDialogOpen(false)}>Закрыть</Button>
+                </DialogActions>
+            </Dialog>
 
-                {/* УЧАСТНИКИ */}
-                <Grid size={{ xs: 12 }}>
+            <Dialog
+                open={membersDialogOpen}
+                onClose={() => setMembersDialogOpen(false)}
+                maxWidth="lg"
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: 4,
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                    Участники организации
+                </DialogTitle>
+                <DialogContent dividers sx={{ backgroundColor: cardContentSx.backgroundColor }}>
                     <Card variant="outlined" sx={cardBaseSx}>
                         <CardHeader
                             sx={cardHeaderSx}
@@ -1406,7 +1785,6 @@ export default function OrgSettingsPage() {
                                             <IconButton
                                                 onClick={() => {
                                                     if (disableCreationActions) return;
-                                                    // фиксируем e-mail'ы на момент открытия
                                                     setInviteExistingEmails(members.map((m) => m.userEmail.toLowerCase()));
                                                     setInviteOpen(true);
                                                 }}
@@ -1530,9 +1908,9 @@ export default function OrgSettingsPage() {
 
                                                         {m.role !== 'owner' && (
                                                             <Tooltip title="Удалить участника">
-                                                            <IconButton onClick={() => openRemoveDialog(m)}>
-                                                                <DeleteOutlineOutlinedIcon fontSize="small" />
-                                                            </IconButton>
+                                                                <IconButton onClick={() => openRemoveDialog(m)}>
+                                                                    <DeleteOutlineOutlinedIcon fontSize="small" />
+                                                                </IconButton>
                                                             </Tooltip>
                                                         )}
                                                     </TableCell>
@@ -1554,10 +1932,38 @@ export default function OrgSettingsPage() {
                             )}
                         </CardContent>
                     </Card>
-                </Grid>
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
+                        borderTop: `1px solid ${cardBorder}`,
+                    }}
+                >
+                    <Button onClick={() => setMembersDialogOpen(false)}>Закрыть</Button>
+                </DialogActions>
+            </Dialog>
 
-                {/* ОТКЛИКИ */}
-                <Grid size={{ xs: 12 }}>
+            <Dialog
+                open={applicationsDialogOpen}
+                onClose={() => setApplicationsDialogOpen(false)}
+                maxWidth="lg"
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: 4,
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                    Отклики на публичные задачи
+                </DialogTitle>
+                <DialogContent dividers sx={{ backgroundColor: cardContentSx.backgroundColor }}>
                     <Card variant="outlined" sx={cardBaseSx}>
                         <CardHeader
                             sx={cardHeaderSx}
@@ -1687,8 +2093,16 @@ export default function OrgSettingsPage() {
                             )}
                         </CardContent>
                     </Card>
-                </Grid>
-            </Grid>
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
+                        borderTop: `1px solid ${cardBorder}`,
+                    }}
+                >
+                    <Button onClick={() => setApplicationsDialogOpen(false)}>Закрыть</Button>
+                </DialogActions>
+            </Dialog>
 
             {/* Диалог добавления участника */}
             <Dialog
