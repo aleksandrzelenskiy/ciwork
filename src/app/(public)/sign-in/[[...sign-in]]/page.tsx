@@ -7,26 +7,26 @@ export default function Page() {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-signin bg-cover bg-center bg-no-repeat">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12 lg:flex-row lg:items-center">
-                <section className="flex flex-1 flex-col justify-center text-white">
-                    <span className="text-xs uppercase tracking-[0.4em] text-white/70">
+                <section className="flex flex-1 flex-col justify-center rounded-3xl border border-white/10 bg-white/5 p-8 text-white shadow-lg backdrop-blur-sm">
+                    <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/80">
                         CI Work
                     </span>
-                    <h1 className="mt-4 text-4xl font-semibold leading-tight text-emerald-200 drop-shadow md:text-5xl">
+                    <h1 className="mt-4 inline-flex w-fit rounded-2xl bg-white/10 px-4 py-2 text-4xl font-semibold leading-tight text-white drop-shadow-md md:text-5xl">
                         АВТОРИЗАЦИЯ
                     </h1>
-                    <p className="mt-4 max-w-md border-l-2 border-emerald-300/70 pl-4 text-base text-white/90">
+                    <p className="mt-4 max-w-md border-l-2 border-white/40 pl-4 text-base font-medium text-white/90">
                         Управляйте задачами, отчётами и коммуникацией в одном
                         месте. Войдите, чтобы продолжить работу с проектами и
                         командой.
                     </p>
-                    <div className="mt-8 flex flex-wrap gap-3 text-xs text-emerald-100">
-                        <span className="rounded-full border border-emerald-200/40 bg-emerald-400/10 px-3 py-1 shadow-sm">
+                    <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/90">
+                        <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 shadow-sm">
                             Контроль задач
                         </span>
-                        <span className="rounded-full border border-emerald-200/40 bg-emerald-400/10 px-3 py-1 shadow-sm">
+                        <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 shadow-sm">
                             Статусы в реальном времени
                         </span>
-                        <span className="rounded-full border border-emerald-200/40 bg-emerald-400/10 px-3 py-1 shadow-sm">
+                        <span className="rounded-full border border-white/30 bg-white/10 px-3 py-1 shadow-sm">
                             Безопасный доступ
                         </span>
                     </div>
