@@ -261,7 +261,7 @@ export async function POST(request: Request) {
         const unreadCount = await getUnreadCount(String(conversation._id), email);
         return NextResponse.json({
             ok: true,
-            conversation: toDTO(conversation.toObject(), unreadCount),
+            conversation: toDTO(conversation.toObject(), unreadCount, null),
         });
     }
 
@@ -305,7 +305,7 @@ export async function POST(request: Request) {
         const unreadCount = await getUnreadCount(String(conversation._id), email);
         return NextResponse.json({
             ok: true,
-            conversation: toDTO(conversation.toObject(), unreadCount),
+            conversation: toDTO(conversation.toObject(), unreadCount, null),
         });
     }
 
@@ -358,7 +358,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             ok: true,
-            conversation: toDTO(conversation.toObject(), unreadCount, {
+            conversation: toDTO(conversation.toObject(), unreadCount, null, {
                 counterpartEmail: targetEmail,
                 counterpartName: targetUser?.name || formatNameFromEmail(targetEmail),
                 counterpartAvatar: targetUser?.profilePic || undefined,
