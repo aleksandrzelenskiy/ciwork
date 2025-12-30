@@ -21,7 +21,10 @@ export const normalizeEmail = (value?: string | null) =>
     typeof value === 'string' ? value.trim().toLowerCase() : '';
 
 export type ChatMessageLike = Partial<
-    Pick<ChatMessage, 'conversationId' | 'orgId' | 'senderEmail' | 'senderName' | 'text' | 'readBy'>
+    Pick<
+        ChatMessage,
+        'conversationId' | 'orgId' | 'senderEmail' | 'senderName' | 'text' | 'readBy' | 'attachments'
+    >
 > & {
     _id?: unknown;
     createdAt?: unknown;
@@ -35,6 +38,7 @@ export const chatMessageToDTO = (message: ChatMessageLike): MessengerMessageDTO 
     senderName: message.senderName,
     text: message.text ?? '',
     readBy: Array.isArray(message.readBy) ? message.readBy : [],
+    attachments: Array.isArray(message.attachments) ? message.attachments : [],
     createdAt: message.createdAt ? new Date(message.createdAt as string | number | Date).toISOString() : new Date().toISOString(),
 });
 

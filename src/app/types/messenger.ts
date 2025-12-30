@@ -9,6 +9,7 @@ export type MessengerConversationDTO = {
     participants: string[];
     unreadCount: number;
     lastMessagePreview?: string;
+    lastMessageAttachment?: MessengerAttachmentDTO;
     updatedAt?: string;
     counterpartName?: string;
     counterpartAvatar?: string;
@@ -26,6 +27,18 @@ export type MessengerMessageDTO = {
     text: string;
     readBy: string[];
     createdAt: string;
+    attachments?: MessengerAttachmentDTO[];
+};
+
+export type MessengerAttachmentDTO = {
+    url: string;
+    kind: 'image' | 'video';
+    contentType?: string;
+    size?: number;
+    width?: number;
+    height?: number;
+    posterUrl?: string;
+    filename?: string;
 };
 
 export type ChatServerToClientEvents = {

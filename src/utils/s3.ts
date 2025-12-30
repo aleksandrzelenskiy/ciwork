@@ -177,6 +177,31 @@ export function buildTaskFileKey(
   return path.posix.join(...parts);
 }
 
+export type MessengerMediaKind = 'image' | 'video';
+
+export function buildMessengerMediaKey(params: {
+  orgSlug?: string;
+  orgId?: string;
+  conversationId: string;
+  filename: string;
+}): string {
+  const safeOrg = params.orgSlug ? sanitizePathSegment(params.orgSlug) : '';
+  const safeOrgId = params.orgId ? sanitizePathSegment(params.orgId) : '';
+  const safeConversationId = sanitizePathSegment(params.conversationId);
+  const safeName = normalizeFilename(params.filename);
+  const parts = ['uploads'];
+
+  if (safeOrg) {
+    parts.push(safeOrg);
+  } else if (safeOrgId) {
+    parts.push(`org-${safeOrgId}`);
+  }
+
+  parts.push('messenger', safeConversationId, safeName);
+
+  return path.posix.join(...parts);
+}
+
 /**
  * Загрузка файла задачи в S3/локально.
  * subfolder — один из предопределённых подкаталогов;

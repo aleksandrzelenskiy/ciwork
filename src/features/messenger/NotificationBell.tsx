@@ -199,6 +199,7 @@ const fetchSocketToken = async (): Promise<string> => {
     const res = await fetch('/api/notifications/socket-auth', {
         method: 'GET',
         cache: 'no-store',
+        credentials: 'include',
     });
     const payload = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -458,7 +459,7 @@ export default function NotificationBell({ buttonSx }: NotificationBellProps) {
         const connectSocket = async () => {
             try {
                 setRealtimeError(null);
-                await fetch('/api/socket', { cache: 'no-store' });
+                await fetch('/api/socket', { cache: 'no-store', credentials: 'include' });
                 if (cancelled) return;
                 const token = await fetchSocketToken();
                 if (cancelled) return;
@@ -483,9 +484,21 @@ export default function NotificationBell({ buttonSx }: NotificationBellProps) {
                 socketInstance.on('notification:deleted', handleRealtimeDeleted);
                 socketInstance.on('notification:unread', handleRealtimeUnreadSummary);
                 socketInstance.on('connect', () => setRealtimeError(null));
-                socketInstance.on('connect_error', (error) => {
+                let refreshing = false;
+                socketInstance.on('connect_error', async (error: { message?: string }) => {
                     console.error('notifications socket connect_error', error);
-                    setRealtimeError('Не удалось подключиться к уведомлениям.');
+                    const message = error?.message?.toUpperCase?.() ?? '';
+                    if (refreshing || (!message.includes('UNAUTHORIZED') && !message.includes('AUTH_FAILED'))) {
+                        setRealtimeError('Не удалось подключиться к уведомлениям.');
+                        return;
+                    }
+                    refreshing = true;
+                    const freshToken = await fetchSocketToken();
+                    if (freshToken) {
+                        socketInstance.auth = { token: freshToken };
+                        socketInstance.connect();
+                    }
+                    refreshing = false;
                 });
             } catch (error) {
                 if (!cancelled) {

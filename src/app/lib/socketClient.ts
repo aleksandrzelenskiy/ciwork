@@ -51,8 +51,20 @@ const createSocketClient = async (): Promise<Socket> => {
             socketInstance = null;
         }
     });
-    socket.on('connect_error', () => {
+    let refreshing = false;
+    socket.on('connect_error', async (error: { message?: string }) => {
         socketInstance = null;
+        const message = error?.message?.toUpperCase?.() ?? '';
+        if (refreshing || (!message.includes('UNAUTHORIZED') && !message.includes('AUTH_FAILED'))) {
+            return;
+        }
+        refreshing = true;
+        const freshToken = await fetchSocketToken();
+        if (freshToken) {
+            socket.auth = { token: freshToken };
+            socket.connect();
+        }
+        refreshing = false;
     });
 
     return socket;

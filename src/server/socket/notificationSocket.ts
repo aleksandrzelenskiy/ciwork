@@ -14,6 +14,7 @@ import type {
 import { verifySocketToken } from '@/server/socket/token';
 import UserModel from '@/server/models/UserModel';
 import dbConnect from '@/server/db/mongoose';
+import { requireConversationAccess } from '@/server/messenger/helpers';
 
 const USER_ROOM_PREFIX = 'notification:user:';
 const TASK_ROOM_PREFIX = 'task:';
@@ -39,7 +40,10 @@ export class NotificationSocketGateway {
         string,
         { lastHeartbeat: number; email?: string; isOnline: boolean; lastActive?: Date | null }
     >();
-    private userEmailCache = new Map<string, { email?: string; lastActive?: Date | null }>();
+    private userMetaCache = new Map<
+        string,
+        { email?: string; lastActive?: Date | null; platformRole?: string | null }
+    >();
 
     public get path() {
         return NOTIFICATIONS_SOCKET_PATH;
@@ -66,7 +70,7 @@ export class NotificationSocketGateway {
                 email: record.email,
             };
         }
-        const cached = this.userEmailCache.get(userId) ?? (await this.hydrateUserMeta(userId));
+        const cached = this.userMetaCache.get(userId) ?? (await this.hydrateUserMeta(userId));
         return {
             isOnline: false,
             lastActive: cached?.lastActive,
@@ -116,9 +120,12 @@ export class NotificationSocketGateway {
                 if (normalized) socket.leave(normalized);
             });
 
-            socket.on('chat:join', ({ conversationId }: { conversationId?: string }) => {
+            socket.on('chat:join', async ({ conversationId }: { conversationId?: string }) => {
                 const room = this.chatRoomName(conversationId);
-                if (room) socket.join(room);
+                if (!room) return;
+                const hasAccess = await this.ensureChatAccess(socket, conversationId);
+                if (!hasAccess) return;
+                socket.join(room);
             });
 
             socket.on('chat:leave', ({ conversationId }: { conversationId?: string }) => {
@@ -128,7 +135,7 @@ export class NotificationSocketGateway {
 
             socket.on(
                 'chat:typing',
-                ({
+                async ({
                     conversationId,
                     userEmail,
                     userName,
@@ -136,6 +143,8 @@ export class NotificationSocketGateway {
                 }: { conversationId?: string; userEmail?: string; userName?: string; isTyping?: boolean }) => {
                     const room = this.chatRoomName(conversationId);
                     if (!room) return;
+                    const hasAccess = await this.ensureChatAccess(socket, conversationId);
+                    if (!hasAccess) return;
                     socket.join(room);
                     socket.to(room).emit('chat:typing', {
                         conversationId,
@@ -240,18 +249,27 @@ export class NotificationSocketGateway {
     }
 
     private async hydrateUserMeta(userId: string) {
-        if (this.userEmailCache.has(userId)) {
-            return this.userEmailCache.get(userId);
+        if (this.userMetaCache.has(userId)) {
+            return this.userMetaCache.get(userId);
         }
         try {
             await dbConnect();
-            const user = await UserModel.findById(userId, { email: 1, lastActive: 1 }).lean().exec();
-            const meta = { email: user?.email, lastActive: user?.lastActive ?? null };
-            this.userEmailCache.set(userId, meta);
+            const user = await UserModel.findById(
+                userId,
+                { email: 1, lastActive: 1, platformRole: 1 }
+            )
+                .lean()
+                .exec();
+            const meta = {
+                email: user?.email,
+                lastActive: user?.lastActive ?? null,
+                platformRole: user?.platformRole ?? null,
+            };
+            this.userMetaCache.set(userId, meta);
             return meta;
         } catch (error) {
             console.error('[notifications socket] hydrateUserMeta failed', error);
-            return { email: undefined, lastActive: null };
+            return { email: undefined, lastActive: null, platformRole: null };
         }
     }
 
@@ -300,10 +318,39 @@ export class NotificationSocketGateway {
             )
                 .lean()
                 .exec();
-            const cached = this.userEmailCache.get(userId) ?? {};
-            this.userEmailCache.set(userId, { ...cached, lastActive });
+            const cached = this.userMetaCache.get(userId) ?? {};
+            this.userMetaCache.set(userId, { ...cached, lastActive });
         } catch (error) {
             console.error('[notifications socket] persistLastActive failed', error);
+        }
+    }
+
+    private async ensureChatAccess(socket: Socket, conversationId?: string) {
+        if (!conversationId) return false;
+        const userId = socket.data?.userId as string | undefined;
+        if (!userId) return false;
+        const accessCache: Set<string> =
+            (socket.data as { chatAccess?: Set<string> }).chatAccess ?? new Set();
+        if (accessCache.has(conversationId)) {
+            (socket.data as { chatAccess?: Set<string> }).chatAccess = accessCache;
+            return true;
+        }
+        const meta = await this.hydrateUserMeta(userId);
+        const userEmail = meta?.email;
+        if (!userEmail) return false;
+        try {
+            await requireConversationAccess(
+                conversationId,
+                userEmail.toLowerCase(),
+                userId,
+                meta?.platformRole === 'super_admin'
+            );
+            accessCache.add(conversationId);
+            (socket.data as { chatAccess?: Set<string> }).chatAccess = accessCache;
+            return true;
+        } catch (error) {
+            console.warn('[notifications socket] chat access denied', error);
+            return false;
         }
     }
 

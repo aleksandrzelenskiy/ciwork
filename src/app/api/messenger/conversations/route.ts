@@ -97,6 +97,7 @@ const toDTO = (
         updatedAt?: Date;
     },
     unreadCount: number,
+    lastMessage?: { text?: string | null; attachments?: Array<Record<string, unknown>> } | null,
     extras?: {
         counterpartEmail?: string;
         counterpartName?: string;
@@ -114,6 +115,19 @@ const toDTO = (
         ? doc.participants.map((p) => normalizeEmail(p))
         : [],
     unreadCount,
+    lastMessagePreview: lastMessage?.text?.trim() || undefined,
+    lastMessageAttachment: Array.isArray(lastMessage?.attachments)
+        ? (lastMessage?.attachments?.[0] as {
+              url: string;
+              kind: 'image' | 'video';
+              contentType?: string;
+              size?: number;
+              width?: number;
+              height?: number;
+              posterUrl?: string;
+              filename?: string;
+          })
+        : undefined,
     updatedAt: doc.updatedAt ? doc.updatedAt.toISOString() : undefined,
     counterpartEmail: extras?.counterpartEmail,
     counterpartName: extras?.counterpartName,
@@ -186,6 +200,13 @@ export async function GET() {
     const items = await Promise.all(
         conversations.map(async (conversation) => {
             const unreadCount = await getUnreadCount(conversation._id.toString(), email);
+            const lastMessage = await ChatMessageModel.findOne({
+                conversationId: conversation._id,
+            })
+                .sort({ createdAt: -1 })
+                .select({ text: 1, attachments: 1 })
+                .lean()
+                .exec();
             const counterpartRaw =
                 conversation.type === 'direct'
                     ? (conversation.participants ?? []).find(
@@ -197,7 +218,7 @@ export async function GET() {
         const presence = counterpartUser?._id
             ? await notificationSocketGateway.getPresence(counterpartUser._id.toString())
             : null;
-        return toDTO(conversation, unreadCount, {
+        return toDTO(conversation, unreadCount, lastMessage, {
             counterpartEmail,
             counterpartName:
                 counterpartUser?.name ||

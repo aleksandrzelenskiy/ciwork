@@ -40,6 +40,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import ClearIcon from '@mui/icons-material/Clear';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import type { MessengerConversationDTO, MessengerMessageDTO } from '@/app/types/messenger';
 import getSocketClient from '@/app/lib/socketClient';
 import { formatNameFromEmail, normalizeEmail } from '@/utils/email';
@@ -84,10 +86,21 @@ const truncatePreview = (value?: string | null, maxLength = 70) => {
     return `${normalized.slice(0, maxLength).trimEnd()}...`;
 };
 
+const MAX_MEDIA_COUNT = 6;
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 60 * 1024 * 1024;
+
 type ParticipantOption = {
     email: string;
     name?: string;
     role?: string;
+};
+
+type PendingMedia = {
+    file: File;
+    previewUrl: string;
+    kind: 'image' | 'video';
 };
 
 export default function MessengerInterface({
@@ -149,9 +162,14 @@ export default function MessengerInterface({
     const [participantsError, setParticipantsError] = React.useState<string | null>(null);
     const [creatingChatWith, setCreatingChatWith] = React.useState<string | null>(null);
     const [mobileView, setMobileView] = React.useState<'list' | 'chat'>('list');
+    const [pendingMedia, setPendingMedia] = React.useState<PendingMedia[]>([]);
+    const [sendingMessage, setSendingMessage] = React.useState(false);
+    const [mediaError, setMediaError] = React.useState<string | null>(null);
     const [typingByConversation, setTypingByConversation] = React.useState<
         Record<string, { userEmail: string; userName?: string }[]>
     >({});
+    const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+    const pendingMediaRef = React.useRef<PendingMedia[]>([]);
     const socketRef = React.useRef<Awaited<ReturnType<typeof getSocketClient>> | null>(null);
     const chatContainerRef = React.useRef<HTMLDivElement | null>(null);
     const seenMessageIdsRef = React.useRef<Set<string>>(new Set());
@@ -163,6 +181,22 @@ export default function MessengerInterface({
     const activeConversationIdRef = React.useRef<string>('');
     const showListPane = !isMobile || mobileView === 'list';
     const showChatPane = !isMobile || mobileView === 'chat';
+
+    const clearPendingMedia = React.useCallback((items?: PendingMedia[]) => {
+        const targets = items ?? pendingMedia;
+        targets.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+        if (!items) {
+            setPendingMedia([]);
+        }
+    }, [pendingMedia]);
+
+    React.useEffect(() => {
+        pendingMediaRef.current = pendingMedia;
+    }, [pendingMedia]);
+
+    React.useEffect(() => () => {
+        pendingMediaRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    }, []);
 
     const activeConversation = React.useMemo(
         () => conversations.find((c) => c.id === activeConversationId),
@@ -830,19 +864,35 @@ export default function MessengerInterface({
     };
 
     const handleSendMessage = async () => {
-        if (!draftMessage.trim() || !activeConversationId) return;
+        if ((!draftMessage.trim() && pendingMedia.length === 0) || !activeConversationId) return;
+        if (sendingMessage) return;
         const text = draftMessage.trim();
+        const mediaToSend = pendingMedia;
         setDraftMessage('');
+        setSendingMessage(true);
+        setMediaError(null);
         stopTyping();
         try {
-            const res = await fetch('/api/messenger/messages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ conversationId: activeConversationId, text }),
-            });
+            const res = mediaToSend.length
+                ? await fetch('/api/messenger/messages', {
+                      method: 'POST',
+                      body: (() => {
+                          const formData = new FormData();
+                          formData.append('conversationId', activeConversationId);
+                          if (text) formData.append('text', text);
+                          mediaToSend.forEach((item) => formData.append('files', item.file));
+                          return formData;
+                      })(),
+                  })
+                : await fetch('/api/messenger/messages', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ conversationId: activeConversationId, text }),
+                  });
             const payload = (await res.json().catch(() => ({}))) as {
                 ok?: boolean;
                 message?: MessengerMessageDTO;
+                error?: string;
             };
             if (res.ok && payload.ok && payload.message) {
                 setMessagesByConversation((prev) => {
@@ -862,9 +912,20 @@ export default function MessengerInterface({
                 if (isConversationVisible(activeConversationId)) {
                     scrollMessagesToBottom();
                 }
+                clearPendingMedia();
+            } else {
+                const errorMessage = payload.error || 'Не удалось отправить сообщение.';
+                setDraftMessage(text);
+                setPendingMedia(mediaToSend);
+                setMediaError(errorMessage);
             }
         } catch (error) {
             console.error('messenger: send failed', error);
+            setDraftMessage(text);
+            setPendingMedia(mediaToSend);
+            setMediaError('Не удалось отправить сообщение. Попробуйте ещё раз.');
+        } finally {
+            setSendingMessage(false);
         }
     };
 
@@ -945,7 +1006,29 @@ export default function MessengerInterface({
             const latestMessageText =
                 conversation.lastMessagePreview ??
                 conversationMessages?.[conversationMessages.length - 1]?.text;
-            return truncatePreview(latestMessageText);
+            if (latestMessageText) {
+                return truncatePreview(latestMessageText);
+            }
+            const lastMessage = conversationMessages?.[conversationMessages.length - 1];
+            if (lastMessage?.attachments?.length) {
+                const hasVideo = lastMessage.attachments.some((item) => item.kind === 'video');
+                const hasImage = lastMessage.attachments.some((item) => item.kind === 'image');
+                if (hasVideo && hasImage) return 'Фото и видео';
+                if (hasVideo) return lastMessage.attachments.length > 1 ? 'Видео' : 'Видео';
+                if (hasImage) return lastMessage.attachments.length > 1 ? 'Фото' : 'Фото';
+                return lastMessage.attachments.length > 1 ? 'Медиафайлы' : 'Медиафайл';
+            }
+            return '';
+        },
+        [messagesByConversation]
+    );
+
+    const getLastAttachmentPreview = React.useCallback(
+        (conversation: MessengerConversationDTO) => {
+            const cachedList = messagesByConversation[conversation.id] ?? [];
+            const cachedMessage = cachedList[cachedList.length - 1];
+            const cachedAttachment = cachedMessage?.attachments?.[0];
+            return cachedAttachment ?? conversation.lastMessageAttachment;
         },
         [messagesByConversation]
     );
@@ -1240,6 +1323,7 @@ export default function MessengerInterface({
                                         ? conversationMessages.filter((msg) => !msg.readBy.includes(userEmail)).length
                                         : conversation.unreadCount ?? 0;
                                 const unreadCount = Math.max(0, Math.floor(derivedUnread));
+                                const previewAttachment = getLastAttachmentPreview(conversation);
                                 return (
                                     <ListItem
                                         key={conversation.id}
@@ -1301,6 +1385,47 @@ export default function MessengerInterface({
                                                 primary={renderConversationTitle(conversation)}
                                                 secondary={renderConversationSecondary(conversation)}
                                             />
+                                            {previewAttachment ? (
+                                                <Box
+                                                    sx={{
+                                                        width: 44,
+                                                        height: 44,
+                                                        borderRadius: 1.5,
+                                                        overflow: 'hidden',
+                                                        backgroundColor: 'rgba(15,23,42,0.08)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        mr: 1,
+                                                    }}
+                                                >
+                                                    {previewAttachment.kind === 'image' ? (
+                                                        <Box
+                                                            component='img'
+                                                            src={previewAttachment.url}
+                                                            alt={previewAttachment.filename || 'preview'}
+                                                            sx={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover',
+                                                            }}
+                                                        />
+                                                    ) : previewAttachment.posterUrl ? (
+                                                        <Box
+                                                            component='img'
+                                                            src={previewAttachment.posterUrl}
+                                                            alt={previewAttachment.filename || 'preview'}
+                                                            sx={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover',
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <PlayArrowIcon fontSize='small' color='action' />
+                                                    )}
+                                                </Box>
+                                            ) : null}
                                             <Badge
                                                 color='secondary'
                                                 badgeContent={unreadCount}
@@ -1477,6 +1602,9 @@ export default function MessengerInterface({
                                     const align = isOwn ? 'flex-end' : 'flex-start';
                                     const bg = isOwn ? messageOwnBg : messageOtherBg;
                                     const isRead = message.readBy?.includes(userEmail);
+                                    const attachments = Array.isArray(message.attachments)
+                                        ? message.attachments
+                                        : [];
                                     return (
                                         <Stack
                                             key={message.id}
@@ -1510,7 +1638,50 @@ export default function MessengerInterface({
                                                     backdropFilter: isOwn ? 'blur(0px)' : 'blur(6px)',
                                                 }}
                                             >
-                                                <Typography variant='body2'>{message.text}</Typography>
+                                                {attachments.length ? (
+                                                    <Stack spacing={1} sx={{ mb: message.text ? 1 : 0 }}>
+                                                        {attachments.map((item, idx) => (
+                                                            <Box
+                                                                key={`${item.url}-${idx}`}
+                                                                sx={{
+                                                                    borderRadius: 2,
+                                                                    overflow: 'hidden',
+                                                                    backgroundColor: 'rgba(0,0,0,0.2)',
+                                                                }}
+                                                            >
+                                                                {item.kind === 'image' ? (
+                                                                    <Box
+                                                                        component='img'
+                                                                        src={item.url}
+                                                                        alt={item.filename || 'image'}
+                                                                        sx={{
+                                                                            display: 'block',
+                                                                            width: '100%',
+                                                                            maxHeight: 240,
+                                                                            objectFit: 'cover',
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                <Box
+                                                                    component='video'
+                                                                    src={item.url}
+                                                                    poster={item.posterUrl}
+                                                                    controls
+                                                                    sx={{
+                                                                        display: 'block',
+                                                                        width: '100%',
+                                                                        maxHeight: 260,
+                                                                            backgroundColor: '#000',
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            </Box>
+                                                        ))}
+                                                    </Stack>
+                                                ) : null}
+                                                {message.text ? (
+                                                    <Typography variant='body2'>{message.text}</Typography>
+                                                ) : null}
                                             </Box>
                                             {isOwn ? (
                                                 <Typography variant='caption' color='text.secondary'>
@@ -1545,6 +1716,71 @@ export default function MessengerInterface({
                                 </Typography>
                             </Stack>
                         ) : null}
+                        {pendingMedia.length ? (
+                            <Stack direction='row' spacing={1} sx={{ px: 1, overflowX: 'auto' }}>
+                                {pendingMedia.map((item, index) => (
+                                    <Box
+                                        key={`${item.previewUrl}-${index}`}
+                                        sx={{
+                                            position: 'relative',
+                                            borderRadius: 2,
+                                            overflow: 'hidden',
+                                            width: 96,
+                                            height: 96,
+                                            flexShrink: 0,
+                                            backgroundColor: 'rgba(15,23,42,0.08)',
+                                        }}
+                                    >
+                                        {item.kind === 'image' ? (
+                                            <Box
+                                                component='img'
+                                                src={item.previewUrl}
+                                                alt={item.file.name}
+                                                sx={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                }}
+                                            />
+                                        ) : (
+                                            <Box
+                                                component='video'
+                                                src={item.previewUrl}
+                                                poster={item.previewUrl}
+                                                sx={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                }}
+                                            />
+                                        )}
+                                        <IconButton
+                                            size='small'
+                                            onClick={() => {
+                                                const next = pendingMedia.filter((_, idx) => idx !== index);
+                                                URL.revokeObjectURL(item.previewUrl);
+                                                setPendingMedia(next);
+                                            }}
+                                            sx={{
+                                                position: 'absolute',
+                                                top: 4,
+                                                right: 4,
+                                                backgroundColor: 'rgba(0,0,0,0.55)',
+                                                color: '#fff',
+                                                '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
+                                            }}
+                                        >
+                                            <CloseIcon fontSize='inherit' />
+                                        </IconButton>
+                                    </Box>
+                                ))}
+                            </Stack>
+                        ) : null}
+                        {mediaError ? (
+                            <Typography variant='caption' color='error' sx={{ px: 1 }}>
+                                {mediaError}
+                            </Typography>
+                        ) : null}
                         <Stack
                             direction='row'
                             spacing={1}
@@ -1558,6 +1794,64 @@ export default function MessengerInterface({
                                 border: composerBorder,
                             }}
                         >
+                            <IconButton
+                                color='primary'
+                                onClick={() => fileInputRef.current?.click()}
+                                aria-label='Прикрепить файл'
+                                disabled={sendingMessage}
+                            >
+                                <AttachFileIcon />
+                            </IconButton>
+                            <input
+                                ref={fileInputRef}
+                                type='file'
+                                accept='image/*,video/*'
+                                multiple
+                                hidden
+                                onChange={(event) => {
+                                    const files = Array.from(event.target.files ?? []);
+                                    event.target.value = '';
+                                    setMediaError(null);
+                                    const totalCount = pendingMediaRef.current.length + files.length;
+                                    if (totalCount > MAX_MEDIA_COUNT) {
+                                        setMediaError(`Можно прикрепить не более ${MAX_MEDIA_COUNT} файлов`);
+                                        return;
+                                    }
+                                    const totalBytes = pendingMediaRef.current.reduce(
+                                        (sum, item) => sum + (item.file.size || 0),
+                                        0
+                                    ) + files.reduce((sum, file) => sum + (file.size || 0), 0);
+                                    if (totalBytes > MAX_TOTAL_BYTES) {
+                                        setMediaError('Суммарный размер файлов превышает лимит 60 МБ');
+                                        return;
+                                    }
+                                    const items = files
+                                        .filter(
+                                            (file) =>
+                                                file.type.startsWith('image/') || file.type.startsWith('video/')
+                                        )
+                                        .filter((file) => {
+                                            const limit = file.type.startsWith('video/')
+                                                ? MAX_VIDEO_BYTES
+                                                : MAX_IMAGE_BYTES;
+                                            if (file.size <= limit) return true;
+                                            setMediaError(
+                                                file.type.startsWith('video/')
+                                                    ? 'Видео превышает лимит 50 МБ'
+                                                    : 'Фото превышает лимит 10 МБ'
+                                            );
+                                            return false;
+                                        })
+                                        .map((file) => ({
+                                            file,
+                                            previewUrl: URL.createObjectURL(file),
+                                            kind: file.type.startsWith('video/') ? 'video' : 'image',
+                                        }));
+                                    if (items.length) {
+                                        setPendingMedia((prev) => [...prev, ...items]);
+                                    }
+                                }}
+                            />
                             <TextField
                                 fullWidth
                                 size='small'
@@ -1574,6 +1868,7 @@ export default function MessengerInterface({
                                         void handleSendMessage();
                                     }
                                 }}
+                                disabled={sendingMessage}
                                 InputProps={{
                                     sx: {
                                         backgroundColor: composerInputBg,
@@ -1601,7 +1896,7 @@ export default function MessengerInterface({
                                 color='primary'
                                 onClick={handleSendMessage}
                                 aria-label='Отправить сообщение'
-                                disabled={!draftMessage.trim()}
+                                disabled={sendingMessage || (!draftMessage.trim() && pendingMedia.length === 0)}
                             >
                                 <SendIcon />
                             </IconButton>

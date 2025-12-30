@@ -101,7 +101,7 @@ export default function MessengerTrigger({ buttonSx }: MessengerTriggerProps) {
         const connectSocket = async (): Promise<ChatSocket | null> => {
             if (socketRef.current) return socketRef.current;
             try {
-                await fetch('/api/socket', { cache: 'no-store' });
+                await fetch('/api/socket', { cache: 'no-store', credentials: 'include' });
             } catch (error) {
                 console.error('messenger-trigger: warm socket failed', error);
             }
@@ -185,6 +185,20 @@ export default function MessengerTrigger({ buttonSx }: MessengerTriggerProps) {
                 socket.on('chat:unread', handleUnread);
                 socket.on('connect', handleConnect);
                 socket.io.on('reconnect', handleConnect);
+                let refreshing = false;
+                socket.on('connect_error', async (error: { message?: string }) => {
+                    const message = error?.message?.toUpperCase?.() ?? '';
+                    if (refreshing || (!message.includes('UNAUTHORIZED') && !message.includes('AUTH_FAILED'))) {
+                        return;
+                    }
+                    refreshing = true;
+                    const freshToken = await fetchSocketToken();
+                    if (freshToken) {
+                        socket.auth = { token: freshToken };
+                        socket.connect();
+                    }
+                    refreshing = false;
+                });
 
                 if (socket.connected) {
                     handleConnect();
@@ -197,6 +211,7 @@ export default function MessengerTrigger({ buttonSx }: MessengerTriggerProps) {
                     socket.off('chat:message:new', handleNewMessage);
                     socket.off('chat:unread', handleUnread);
                     socket.off('connect', handleConnect);
+                    socket.off('connect_error');
                     socket.io.off('reconnect', handleConnect);
                 };
 
