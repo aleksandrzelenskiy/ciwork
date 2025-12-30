@@ -42,6 +42,9 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import type { MessengerConversationDTO, MessengerMessageDTO } from '@/app/types/messenger';
 import getSocketClient from '@/app/lib/socketClient';
 import { formatNameFromEmail, normalizeEmail } from '@/utils/email';
@@ -165,6 +168,15 @@ export default function MessengerInterface({
     const [pendingMedia, setPendingMedia] = React.useState<PendingMedia[]>([]);
     const [sendingMessage, setSendingMessage] = React.useState(false);
     const [mediaError, setMediaError] = React.useState<string | null>(null);
+    const [deletingMessageIds, setDeletingMessageIds] = React.useState<Record<string, boolean>>({});
+    const [viewerState, setViewerState] = React.useState<{
+        open: boolean;
+        attachments: MessengerMessageDTO['attachments'];
+        index: number;
+        caption?: string;
+        senderLabel?: string;
+        createdAt?: string;
+    }>({ open: false, attachments: [], index: 0 });
     const [typingByConversation, setTypingByConversation] = React.useState<
         Record<string, { userEmail: string; userName?: string }[]>
     >({});
@@ -179,6 +191,7 @@ export default function MessengerInterface({
     const typingConversationRef = React.useRef<string>('');
     const joinedConversationsRef = React.useRef<Set<string>>(new Set());
     const activeConversationIdRef = React.useRef<string>('');
+    const deletedMessageIdsRef = React.useRef<Set<string>>(new Set());
     const showListPane = !isMobile || mobileView === 'list';
     const showChatPane = !isMobile || mobileView === 'chat';
 
@@ -228,6 +241,16 @@ export default function MessengerInterface({
             ),
         [activeConversationId, typingByConversation, userEmail]
     );
+
+    const formatTypingLabel = React.useCallback((items: { userEmail: string; userName?: string }[]) => {
+        const names = items
+            .map((item) => item.userName?.trim() || formatNameFromEmail(item.userEmail) || item.userEmail)
+            .filter(Boolean);
+        if (names.length === 0) return 'Печатает...';
+        if (names.length === 1) return `${names[0]} печатает...`;
+        if (names.length === 2) return `${names[0]} и ${names[1]} печатают...`;
+        return `${names[0]} и ещё ${names.length - 1} печатают...`;
+    }, []);
 
     const totalUnread = React.useMemo(
         () => conversations.reduce((acc, item) => acc + item.unreadCount, 0),
@@ -522,6 +545,63 @@ export default function MessengerInterface({
         requestAnimationFrame(scroll);
     }, []);
 
+    const applyMessageDeletion = React.useCallback(
+        (conversationId: string, messageId: string, readBy?: string[]) => {
+            if (!conversationId || !messageId) return;
+            if (deletedMessageIdsRef.current.has(messageId)) return;
+            deletedMessageIdsRef.current.add(messageId);
+
+            let removedUnread = false;
+            setMessagesByConversation((prev) => {
+                const existing = prev[conversationId] ?? [];
+                if (!existing.length) return prev;
+                const target = existing.find((msg) => msg.id === messageId);
+                if (!target) return prev;
+                if (userEmail && !target.readBy.includes(userEmail)) {
+                    removedUnread = true;
+                }
+                const next = existing.filter((msg) => msg.id !== messageId);
+                return { ...prev, [conversationId]: next };
+            });
+
+            const shouldDecrement =
+                !!userEmail && (removedUnread || (Array.isArray(readBy) && !readBy.includes(userEmail)));
+            if (shouldDecrement) {
+                setConversations((prev) =>
+                    prev.map((item) =>
+                        item.id === conversationId
+                            ? { ...item, unreadCount: Math.max(0, (item.unreadCount ?? 0) - 1) }
+                            : item
+                    )
+                );
+            }
+        },
+        [userEmail]
+    );
+
+    const openMediaViewer = React.useCallback(
+        (
+            attachments: MessengerMessageDTO['attachments'],
+            index: number,
+            meta?: { caption?: string; senderLabel?: string; createdAt?: string }
+        ) => {
+            if (!attachments?.length) return;
+            setViewerState({
+                open: true,
+                attachments,
+                index,
+                caption: meta?.caption,
+                senderLabel: meta?.senderLabel,
+                createdAt: meta?.createdAt,
+            });
+        },
+        []
+    );
+
+    const closeMediaViewer = React.useCallback(() => {
+        setViewerState((prev) => ({ ...prev, open: false }));
+    }, []);
+
     const removeTypingUser = React.useCallback((conversationId: string, email?: string) => {
         if (!conversationId) return;
         const normalizedEmail = normalizeEmail(email);
@@ -581,6 +661,7 @@ export default function MessengerInterface({
             socketRef.current.emit('chat:typing', {
                 conversationId: targetConversationId,
                 userEmail: email,
+                userName: formatNameFromEmail(email),
                 isTyping,
             });
         },
@@ -788,17 +869,28 @@ export default function MessengerInterface({
                     c.id === payload.conversationId
                         ? { ...c, unreadCount: payload.unreadCount }
                         : c
-                )
+                    )
             );
         };
 
+        const handleMessageDeleted = (payload: {
+            conversationId: string;
+            messageId: string;
+            readBy?: string[];
+            deletedBy?: string;
+        }) => {
+            applyMessageDeletion(payload.conversationId, payload.messageId, payload.readBy);
+        };
+
         socket.on('chat:message:new', handleNewMessage);
+        socket.on('chat:message:deleted', handleMessageDeleted);
         socket.on('chat:read', handleRead);
         socket.on('chat:unread', handleUnread);
         socket.on('chat:typing', handleTypingEvent);
 
         return () => {
             socket.off('chat:message:new', handleNewMessage);
+            socket.off('chat:message:deleted', handleMessageDeleted);
             socket.off('chat:read', handleRead);
             socket.off('chat:unread', handleUnread);
             socket.off('chat:typing', handleTypingEvent);
@@ -814,6 +906,7 @@ export default function MessengerInterface({
         scrollMessagesToBottom,
         removeTypingUser,
         handleTypingEvent,
+        applyMessageDeletion,
     ]);
 
     React.useEffect(() => {
@@ -926,6 +1019,39 @@ export default function MessengerInterface({
             setMediaError('Не удалось отправить сообщение. Попробуйте ещё раз.');
         } finally {
             setSendingMessage(false);
+        }
+    };
+
+    const handleDeleteMessage = async (messageId: string, conversationId: string) => {
+        if (!messageId || !conversationId) return;
+        if (deletingMessageIds[messageId]) return;
+        const confirmed = window.confirm('Удалить сообщение?');
+        if (!confirmed) return;
+        setDeletingMessageIds((prev) => ({ ...prev, [messageId]: true }));
+        try {
+            const res = await fetch(`/api/messenger/messages/${messageId}`, { method: 'DELETE' });
+            const payload = (await res.json().catch(() => ({}))) as {
+                ok?: boolean;
+                conversationId?: string;
+                messageId?: string;
+                readBy?: string[];
+                error?: string;
+            };
+            if (!res.ok || !payload.ok) {
+                console.error('messenger: delete message failed', payload.error);
+                window.alert(payload.error || 'Не удалось удалить сообщение.');
+                return;
+            }
+            applyMessageDeletion(payload.conversationId ?? conversationId, payload.messageId ?? messageId, payload.readBy);
+        } catch (error) {
+            console.error('messenger: delete message failed', error);
+            window.alert('Не удалось удалить сообщение.');
+        } finally {
+            setDeletingMessageIds((prev) => {
+                const next = { ...prev };
+                delete next[messageId];
+                return next;
+            });
         }
     };
 
@@ -1087,7 +1213,7 @@ export default function MessengerInterface({
                 <Stack spacing={0.25}>
                     {isTyping ? (
                         <Typography variant='body2' color='primary.main' noWrap>
-                            Печатает...
+                            {formatTypingLabel(typingUsers)}
                         </Typography>
                     ) : lastText ? (
                         <Typography variant='body2' color='text.secondary' noWrap>
@@ -1102,7 +1228,7 @@ export default function MessengerInterface({
             <Stack spacing={0.5}>
                 {isTyping ? (
                     <Typography variant='body2' color='primary.main' noWrap>
-                        Печатает...
+                        {formatTypingLabel(typingUsers)}
                     </Typography>
                 ) : lastText ? (
                     <Typography
@@ -1174,6 +1300,13 @@ export default function MessengerInterface({
         const color = activeConversation.type === 'project' ? 'secondary.main' : 'primary.main';
         return { src: undefined, label, color };
     }, [activeConversation, getDirectDisplayName]);
+
+    const viewerAttachment = viewerState.attachments?.[viewerState.index];
+    const viewerTitleParts = [
+        viewerState.senderLabel,
+        viewerState.createdAt ? formatDateWithTime(viewerState.createdAt) : null,
+    ].filter(Boolean);
+    const viewerTitle = viewerTitleParts.join(' · ');
 
     return (
         <>
@@ -1605,6 +1738,7 @@ export default function MessengerInterface({
                                     const attachments = Array.isArray(message.attachments)
                                         ? message.attachments
                                         : [];
+                                    const senderLabel = message.senderName || message.senderEmail;
                                     return (
                                         <Stack
                                             key={message.id}
@@ -1617,7 +1751,7 @@ export default function MessengerInterface({
                                                 color='text.secondary'
                                                 sx={{ pr: isOwn ? 1 : 0 }}
                                             >
-                                                {message.senderName || message.senderEmail} · {formatTime(message.createdAt)}
+                                                {senderLabel} · {formatTime(message.createdAt)}
                                             </Typography>
                                             <Box
                                                 sx={{
@@ -1636,8 +1770,38 @@ export default function MessengerInterface({
                                                         ? '1px solid rgba(99,102,241,0.25)'
                                                         : '1px solid transparent',
                                                     backdropFilter: isOwn ? 'blur(0px)' : 'blur(6px)',
+                                                    position: 'relative',
+                                                    '&:hover .message-actions': {
+                                                        opacity: 1,
+                                                    },
                                                 }}
                                             >
+                                                {isOwn ? (
+                                                    <IconButton
+                                                        className='message-actions'
+                                                        size='small'
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            void handleDeleteMessage(message.id, message.conversationId);
+                                                        }}
+                                                        disabled={deletingMessageIds[message.id]}
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: 6,
+                                                            right: 6,
+                                                            opacity: 0,
+                                                            transition: 'opacity 0.2s ease',
+                                                            backgroundColor: isOwn ? 'rgba(255,255,255,0.18)' : 'transparent',
+                                                            color: isOwn ? '#fff' : 'text.secondary',
+                                                            '&:hover': {
+                                                                backgroundColor: isOwn ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.08)',
+                                                            },
+                                                        }}
+                                                        aria-label='Удалить сообщение'
+                                                    >
+                                                        <DeleteOutlineIcon fontSize='inherit' />
+                                                    </IconButton>
+                                                ) : null}
                                                 {attachments.length ? (
                                                     <Stack spacing={1} sx={{ mb: message.text ? 1 : 0 }}>
                                                         {attachments.map((item, idx) => (
@@ -1647,6 +1811,25 @@ export default function MessengerInterface({
                                                                     borderRadius: 2,
                                                                     overflow: 'hidden',
                                                                     backgroundColor: 'rgba(0,0,0,0.2)',
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                                role='button'
+                                                                tabIndex={0}
+                                                                onClick={() =>
+                                                                    openMediaViewer(attachments, idx, {
+                                                                        caption: message.text || undefined,
+                                                                        senderLabel,
+                                                                        createdAt: message.createdAt,
+                                                                    })
+                                                                }
+                                                                onKeyDown={(event) => {
+                                                                    if (event.key === 'Enter') {
+                                                                        openMediaViewer(attachments, idx, {
+                                                                            caption: message.text || undefined,
+                                                                            senderLabel,
+                                                                            createdAt: message.createdAt,
+                                                                        });
+                                                                    }
                                                                 }}
                                                             >
                                                                 {item.kind === 'image' ? (
@@ -1663,17 +1846,57 @@ export default function MessengerInterface({
                                                                     />
                                                                 ) : (
                                                                 <Box
-                                                                    component='video'
-                                                                    src={item.url}
-                                                                    poster={item.posterUrl}
-                                                                    controls
                                                                     sx={{
-                                                                        display: 'block',
+                                                                        position: 'relative',
                                                                         width: '100%',
                                                                         maxHeight: 260,
-                                                                            backgroundColor: '#000',
+                                                                        backgroundColor: '#000',
+                                                                    }}
+                                                                >
+                                                                    {item.posterUrl ? (
+                                                                        <Box
+                                                                            component='img'
+                                                                            src={item.posterUrl}
+                                                                            alt={item.filename || 'video'}
+                                                                            sx={{
+                                                                                display: 'block',
+                                                                                width: '100%',
+                                                                                maxHeight: 260,
+                                                                                objectFit: 'cover',
+                                                                            }}
+                                                                        />
+                                                                    ) : (
+                                                                        <Box
+                                                                            sx={{
+                                                                                height: 180,
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center',
+                                                                                color: '#fff',
+                                                                                fontSize: 14,
+                                                                            }}
+                                                                        >
+                                                                            Видео
+                                                                        </Box>
+                                                                    )}
+                                                                    <Box
+                                                                        sx={{
+                                                                            position: 'absolute',
+                                                                            inset: 0,
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            backgroundColor: 'rgba(0,0,0,0.25)',
                                                                         }}
-                                                                    />
+                                                                    >
+                                                                        <PlayArrowIcon
+                                                                            sx={{
+                                                                                fontSize: 42,
+                                                                                color: '#fff',
+                                                                            }}
+                                                                        />
+                                                                    </Box>
+                                                                </Box>
                                                                 )}
                                                             </Box>
                                                         ))}
@@ -1712,7 +1935,7 @@ export default function MessengerInterface({
                                     }}
                                 />
                                 <Typography variant='caption' color='text.secondary'>
-                                    Печатает...
+                                    {formatTypingLabel(activeTypingUsers)}
                                 </Typography>
                             </Stack>
                         ) : null}
@@ -1855,7 +2078,12 @@ export default function MessengerInterface({
                             <TextField
                                 fullWidth
                                 size='small'
-                                placeholder='Напишите сообщение для коллег или проектной команды...'
+                                label={pendingMedia.length ? 'Добавить подпись' : undefined}
+                                placeholder={
+                                    pendingMedia.length
+                                        ? 'Добавить подпись...'
+                                        : 'Напишите сообщение для коллег или проектной команды...'
+                                }
                                 value={draftMessage}
                                 onChange={(event) => {
                                     setDraftMessage(event.target.value);
@@ -1904,6 +2132,133 @@ export default function MessengerInterface({
                     </Stack>
                 </Box>
             </Paper>
+            <Dialog
+                open={viewerState.open}
+                onClose={closeMediaViewer}
+                fullWidth
+                maxWidth='md'
+                PaperProps={{
+                    sx: {
+                        backgroundColor: isDark ? 'rgba(10,12,18,0.98)' : 'rgba(255,255,255,0.98)',
+                        backdropFilter: 'blur(12px)',
+                    },
+                }}
+            >
+                <DialogTitle
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                    }}
+                >
+                    <Stack spacing={0.25}>
+                        <Typography variant='subtitle1' fontWeight={700}>
+                            {viewerTitle || 'Просмотр медиа'}
+                        </Typography>
+                        {viewerState.caption ? (
+                            <Typography variant='body2' color='text.secondary'>
+                                {viewerState.caption}
+                            </Typography>
+                        ) : null}
+                    </Stack>
+                    <IconButton onClick={closeMediaViewer} aria-label='Закрыть просмотр медиа'>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent
+                    dividers
+                    sx={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: 360,
+                        backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(15,23,42,0.04)',
+                    }}
+                >
+                    {viewerAttachment ? (
+                        viewerAttachment.kind === 'image' ? (
+                            <Box
+                                component='img'
+                                src={viewerAttachment.url}
+                                alt={viewerAttachment.filename || 'image'}
+                                sx={{
+                                    maxWidth: '100%',
+                                    maxHeight: '70vh',
+                                    borderRadius: 2,
+                                    boxShadow: isDark
+                                        ? '0 24px 60px rgba(0,0,0,0.6)'
+                                        : '0 18px 40px rgba(15,23,42,0.18)',
+                                }}
+                            />
+                        ) : (
+                            <Box
+                                component='video'
+                                src={viewerAttachment.url}
+                                poster={viewerAttachment.posterUrl}
+                                controls
+                                sx={{
+                                    width: '100%',
+                                    maxHeight: '70vh',
+                                    borderRadius: 2,
+                                    backgroundColor: '#000',
+                                }}
+                            />
+                        )
+                    ) : (
+                        <Typography variant='body2' color='text.secondary'>
+                            Медиафайл недоступен.
+                        </Typography>
+                    )}
+                    {viewerState.attachments.length > 1 ? (
+                        <>
+                            <IconButton
+                                onClick={() =>
+                                    setViewerState((prev) => ({
+                                        ...prev,
+                                        index:
+                                            prev.index <= 0
+                                                ? prev.attachments.length - 1
+                                                : prev.index - 1,
+                                    }))
+                                }
+                                sx={{
+                                    position: 'absolute',
+                                    left: 12,
+                                    backgroundColor: 'rgba(0,0,0,0.45)',
+                                    color: '#fff',
+                                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.65)' },
+                                }}
+                                aria-label='Предыдущее медиа'
+                            >
+                                <ChevronLeftIcon />
+                            </IconButton>
+                            <IconButton
+                                onClick={() =>
+                                    setViewerState((prev) => ({
+                                        ...prev,
+                                        index:
+                                            prev.index >= prev.attachments.length - 1
+                                                ? 0
+                                                : prev.index + 1,
+                                    }))
+                                }
+                                sx={{
+                                    position: 'absolute',
+                                    right: 12,
+                                    backgroundColor: 'rgba(0,0,0,0.45)',
+                                    color: '#fff',
+                                    '&:hover': { backgroundColor: 'rgba(0,0,0,0.65)' },
+                                }}
+                                aria-label='Следующее медиа'
+                            >
+                                <ChevronRightIcon />
+                            </IconButton>
+                        </>
+                    ) : null}
+                </DialogContent>
+            </Dialog>
             <Dialog open={contactPickerOpen} onClose={handleCloseContactPicker} fullWidth maxWidth='xs'>
                 <DialogTitle>Новое сообщение</DialogTitle>
                 <DialogContent dividers>

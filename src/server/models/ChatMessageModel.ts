@@ -30,7 +30,7 @@ const ChatMessageSchema = new Schema<ChatMessage>(
         orgId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
         senderEmail: { type: String, required: true, lowercase: true, trim: true, index: true },
         senderName: { type: String },
-        text: { type: String, required: true },
+        text: { type: String, default: '' },
         readBy: { type: [String], default: [], index: true }, // lower-case emails
         attachments: {
             type: [

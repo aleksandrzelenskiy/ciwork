@@ -43,6 +43,12 @@ export type MessengerAttachmentDTO = {
 
 export type ChatServerToClientEvents = {
     'chat:message:new': (payload: MessengerMessageDTO) => void;
+    'chat:message:deleted': (payload: {
+        conversationId: string;
+        messageId: string;
+        readBy?: string[];
+        deletedBy?: string;
+    }) => void;
     'chat:read': (payload: { conversationId: string; userEmail: string; messageIds: string[] }) => void;
     'chat:unread': (payload: { conversationId: string; unreadCount: number; userEmail?: string }) => void;
     'chat:typing': (payload: { conversationId: string; userEmail?: string; userName?: string; isTyping?: boolean }) => void;
