@@ -17,7 +17,7 @@ const CAN_DELETE_ROLES = new Set(['owner', 'org_admin']);
 
 export async function DELETE(
     _request: Request,
-    { params }: { params: { messageId?: string } }
+    { params }: { params: { messageId: string } }
 ) {
     const currentUser = await GetCurrentUserFromMongoDB();
     if (!currentUser.success) {
