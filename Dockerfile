@@ -2,7 +2,8 @@
 FROM node:20-alpine AS base
 
 # Устанавливаем необходимые шрифты и ffmpeg
-RUN echo "https://mirror.yandex.ru/mirrors/alpine/latest-stable/main" > /etc/apk/repositories
+RUN echo "https://mirror.yandex.ru/mirrors/alpine/latest-stable/main" > /etc/apk/repositories \
+    && echo "https://mirror.yandex.ru/mirrors/alpine/latest-stable/community" >> /etc/apk/repositories
 RUN apk update && apk add --no-cache ttf-dejavu ffmpeg
 
 # ---------- deps ----------
