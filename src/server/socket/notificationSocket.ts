@@ -10,9 +10,6 @@ import type {
     NotificationUnreadEventPayload,
 } from '@/app/types/notifications';
 import { verifySocketToken } from '@/server/socket/token';
-import UserModel from '@/server/models/UserModel';
-import dbConnect from '@/server/db/mongoose';
-import { requireConversationAccess } from '@/server/messenger/helpers';
 
 const USER_ROOM_PREFIX = 'notification:user:';
 const TASK_ROOM_PREFIX = 'task:';
@@ -251,6 +248,10 @@ export class NotificationSocketGateway {
             return this.userMetaCache.get(userId);
         }
         try {
+            const [{ default: dbConnect }, { default: UserModel }] = await Promise.all([
+                import('@/server/db/mongoose'),
+                import('@/server/models/UserModel'),
+            ]);
             await dbConnect();
             const user = await UserModel.findById(
                 userId,
@@ -308,6 +309,10 @@ export class NotificationSocketGateway {
 
     private async persistLastActive(userId: string, lastActive: Date) {
         try {
+            const [{ default: dbConnect }, { default: UserModel }] = await Promise.all([
+                import('@/server/db/mongoose'),
+                import('@/server/models/UserModel'),
+            ]);
             await dbConnect();
             await UserModel.findByIdAndUpdate(
                 userId,
@@ -337,6 +342,7 @@ export class NotificationSocketGateway {
         const userEmail = meta?.email;
         if (!userEmail) return false;
         try {
+            const { requireConversationAccess } = await import('@/server/messenger/helpers');
             await requireConversationAccess(
                 conversationId,
                 userEmail.toLowerCase(),

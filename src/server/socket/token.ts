@@ -1,13 +1,11 @@
 // src/server/socket/token.ts
 
 import crypto from 'node:crypto';
-import { getServerEnv } from '@/config/env';
 
 const getSecret = () => {
-    const env = getServerEnv();
     return (
-        env.NOTIFICATIONS_SOCKET_SECRET ||
-        env.CLERK_SECRET_KEY ||
+        process.env.NOTIFICATIONS_SOCKET_SECRET ||
+        process.env.CLERK_SECRET_KEY ||
         'dev-notifications-socket-secret'
     );
 };
