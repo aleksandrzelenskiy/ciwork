@@ -773,7 +773,7 @@ export default function OrgSettingsPage() {
         overflow: 'hidden',
     };
     const statCardSx = {
-        borderRadius: 3,
+        borderRadius: theme.shape.borderRadius,
         px: { xs: 2, md: 2.5 },
         py: { xs: 1.25, md: 1.5 },
         border: `1px solid ${cardBorder}`,
@@ -830,19 +830,19 @@ export default function OrgSettingsPage() {
         backgroundColor: cardBg,
         border: `1px solid ${cardBorder}`,
         boxShadow: cardShadow,
-        borderRadius: 4,
+        borderRadius: theme.shape.borderRadius,
         color: textPrimary,
     };
     const cardHeaderSx = {
         borderBottom: `1px solid ${cardBorder}`,
         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.72)' : 'rgba(255,255,255,0.9)',
-        borderTopLeftRadius: 16,
-        borderTopRightRadius: 16,
+        borderTopLeftRadius: theme.shape.borderRadius,
+        borderTopRightRadius: theme.shape.borderRadius,
     };
     const cardContentSx = {
         backgroundColor: isDarkMode ? 'rgba(12,16,26,0.75)' : 'rgba(247,249,255,0.8)',
-        borderBottomLeftRadius: 16,
-        borderBottomRightRadius: 16,
+        borderBottomLeftRadius: theme.shape.borderRadius,
+        borderBottomRightRadius: theme.shape.borderRadius,
     };
     const masonrySpacing = { xs: 1.5, sm: 2, md: 2.5 };
     const renderStatusPanel = (content: React.ReactNode) => (
@@ -1084,6 +1084,120 @@ export default function OrgSettingsPage() {
                         </Stack>
                     </Stack>
 
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mt: { xs: 2.5, md: 3 } }}>
+                        <Box sx={statCardSx}>
+                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                                Активные проекты
+                            </Typography>
+                            <Typography variant="h4" fontWeight={700} color={textPrimary}>
+                                {activeProjectsCount}
+                            </Typography>
+                            <Typography variant="body2" color={textSecondary}>
+                                из {projectsLimitLabel} доступных
+                            </Typography>
+                        </Box>
+                        <Box sx={statCardSx}>
+                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                                Рабочих мест
+                            </Typography>
+                            <Typography variant="h4" fontWeight={700} color={textPrimary}>
+                                {members.length}
+                            </Typography>
+                            <Typography variant="body2" color={textSecondary}>
+                                Всего {seatsLabel}
+                            </Typography>
+                        </Box>
+                        <Box sx={statCardSx}>
+                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                                Статус подписки
+                            </Typography>
+                            <Typography variant="h6" fontWeight={600} sx={{ color: subscriptionStatusColor }}>
+                                {subscriptionStatusLabel}
+                            </Typography>
+                            <Typography variant="body2" color={textSecondary}>
+                                {subscriptionStatusDescription}
+                            </Typography>
+                        </Box>
+                        <Box sx={statCardSx}>
+                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                                Ваша роль
+                            </Typography>
+                            <Typography variant="h6" fontWeight={600} color={textPrimary}>
+                                {roleLabelRu}
+                            </Typography>
+                            <Typography variant="body2" color={textSecondary}>
+                                Организация {orgName || org}
+                            </Typography>
+                        </Box>
+                    </Stack>
+
+                    <Stack spacing={1.5} sx={{ mt: { xs: 2, md: 2.5 } }}>
+                        {subscriptionError && (
+                            <Alert severity="error" sx={getAlertSx('error')}>
+                                Не удалось получить статус подписки: {subscriptionError}
+                            </Alert>
+                        )}
+                        {!subscriptionError && subscriptionLoading && (
+                            <Alert severity="info" sx={getAlertSx('info')}>
+                                Проверяем статус подписки…
+                            </Alert>
+                        )}
+                        {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && (
+                            <Alert severity="warning" sx={getAlertSx('warning')}>
+                                <Stack
+                                    direction={{ xs: 'column', sm: 'row' }}
+                                    spacing={2}
+                                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                    justifyContent="space-between"
+                                >
+                                    <Box>
+                                        <Typography fontWeight={600} color={textPrimary}>
+                                            Подписка не активна.
+                                        </Typography>
+                                        {isTrialExpired && formattedTrialEnd && (
+                                            <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
+                                                Пробный период завершился {formattedTrialEnd}.
+                                            </Typography>
+                                        )}
+                                        <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
+                                            Получите бесплатный пробный период на 10 дней с тарифом PRO.
+                                        </Typography>
+                                        {!canStartTrial && (
+                                            <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
+                                                Обратитесь к владельцу организации, чтобы активировать подписку.
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                    {canStartTrial && (
+                                        <Button
+                                            variant="contained"
+                                            onClick={handleStartTrial}
+                                            disabled={startTrialLoading}
+                                            sx={{
+                                                ...actionButtonBaseSx,
+                                                px: { xs: 2.25, md: 2.75 },
+                                                py: 0.9,
+                                                backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
+                                                color: '#2f1000',
+                                            }}
+                                        >
+                                            {startTrialLoading ? 'Запускаем…' : 'Активировать'}
+                                        </Button>
+                                    )}
+                                </Stack>
+                            </Alert>
+                        )}
+                        {!subscriptionError && !subscriptionLoading && isTrialActive && (
+                            <Alert severity="info" sx={getAlertSx('info')}>
+                                Пробный период активен до {formattedTrialEnd ?? '—'}
+                                {typeof trialDaysLeft === 'number' && (
+                                    <Typography component="span" sx={{ ml: 0.5 }}>
+                                        (осталось {trialDaysLeft} дн.)
+                                    </Typography>
+                                )}
+                            </Alert>
+                        )}
+                    </Stack>
                 </Box>
 
                 <Box
@@ -1107,142 +1221,6 @@ export default function OrgSettingsPage() {
                             '& > *': { boxSizing: 'border-box' },
                         }}
                     >
-                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
-                            <Stack spacing={2}>
-                                <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                    <Typography variant="subtitle1" fontWeight={600}>
-                                        Ключевые показатели
-                                    </Typography>
-                                    <Tooltip title="Обновить">
-                                        <span>
-                                            <IconButton onClick={handleRefreshClick} disabled={projectsLoading || loading}>
-                                                <RefreshIcon />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Stack>
-                                <Box
-                                    sx={{
-                                        display: 'grid',
-                                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-                                        gap: 1.5,
-                                    }}
-                                >
-                                    <Box sx={statCardSx}>
-                                        <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                            Активные проекты
-                                        </Typography>
-                                        <Typography variant="h4" fontWeight={700} color={textPrimary}>
-                                            {activeProjectsCount}
-                                        </Typography>
-                                        <Typography variant="body2" color={textSecondary}>
-                                            из {projectsLimitLabel} доступных
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={statCardSx}>
-                                        <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                            Рабочих мест
-                                        </Typography>
-                                        <Typography variant="h4" fontWeight={700} color={textPrimary}>
-                                            {members.length}
-                                        </Typography>
-                                        <Typography variant="body2" color={textSecondary}>
-                                            Всего {seatsLabel}
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={statCardSx}>
-                                        <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                            Статус подписки
-                                        </Typography>
-                                        <Typography variant="h6" fontWeight={600} sx={{ color: subscriptionStatusColor }}>
-                                            {subscriptionStatusLabel}
-                                        </Typography>
-                                        <Typography variant="body2" color={textSecondary}>
-                                            {subscriptionStatusDescription}
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={statCardSx}>
-                                        <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                            Ваша роль
-                                        </Typography>
-                                        <Typography variant="h6" fontWeight={600} color={textPrimary}>
-                                            {roleLabelRu}
-                                        </Typography>
-                                        <Typography variant="body2" color={textSecondary}>
-                                            Организация {orgName || org}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                                <Stack spacing={1.5}>
-                                    {subscriptionError && (
-                                        <Alert severity="error" sx={getAlertSx('error')}>
-                                            Не удалось получить статус подписки: {subscriptionError}
-                                        </Alert>
-                                    )}
-                                    {!subscriptionError && subscriptionLoading && (
-                                        <Alert severity="info" sx={getAlertSx('info')}>
-                                            Проверяем статус подписки…
-                                        </Alert>
-                                    )}
-                                    {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && (
-                                        <Alert severity="warning" sx={getAlertSx('warning')}>
-                                            <Stack
-                                                direction={{ xs: 'column', sm: 'row' }}
-                                                spacing={2}
-                                                alignItems={{ xs: 'flex-start', sm: 'center' }}
-                                                justifyContent="space-between"
-                                            >
-                                                <Box>
-                                                    <Typography fontWeight={600} color={textPrimary}>
-                                                        Подписка не активна.
-                                                    </Typography>
-                                                    {isTrialExpired && formattedTrialEnd && (
-                                                        <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                                            Пробный период завершился {formattedTrialEnd}.
-                                                        </Typography>
-                                                    )}
-                                                    <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                                        Получите бесплатный пробный период на 10 дней с тарифом PRO.
-                                                    </Typography>
-                                                    {!canStartTrial && (
-                                                        <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                                            Обратитесь к владельцу организации, чтобы активировать подписку.
-                                                        </Typography>
-                                                    )}
-                                                </Box>
-                                                {canStartTrial && (
-                                                    <Button
-                                                        variant="contained"
-                                                        onClick={handleStartTrial}
-                                                        disabled={startTrialLoading}
-                                                        sx={{
-                                                            ...actionButtonBaseSx,
-                                                            px: { xs: 2.25, md: 2.75 },
-                                                            py: 0.9,
-                                                            backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
-                                                            color: '#2f1000',
-                                                        }}
-                                                    >
-                                                        {startTrialLoading ? 'Запускаем…' : 'Активировать'}
-                                                    </Button>
-                                                )}
-                                            </Stack>
-                                        </Alert>
-                                    )}
-                                    {!subscriptionError && !subscriptionLoading && isTrialActive && (
-                                        <Alert severity="info" sx={getAlertSx('info')}>
-                                            Пробный период активен до {formattedTrialEnd ?? '—'}
-                                            {typeof trialDaysLeft === 'number' && (
-                                                <Typography component="span" sx={{ ml: 0.5 }}>
-                                                    (осталось {trialDaysLeft} дн.)
-                                                </Typography>
-                                            )}
-                                        </Alert>
-                                    )}
-                                </Stack>
-                            </Stack>
-                        </Box>
-
                         {showNotificationsCard && (
                             <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
                                 <Stack spacing={1.5}>
@@ -1354,7 +1332,7 @@ export default function OrgSettingsPage() {
                                             <Box
                                                 key={project._id}
                                                 sx={{
-                                                    borderRadius: 2,
+                                                    borderRadius: 1,
                                                     p: 1.25,
                                                     border: `1px solid ${cardBorder}`,
                                                     backgroundColor: isDarkMode
@@ -1444,7 +1422,7 @@ export default function OrgSettingsPage() {
                                             <Box
                                                 key={member._id}
                                                 sx={{
-                                                    borderRadius: 2,
+                                                    borderRadius: 1,
                                                     p: 1.25,
                                                     border: `1px solid ${cardBorder}`,
                                                     backgroundColor: isDarkMode
@@ -1531,7 +1509,7 @@ export default function OrgSettingsPage() {
                                             <Box
                                                 key={app._id}
                                                 sx={{
-                                                    borderRadius: 2,
+                                                    borderRadius: 1,
                                                     p: 1.25,
                                                     border: `1px solid ${cardBorder}`,
                                                     backgroundColor: isDarkMode
@@ -1578,7 +1556,7 @@ export default function OrgSettingsPage() {
                             backgroundColor: cardBg,
                             border: `1px solid ${cardBorder}`,
                             boxShadow: cardShadow,
-                            borderRadius: 4,
+                            borderRadius: theme.shape.borderRadius,
                         },
                     },
                 }}
@@ -1754,7 +1732,7 @@ export default function OrgSettingsPage() {
                             backgroundColor: cardBg,
                             border: `1px solid ${cardBorder}`,
                             boxShadow: cardShadow,
-                            borderRadius: 4,
+                            borderRadius: theme.shape.borderRadius,
                         },
                     },
                 }}
@@ -1955,7 +1933,7 @@ export default function OrgSettingsPage() {
                             backgroundColor: cardBg,
                             border: `1px solid ${cardBorder}`,
                             boxShadow: cardShadow,
-                            borderRadius: 4,
+                            borderRadius: theme.shape.borderRadius,
                         },
                     },
                 }}
@@ -2117,7 +2095,7 @@ export default function OrgSettingsPage() {
                             backgroundColor: cardBg,
                             border: `1px solid ${cardBorder}`,
                             boxShadow: cardShadow,
-                            borderRadius: 4,
+                            borderRadius: theme.shape.borderRadius,
                         },
                     },
                 }}
@@ -2185,7 +2163,7 @@ export default function OrgSettingsPage() {
                             backgroundColor: cardBg,
                             border: `1px solid ${cardBorder}`,
                             boxShadow: cardShadow,
-                            borderRadius: 4,
+                            borderRadius: theme.shape.borderRadius,
                         },
                     },
                 }}
@@ -2263,7 +2241,7 @@ export default function OrgSettingsPage() {
                             backgroundColor: cardBg,
                             border: `1px solid ${cardBorder}`,
                             boxShadow: cardShadow,
-                            borderRadius: 4,
+                            borderRadius: theme.shape.borderRadius,
                         },
                     },
                 }}
@@ -2302,7 +2280,7 @@ export default function OrgSettingsPage() {
                             backgroundColor: cardBg,
                             border: `1px solid ${cardBorder}`,
                             boxShadow: cardShadow,
-                            borderRadius: 4,
+                            borderRadius: theme.shape.borderRadius,
                         },
                     },
                 }}

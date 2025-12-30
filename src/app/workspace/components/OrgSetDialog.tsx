@@ -170,7 +170,7 @@ export default function OrgSetDialog({
                     backgroundColor: paperBg,
                     border: `1px solid ${paperBorder}`,
                     boxShadow: paperShadow,
-                    borderRadius: 3,
+                    borderRadius: theme.shape.borderRadius,
                 },
             }}
         >
