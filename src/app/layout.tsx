@@ -2,6 +2,7 @@
 
 import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
+import { ruRU } from '@clerk/localizations';
 import ClientApp from './ClientApp';
 import localFont from 'next/font/local';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
@@ -37,7 +38,11 @@ export default function RootLayout({
     }
 
     return (
-        <ClerkProvider publishableKey={publishableKey} dynamic>
+        <ClerkProvider
+            publishableKey={publishableKey}
+            localization={ruRU}
+            dynamic
+        >
             <html lang="ru">
                 <body className={primaryFont.className}>
                     <ThemeProvider theme={theme}>

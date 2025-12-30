@@ -1,8 +1,6 @@
 'use client';
 
 import { SignUp } from '@clerk/nextjs';
-import { ruRU } from '@clerk/localizations';
-
 import { authAppearance } from '../../auth-appearance';
 
 export default function Page() {
@@ -37,7 +35,6 @@ export default function Page() {
                     <SignUp
                         afterSignUpUrl="/onboarding"
                         appearance={authAppearance}
-                        localization={ruRU}
                     />
                     <p className="mt-4 text-xs text-white/70">
                         Если у вас уже есть доступ, используйте вход в систему.
