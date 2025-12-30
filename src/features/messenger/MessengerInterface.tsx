@@ -1845,7 +1845,7 @@ export default function MessengerInterface({
                                         .map((file) => ({
                                             file,
                                             previewUrl: URL.createObjectURL(file),
-                                            kind: file.type.startsWith('video/') ? 'video' : 'image',
+                                            kind: (file.type.startsWith('video/') ? 'video' : 'image') as 'video' | 'image',
                                         }));
                                     if (items.length) {
                                         setPendingMedia((prev) => [...prev, ...items]);
