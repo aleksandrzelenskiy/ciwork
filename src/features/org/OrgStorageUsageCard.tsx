@@ -3,10 +3,15 @@
 import * as React from 'react';
 import {
     Box,
+    Button,
     Card,
     CardContent,
     CardHeader,
     CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     LinearProgress,
     Stack,
     Typography,
@@ -73,6 +78,7 @@ export default function OrgStorageUsageCard({
     const [usage, setUsage] = React.useState<StorageUsagePayload | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
+    const [detailsOpen, setDetailsOpen] = React.useState(false);
 
     React.useEffect(() => {
         if (!orgSlug) return;
@@ -131,56 +137,24 @@ export default function OrgStorageUsageCard({
         : [{ label: 'Нет данных', value: 1, color: COLORS.empty }];
 
     return (
-        <Card variant="outlined" sx={cardSx}>
-            <CardHeader
-                sx={cardHeaderSx}
-                avatar={<StorageOutlinedIcon fontSize="small" />}
-                title="Хранилище организации"
-                subheader="Фотоотчеты и вложения задач"
-            />
-            <CardContent sx={cardContentSx}>
-                {loading ? (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                        <CircularProgress size={20} />
-                        <Typography>Загрузка данных о хранилище…</Typography>
-                    </Stack>
-                ) : error ? (
-                    <Typography color="error">{error}</Typography>
-                ) : (
-                    <Stack
-                        direction={{ xs: 'column', md: 'row' }}
-                        spacing={3}
-                        alignItems={{ xs: 'stretch', md: 'center' }}
-                    >
-                        <Box sx={{ width: { xs: '100%', md: 260 }, height: 220 }}>
-                            <ResponsiveContainer>
-                                <PieChart>
-                                    <Pie
-                                        data={chartData}
-                                        dataKey="value"
-                                        nameKey="label"
-                                        innerRadius={65}
-                                        outerRadius={90}
-                                        paddingAngle={hasUsage ? 4 : 0}
-                                    >
-                                        {chartData.map((entry) => (
-                                            <Cell
-                                                key={entry.label}
-                                                fill={entry.color}
-                                                stroke="transparent"
-                                            />
-                                        ))}
-                                    </Pie>
-                                    {hasUsage && (
-                                        <Tooltip
-                                            formatter={(value: number) => formatBytes(value)}
-                                            labelFormatter={(label) => String(label)}
-                                        />
-                                    )}
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </Box>
-                        <Stack spacing={1.5} sx={{ flex: 1 }}>
+        <>
+            <Card variant="outlined" sx={cardSx}>
+                <CardHeader
+                    sx={cardHeaderSx}
+                    avatar={<StorageOutlinedIcon fontSize="small" />}
+                    title="Хранилище организации"
+                    subheader="Фотоотчеты и вложения задач"
+                />
+                <CardContent sx={cardContentSx}>
+                    {loading ? (
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <CircularProgress size={20} />
+                            <Typography>Загрузка данных о хранилище…</Typography>
+                        </Stack>
+                    ) : error ? (
+                        <Typography color="error">{error}</Typography>
+                    ) : (
+                        <Stack spacing={1.5}>
                             <Stack spacing={0.5}>
                                 <Typography variant="overline" color="text.secondary">
                                     Использовано
@@ -194,47 +168,6 @@ export default function OrgStorageUsageCard({
                                         : 'Лимит не задан'}
                                 </Typography>
                             </Stack>
-                            {limitBytes && (
-                                <Box>
-                                    <LinearProgress
-                                        variant="determinate"
-                                        value={usagePercent ?? 0}
-                                        sx={{ height: 8, borderRadius: 999 }}
-                                    />
-                                    <Typography variant="caption" color="text.secondary">
-                                        {`${usagePercent?.toFixed(1) ?? '0.0'}% от лимита`}
-                                    </Typography>
-                                </Box>
-                            )}
-                            <Stack spacing={1}>
-                                {breakdown.map((item) => {
-                                    const percent = totalBytes > 0 ? (item.value / totalBytes) * 100 : 0;
-                                    return (
-                                        <Stack
-                                            key={item.label}
-                                            direction="row"
-                                            spacing={1}
-                                            alignItems="center"
-                                            justifyContent="space-between"
-                                        >
-                                            <Stack direction="row" spacing={1} alignItems="center">
-                                                <Box
-                                                    sx={{
-                                                        width: 10,
-                                                        height: 10,
-                                                        borderRadius: '50%',
-                                                        backgroundColor: item.color,
-                                                    }}
-                                                />
-                                                <Typography variant="body2">{item.label}</Typography>
-                                            </Stack>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {`${formatBytes(item.value)} · ${percent.toFixed(1)}%`}
-                                            </Typography>
-                                        </Stack>
-                                    );
-                                })}
-                            </Stack>
                             {usage?.readOnly && (
                                 <Typography variant="caption" color="error">
                                     {usage.readOnlyReason
@@ -242,10 +175,133 @@ export default function OrgStorageUsageCard({
                                         : 'Доступ только чтение: недостаточно средств'}
                                 </Typography>
                             )}
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => setDetailsOpen(true)}
+                                sx={{ alignSelf: 'flex-start', textTransform: 'none', borderRadius: 999 }}
+                            >
+                                Подробнее
+                            </Button>
                         </Stack>
-                    </Stack>
-                )}
-            </CardContent>
-        </Card>
+                    )}
+                </CardContent>
+            </Card>
+
+            <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
+                <DialogTitle>Хранилище организации</DialogTitle>
+                <DialogContent dividers>
+                    {loading ? (
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <CircularProgress size={20} />
+                            <Typography>Загрузка данных о хранилище…</Typography>
+                        </Stack>
+                    ) : error ? (
+                        <Typography color="error">{error}</Typography>
+                    ) : (
+                        <Stack
+                            direction={{ xs: 'column', md: 'row' }}
+                            spacing={3}
+                            alignItems={{ xs: 'stretch', md: 'center' }}
+                        >
+                            <Box sx={{ width: { xs: '100%', md: 260 }, height: 220 }}>
+                                <ResponsiveContainer>
+                                    <PieChart>
+                                        <Pie
+                                            data={chartData}
+                                            dataKey="value"
+                                            nameKey="label"
+                                            innerRadius={65}
+                                            outerRadius={90}
+                                            paddingAngle={hasUsage ? 4 : 0}
+                                        >
+                                            {chartData.map((entry) => (
+                                                <Cell
+                                                    key={entry.label}
+                                                    fill={entry.color}
+                                                    stroke="transparent"
+                                                />
+                                            ))}
+                                        </Pie>
+                                        {hasUsage && (
+                                            <Tooltip
+                                                formatter={(value: number) => formatBytes(value)}
+                                                labelFormatter={(label) => String(label)}
+                                            />
+                                        )}
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </Box>
+                            <Stack spacing={1.5} sx={{ flex: 1 }}>
+                                <Stack spacing={0.5}>
+                                    <Typography variant="overline" color="text.secondary">
+                                        Использовано
+                                    </Typography>
+                                    <Typography variant="h5" fontWeight={700}>
+                                        {formatBytes(totalBytes)}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {limitBytes
+                                            ? `Лимит тарифа ${formatBytes(limitBytes)}, свободно ${formatBytes(remainingBytes ?? 0)}`
+                                            : 'Лимит не задан'}
+                                    </Typography>
+                                </Stack>
+                                {limitBytes && (
+                                    <Box>
+                                        <LinearProgress
+                                            variant="determinate"
+                                            value={usagePercent ?? 0}
+                                            sx={{ height: 8, borderRadius: 999 }}
+                                        />
+                                        <Typography variant="caption" color="text.secondary">
+                                            {`${usagePercent?.toFixed(1) ?? '0.0'}% от лимита`}
+                                        </Typography>
+                                    </Box>
+                                )}
+                                <Stack spacing={1}>
+                                    {breakdown.map((item) => {
+                                        const percent = totalBytes > 0 ? (item.value / totalBytes) * 100 : 0;
+                                        return (
+                                            <Stack
+                                                key={item.label}
+                                                direction="row"
+                                                spacing={1}
+                                                alignItems="center"
+                                                justifyContent="space-between"
+                                            >
+                                                <Stack direction="row" spacing={1} alignItems="center">
+                                                    <Box
+                                                        sx={{
+                                                            width: 10,
+                                                            height: 10,
+                                                            borderRadius: '50%',
+                                                            backgroundColor: item.color,
+                                                        }}
+                                                    />
+                                                    <Typography variant="body2">{item.label}</Typography>
+                                                </Stack>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {`${formatBytes(item.value)} · ${percent.toFixed(1)}%`}
+                                                </Typography>
+                                            </Stack>
+                                        );
+                                    })}
+                                </Stack>
+                                {usage?.readOnly && (
+                                    <Typography variant="caption" color="error">
+                                        {usage.readOnlyReason
+                                            ? `Доступ только чтение: ${usage.readOnlyReason}`
+                                            : 'Доступ только чтение: недостаточно средств'}
+                                    </Typography>
+                                )}
+                            </Stack>
+                        </Stack>
+                    )}
+                </DialogContent>
+            <DialogActions sx={{ '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' } }}>
+                <Button onClick={() => setDetailsOpen(false)}>Закрыть</Button>
+            </DialogActions>
+        </Dialog>
+        </>
     );
 }

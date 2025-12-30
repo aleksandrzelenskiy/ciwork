@@ -1243,6 +1243,7 @@ export default function OrgSettingsPage() {
                                                     size="small"
                                                     onClick={() => void fetchOrgSettings()}
                                                     disabled={orgSettingsLoading}
+                                                    sx={{ borderRadius: 999, textTransform: 'none' }}
                                                 >
                                                     Повторить
                                                 </Button>
@@ -1561,7 +1562,7 @@ export default function OrgSettingsPage() {
                     },
                 }}
             >
-                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                <DialogTitle sx={cardHeaderSx}>
                     Проекты организации
                 </DialogTitle>
                 <DialogContent dividers sx={{ backgroundColor: cardContentSx.backgroundColor }}>
@@ -1714,6 +1715,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={() => setProjectsDialogOpen(false)}>Закрыть</Button>
@@ -1737,7 +1739,7 @@ export default function OrgSettingsPage() {
                     },
                 }}
             >
-                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                <DialogTitle sx={cardHeaderSx}>
                     Участники организации
                 </DialogTitle>
                 <DialogContent dividers sx={{ backgroundColor: cardContentSx.backgroundColor }}>
@@ -1915,6 +1917,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={() => setMembersDialogOpen(false)}>Закрыть</Button>
@@ -1938,7 +1941,7 @@ export default function OrgSettingsPage() {
                     },
                 }}
             >
-                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                <DialogTitle sx={cardHeaderSx}>
                     Отклики на публичные задачи
                 </DialogTitle>
                 <DialogContent dividers sx={{ backgroundColor: cardContentSx.backgroundColor }}>
@@ -2027,7 +2030,6 @@ export default function OrgSettingsPage() {
                                                                         : 'default'
                                                         }
                                                         variant="outlined"
-                                                        sx={{ borderRadius: 2 }}
                                                     />
                                                 </TableCell>
                                                 <TableCell>
@@ -2076,6 +2078,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={() => setApplicationsDialogOpen(false)}>Закрыть</Button>
@@ -2100,9 +2103,7 @@ export default function OrgSettingsPage() {
                     },
                 }}
             >
-                <DialogTitle
-                    sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}
-                >
+                <DialogTitle sx={cardHeaderSx}>
                     Пригласить участника
                 </DialogTitle>
                 <DialogContent
@@ -2122,6 +2123,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
                     }}
                 >
                     <Button variant="text" color="primary" onClick={() => setInviteOpen(false)}>
@@ -2168,7 +2170,7 @@ export default function OrgSettingsPage() {
                     },
                 }}
             >
-                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                <DialogTitle sx={cardHeaderSx}>
                     Изменить роль участника
                 </DialogTitle>
                 <DialogContent sx={{ backgroundColor: cardContentSx.backgroundColor }}>
@@ -2194,6 +2196,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={() => setRoleDialogOpen(false)}>Отмена</Button>
@@ -2246,7 +2249,7 @@ export default function OrgSettingsPage() {
                     },
                 }}
             >
-                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                <DialogTitle sx={cardHeaderSx}>
                     Удалить участника?
                 </DialogTitle>
                 <DialogContent sx={{ backgroundColor: cardContentSx.backgroundColor }}>
@@ -2260,6 +2263,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={closeRemoveDialog} disabled={removing}>Отмена</Button>
@@ -2285,7 +2289,7 @@ export default function OrgSettingsPage() {
                     },
                 }}
             >
-                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                <DialogTitle sx={cardHeaderSx}>
                     Удалить проект?
                 </DialogTitle>
                 <DialogContent sx={{ backgroundColor: cardContentSx.backgroundColor }}>
@@ -2298,6 +2302,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={closeRemoveProjectDialog} disabled={removingProject}>Отмена</Button>
@@ -2318,12 +2323,12 @@ export default function OrgSettingsPage() {
                             backgroundColor: cardBg,
                             border: `1px solid ${cardBorder}`,
                             boxShadow: cardShadow,
-                            borderRadius: 4,
+                            borderRadius: theme.shape.borderRadius,
                         },
                     },
                 }}
             >
-                <DialogTitle sx={{ ...cardHeaderSx, borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                <DialogTitle sx={cardHeaderSx}>
                     Удалить отклик?
                 </DialogTitle>
                 <DialogContent sx={{ backgroundColor: cardContentSx.backgroundColor }}>
@@ -2337,6 +2342,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={closeRemoveApplicationDialog} disabled={removingApplication}>Отмена</Button>
