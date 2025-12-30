@@ -30,19 +30,51 @@ const parseMessagePayload = async (request: Request) => {
         const formData = await request.formData();
         const conversationId = String(formData.get('conversationId') ?? '').trim();
         const text = String(formData.get('text') ?? '').trim();
+        const replyToRaw = String(formData.get('replyTo') ?? '').trim();
+        let replyTo: {
+            messageId?: string;
+            text?: string;
+            senderEmail?: string;
+            senderName?: string;
+            createdAt?: string;
+        } | null = null;
+        if (replyToRaw) {
+            try {
+                replyTo = JSON.parse(replyToRaw) as {
+                    messageId?: string;
+                    text?: string;
+                    senderEmail?: string;
+                    senderName?: string;
+                    createdAt?: string;
+                };
+            } catch {
+                replyTo = null;
+            }
+        }
         const files = formData
             .getAll('files')
             .filter((item): item is File => item instanceof File);
-        return { conversationId, text, files };
+        return { conversationId, text, files, replyTo };
     }
 
     const body = (await request.json().catch(() => null)) as
-        | { conversationId?: string; text?: string }
+        | {
+              conversationId?: string;
+              text?: string;
+              replyTo?: {
+                  messageId?: string;
+                  text?: string;
+                  senderEmail?: string;
+                  senderName?: string;
+                  createdAt?: string;
+              };
+          }
         | null;
     return {
         conversationId: body?.conversationId?.trim() ?? '',
         text: body?.text?.trim() ?? '',
         files: [] as File[],
+        replyTo: body?.replyTo ?? null,
     };
 };
 
@@ -63,6 +95,7 @@ export async function POST(request: Request) {
     const conversationId = payload.conversationId;
     const text = payload.text;
     const files = payload.files ?? [];
+    const replyTo = payload.replyTo ?? null;
 
     if (!conversationId) {
         return NextResponse.json({ error: 'conversationId обязателен' }, { status: 400 });
@@ -181,6 +214,16 @@ export async function POST(request: Request) {
         senderEmail,
         senderName,
         text,
+        replyTo:
+            replyTo && replyTo.messageId
+                ? {
+                      messageId: replyTo.messageId,
+                      text: replyTo.text ?? '',
+                      senderEmail: replyTo.senderEmail ?? '',
+                      senderName: replyTo.senderName ?? '',
+                      createdAt: replyTo.createdAt ? new Date(replyTo.createdAt) : undefined,
+                  }
+                : undefined,
         readBy: [senderEmail],
         attachments,
         attachmentsBytes,

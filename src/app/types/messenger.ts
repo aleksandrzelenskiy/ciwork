@@ -27,7 +27,17 @@ export type MessengerMessageDTO = {
     text: string;
     readBy: string[];
     createdAt: string;
+    updatedAt?: string;
     attachments?: MessengerAttachmentDTO[];
+    replyTo?: MessengerReplyDTO;
+};
+
+export type MessengerReplyDTO = {
+    messageId: string;
+    text: string;
+    senderEmail: string;
+    senderName?: string;
+    createdAt?: string;
 };
 
 export type MessengerAttachmentDTO = {
@@ -43,6 +53,7 @@ export type MessengerAttachmentDTO = {
 
 export type ChatServerToClientEvents = {
     'chat:message:new': (payload: MessengerMessageDTO) => void;
+    'chat:message:updated': (payload: MessengerMessageDTO) => void;
     'chat:message:deleted': (payload: {
         conversationId: string;
         messageId: string;

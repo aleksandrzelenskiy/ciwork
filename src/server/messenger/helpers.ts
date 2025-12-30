@@ -21,11 +21,19 @@ export const normalizeEmail = (value?: string | null) =>
 export type ChatMessageLike = Partial<
     Pick<
         ChatMessage,
-        'conversationId' | 'orgId' | 'senderEmail' | 'senderName' | 'text' | 'readBy' | 'attachments'
+        | 'conversationId'
+        | 'orgId'
+        | 'senderEmail'
+        | 'senderName'
+        | 'text'
+        | 'readBy'
+        | 'attachments'
+        | 'replyTo'
     >
 > & {
     _id?: unknown;
     createdAt?: unknown;
+    updatedAt?: unknown;
 };
 
 export const chatMessageToDTO = (message: ChatMessageLike): MessengerMessageDTO => ({
@@ -38,6 +46,18 @@ export const chatMessageToDTO = (message: ChatMessageLike): MessengerMessageDTO 
     readBy: Array.isArray(message.readBy) ? message.readBy : [],
     attachments: Array.isArray(message.attachments) ? message.attachments : [],
     createdAt: message.createdAt ? new Date(message.createdAt as string | number | Date).toISOString() : new Date().toISOString(),
+    updatedAt: message.updatedAt ? new Date(message.updatedAt as string | number | Date).toISOString() : undefined,
+    replyTo: message.replyTo
+        ? {
+              messageId: message.replyTo.messageId ?? '',
+              text: message.replyTo.text ?? '',
+              senderEmail: message.replyTo.senderEmail ?? '',
+              senderName: message.replyTo.senderName ?? undefined,
+              createdAt: message.replyTo.createdAt
+                  ? new Date(message.replyTo.createdAt as string | number | Date).toISOString()
+                  : undefined,
+          }
+        : undefined,
 });
 
 export async function requireConversationAccess(

@@ -10,6 +10,13 @@ export interface ChatMessage extends Document {
     senderName?: string;
     text: string;
     readBy: string[];
+    replyTo?: {
+        messageId: string;
+        text: string;
+        senderEmail: string;
+        senderName?: string;
+        createdAt?: Date;
+    };
     attachments?: Array<{
         url: string;
         kind: 'image' | 'video';
@@ -32,6 +39,16 @@ const ChatMessageSchema = new Schema<ChatMessage>(
         senderName: { type: String },
         text: { type: String, default: '' },
         readBy: { type: [String], default: [], index: true }, // lower-case emails
+        replyTo: {
+            type: {
+                messageId: { type: String },
+                text: { type: String },
+                senderEmail: { type: String },
+                senderName: { type: String },
+                createdAt: { type: Date },
+            },
+            default: null,
+        },
         attachments: {
             type: [
                 {

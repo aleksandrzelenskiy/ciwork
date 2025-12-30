@@ -417,6 +417,21 @@ export class NotificationSocketGateway {
             this.io?.to(this.roomName(userId)).emit('chat:message:deleted', payload);
         });
     }
+
+    public emitChatMessageUpdated(
+        conversationId: string,
+        payload: unknown,
+        recipientUserIds: string[]
+    ) {
+        if (!this.io) return;
+        const room = this.chatRoomName(conversationId);
+        if (room) {
+            this.io.to(room).emit('chat:message:updated', payload);
+        }
+        recipientUserIds.forEach((userId) => {
+            this.io?.to(this.roomName(userId)).emit('chat:message:updated', payload);
+        });
+    }
 }
 
 const globalForSocket = globalThis as typeof globalThis & {
@@ -430,7 +445,8 @@ const isGatewayCompatible =
     typeof existingGateway.emitChatMessage === 'function' &&
     typeof existingGateway.emitChatRead === 'function' &&
     typeof existingGateway.emitChatUnread === 'function' &&
-    typeof existingGateway.emitChatMessageDeleted === 'function';
+    typeof existingGateway.emitChatMessageDeleted === 'function' &&
+    typeof existingGateway.emitChatMessageUpdated === 'function';
 
 export const notificationSocketGateway = isGatewayCompatible
     ? existingGateway
