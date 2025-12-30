@@ -198,8 +198,8 @@ export async function POST(request: Request) {
 
     const recipientUserIds = await findUserIdsByEmails(uniqueRecipientEmails);
 
-    const payload = chatMessageToDTO(message.toObject<ChatMessageLike>());
-    notificationSocketGateway.emitChatMessage(conversationId, payload, recipientUserIds);
+    const messagePayload = chatMessageToDTO(message.toObject<ChatMessageLike>());
+    notificationSocketGateway.emitChatMessage(conversationId, messagePayload, recipientUserIds);
 
-    return NextResponse.json({ ok: true, message: payload });
+    return NextResponse.json({ ok: true, message: messagePayload });
 }
