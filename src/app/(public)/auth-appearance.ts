@@ -11,7 +11,7 @@ export const authAppearance = {
     },
     elements: {
         rootBox: 'w-full',
-        card: 'rounded-t-3xl rounded-b-none border border-white/30 bg-white/90 px-8 py-8 shadow-2xl backdrop-blur',
+        card: 'rounded-t-3xl rounded-b-none border border-white/30 bg-white/80 px-8 py-8 shadow-2xl backdrop-blur',
         headerTitle: 'text-2xl font-semibold text-slate-900',
         headerSubtitle: 'text-sm text-slate-500',
         formFieldLabel: 'text-sm font-medium text-slate-700',

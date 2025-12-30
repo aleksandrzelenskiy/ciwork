@@ -6,8 +6,8 @@ import { authAppearance } from '../../auth-appearance';
 export default function Page() {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-signin bg-cover bg-center bg-no-repeat">
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12 lg:flex-row lg:items-center">
-                <section className="flex flex-1 flex-col justify-center rounded-3xl border border-white/10 bg-white/5 p-8 text-white shadow-lg backdrop-blur-sm">
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12 lg:flex-row lg:items-stretch">
+                <section className="flex h-full flex-1 flex-col justify-center rounded-3xl border border-white/10 bg-black/30 p-8 text-white shadow-2xl backdrop-blur-md">
                     <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/80">
                         CI Work
                     </span>
@@ -31,7 +31,7 @@ export default function Page() {
                         </span>
                     </div>
                 </section>
-                <div className="flex w-full max-w-md flex-col">
+                <div className="flex h-full w-full max-w-md flex-col">
                     <SignUp
                         afterSignUpUrl="/onboarding"
                         appearance={authAppearance}
