@@ -1,7 +1,5 @@
 // src/server/db/mongoose.ts
 
-import 'server-only';
-
 import mongoose, { Connection, ConnectOptions } from 'mongoose';
 import { requireEnv } from '@/config/env';
 

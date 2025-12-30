@@ -1,5 +1,3 @@
-import 'server-only';
-
 // src/server/models/ChatConversationModel.ts
 import mongoose, { Schema, Document, model, models } from 'mongoose';
 

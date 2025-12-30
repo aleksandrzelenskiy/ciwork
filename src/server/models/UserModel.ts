@@ -1,5 +1,3 @@
-import 'server-only';
-
 // src/server/models/UserModel.ts
 
 import mongoose, { Schema, Document, model, models, Types } from 'mongoose';

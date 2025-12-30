@@ -1,5 +1,3 @@
-import 'server-only';
-
 import dbConnect from '@/server/db/mongoose';
 import ChatConversationModel, { type ChatConversation } from '@/server/models/ChatConversationModel';
 import MembershipModel, { type OrgRole } from '@/server/models/MembershipModel';
