@@ -1,7 +1,5 @@
 // src/server/socket/token.ts
 
-import 'server-only';
-
 import crypto from 'node:crypto';
 import { getServerEnv } from '@/config/env';
 

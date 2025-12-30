@@ -1,7 +1,5 @@
 // src/server/socket/notificationSocket.ts
 
-import 'server-only';
-
 import { Server as SocketIOServer, type Socket } from 'socket.io';
 import { NOTIFICATIONS_SOCKET_PATH } from '@/config/socket';
 import type {
