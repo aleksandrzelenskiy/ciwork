@@ -1301,7 +1301,8 @@ export default function MessengerInterface({
         return { src: undefined, label, color };
     }, [activeConversation, getDirectDisplayName]);
 
-    const viewerAttachment = viewerState.attachments?.[viewerState.index];
+    const viewerAttachments = viewerState.attachments ?? [];
+    const viewerAttachment = viewerAttachments[viewerState.index];
     const viewerTitleParts = [
         viewerState.senderLabel,
         viewerState.createdAt ? formatDateWithTime(viewerState.createdAt) : null,
@@ -2211,7 +2212,7 @@ export default function MessengerInterface({
                             Медиафайл недоступен.
                         </Typography>
                     )}
-                    {viewerState.attachments.length > 1 ? (
+                    {viewerAttachments.length > 1 ? (
                         <>
                             <IconButton
                                 onClick={() =>
@@ -2219,7 +2220,7 @@ export default function MessengerInterface({
                                         ...prev,
                                         index:
                                             prev.index <= 0
-                                                ? prev.attachments.length - 1
+                                                ? (prev.attachments ?? []).length - 1
                                                 : prev.index - 1,
                                     }))
                                 }
@@ -2239,7 +2240,7 @@ export default function MessengerInterface({
                                     setViewerState((prev) => ({
                                         ...prev,
                                         index:
-                                            prev.index >= prev.attachments.length - 1
+                                            prev.index >= (prev.attachments ?? []).length - 1
                                                 ? 0
                                                 : prev.index + 1,
                                     }))
