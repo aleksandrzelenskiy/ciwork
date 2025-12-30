@@ -11,22 +11,22 @@ export default function Page() {
                     <span className="text-xs uppercase tracking-[0.4em] text-white/70">
                         CI Work
                     </span>
-                    <h1 className="mt-4 text-4xl font-semibold leading-tight md:text-5xl">
+                    <h1 className="mt-4 text-4xl font-semibold leading-tight text-emerald-200 drop-shadow md:text-5xl">
                         Регистрация в платформе
                     </h1>
-                    <p className="mt-4 max-w-md text-base text-white/85">
+                    <p className="mt-4 max-w-md border-l-2 border-emerald-300/70 pl-4 text-base text-white/90">
                         Создайте аккаунт, чтобы принимать задачи, отправлять
                         отчёты и видеть прогресс команды в едином рабочем
                         пространстве.
                     </p>
-                    <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/70">
-                        <span className="rounded-full border border-white/20 px-3 py-1">
+                    <div className="mt-8 flex flex-wrap gap-3 text-xs text-emerald-100">
+                        <span className="rounded-full border border-emerald-200/40 bg-emerald-400/10 px-3 py-1 shadow-sm">
                             Приглашения в проекты
                         </span>
-                        <span className="rounded-full border border-white/20 px-3 py-1">
+                        <span className="rounded-full border border-emerald-200/40 bg-emerald-400/10 px-3 py-1 shadow-sm">
                             Быстрый онбординг
                         </span>
-                        <span className="rounded-full border border-white/20 px-3 py-1">
+                        <span className="rounded-full border border-emerald-200/40 bg-emerald-400/10 px-3 py-1 shadow-sm">
                             Уведомления о статусе
                         </span>
                     </div>
