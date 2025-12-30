@@ -6,8 +6,8 @@ import { authAppearance } from '../../auth-appearance';
 export default function Page() {
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-signin bg-cover bg-center bg-no-repeat">
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-12 lg:flex-row lg:items-stretch">
-                <section className="hidden flex-1 flex-col justify-center rounded-3xl border border-white/10 bg-black/20 p-8 text-white shadow-2xl backdrop-blur-md lg:flex lg:min-h-full lg:self-stretch">
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-10 px-4 py-12 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-stretch lg:px-6">
+                <section className="hidden flex-1 flex-col justify-center rounded-3xl border border-white/10 bg-black/15 p-8 text-white shadow-2xl backdrop-blur-md lg:flex lg:self-stretch">
                     <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/80">
                         CI Work
                     </span>
@@ -31,14 +31,11 @@ export default function Page() {
                         </span>
                     </div>
                 </section>
-                <div className="flex h-full w-full max-w-md flex-col lg:min-h-full lg:self-stretch">
+                <div className="flex h-full w-full max-w-full flex-col lg:max-w-md lg:self-stretch">
                     <SignUp
                         afterSignUpUrl="/onboarding"
                         appearance={authAppearance}
                     />
-                    <p className="mt-4 text-xs text-white/70">
-                        Если у вас уже есть доступ, используйте вход в систему.
-                    </p>
                 </div>
             </div>
         </div>
