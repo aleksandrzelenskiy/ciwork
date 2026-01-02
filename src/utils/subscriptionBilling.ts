@@ -1,5 +1,5 @@
 import { Types, type ClientSession } from 'mongoose';
-import Subscription, { type SubscriptionPlan } from '@/server/models/SubscriptionModel';
+import Subscription, { type Subscription as SubscriptionDoc, type SubscriptionPlan } from '@/server/models/SubscriptionModel';
 import { getPlanConfig } from '@/utils/planConfig';
 import { creditOrgWallet, debitOrgWallet, ensureOrgWallet, withOrgWalletTransaction } from '@/utils/orgWallet';
 
@@ -382,12 +382,21 @@ export const chargeSubscriptionPeriod = async (orgId: Types.ObjectId, now: Date 
 
 export type PlanChangeTiming = 'immediate' | 'period_end';
 
+export type PlanChangeResult = {
+    ok: boolean;
+    subscription: SubscriptionDoc;
+    charged: number;
+    credited: number;
+    pending: boolean;
+    reason?: 'insufficient_funds';
+};
+
 export const changeSubscriptionPlan = async (params: {
     orgId: Types.ObjectId;
     nextPlan: SubscriptionPlan;
     timing: PlanChangeTiming;
     now?: Date;
-}) => {
+}): Promise<PlanChangeResult> => {
     const now = params.now ?? new Date();
     const subscription =
         (await Subscription.findOne({ orgId: params.orgId })) ??
