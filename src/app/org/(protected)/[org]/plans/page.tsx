@@ -10,7 +10,14 @@ import {
     CardContent,
     CardHeader,
     CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     Divider,
+    FormControlLabel,
+    Radio,
+    RadioGroup,
     Stack,
     Typography,
 } from '@mui/material';
@@ -34,6 +41,10 @@ type PlanConfig = {
 type SubscriptionInfo = {
     plan: PlanCode;
     status: string;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+    pendingPlan?: PlanCode | null;
+    pendingPlanEffectiveAt?: string | null;
 };
 
 type BillingInfo = {
@@ -51,6 +62,17 @@ type SubscriptionResponse = { subscription: SubscriptionInfo; billing: BillingIn
 
 const formatLimit = (value: number | null, fallback = 'Без ограничений') =>
     typeof value === 'number' ? value : fallback;
+const formatDate = (value?: string | null) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('ru-RU');
+};
+const formatAmount = (value: number) =>
+    new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(value);
+const roundCurrency = (value: number) => Math.round(value * 100) / 100;
+
+type PlanChangeTiming = 'immediate' | 'period_end';
 
 export default function OrgPlansPage() {
     const params = useParams<{ org: string }>();
@@ -64,6 +86,9 @@ export default function OrgPlansPage() {
     const [savingPlan, setSavingPlan] = React.useState<PlanCode | null>(null);
     const [error, setError] = React.useState<string | null>(null);
     const [notice, setNotice] = React.useState<string | null>(null);
+    const [changeDialogOpen, setChangeDialogOpen] = React.useState(false);
+    const [changeTarget, setChangeTarget] = React.useState<PlanCode | null>(null);
+    const [changeTiming, setChangeTiming] = React.useState<PlanChangeTiming>('immediate');
 
     const canChangePlan = role === 'owner' || role === 'org_admin';
     const currentPlanConfig = plans.find((plan) => plan.plan === subscription?.plan) ?? plans[0];
@@ -107,7 +132,7 @@ export default function OrgPlansPage() {
         void loadData();
     }, [loadData]);
 
-    const handleSwitchPlan = async (plan: PlanCode) => {
+    const handleSwitchPlan = async (plan: PlanCode, timing: PlanChangeTiming) => {
         if (!orgSlug) return;
         setSavingPlan(plan);
         setNotice(null);
@@ -115,7 +140,7 @@ export default function OrgPlansPage() {
             const res = await fetch(`/api/org/${encodeURIComponent(orgSlug)}/subscription`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ plan, status: 'active' }),
+                body: JSON.stringify({ plan, changeTiming: timing }),
             });
             const payload = (await res.json().catch(() => null)) as SubscriptionResponse | { error?: string } | null;
             if (!res.ok || !payload || !('subscription' in payload)) {
@@ -124,13 +149,65 @@ export default function OrgPlansPage() {
             }
             setSubscription(payload.subscription);
             setBilling(payload.billing);
-            setNotice('Тариф обновлен');
+            setNotice(timing === 'period_end' ? 'Смена тарифа запланирована' : 'Тариф обновлен');
         } catch (err) {
             setNotice(err instanceof Error ? err.message : 'Не удалось сменить тариф');
         } finally {
             setSavingPlan(null);
         }
     };
+
+    const openChangeDialog = (plan: PlanCode) => {
+        setChangeTarget(plan);
+        setChangeTiming('immediate');
+        setChangeDialogOpen(true);
+    };
+
+    const confirmChange = () => {
+        if (!changeTarget) return;
+        setChangeDialogOpen(false);
+        void handleSwitchPlan(changeTarget, changeTiming);
+    };
+
+    const handleCancelPending = async () => {
+        if (!orgSlug) return;
+        setNotice(null);
+        try {
+            const res = await fetch(`/api/org/${encodeURIComponent(orgSlug)}/subscription`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cancelPending: true }),
+            });
+            const payload = (await res.json().catch(() => null)) as SubscriptionResponse | { error?: string } | null;
+            if (!res.ok || !payload || !('subscription' in payload)) {
+                setNotice(payload && 'error' in payload ? payload.error ?? 'Не удалось отменить смену тарифа' : 'Не удалось отменить смену тарифа');
+                return;
+            }
+            setSubscription(payload.subscription);
+            setBilling(payload.billing);
+            setNotice('Запланированная смена тарифа отменена');
+        } catch (err) {
+            setNotice(err instanceof Error ? err.message : 'Не удалось отменить смену тарифа');
+        }
+    };
+
+    const targetPlanConfig = plans.find((plan) => plan.plan === changeTarget);
+    const currentPlanPrice = currentPlanConfig?.priceRubMonthly ?? 0;
+    const targetPlanPrice = targetPlanConfig?.priceRubMonthly ?? 0;
+    const periodStart = subscription?.periodStart ? new Date(subscription.periodStart) : null;
+    const periodEnd = subscription?.periodEnd ? new Date(subscription.periodEnd) : null;
+    const now = Date.now();
+    const hasValidPeriod =
+        periodStart &&
+        periodEnd &&
+        !Number.isNaN(periodStart.getTime()) &&
+        !Number.isNaN(periodEnd.getTime()) &&
+        periodEnd.getTime() > now &&
+        periodStart.getTime() < periodEnd.getTime();
+    const fraction = hasValidPeriod ? (periodEnd.getTime() - now) / (periodEnd.getTime() - periodStart.getTime()) : 1;
+    const unusedValue = currentPlanPrice > 0 && hasValidPeriod ? currentPlanPrice * fraction : 0;
+    const newCost = targetPlanPrice > 0 && hasValidPeriod ? targetPlanPrice * fraction : targetPlanPrice;
+    const delta = roundCurrency(newCost - unusedValue);
 
     const handleActivateGrace = async () => {
         if (!orgSlug) return;
@@ -191,6 +268,18 @@ export default function OrgPlansPage() {
                         {billing.reason ?? 'Доступ ограничен до оплаты подписки'}
                     </Alert>
                 )}
+                {subscription?.pendingPlan && subscription?.pendingPlanEffectiveAt && (
+                    <Alert
+                        severity="info"
+                        action={canChangePlan ? (
+                            <Button color="inherit" size="small" onClick={handleCancelPending}>
+                                Отменить
+                            </Button>
+                        ) : undefined}
+                    >
+                        Запланирована смена тарифа на {subscription.pendingPlan.toUpperCase()} с {formatDate(subscription.pendingPlanEffectiveAt)}.
+                    </Alert>
+                )}
                 {notice && <Alert severity="info">{notice}</Alert>}
 
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
@@ -235,8 +324,8 @@ export default function OrgPlansPage() {
                                             <Button
                                                 variant={isCurrent ? 'outlined' : 'contained'}
                                                 fullWidth
-                                                disabled={!canChangePlan || savingPlan !== null}
-                                                onClick={() => handleSwitchPlan(plan.plan)}
+                                                disabled={!canChangePlan || savingPlan !== null || isCurrent}
+                                                onClick={() => openChangeDialog(plan.plan)}
                                             >
                                                 {isCurrent ? 'Текущий тариф' : 'Перейти'}
                                             </Button>
@@ -298,6 +387,61 @@ export default function OrgPlansPage() {
                     </CardContent>
                 </Card>
             </Stack>
+                <Dialog open={changeDialogOpen} onClose={() => setChangeDialogOpen(false)}>
+                    <DialogTitle>Смена тарифа</DialogTitle>
+                    <DialogContent>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Выберите, когда применить новый тариф. При мгновенной смене мы пересчитаем остаток оплаченного периода.
+                        </Typography>
+                        <Box sx={{ mb: 2 }}>
+                            {changeTiming === 'immediate' ? (
+                                delta > 0 ? (
+                                    <Typography variant="body2">
+                                        Списание: {formatAmount(delta)} ₽ (пропорционально оставшемуся периоду).
+                                    </Typography>
+                                ) : delta < 0 ? (
+                                    <Typography variant="body2">
+                                        Возврат на баланс: {formatAmount(Math.abs(delta))} ₽.
+                                    </Typography>
+                                ) : (
+                                    <Typography variant="body2">
+                                        Перерасчет не требуется, сумма к списанию 0 ₽.
+                                    </Typography>
+                                )
+                            ) : (
+                                <Typography variant="body2">
+                                    Списания сейчас не будет, новый тариф применится в конце оплаченного периода.
+                                </Typography>
+                            )}
+                            {hasValidPeriod && (
+                                <Typography variant="caption" color="text.secondary">
+                                    Остаток периода: {Math.ceil((periodEnd!.getTime() - now) / (1000 * 60 * 60 * 24))} дн.
+                                </Typography>
+                            )}
+                        </Box>
+                        <RadioGroup
+                            value={changeTiming}
+                            onChange={(event) => setChangeTiming(event.target.value as PlanChangeTiming)}
+                        >
+                        <FormControlLabel
+                            value="immediate"
+                            control={<Radio />}
+                            label="Сразу (с перерасчетом остатка периода)"
+                        />
+                        <FormControlLabel
+                            value="period_end"
+                            control={<Radio />}
+                            label="После окончания оплаченного периода"
+                        />
+                    </RadioGroup>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setChangeDialogOpen(false)}>Отмена</Button>
+                    <Button variant="contained" onClick={confirmChange} disabled={!changeTarget}>
+                        Подтвердить
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }

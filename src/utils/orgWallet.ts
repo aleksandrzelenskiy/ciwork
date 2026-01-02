@@ -7,6 +7,17 @@ type EnsureOrgWalletResult = {
     created: boolean;
 };
 
+const isTransactionNotSupportedError = (error: unknown): boolean => {
+    const mongoError = error as { code?: number; codeName?: string; message?: string };
+    return (
+        mongoError?.code === 20 ||
+        mongoError?.codeName === 'IllegalOperation' ||
+        mongoError?.message?.includes?.(
+            'Transaction numbers are only allowed on a replica set member or mongos'
+        ) === true
+    );
+};
+
 const withSession = (query: { session?: ClientSession }, session?: ClientSession) =>
     session ? { ...query, session } : query;
 
@@ -48,10 +59,11 @@ export const ensureOrgWallet = async (
 export const creditOrgWallet = async (params: {
     orgId: Types.ObjectId;
     amount: number;
+    source?: 'manual' | 'subscription';
     meta?: Record<string, unknown>;
     session?: ClientSession;
 }) => {
-    const { orgId, amount, meta, session } = params;
+    const { orgId, amount, meta, session, source } = params;
     const { wallet } = await ensureOrgWallet(orgId, session);
     const updated = await OrgWalletModel.findOneAndUpdate(
         { _id: wallet._id },
@@ -67,7 +79,7 @@ export const creditOrgWallet = async (params: {
                 orgId,
                 amount,
                 type: 'credit',
-                source: 'manual',
+                source: source ?? 'manual',
                 balanceAfter: updated.balance,
                 meta,
             },
@@ -114,14 +126,21 @@ export const debitOrgWallet = async (params: {
 };
 
 export const withOrgWalletTransaction = async <T>(
-    task: (session: ClientSession) => Promise<T>
+    task: (session?: ClientSession) => Promise<T>
 ): Promise<T> => {
     const session = await mongoose.startSession();
     try {
         let result: T | null = null;
-        await session.withTransaction(async () => {
-            result = await task(session);
-        });
+        try {
+            await session.withTransaction(async () => {
+                result = await task(session);
+            });
+        } catch (error) {
+            if (!isTransactionNotSupportedError(error)) {
+                throw error;
+            }
+            result = await task(undefined);
+        }
         if (!result) throw new Error('ORG_WALLET_TX_MISSING');
         return result;
     } finally {

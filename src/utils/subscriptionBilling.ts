@@ -1,7 +1,7 @@
-import { Types } from 'mongoose';
+import { Types, type ClientSession } from 'mongoose';
 import Subscription, { type SubscriptionPlan } from '@/server/models/SubscriptionModel';
 import { getPlanConfig } from '@/utils/planConfig';
-import { debitOrgWallet, ensureOrgWallet, withOrgWalletTransaction } from '@/utils/orgWallet';
+import { creditOrgWallet, debitOrgWallet, ensureOrgWallet, withOrgWalletTransaction } from '@/utils/orgWallet';
 
 export type SubscriptionAccess = {
     ok: boolean;
@@ -30,6 +30,8 @@ const getPeriodBounds = (date: Date): { start: Date; end: Date } => {
     const end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1, 0, 0, 0));
     return { start, end };
 };
+
+const roundCurrency = (value: number) => Math.round(value * 100) / 100;
 
 const isTrialActive = (sub: { status?: string; periodEnd?: Date | string | null }): boolean => {
     if (!sub || sub.status !== 'trial') return false;
@@ -318,10 +320,24 @@ export const chargeSubscriptionPeriod = async (orgId: Types.ObjectId, now: Date 
     if (!subscription) {
         throw new Error('SUBSCRIPTION_NOT_FOUND');
     }
+    let pendingApplied = false;
+    if (subscription.pendingPlan && subscription.pendingPlanEffectiveAt) {
+        if (subscription.pendingPlanEffectiveAt.getTime() <= now.getTime()) {
+            subscription.plan = subscription.pendingPlan as SubscriptionPlan;
+            subscription.pendingPlan = undefined;
+            subscription.pendingPlanEffectiveAt = undefined;
+            subscription.pendingPlanRequestedAt = undefined;
+            pendingApplied = true;
+        }
+    }
+
     const plan = (subscription.plan as SubscriptionPlan | undefined) ?? 'basic';
     const planConfig = await getPlanConfig(plan);
     const priceRubMonthly = planConfig.priceRubMonthly ?? 0;
     const { start, end } = getPeriodBounds(now);
+    if (pendingApplied) {
+        subscription.storageLimitGb = planConfig.storageIncludedGb ?? undefined;
+    }
 
     if (priceRubMonthly <= 0) {
         subscription.status = 'active';
@@ -361,5 +377,127 @@ export const chargeSubscriptionPeriod = async (orgId: Types.ObjectId, now: Date 
         subscription.graceUntil = undefined;
         await subscription.save({ session });
         return { ok: true, subscription, charged: priceRubMonthly };
+    });
+};
+
+export type PlanChangeTiming = 'immediate' | 'period_end';
+
+export const changeSubscriptionPlan = async (params: {
+    orgId: Types.ObjectId;
+    nextPlan: SubscriptionPlan;
+    timing: PlanChangeTiming;
+    now?: Date;
+}) => {
+    const now = params.now ?? new Date();
+    const subscription =
+        (await Subscription.findOne({ orgId: params.orgId })) ??
+        new Subscription({ orgId: params.orgId, plan: 'basic', status: 'inactive' });
+
+    const currentPlan = (subscription.plan as SubscriptionPlan | undefined) ?? 'basic';
+    const currentStatus = subscription.status ?? 'inactive';
+    const currentPlanConfig = await getPlanConfig(currentPlan);
+    const nextPlanConfig = await getPlanConfig(params.nextPlan);
+    const currentPrice = currentPlanConfig.priceRubMonthly ?? 0;
+    const nextPrice = nextPlanConfig.priceRubMonthly ?? 0;
+
+    const periodStart = parseDate(subscription.periodStart ?? null);
+    const periodEnd = parseDate(subscription.periodEnd ?? null);
+    const hasActivePaidPeriod =
+        currentStatus === 'active' &&
+        currentPrice > 0 &&
+        Boolean(periodStart && periodEnd && periodEnd.getTime() > now.getTime());
+
+    if (params.timing === 'period_end') {
+        const effectiveAt = periodEnd && periodEnd.getTime() > now.getTime()
+            ? periodEnd
+            : getPeriodBounds(now).end;
+        if (effectiveAt.getTime() <= now.getTime()) {
+            return changeSubscriptionPlan({ ...params, timing: 'immediate', now });
+        }
+        subscription.pendingPlan = params.nextPlan;
+        subscription.pendingPlanEffectiveAt = effectiveAt;
+        subscription.pendingPlanRequestedAt = now;
+        await subscription.save();
+        return { ok: true, subscription, charged: 0, credited: 0, pending: true };
+    }
+
+    let chargeAmount = nextPrice;
+    let creditAmount = 0;
+
+    if (hasActivePaidPeriod && periodStart && periodEnd) {
+        const totalMs = Math.max(1, periodEnd.getTime() - periodStart.getTime());
+        const remainingMs = Math.max(0, periodEnd.getTime() - now.getTime());
+        const fraction = remainingMs / totalMs;
+        const unusedValue = currentPrice * fraction;
+        const newCost = nextPrice * fraction;
+        const delta = roundCurrency(newCost - unusedValue);
+        if (delta >= 0) {
+            chargeAmount = delta;
+            creditAmount = 0;
+        } else {
+            chargeAmount = 0;
+            creditAmount = roundCurrency(-delta);
+        }
+    }
+
+    const { start, end } = hasActivePaidPeriod && periodStart && periodEnd
+        ? { start: periodStart, end: periodEnd }
+        : getPeriodBounds(now);
+
+    const applySubscriptionUpdate = async (session?: ClientSession) => {
+        subscription.plan = params.nextPlan;
+        subscription.status = 'active';
+        subscription.periodStart = start;
+        subscription.periodEnd = end;
+        subscription.pendingPlan = undefined;
+        subscription.pendingPlanEffectiveAt = undefined;
+        subscription.pendingPlanRequestedAt = undefined;
+        subscription.graceUntil = undefined;
+        await subscription.save(session ? { session } : undefined);
+    };
+
+    if (chargeAmount <= 0 && creditAmount <= 0) {
+        await applySubscriptionUpdate();
+        return { ok: true, subscription, charged: 0, credited: 0, pending: false };
+    }
+
+    return withOrgWalletTransaction(async (session) => {
+        if (chargeAmount > 0) {
+            const debit = await debitOrgWallet({
+                orgId: params.orgId,
+                amount: chargeAmount,
+                source: 'subscription',
+                meta: {
+                    fromPlan: currentPlan,
+                    toPlan: params.nextPlan,
+                    chargeType: hasActivePaidPeriod ? 'proration' : 'full',
+                    periodStart: start.toISOString(),
+                    periodEnd: end.toISOString(),
+                },
+                session,
+            });
+            if (!debit.ok) {
+                return { ok: false, subscription, charged: 0, credited: 0, pending: false, reason: 'insufficient_funds' };
+            }
+        }
+
+        if (creditAmount > 0) {
+            await creditOrgWallet({
+                orgId: params.orgId,
+                amount: creditAmount,
+                source: 'subscription',
+                meta: {
+                    fromPlan: currentPlan,
+                    toPlan: params.nextPlan,
+                    creditType: 'proration',
+                    periodStart: start.toISOString(),
+                    periodEnd: end.toISOString(),
+                },
+                session,
+            });
+        }
+
+        await applySubscriptionUpdate(session);
+        return { ok: true, subscription, charged: chargeAmount, credited: creditAmount, pending: false };
     });
 };

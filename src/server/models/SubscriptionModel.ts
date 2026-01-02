@@ -17,6 +17,9 @@ export interface Subscription extends Document {
     storageLimitGb?: number;   // лимит хранилища
     periodStart?: Date;
     periodEnd?: Date;
+    pendingPlan?: SubscriptionPlan;
+    pendingPlanEffectiveAt?: Date;
+    pendingPlanRequestedAt?: Date;
     graceUntil?: Date;
     graceUsedAt?: Date;
     note?: string;             // номер счёта/комментарии
@@ -38,6 +41,9 @@ const SubscriptionSchema = new Schema<Subscription>(
         storageLimitGb: { type: Number },
         periodStart: { type: Date },
         periodEnd: { type: Date },
+        pendingPlan: { type: String, enum: ['basic', 'pro', 'business', 'enterprise'] },
+        pendingPlanEffectiveAt: { type: Date },
+        pendingPlanRequestedAt: { type: Date },
         graceUntil: { type: Date },
         graceUsedAt: { type: Date },
         note: { type: String },

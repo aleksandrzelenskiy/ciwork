@@ -4,7 +4,7 @@ import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import Subscription from '@/server/models/SubscriptionModel';
 import { requireOrgRole } from '@/server/org/permissions';
-import { ensureSubscriptionAccess, chargeSubscriptionPeriod } from '@/utils/subscriptionBilling';
+import { changeSubscriptionPlan, ensureSubscriptionAccess, type PlanChangeTiming } from '@/utils/subscriptionBilling';
 import { getPlanConfig } from '@/utils/planConfig';
 
 export const runtime = 'nodejs';
@@ -25,6 +25,8 @@ type ISODateString = string;
 type SubscriptionDTO = {
     orgSlug: string;
     plan: Plan;
+    pendingPlan?: Plan | null;
+    pendingPlanEffectiveAt?: ISODateString | null;
     status: SubStatus;
     seats?: number;
     projectsLimit?: number;
@@ -57,13 +59,19 @@ type PatchBody = Partial<
         SubscriptionDTO,
         'plan' | 'status' | 'seats' | 'projectsLimit' | 'publicTasksLimit' | 'tasksWeeklyLimit' | 'boostCredits' | 'storageLimitGb' | 'periodStart' | 'periodEnd' | 'note'
     >
->;
+> & {
+    changeTiming?: PlanChangeTiming;
+    cancelPending?: boolean;
+};
 type PatchSubResponse = { ok: true; subscription: SubscriptionDTO; billing: SubscriptionBillingDTO } | { error: string };
 
 /** Lean-документ подписки, возвращаемый .lean() */
 interface SubscriptionLean {
     plan: Plan;
     status: SubStatus;
+    pendingPlan?: Plan;
+    pendingPlanEffectiveAt?: Date | string | null;
+    pendingPlanRequestedAt?: Date | string | null;
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
@@ -95,6 +103,8 @@ function toSubscriptionDTO(doc: SubscriptionLean, orgSlug: string): Subscription
     return {
         orgSlug,
         plan: doc.plan,
+        pendingPlan: doc.pendingPlan ?? null,
+        pendingPlanEffectiveAt: toISO(doc.pendingPlanEffectiveAt),
         status: doc.status,
         seats: doc.seats,
         projectsLimit: doc.projectsLimit,
@@ -117,6 +127,8 @@ function fallbackDTO(orgSlug: string): SubscriptionDTO {
     return {
         orgSlug,
         plan: 'basic',
+        pendingPlan: null,
+        pendingPlanEffectiveAt: null,
         status: 'inactive',
         seats: 5,
         projectsLimit: 1,
@@ -266,9 +278,40 @@ export async function PATCH(
             updatedAt: new Date(),
         };
 
-        if ('plan' in body && !('storageLimitGb' in body) && body.plan) {
-            const planConfig = await getPlanConfig(body.plan);
-            update.storageLimitGb = planConfig.storageIncludedGb ?? undefined;
+        if (body.cancelPending) {
+            await Subscription.updateOne(
+                { orgId: org._id },
+                { $set: { pendingPlan: undefined, pendingPlanEffectiveAt: undefined, pendingPlanRequestedAt: undefined } }
+            );
+        }
+
+        let planChangeResult: { ok: boolean; subscription?: unknown; pending?: boolean; reason?: string } | null = null;
+        const changeTiming: PlanChangeTiming =
+            body.changeTiming === 'period_end' ? 'period_end' : 'immediate';
+
+        if ('plan' in body && body.plan) {
+            planChangeResult = await changeSubscriptionPlan({
+                orgId: org._id,
+                nextPlan: body.plan,
+                timing: changeTiming,
+            });
+            if (!planChangeResult.ok) {
+                return NextResponse.json(
+                    { error: 'Недостаточно средств для оплаты подписки' },
+                    { status: 402 }
+                );
+            }
+
+            if (changeTiming === 'immediate') {
+                if (!('storageLimitGb' in body)) {
+                    const planConfig = await getPlanConfig(body.plan);
+                    update.storageLimitGb = planConfig.storageIncludedGb ?? undefined;
+                }
+                delete update.plan;
+            } else {
+                delete update.plan;
+            }
+            delete update.status;
         }
 
         if (body.status === 'trial') {
@@ -286,17 +329,7 @@ export async function PATCH(
         if (!saved) return NextResponse.json({ error: 'Не удалось обновить подписку' }, { status: 500 });
 
         let resolvedSubscription = saved;
-        if (body.plan && body.status !== 'trial') {
-            const planConfig = await getPlanConfig(body.plan);
-            if (planConfig.priceRubMonthly > 0) {
-                const charge = await chargeSubscriptionPeriod(org._id);
-                if (!charge.ok) {
-                    return NextResponse.json(
-                        { error: 'Недостаточно средств для оплаты подписки' },
-                        { status: 402 }
-                    );
-                }
-            }
+        if (planChangeResult) {
             const refreshed = await Subscription.findOne({ orgId: org._id }).lean<SubscriptionLean>();
             if (refreshed) {
                 resolvedSubscription = refreshed;

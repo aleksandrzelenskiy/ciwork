@@ -16,9 +16,17 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     const now = new Date();
     const subscriptions = await Subscription.find({
-        plan: { $ne: 'basic' },
-        status: { $in: ['active', 'past_due'] },
-        periodEnd: { $lte: now },
+        $or: [
+            {
+                plan: { $ne: 'basic' },
+                status: { $in: ['active', 'past_due'] },
+                periodEnd: { $lte: now },
+            },
+            {
+                pendingPlan: { $exists: true, $ne: null },
+                pendingPlanEffectiveAt: { $lte: now },
+            },
+        ],
     }).lean();
 
     const results = [];
