@@ -175,9 +175,17 @@ export default function OrgPlansPage() {
             });
             const payload = (await res.json().catch(() => null)) as SubscriptionResponse | { error?: string } | null;
             if (!res.ok || !payload || !('subscription' in payload)) {
-                if (payload && 'payment' in payload && payload.payment?.required) {
+                if (
+                    payload &&
+                    'payment' in payload &&
+                    payload.payment &&
+                    'required' in payload.payment &&
+                    typeof payload.payment.required === 'number'
+                ) {
                     const required = formatAmount(payload.payment.required);
-                    const available = formatAmount(payload.payment.available ?? 0);
+                    const available = formatAmount(
+                        typeof payload.payment.available === 'number' ? payload.payment.available : 0
+                    );
                     setNotice(`Недостаточно средств: нужно ${required} ₽, доступно ${available} ₽.`);
                 } else {
                     setNotice(payload && 'error' in payload ? payload.error ?? 'Не удалось сменить тариф' : 'Не удалось сменить тариф');
