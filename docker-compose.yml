@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    container_name: ci-work_app
+    container_name: ciwork_app
     env_file: .env.production
     ports:
       - '127.0.0.1:3000:3000'
@@ -18,14 +18,33 @@ services:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: secret123
     volumes:
-      - ci-work_db_data:/data/db
+      - ciwork_ciwork_db_data:/data/db
     ports:
       - '27017:27017'
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2
+    container_name: ciwork_caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    restart: unless-stopped
+
+
 volumes:
-  ci-work_db_data:
-    name: ci-work_db_data
+  ciwork_ciwork_db_data:
+    external: true
+  caddy_data:
+  caddy_config:
+
 
 networks:
   default:
