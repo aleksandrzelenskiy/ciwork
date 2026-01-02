@@ -8,6 +8,8 @@ services:
     depends_on:
       - mongo
     restart: unless-stopped
+    networks:
+      - ciwork_net
 
   mongo:
     image: mongo:6.0
@@ -22,6 +24,8 @@ services:
     ports:
       - '27017:27017'
     restart: unless-stopped
+    networks:
+      - ciwork_net
 
   caddy:
     image: caddy:2
@@ -37,6 +41,8 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    networks:
+      - ciwork_net
 
 
 volumes:
@@ -47,7 +53,8 @@ volumes:
 
 
 networks:
-  default:
+  ciwork_net:
     driver: bridge
     driver_opts:
       com.docker.network.driver.mtu: '1450'
+
