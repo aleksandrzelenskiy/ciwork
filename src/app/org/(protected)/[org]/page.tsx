@@ -940,11 +940,17 @@ export default function OrgSettingsPage() {
     const showNotificationsCard = Boolean(walletError || orgSettingsError);
     const currentPlanConfig = planConfigs.find((planConfig) => planConfig.plan === (subscription?.plan ?? 'basic'));
     const resolvedProjectsLimit =
-        typeof subscription?.projectsLimit === 'number'
-            ? subscription.projectsLimit
-            : currentPlanConfig?.projectsLimit ?? null;
+        typeof currentPlanConfig?.projectsLimit === 'number'
+            ? currentPlanConfig.projectsLimit
+            : typeof subscription?.projectsLimit === 'number'
+                ? subscription.projectsLimit
+                : null;
     const resolvedSeatsLimit =
-        typeof subscription?.seats === 'number' ? subscription.seats : currentPlanConfig?.seatsLimit ?? null;
+        typeof currentPlanConfig?.seatsLimit === 'number'
+            ? currentPlanConfig.seatsLimit
+            : typeof subscription?.seats === 'number'
+                ? subscription.seats
+                : null;
     const formatLimitLabel = (value: number | null) => (typeof value === 'number' ? String(value) : '∞');
     const projectsLimitLabel = formatLimitLabel(resolvedProjectsLimit);
     const activeProjectsCount = projects.length;
@@ -1185,7 +1191,7 @@ export default function OrgSettingsPage() {
                                 Рабочих мест
                             </Typography>
                             <Typography variant="h4" fontWeight={700} color={textPrimary}>
-                                {members.length}
+                                {activeMembersCount}
                             </Typography>
                             <Typography variant="body2" color={textSecondary}>
                                 Всего {seatsLabel}
