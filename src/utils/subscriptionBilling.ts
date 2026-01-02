@@ -358,7 +358,7 @@ export const chargeSubscriptionPeriod = async (orgId: Types.ObjectId, now: Date 
         subscription.status = 'active';
         subscription.periodStart = start;
         subscription.periodEnd = end;
-        subscription.graceUntil = null;
+        subscription.graceUntil = undefined;
         await subscription.save({ session });
         return { ok: true, subscription, charged: priceRubMonthly };
     });
