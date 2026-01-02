@@ -76,15 +76,27 @@ type SubscriptionInfo = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
+    tasksWeeklyLimit?: number;
     periodStart?: string | null;
     periodEnd?: string | null;
+    graceUntil?: string | null;
+    graceUsedAt?: string | null;
     note?: string;
     updatedByEmail?: string;
     updatedAt: string;
 };
 
-type GetSubscriptionResponse = { subscription: SubscriptionInfo };
-type PatchSubscriptionResponse = { ok: true; subscription: SubscriptionInfo };
+type SubscriptionBillingInfo = {
+    isActive: boolean;
+    readOnly: boolean;
+    reason?: string;
+    graceAvailable: boolean;
+    graceUntil?: string | null;
+    priceRubMonthly: number;
+};
+
+type GetSubscriptionResponse = { subscription: SubscriptionInfo; billing: SubscriptionBillingInfo };
+type PatchSubscriptionResponse = { ok: true; subscription: SubscriptionInfo; billing: SubscriptionBillingInfo };
 type OrgWalletInfo = { balance: number; currency: string };
 type OrgWalletTx = {
     id: string;
@@ -189,6 +201,7 @@ export default function OrgSettingsPage() {
     const [orgSettingsError, setOrgSettingsError] = React.useState<string | null>(null);
     const [orgSettingsSaving, setOrgSettingsSaving] = React.useState(false);
     const [subscription, setSubscription] = React.useState<SubscriptionInfo | null>(null);
+    const [billing, setBilling] = React.useState<SubscriptionBillingInfo | null>(null);
     const [subscriptionLoading, setSubscriptionLoading] = React.useState(true);
     const [subscriptionError, setSubscriptionError] = React.useState<string | null>(null);
     const [startTrialLoading, setStartTrialLoading] = React.useState(false);
@@ -533,14 +546,17 @@ export default function OrgSettingsPage() {
             const data = (await res.json().catch(() => ({}))) as GetSubscriptionResponse | { error?: string };
             if (!res.ok || !('subscription' in data)) {
                 setSubscription(null);
+                setBilling(null);
                 setSubscriptionError('error' in data && data.error ? data.error : 'Не удалось загрузить подписку');
                 return;
             }
             setSubscription(data.subscription);
+            setBilling(data.billing);
             setSubscriptionError(null);
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Ошибка загрузки подписки';
             setSubscription(null);
+            setBilling(null);
             setSubscriptionError(msg);
         } finally {
             setSubscriptionLoading(false);
@@ -671,6 +687,7 @@ export default function OrgSettingsPage() {
                 return;
             }
             setSubscription(data.subscription);
+            setBilling(data.billing);
             setSubscriptionError(null);
             setSnack({ open: true, msg: 'Пробный период активирован на 10 дней', sev: 'success' });
         } catch (e: unknown) {
@@ -679,6 +696,27 @@ export default function OrgSettingsPage() {
             setSnack({ open: true, msg, sev: 'error' });
         } finally {
             setStartTrialLoading(false);
+        }
+    };
+
+    const handleActivateGrace = async () => {
+        if (!org || !isOwnerOrAdmin) return;
+        setSubscriptionError(null);
+        try {
+            const res = await fetch(`/api/org/${encodeURIComponent(org)}/subscription/grace`, {
+                method: 'POST',
+            });
+            const data = (await res.json().catch(() => ({}))) as { billing?: SubscriptionBillingInfo; error?: string };
+            if (!res.ok || !data.billing) {
+                const msg = data?.error || 'Не удалось активировать grace';
+                setSnack({ open: true, msg, sev: 'error' });
+                return;
+            }
+            setBilling(data.billing);
+            setSnack({ open: true, msg: 'Grace-период активирован на 3 дня', sev: 'success' });
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : 'Ошибка активации grace';
+            setSnack({ open: true, msg, sev: 'error' });
         }
     };
 
@@ -860,7 +898,7 @@ export default function OrgSettingsPage() {
     const isOwnerOrAdmin = myRole === 'owner' || myRole === 'org_admin';
     const hasTrialHistory = Boolean(subscription?.periodStart);
     const canStartTrial = isOwnerOrAdmin && (!subscription || (subscription.status === 'inactive' && !hasTrialHistory));
-    const isSubscriptionActive = subscription?.status === 'active' || isTrialActive;
+    const isSubscriptionActive = billing?.isActive ?? (subscription?.status === 'active' || isTrialActive);
     const formattedTrialEnd = trialEndsAt?.toLocaleDateString('ru-RU');
     const trialDaysLeft =
         isTrialActive && trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - nowTs) / DAY_MS)) : null;
@@ -1041,6 +1079,20 @@ export default function OrgSettingsPage() {
                         >
                             <Button
                                 variant="outlined"
+                                onClick={() => org && router.push(`/org/${encodeURIComponent(org)}/plans`)}
+                                sx={{
+                                    ...actionButtonBaseSx,
+                                    borderColor: headerBorder,
+                                    color: textPrimary,
+                                    backgroundColor: isDarkMode
+                                        ? 'rgba(15,18,28,0.65)'
+                                        : 'rgba(255,255,255,0.85)',
+                                }}
+                            >
+                                Тарифы
+                            </Button>
+                            <Button
+                                variant="outlined"
                                 onClick={goToProjectsPage}
                                 startIcon={<DriveFileMoveIcon />}
                                 sx={{
@@ -1140,6 +1192,32 @@ export default function OrgSettingsPage() {
                         {!subscriptionError && subscriptionLoading && (
                             <Alert severity="info" sx={getAlertSx('info')}>
                                 Проверяем статус подписки…
+                            </Alert>
+                        )}
+                        {!subscriptionError && !subscriptionLoading && billing?.readOnly && (
+                            <Alert
+                                severity="warning"
+                                sx={getAlertSx('warning')}
+                                action={
+                                    billing.graceAvailable && isOwnerOrAdmin ? (
+                                        <Button
+                                            size="small"
+                                            variant="contained"
+                                            onClick={handleActivateGrace}
+                                            sx={{
+                                                ...actionButtonBaseSx,
+                                                px: 2,
+                                                py: 0.6,
+                                                backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
+                                                color: '#2f1000',
+                                            }}
+                                        >
+                                            Grace 3 дня
+                                        </Button>
+                                    ) : undefined
+                                }
+                            >
+                                {billing.reason ?? 'Доступ ограничен: недостаточно средств'}
                             </Alert>
                         )}
                         {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && (

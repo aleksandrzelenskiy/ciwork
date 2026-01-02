@@ -12,6 +12,8 @@ import { buildBsAddressFromLocations, sanitizeBsLocationAddresses } from '@/util
 import { splitAttachmentsAndDocuments } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { addReverseRelations } from '@/app/utils/relatedTasksSync';
+import { ensureSubscriptionWriteAccess } from '@/utils/subscriptionBilling';
+import { ensureWeeklyTaskSlot } from '@/utils/taskLimits';
 
 
 export const runtime = 'nodejs';
@@ -205,6 +207,19 @@ export async function GET(
             return NextResponse.json({ error: 'Org or project not found' }, { status: 404 });
         }
 
+        const access = await ensureSubscriptionWriteAccess(orgObjId);
+        if (!access.ok) {
+            return NextResponse.json(
+                {
+                    error: access.reason || 'Недостаточно средств для оплаты подписки',
+                    graceAvailable: access.graceAvailable,
+                    graceUntil: access.graceUntil ? access.graceUntil.toISOString() : null,
+                },
+                { status: 402 }
+            );
+        }
+
+
         const { searchParams } = new URL(req.url);
         const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1);
         const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '20', 10), 1), 100);
@@ -330,6 +345,14 @@ export async function POST(
             return NextResponse.json(
                 { error: 'initiatorName and initiatorEmail are required' },
                 { status: 400 }
+            );
+        }
+
+        const taskLimit = await ensureWeeklyTaskSlot(orgObjId, { consume: true });
+        if (!taskLimit.ok) {
+            return NextResponse.json(
+                { error: taskLimit.reason || 'Лимит задач на неделю исчерпан' },
+                { status: 402 }
             );
         }
 

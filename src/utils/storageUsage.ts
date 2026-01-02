@@ -2,16 +2,19 @@ import { Types } from 'mongoose';
 import StorageUsageModel from '@/server/models/StorageUsageModel';
 import StorageBillingModel from '@/server/models/StorageBillingModel';
 import OrgWalletModel from '@/server/models/OrgWalletModel';
+import StoragePackageModel from '@/server/models/StoragePackageModel';
+import Subscription from '@/server/models/SubscriptionModel';
+import { getPlanConfig } from '@/utils/planConfig';
 import { debitOrgWallet, ensureOrgWallet, withOrgWalletTransaction } from '@/utils/orgWallet';
 
 export type OrgId = Types.ObjectId | string;
 
 export const GB_BYTES = 1024 * 1024 * 1024;
-export const FREE_STORAGE_GB = 5;
-export const OVERAGE_RUB_PER_GB_MONTH = 50;
 
 type StorageAccess = {
     bytesUsed: number;
+    includedGb: number;
+    packageGb: number;
     overageGb: number;
     hourlyCharge: number;
     walletBalance: number;
@@ -46,16 +49,41 @@ const hoursInUtcMonth = (date: Date): number => {
     return Math.round((end - start) / (1000 * 60 * 60));
 };
 
-const computeOverageGb = (bytesUsed: number): number => {
-    const overBytes = Math.max(0, bytesUsed - FREE_STORAGE_GB * GB_BYTES);
+const computeOverageGb = (bytesUsed: number, includedGb: number): number => {
+    const overBytes = Math.max(0, bytesUsed - includedGb * GB_BYTES);
     return overBytes > 0 ? Math.ceil(overBytes / GB_BYTES) : 0;
 };
 
-const computeHourlyCharge = (overageGb: number, date: Date): number => {
+const computeHourlyCharge = (overageGb: number, monthlyRate: number, date: Date): number => {
     if (overageGb <= 0) return 0;
-    const monthlyRate = OVERAGE_RUB_PER_GB_MONTH;
     const hours = hoursInUtcMonth(date);
     return (overageGb * monthlyRate) / hours;
+};
+
+const loadStorageAllowance = async (orgId: Types.ObjectId, at: Date) => {
+    const subscription = await Subscription.findOne({ orgId }).lean();
+    const plan = (subscription?.plan as 'basic' | 'pro' | 'business' | 'enterprise' | undefined) ?? 'basic';
+    const planConfig = await getPlanConfig(plan);
+    const includedGbRaw =
+        typeof subscription?.storageLimitGb === 'number'
+            ? subscription.storageLimitGb
+            : planConfig.storageIncludedGb;
+    const includedGb = includedGbRaw === null || typeof includedGbRaw === 'undefined'
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, includedGbRaw ?? 0);
+    const packages = await StoragePackageModel.find({
+        orgId,
+        status: 'active',
+        periodStart: { $lte: at },
+        periodEnd: { $gt: at },
+    }).lean();
+    const packageGb = packages.reduce((sum, pkg) => sum + (pkg.packageGb ?? 0), 0);
+    return {
+        includedGb,
+        packageGb,
+        overageRate: planConfig.storageOverageRubPerGbMonth ?? 0,
+        plan,
+    };
 };
 
 export const ensureStorageUsage = async (orgId: OrgId) => {
@@ -94,13 +122,15 @@ export const adjustStorageBytes = async (orgId: OrgId, bytesDelta: number) => {
 export const getStorageAccess = async (orgId: OrgId, at: Date = new Date()): Promise<StorageAccess> => {
     const orgObjectId = toObjectId(orgId);
     if (!orgObjectId) throw new Error('INVALID_ORG_ID');
-    const [usage, walletDoc] = await Promise.all([
+    const [usage, walletDoc, allowance] = await Promise.all([
         ensureStorageUsage(orgObjectId),
         ensureOrgWallet(orgObjectId).then((res) => res.wallet),
+        loadStorageAllowance(orgObjectId, at),
     ]);
     const bytesUsed = usage.bytesUsed ?? 0;
-    const overageGb = computeOverageGb(bytesUsed);
-    const hourlyCharge = computeHourlyCharge(overageGb, at);
+    const includedGb = allowance.includedGb + allowance.packageGb;
+    const overageGb = computeOverageGb(bytesUsed, includedGb);
+    const hourlyCharge = computeHourlyCharge(overageGb, allowance.overageRate, at);
     const walletBalance = walletDoc.balance ?? 0;
     const readOnly =
         usage.readOnly ||
@@ -110,6 +140,8 @@ export const getStorageAccess = async (orgId: OrgId, at: Date = new Date()): Pro
         : undefined;
     return {
         bytesUsed,
+        includedGb,
+        packageGb: allowance.packageGb,
         overageGb,
         hourlyCharge,
         walletBalance,
@@ -157,10 +189,14 @@ export const chargeHourlyOverageForOrg = async (orgId: OrgId, now: Date = new Da
     }
 
     return withOrgWalletTransaction(async (session) => {
-        const usage = await ensureStorageUsage(orgObjectId);
+        const [usage, allowance] = await Promise.all([
+            ensureStorageUsage(orgObjectId),
+            loadStorageAllowance(orgObjectId, now),
+        ]);
         const bytesUsed = usage.bytesUsed ?? 0;
-        const overageGb = computeOverageGb(bytesUsed);
-        const hourlyCharge = computeHourlyCharge(overageGb, now);
+        const includedGb = allowance.includedGb + allowance.packageGb;
+        const overageGb = computeOverageGb(bytesUsed, includedGb);
+        const hourlyCharge = computeHourlyCharge(overageGb, allowance.overageRate, now);
 
         if (overageGb <= 0 || hourlyCharge <= 0) {
             await setReadOnlyState(orgObjectId, false);
@@ -178,11 +214,13 @@ export const chargeHourlyOverageForOrg = async (orgId: OrgId, now: Date = new Da
         const debitResult = await debitOrgWallet({
             orgId: orgObjectId,
             amount: hourlyCharge,
+            source: 'storage_overage',
             meta: {
                 period,
                 hourKey,
                 overageGb,
                 bytesUsed,
+                includedGb,
             },
             session,
         });

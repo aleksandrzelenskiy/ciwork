@@ -4,6 +4,8 @@ import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import Subscription from '@/server/models/SubscriptionModel';
 import { requireOrgRole } from '@/server/org/permissions';
+import { ensureSubscriptionAccess, chargeSubscriptionPeriod } from '@/utils/subscriptionBilling';
+import { getPlanConfig } from '@/utils/planConfig';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,24 +29,36 @@ type SubscriptionDTO = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
+    tasksWeeklyLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     periodStart?: ISODateString | null;
     periodEnd?: ISODateString | null;
+    graceUntil?: ISODateString | null;
+    graceUsedAt?: ISODateString | null;
     note?: string;
     updatedByEmail?: string;
     updatedAt: ISODateString;
 };
 
-type GetSubResponse = { subscription: SubscriptionDTO } | { error: string };
+type SubscriptionBillingDTO = {
+    isActive: boolean;
+    readOnly: boolean;
+    reason?: string;
+    graceUntil?: ISODateString | null;
+    graceAvailable: boolean;
+    priceRubMonthly: number;
+};
+
+type GetSubResponse = { subscription: SubscriptionDTO; billing: SubscriptionBillingDTO } | { error: string };
 
 type PatchBody = Partial<
     Pick<
         SubscriptionDTO,
-        'plan' | 'status' | 'seats' | 'projectsLimit' | 'publicTasksLimit' | 'boostCredits' | 'storageLimitGb' | 'periodStart' | 'periodEnd' | 'note'
+        'plan' | 'status' | 'seats' | 'projectsLimit' | 'publicTasksLimit' | 'tasksWeeklyLimit' | 'boostCredits' | 'storageLimitGb' | 'periodStart' | 'periodEnd' | 'note'
     >
 >;
-type PatchSubResponse = { ok: true; subscription: SubscriptionDTO } | { error: string };
+type PatchSubResponse = { ok: true; subscription: SubscriptionDTO; billing: SubscriptionBillingDTO } | { error: string };
 
 /** Lean-документ подписки, возвращаемый .lean() */
 interface SubscriptionLean {
@@ -53,10 +67,13 @@ interface SubscriptionLean {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
+    tasksWeeklyLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     periodStart?: Date | string | null;
     periodEnd?: Date | string | null;
+    graceUntil?: Date | string | null;
+    graceUsedAt?: Date | string | null;
     note?: string;
     updatedByEmail?: string;
     updatedAt?: Date | string;
@@ -82,10 +99,13 @@ function toSubscriptionDTO(doc: SubscriptionLean, orgSlug: string): Subscription
         seats: doc.seats,
         projectsLimit: doc.projectsLimit,
         publicTasksLimit: doc.publicTasksLimit,
+        tasksWeeklyLimit: doc.tasksWeeklyLimit,
         boostCredits: doc.boostCredits,
         storageLimitGb: doc.storageLimitGb,
         periodStart: toISO(doc.periodStart),
         periodEnd: toISO(doc.periodEnd),
+        graceUntil: toISO(doc.graceUntil),
+        graceUsedAt: toISO(doc.graceUsedAt),
         note: doc.note,
         updatedByEmail: doc.updatedByEmail,
         updatedAt: toISO(doc.updatedAt ?? doc.createdAt) ?? new Date().toISOString(),
@@ -101,10 +121,13 @@ function fallbackDTO(orgSlug: string): SubscriptionDTO {
         seats: 5,
         projectsLimit: 1,
         publicTasksLimit: 5,
+        tasksWeeklyLimit: 10,
         boostCredits: 0,
-        storageLimitGb: 10,
+        storageLimitGb: 5,
         periodStart: null,
         periodEnd: null,
+        graceUntil: null,
+        graceUsedAt: null,
         note: 'not configured',
         updatedAt: new Date().toISOString(),
     };
@@ -146,10 +169,45 @@ export async function GET(
 
         const { org } = await requireOrgRole(orgSlug, email, ['owner', 'org_admin', 'manager', 'executor', 'viewer']);
 
-        const sub = await Subscription.findOne({ orgId: org._id }).lean<SubscriptionLean>();
-        if (!sub) return NextResponse.json({ subscription: fallbackDTO(org.orgSlug) });
+        const [sub, access] = await Promise.all([
+            Subscription.findOne({ orgId: org._id }).lean<SubscriptionLean>(),
+            ensureSubscriptionAccess(org._id),
+        ]);
+        if (!sub) {
+            return NextResponse.json({
+                subscription: fallbackDTO(org.orgSlug),
+                billing: {
+                    isActive: access.ok,
+                    readOnly: access.readOnly,
+                    reason: access.reason,
+                    graceUntil: toISO(access.graceUntil ?? null),
+                    graceAvailable: access.graceAvailable,
+                    priceRubMonthly: access.priceRubMonthly,
+                },
+            });
+        }
 
-        return NextResponse.json({ subscription: toSubscriptionDTO(sub, org.orgSlug) });
+        const planConfig = await getPlanConfig(sub.plan);
+        const merged: SubscriptionLean = {
+            ...sub,
+            seats: sub.seats ?? planConfig.seatsLimit ?? undefined,
+            projectsLimit: sub.projectsLimit ?? planConfig.projectsLimit ?? undefined,
+            publicTasksLimit: sub.publicTasksLimit ?? planConfig.publicTasksMonthlyLimit ?? undefined,
+            tasksWeeklyLimit: sub.tasksWeeklyLimit ?? planConfig.tasksWeeklyLimit ?? undefined,
+            storageLimitGb: sub.storageLimitGb ?? planConfig.storageIncludedGb ?? undefined,
+        };
+
+        return NextResponse.json({
+            subscription: toSubscriptionDTO(merged, org.orgSlug),
+            billing: {
+                isActive: access.ok,
+                readOnly: access.readOnly,
+                reason: access.reason,
+                graceUntil: toISO(access.graceUntil ?? null),
+                graceAvailable: access.graceAvailable,
+                priceRubMonthly: access.priceRubMonthly,
+            },
+        });
     } catch (e: unknown) {
         return NextResponse.json({ error: errorMessage(e) }, { status: 500 });
     }
@@ -182,6 +240,7 @@ export async function PATCH(
             seats?: number;
             projectsLimit?: number;
             publicTasksLimit?: number;
+            tasksWeeklyLimit?: number;
             boostCredits?: number;
             storageLimitGb?: number;
             periodStart?: Date | null;
@@ -197,6 +256,7 @@ export async function PATCH(
             ...('seats' in body ? { seats: body.seats } : {}),
             ...('projectsLimit' in body ? { projectsLimit: body.projectsLimit } : {}),
             ...('publicTasksLimit' in body ? { publicTasksLimit: body.publicTasksLimit } : {}),
+            ...('tasksWeeklyLimit' in body ? { tasksWeeklyLimit: body.tasksWeeklyLimit } : {}),
             ...('boostCredits' in body ? { boostCredits: body.boostCredits } : {}),
             ...('storageLimitGb' in body ? { storageLimitGb: body.storageLimitGb } : {}),
             ...('periodStart' in body ? { periodStart: parsedPeriodStart ?? null } : {}),
@@ -205,6 +265,11 @@ export async function PATCH(
             updatedByEmail: email,
             updatedAt: new Date(),
         };
+
+        if ('plan' in body && !('storageLimitGb' in body) && body.plan) {
+            const planConfig = await getPlanConfig(body.plan);
+            update.storageLimitGb = planConfig.storageIncludedGb ?? undefined;
+        }
 
         if (body.status === 'trial') {
             const { start, end } = clampTrialWindow(parsedPeriodStart ?? null, parsedPeriodEnd ?? null);
@@ -220,7 +285,37 @@ export async function PATCH(
 
         if (!saved) return NextResponse.json({ error: 'Не удалось обновить подписку' }, { status: 500 });
 
-        return NextResponse.json({ ok: true, subscription: toSubscriptionDTO(saved, org.orgSlug) });
+        let resolvedSubscription = saved;
+        if (body.plan && body.status !== 'trial') {
+            const planConfig = await getPlanConfig(body.plan);
+            if (planConfig.priceRubMonthly > 0) {
+                const charge = await chargeSubscriptionPeriod(org._id);
+                if (!charge.ok) {
+                    return NextResponse.json(
+                        { error: 'Недостаточно средств для оплаты подписки' },
+                        { status: 402 }
+                    );
+                }
+            }
+            const refreshed = await Subscription.findOne({ orgId: org._id }).lean<SubscriptionLean>();
+            if (refreshed) {
+                resolvedSubscription = refreshed;
+            }
+        }
+
+        const access = await ensureSubscriptionAccess(org._id);
+        return NextResponse.json({
+            ok: true,
+            subscription: toSubscriptionDTO(resolvedSubscription, org.orgSlug),
+            billing: {
+                isActive: access.ok,
+                readOnly: access.readOnly,
+                reason: access.reason,
+                graceUntil: toISO(access.graceUntil ?? null),
+                graceAvailable: access.graceAvailable,
+                priceRubMonthly: access.priceRubMonthly,
+            },
+        });
     } catch (e: unknown) {
         return NextResponse.json({ error: errorMessage(e) }, { status: 500 });
     }

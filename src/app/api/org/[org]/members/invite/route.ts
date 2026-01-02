@@ -8,6 +8,7 @@ import crypto from 'crypto';
 import UserModel from '@/server/models/UserModel';
 import { createNotification } from '@/server/notifications/service';
 import type { Types } from 'mongoose';
+import { ensureSubscriptionWriteAccess } from '@/utils/subscriptionBilling';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,17 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ org: strin
 
         // приглашать могут owner/org_admin/manager
         const { org } = await requireOrgRole(orgSlug, inviterEmail, ['owner', 'org_admin', 'manager']);
+        const access = await ensureSubscriptionWriteAccess(org._id);
+        if (!access.ok) {
+            return NextResponse.json(
+                {
+                    error: access.reason || 'Недостаточно средств для оплаты подписки',
+                    graceAvailable: access.graceAvailable,
+                    graceUntil: access.graceUntil ? access.graceUntil.toISOString() : null,
+                },
+                { status: 402 }
+            );
+        }
 
         const body = (await req.json()) as InviteBody;
         const userEmail = body.userEmail?.toLowerCase();

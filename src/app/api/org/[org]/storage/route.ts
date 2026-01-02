@@ -3,8 +3,7 @@ import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import { requireOrgRole } from '@/server/org/permissions';
 import ReportModel from '@/server/models/ReportModel';
-import Subscription from '@/server/models/SubscriptionModel';
-import { ensureStorageUsage, GB_BYTES } from '@/utils/storageUsage';
+import { ensureStorageUsage, GB_BYTES, getStorageAccess } from '@/utils/storageUsage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,6 +13,10 @@ type StorageUsageDTO = {
     reportBytes: number;
     attachmentBytes: number;
     limitBytes: number | null;
+    includedGb: number | null;
+    packageGb: number;
+    hourlyCharge: number;
+    overageGb: number;
     readOnly: boolean;
     readOnlyReason?: string;
     updatedAt: string;
@@ -41,7 +44,10 @@ export async function GET(
 
         const { org } = await requireOrgRole(orgSlug, email, ['owner', 'org_admin', 'manager', 'executor', 'viewer']);
 
-        const usage = await ensureStorageUsage(org._id);
+        const [usage, access] = await Promise.all([
+            ensureStorageUsage(org._id),
+            getStorageAccess(org._id),
+        ]);
         const totalBytes = usage.bytesUsed ?? 0;
 
         const reportAgg = await ReportModel.aggregate<{ total: number }>([
@@ -52,8 +58,7 @@ export async function GET(
         const reportBytes = Math.min(reportBytesRaw, totalBytes);
         const attachmentBytes = Math.max(0, totalBytes - reportBytes);
 
-        const subscription = await Subscription.findOne({ orgId: org._id }).lean();
-        const limitGb = typeof subscription?.storageLimitGb === 'number' ? subscription.storageLimitGb : null;
+        const limitGb = Number.isFinite(access.includedGb) ? access.includedGb : null;
         const limitBytes = limitGb && limitGb > 0 ? limitGb * GB_BYTES : null;
 
         return NextResponse.json({
@@ -62,8 +67,12 @@ export async function GET(
                 reportBytes,
                 attachmentBytes,
                 limitBytes,
-                readOnly: usage.readOnly ?? false,
-                readOnlyReason: usage.readOnlyReason ?? undefined,
+                includedGb: limitGb,
+                packageGb: access.packageGb,
+                hourlyCharge: access.hourlyCharge,
+                overageGb: access.overageGb,
+                readOnly: access.readOnly,
+                readOnlyReason: access.readOnlyReason ?? undefined,
                 updatedAt: toIso(usage.updatedAt),
             },
         });

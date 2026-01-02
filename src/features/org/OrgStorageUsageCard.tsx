@@ -31,6 +31,10 @@ type StorageUsagePayload = {
     reportBytes: number;
     attachmentBytes: number;
     limitBytes: number | null;
+    includedGb: number | null;
+    packageGb: number;
+    hourlyCharge: number;
+    overageGb: number;
     readOnly: boolean;
     readOnlyReason?: string;
     updatedAt?: string;
@@ -124,6 +128,11 @@ export default function OrgStorageUsageCard({
     const attachmentBytes = usage?.attachmentBytes ?? 0;
     const limitBytes = usage?.limitBytes ?? null;
     const remainingBytes = limitBytes ? Math.max(0, limitBytes - totalBytes) : null;
+    const limitLabel = limitBytes
+        ? `Лимит тарифа ${formatBytes(limitBytes)}, свободно ${formatBytes(remainingBytes ?? 0)}`
+        : usage?.includedGb === null
+            ? 'Без ограничений'
+            : 'Лимит не задан';
     const usagePercent = limitBytes ? Math.min(100, (totalBytes / limitBytes) * 100) : null;
     const hasUsage = totalBytes > 0;
 
@@ -163,10 +172,14 @@ export default function OrgStorageUsageCard({
                                     {formatBytes(totalBytes)}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    {limitBytes
-                                        ? `Лимит тарифа ${formatBytes(limitBytes)}, свободно ${formatBytes(remainingBytes ?? 0)}`
-                                        : 'Лимит не задан'}
+                                    {limitLabel}
                                 </Typography>
+                                {usage && (
+                                    <Typography variant="caption" color="text.secondary">
+                                        Включено: {usage.includedGb ?? '∞'} GB · Пакеты: {usage.packageGb} GB ·
+                                        Перерасход: {usage.overageGb} GB · {usage.hourlyCharge.toFixed(2)} ₽/час
+                                    </Typography>
+                                )}
                             </Stack>
                             {usage?.readOnly && (
                                 <Typography variant="caption" color="error">
@@ -241,10 +254,14 @@ export default function OrgStorageUsageCard({
                                         {formatBytes(totalBytes)}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                        {limitBytes
-                                            ? `Лимит тарифа ${formatBytes(limitBytes)}, свободно ${formatBytes(remainingBytes ?? 0)}`
-                                            : 'Лимит не задан'}
+                                        {limitLabel}
                                     </Typography>
+                                    {usage && (
+                                        <Typography variant="caption" color="text.secondary">
+                                            Включено: {usage.includedGb ?? '∞'} GB · Пакеты: {usage.packageGb} GB ·
+                                            Перерасход: {usage.overageGb} GB · {usage.hourlyCharge.toFixed(2)} ₽/час
+                                        </Typography>
+                                    )}
                                 </Stack>
                                 {limitBytes && (
                                     <Box>

@@ -22,6 +22,7 @@ type AdminOrganizationDTO = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
+    tasksWeeklyLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     walletBalance?: number;
@@ -86,6 +87,7 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             seats: subscription?.seats,
             projectsLimit: subscription?.projectsLimit,
             publicTasksLimit: subscription?.publicTasksLimit,
+            tasksWeeklyLimit: subscription?.tasksWeeklyLimit,
             boostCredits: subscription?.boostCredits,
             storageLimitGb: subscription?.storageLimitGb,
             walletBalance: wallet?.balance ?? 0,

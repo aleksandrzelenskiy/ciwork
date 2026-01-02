@@ -1,0 +1,262 @@
+'use client';
+
+import * as React from 'react';
+import {
+    Alert,
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Paper,
+    Stack,
+    Table,
+    TableBody,
+    TableCell,
+    TableContainer,
+    TableHead,
+    TableRow,
+    TextField,
+    Typography,
+} from '@mui/material';
+
+type PlanCode = 'basic' | 'pro' | 'business' | 'enterprise';
+
+type PlanConfig = {
+    plan: PlanCode;
+    title: string;
+    priceRubMonthly: number;
+    projectsLimit: number | null;
+    seatsLimit: number | null;
+    tasksWeeklyLimit: number | null;
+    publicTasksMonthlyLimit: number | null;
+    storageIncludedGb: number | null;
+    storageOverageRubPerGbMonth: number;
+    storagePackageGb: number | null;
+    storagePackageRubMonthly: number | null;
+    features: string[];
+};
+
+type PlanResponse = { plans: PlanConfig[] } | { error: string };
+
+const formatLimit = (value: number | null) => (typeof value === 'number' ? value : '—');
+
+export default function PlanConfigAdmin() {
+    const [plans, setPlans] = React.useState<PlanConfig[]>([]);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
+    const [selected, setSelected] = React.useState<PlanConfig | null>(null);
+    const [saving, setSaving] = React.useState(false);
+    const [dialogError, setDialogError] = React.useState<string | null>(null);
+
+    const loadPlans = React.useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch('/api/admin/plans', { cache: 'no-store' });
+            const payload = (await res.json().catch(() => null)) as PlanResponse | null;
+            if (!res.ok || !payload || !('plans' in payload)) {
+                setError(payload && 'error' in payload ? payload.error ?? 'Не удалось загрузить тарифы' : 'Не удалось загрузить тарифы');
+                return;
+            }
+            setPlans(payload.plans);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Не удалось загрузить тарифы');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    React.useEffect(() => {
+        void loadPlans();
+    }, [loadPlans]);
+
+    const handleOpen = (plan: PlanConfig) => {
+        setSelected({ ...plan });
+        setDialogError(null);
+    };
+
+    const handleClose = () => {
+        if (saving) return;
+        setSelected(null);
+        setDialogError(null);
+    };
+
+    const handleSave = async () => {
+        if (!selected) return;
+        setSaving(true);
+        setDialogError(null);
+        try {
+            const res = await fetch('/api/admin/plans', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...selected,
+                    features: selected.features.filter(Boolean),
+                }),
+            });
+            const payload = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+            if (!res.ok || !payload?.ok) {
+                setDialogError(payload?.error || 'Не удалось сохранить тариф');
+                return;
+            }
+            await loadPlans();
+            handleClose();
+        } catch (err) {
+            setDialogError(err instanceof Error ? err.message : 'Не удалось сохранить тариф');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const updateField = <K extends keyof PlanConfig>(key: K, value: PlanConfig[K]) => {
+        if (!selected) return;
+        setSelected({ ...selected, [key]: value });
+    };
+
+    return (
+        <Box>
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            <TableContainer component={Paper} variant="outlined">
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Тариф</TableCell>
+                            <TableCell>Цена/мес</TableCell>
+                            <TableCell>Проекты</TableCell>
+                            <TableCell>Места</TableCell>
+                            <TableCell>Задачи/нед</TableCell>
+                            <TableCell>Хранилище, GB</TableCell>
+                            <TableCell>Овередж/GB/мес</TableCell>
+                            <TableCell>Пакет GB</TableCell>
+                            <TableCell>Пакет/мес</TableCell>
+                            <TableCell />
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {!loading && plans.map((plan) => (
+                            <TableRow key={plan.plan}>
+                                <TableCell>{plan.title}</TableCell>
+                                <TableCell>{plan.priceRubMonthly}</TableCell>
+                                <TableCell>{formatLimit(plan.projectsLimit)}</TableCell>
+                                <TableCell>{formatLimit(plan.seatsLimit)}</TableCell>
+                                <TableCell>{formatLimit(plan.tasksWeeklyLimit)}</TableCell>
+                                <TableCell>{formatLimit(plan.storageIncludedGb)}</TableCell>
+                                <TableCell>{plan.storageOverageRubPerGbMonth}</TableCell>
+                                <TableCell>{formatLimit(plan.storagePackageGb)}</TableCell>
+                                <TableCell>{formatLimit(plan.storagePackageRubMonthly)}</TableCell>
+                                <TableCell>
+                                    <Button size="small" onClick={() => handleOpen(plan)}>
+                                        Изменить
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        {loading && (
+                            <TableRow>
+                                <TableCell colSpan={10}>
+                                    <Typography>Загрузка…</Typography>
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            <Dialog open={Boolean(selected)} onClose={handleClose} maxWidth="sm" fullWidth>
+                <DialogTitle>Параметры тарифа</DialogTitle>
+                <DialogContent dividers>
+                    {dialogError && <Alert severity="error" sx={{ mb: 2 }}>{dialogError}</Alert>}
+                    {selected && (
+                        <Stack spacing={2}>
+                            <TextField
+                                label="Название"
+                                value={selected.title}
+                                onChange={(e) => updateField('title', e.target.value)}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Цена, ₽/мес"
+                                type="number"
+                                value={selected.priceRubMonthly}
+                                onChange={(e) => updateField('priceRubMonthly', Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Лимит проектов"
+                                type="number"
+                                value={selected.projectsLimit ?? ''}
+                                onChange={(e) => updateField('projectsLimit', e.target.value === '' ? null : Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Лимит мест"
+                                type="number"
+                                value={selected.seatsLimit ?? ''}
+                                onChange={(e) => updateField('seatsLimit', e.target.value === '' ? null : Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Задачи в неделю"
+                                type="number"
+                                value={selected.tasksWeeklyLimit ?? ''}
+                                onChange={(e) => updateField('tasksWeeklyLimit', e.target.value === '' ? null : Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Публичные задачи/мес"
+                                type="number"
+                                value={selected.publicTasksMonthlyLimit ?? ''}
+                                onChange={(e) => updateField('publicTasksMonthlyLimit', e.target.value === '' ? null : Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Хранилище включено, GB"
+                                type="number"
+                                value={selected.storageIncludedGb ?? ''}
+                                onChange={(e) => updateField('storageIncludedGb', e.target.value === '' ? null : Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Овередж ₽/GB/мес"
+                                type="number"
+                                value={selected.storageOverageRubPerGbMonth}
+                                onChange={(e) => updateField('storageOverageRubPerGbMonth', Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Пакет, GB"
+                                type="number"
+                                value={selected.storagePackageGb ?? ''}
+                                onChange={(e) => updateField('storagePackageGb', e.target.value === '' ? null : Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Цена пакета ₽/мес"
+                                type="number"
+                                value={selected.storagePackageRubMonthly ?? ''}
+                                onChange={(e) => updateField('storagePackageRubMonthly', e.target.value === '' ? null : Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Особенности (по строкам)"
+                                value={selected.features.join('\n')}
+                                onChange={(e) => updateField('features', e.target.value.split('\n').map((line) => line.trim()).filter(Boolean))}
+                                multiline
+                                minRows={3}
+                                fullWidth
+                            />
+                        </Stack>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleClose} disabled={saving}>Отмена</Button>
+                    <Button onClick={handleSave} disabled={saving} variant="contained">
+                        {saving ? 'Сохраняем…' : 'Сохранить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Box>
+    );
+}

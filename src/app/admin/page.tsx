@@ -9,8 +9,9 @@ import {
 import { useTheme } from '@mui/material/styles';
 import OrganizationsAdmin from '@/features/admin/OrganizationsAdmin';
 import UsersAdmin from '@/features/admin/UsersAdmin';
+import PlanConfigAdmin from '@/features/admin/PlanConfigAdmin';
 
-type AdminTab = 'organizations' | 'users';
+type AdminTab = 'organizations' | 'users' | 'plans';
 
 export default function AdminPage() {
     const theme = useTheme();
@@ -66,10 +67,27 @@ export default function AdminPage() {
                         border: `1px solid ${tabBorderColor}`,
                     }}
                 />
+                <Tab
+                    value="plans"
+                    label="ТАРИФЫ"
+                    sx={{
+                        textTransform: 'uppercase',
+                        fontWeight: 600,
+                        borderRadius: '10px',
+                        minHeight: 0,
+                        px: 2.5,
+                        py: 1.2,
+                        mx: 0.5,
+                        color: tab === 'plans' ? theme.palette.text.primary : tabInactiveColor,
+                        backgroundColor: tab === 'plans' ? tabActiveBg : 'transparent',
+                        border: `1px solid ${tabBorderColor}`,
+                    }}
+                />
             </Tabs>
 
             {tab === 'organizations' && <OrganizationsAdmin />}
             {tab === 'users' && <UsersAdmin />}
+            {tab === 'plans' && <PlanConfigAdmin />}
         </Box>
     );
 }

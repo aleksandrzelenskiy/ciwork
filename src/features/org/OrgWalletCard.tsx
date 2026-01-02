@@ -36,7 +36,7 @@ export default function OrgWalletCard({
                     {loading ? '—' : `${balance.toFixed(2)} ${currency}`}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                    Списания за хранение рассчитываются почасово.
+                    Хранение списывается почасово, подписка — раз в месяц.
                 </Typography>
                 <Button
                     variant="outlined"

@@ -5,6 +5,7 @@ import dbConnect from '@/server/db/mongoose';
 import Organization from '@/server/models/OrganizationModel';
 import Subscription from '@/server/models/SubscriptionModel';
 import { resolvePlanLimits } from '@/utils/billingLimits';
+import { getPlanConfig } from '@/utils/planConfig';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,7 @@ type AdminSubscriptionDTO = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
+    tasksWeeklyLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     periodStart?: string | null;
@@ -37,6 +39,7 @@ type PatchBody = Partial<{
     seats: number;
     projectsLimit: number;
     publicTasksLimit: number;
+    tasksWeeklyLimit: number;
     boostCredits: number;
     storageLimitGb: number;
     periodStart: string | null;
@@ -114,14 +117,22 @@ export async function PATCH(
               seats: 'seats' in body ? body.seats : undefined,
               projectsLimit: 'projectsLimit' in body ? body.projectsLimit : undefined,
               publicTasksLimit: 'publicTasksLimit' in body ? body.publicTasksLimit : undefined,
+              tasksWeeklyLimit: 'tasksWeeklyLimit' in body ? body.tasksWeeklyLimit : undefined,
           }
         : {
               seats: 'seats' in body ? body.seats : existingSubscription?.seats,
               projectsLimit: 'projectsLimit' in body ? body.projectsLimit : existingSubscription?.projectsLimit,
               publicTasksLimit: 'publicTasksLimit' in body ? body.publicTasksLimit : existingSubscription?.publicTasksLimit,
+              tasksWeeklyLimit: 'tasksWeeklyLimit' in body ? body.tasksWeeklyLimit : existingSubscription?.tasksWeeklyLimit,
           };
 
-    const resolvedLimits = resolvePlanLimits(nextPlan, limitOverrides);
+    const planConfig = await getPlanConfig(nextPlan);
+    const resolvedLimits = resolvePlanLimits(nextPlan, {
+        seats: limitOverrides.seats ?? planConfig.seatsLimit ?? undefined,
+        projectsLimit: limitOverrides.projectsLimit ?? planConfig.projectsLimit ?? undefined,
+        publicTasksLimit: limitOverrides.publicTasksLimit ?? planConfig.publicTasksMonthlyLimit ?? undefined,
+        tasksWeeklyLimit: 'tasksWeeklyLimit' in body ? body.tasksWeeklyLimit : planConfig.tasksWeeklyLimit ?? undefined,
+    });
     const shouldUpdateLimits =
         planChanged ||
         'seats' in body ||
@@ -146,13 +157,18 @@ export async function PATCH(
         ...('status' in body ? { status: body.status } : {}),
         ...(shouldUpdateLimits
             ? {
-                  seats: resolvedLimits.seats ?? undefined,
-                  projectsLimit: resolvedLimits.projects ?? undefined,
-                  publicTasksLimit: resolvedLimits.publications ?? undefined,
+                  seats: resolvedLimits.seats ?? planConfig.seatsLimit ?? undefined,
+                  projectsLimit: resolvedLimits.projects ?? planConfig.projectsLimit ?? undefined,
+                  publicTasksLimit: resolvedLimits.publications ?? planConfig.publicTasksMonthlyLimit ?? undefined,
+                  tasksWeeklyLimit: resolvedLimits.tasksWeekly ?? planConfig.tasksWeeklyLimit ?? undefined,
               }
             : {}),
         ...('boostCredits' in body ? { boostCredits: body.boostCredits } : {}),
-        ...('storageLimitGb' in body ? { storageLimitGb: body.storageLimitGb } : {}),
+        ...('storageLimitGb' in body
+            ? { storageLimitGb: body.storageLimitGb }
+            : planChanged
+                ? { storageLimitGb: planConfig.storageIncludedGb ?? undefined }
+                : {}),
         ...('periodStart' in body ? { periodStart: parsedPeriodStart ?? null } : {}),
         ...('periodEnd' in body ? { periodEnd: parsedPeriodEnd ?? null } : {}),
         ...('note' in body ? { note: body.note } : {}),
@@ -183,6 +199,7 @@ export async function PATCH(
         seats: saved.seats,
         projectsLimit: saved.projectsLimit,
         publicTasksLimit: saved.publicTasksLimit,
+        tasksWeeklyLimit: saved.tasksWeeklyLimit,
         boostCredits: saved.boostCredits,
         storageLimitGb: saved.storageLimitGb,
         periodStart: toISO(saved.periodStart),

@@ -83,15 +83,28 @@ type SubscriptionInfo = {
     status: SubscriptionStatus;
     seats?: number;
     projectsLimit?: number;
+    publicTasksLimit?: number;
+    tasksWeeklyLimit?: number;
     periodStart?: string | null;
     periodEnd?: string | null;
+    graceUntil?: string | null;
+    graceUsedAt?: string | null;
     note?: string;
     updatedByEmail?: string;
     updatedAt: string;
 };
 
-type GetSubscriptionResponse = { subscription: SubscriptionInfo };
-type PatchSubscriptionResponse = { ok: true; subscription: SubscriptionInfo };
+type SubscriptionBillingInfo = {
+    isActive: boolean;
+    readOnly: boolean;
+    reason?: string;
+    graceAvailable: boolean;
+    graceUntil?: string | null;
+    priceRubMonthly: number;
+};
+
+type GetSubscriptionResponse = { subscription: SubscriptionInfo; billing: SubscriptionBillingInfo };
+type PatchSubscriptionResponse = { ok: true; subscription: SubscriptionInfo; billing: SubscriptionBillingInfo };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_DURATION_DAYS = 10;
@@ -114,6 +127,7 @@ export default function OrgProjectsPage() {
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState<string | null>(null);
     const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+    const [billing, setBilling] = useState<SubscriptionBillingInfo | null>(null);
     const [subscriptionLoading, setSubscriptionLoading] = useState(true);
     const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
     const [startTrialLoading, setStartTrialLoading] = useState(false);
@@ -179,15 +193,18 @@ export default function OrgProjectsPage() {
                 const message = 'error' in data ? data.error : 'Не удалось загрузить подписку';
                 setSubscriptionError(message);
                 setSubscription(null);
+                setBilling(null);
                 return;
             }
 
             setSubscriptionError(null);
             setSubscription(data.subscription);
+            setBilling(data.billing);
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Ошибка загрузки подписки';
             setSubscriptionError(msg);
             setSubscription(null);
+            setBilling(null);
         } finally {
             setSubscriptionLoading(false);
         }
@@ -210,7 +227,7 @@ export default function OrgProjectsPage() {
     const nowTs = Date.now();
     const isTrialActive = subscription?.status === 'trial' && !!trialEndsAt && trialEndsAt.getTime() > nowTs;
     const isTrialExpired = subscription?.status === 'trial' && !isTrialActive;
-    const isSubscriptionActive = subscription?.status === 'active' || isTrialActive;
+    const isSubscriptionActive = billing?.isActive ?? (subscription?.status === 'active' || isTrialActive);
     const trialDaysLeft =
         isTrialActive && trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - nowTs) / DAY_MS)) : null;
     const formattedTrialEnd = trialEndsAt?.toLocaleDateString('ru-RU');
@@ -582,6 +599,7 @@ export default function OrgProjectsPage() {
             }
 
             setSubscription(data.subscription);
+            setBilling(data.billing);
             setSubscriptionError(null);
             showSnack('Триал активирован на 10 дней', 'success');
         } catch (e: unknown) {
@@ -590,6 +608,26 @@ export default function OrgProjectsPage() {
             showSnack(msg, 'error');
         } finally {
             setStartTrialLoading(false);
+        }
+    };
+
+    const handleActivateGrace = async (): Promise<void> => {
+        if (!orgSlug || !(myRole === 'owner' || myRole === 'org_admin')) return;
+        try {
+            const res = await fetch(`/api/org/${encodeURIComponent(orgSlug)}/subscription/grace`, {
+                method: 'POST',
+            });
+            const data = (await res.json().catch(() => ({}))) as { billing?: SubscriptionBillingInfo; error?: string };
+            if (!res.ok || !data.billing) {
+                const msg = data?.error || 'Не удалось активировать grace';
+                showSnack(msg, 'error');
+                return;
+            }
+            setBilling(data.billing);
+            showSnack('Grace-период активирован на 3 дня', 'success');
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : 'Ошибка активации grace';
+            showSnack(msg, 'error');
         }
     };
 
@@ -613,6 +651,35 @@ export default function OrgProjectsPage() {
         subscriptionAlerts.push(
             <Alert key="sub-loading" severity="info" sx={getAlertSx('info')}>
                 Проверяем статус подписки…
+            </Alert>
+        );
+    }
+    if (!subscriptionError && !subscriptionLoading && billing?.readOnly) {
+        subscriptionAlerts.push(
+            <Alert
+                key="sub-billing-readonly"
+                severity="warning"
+                sx={getAlertSx('warning')}
+                action={
+                    billing.graceAvailable && (myRole === 'owner' || myRole === 'org_admin') ? (
+                        <Button
+                            size="small"
+                            variant="contained"
+                            onClick={handleActivateGrace}
+                            sx={{
+                                ...actionButtonBaseSx,
+                                px: 2,
+                                py: 0.6,
+                                backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
+                                color: '#2f1000',
+                            }}
+                        >
+                            Grace 3 дня
+                        </Button>
+                    ) : undefined
+                }
+            >
+                {billing.reason ?? 'Доступ ограничен: недостаточно средств'}
             </Alert>
         );
     }

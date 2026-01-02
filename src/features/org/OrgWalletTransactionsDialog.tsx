@@ -27,6 +27,12 @@ const formatTitle = (tx: WalletTx) => {
     if (tx.source === 'storage_overage') {
         return 'Списание за хранение';
     }
+    if (tx.source === 'subscription') {
+        return 'Списание за подписку';
+    }
+    if (tx.source === 'storage_package') {
+        return 'Пакет дополнительного хранения';
+    }
     if (tx.type === 'credit') {
         return 'Пополнение';
     }
@@ -38,6 +44,17 @@ const formatDetails = (tx: WalletTx) => {
         const overageGb = tx.meta.overageGb as number | undefined;
         const hourKey = tx.meta.hourKey as string | undefined;
         return `Сверх лимита: ${overageGb ?? '—'} ГБ · период ${hourKey ?? '—'}`;
+    }
+    if (tx.source === 'subscription' && tx.meta) {
+        const plan = tx.meta.plan as string | undefined;
+        const periodStart = tx.meta.periodStart as string | undefined;
+        const periodEnd = tx.meta.periodEnd as string | undefined;
+        return `Тариф ${plan ?? '—'} · период ${periodStart ?? '—'} → ${periodEnd ?? '—'}`;
+    }
+    if (tx.source === 'storage_package' && tx.meta) {
+        const packageGb = tx.meta.packageGb as number | undefined;
+        const quantity = tx.meta.quantity as number | undefined;
+        return `Пакет: ${packageGb ?? '—'} GB · шт: ${quantity ?? 1}`;
     }
     if (tx.source === 'manual') {
         return 'Изменено вручную администратором';

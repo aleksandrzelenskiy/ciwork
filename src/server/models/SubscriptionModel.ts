@@ -12,10 +12,13 @@ export interface Subscription extends Document {
     seats?: number;            // лимит мест
     projectsLimit?: number;    // лимит проектов
     publicTasksLimit?: number; // лимит публичных задач
+    tasksWeeklyLimit?: number; // лимит задач в неделю
     boostCredits?: number;     // кредиты на бусты
     storageLimitGb?: number;   // лимит хранилища
     periodStart?: Date;
     periodEnd?: Date;
+    graceUntil?: Date;
+    graceUsedAt?: Date;
     note?: string;             // номер счёта/комментарии
     updatedByEmail?: string;   // кто включил/изменил
     updatedAt: Date;
@@ -30,10 +33,13 @@ const SubscriptionSchema = new Schema<Subscription>(
         seats: { type: Number },
         projectsLimit: { type: Number },
         publicTasksLimit: { type: Number },
+        tasksWeeklyLimit: { type: Number },
         boostCredits: { type: Number, default: 0 },
-        storageLimitGb: { type: Number, default: 10 },
+        storageLimitGb: { type: Number },
         periodStart: { type: Date },
         periodEnd: { type: Date },
+        graceUntil: { type: Date },
+        graceUsedAt: { type: Date },
         note: { type: String },
         updatedByEmail: { type: String },
         updatedAt: { type: Date, default: Date.now },

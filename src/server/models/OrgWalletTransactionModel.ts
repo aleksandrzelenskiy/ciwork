@@ -3,7 +3,7 @@ import 'server-only';
 import mongoose, { Schema, Document, model, models, Types } from 'mongoose';
 
 export type OrgWalletTxType = 'credit' | 'debit';
-export type OrgWalletTxSource = 'manual' | 'storage_overage';
+export type OrgWalletTxSource = 'manual' | 'storage_overage' | 'subscription' | 'storage_package';
 
 export interface OrgWalletTransaction extends Document {
     orgId: Types.ObjectId;
@@ -20,7 +20,7 @@ const OrgWalletTransactionSchema = new Schema<OrgWalletTransaction>(
         orgId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
         amount: { type: Number, required: true },
         type: { type: String, enum: ['credit', 'debit'], required: true },
-        source: { type: String, enum: ['manual', 'storage_overage'], required: true },
+        source: { type: String, enum: ['manual', 'storage_overage', 'subscription', 'storage_package'], required: true },
         balanceAfter: { type: Number, required: true },
         meta: { type: Schema.Types.Mixed },
     },

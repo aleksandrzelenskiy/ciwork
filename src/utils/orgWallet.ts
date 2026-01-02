@@ -80,10 +80,11 @@ export const creditOrgWallet = async (params: {
 export const debitOrgWallet = async (params: {
     orgId: Types.ObjectId;
     amount: number;
+    source?: 'storage_overage' | 'subscription' | 'storage_package';
     meta?: Record<string, unknown>;
     session?: ClientSession;
 }) => {
-    const { orgId, amount, meta, session } = params;
+    const { orgId, amount, meta, session, source } = params;
     const { wallet } = await ensureOrgWallet(orgId, session);
     if ((wallet.balance ?? 0) < amount) {
         return { ok: false, wallet, available: wallet.balance ?? 0 };
@@ -102,7 +103,7 @@ export const debitOrgWallet = async (params: {
                 orgId,
                 amount,
                 type: 'debit',
-                source: 'storage_overage',
+                source: source ?? 'storage_overage',
                 balanceAfter: updated.balance,
                 meta,
             },

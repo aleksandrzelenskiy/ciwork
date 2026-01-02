@@ -11,6 +11,7 @@ export interface BillingUsage extends Document {
     projectsUsed: number;
     seatsUsed: number;
     publicationsUsed: number;
+    tasksUsed: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -22,6 +23,7 @@ const BillingUsageSchema = new Schema<BillingUsage>(
         projectsUsed: { type: Number, default: 0 },
         seatsUsed: { type: Number, default: 0 },
         publicationsUsed: { type: Number, default: 0 },
+        tasksUsed: { type: Number, default: 0 },
     },
     { timestamps: true, collection: 'billing_usage' }
 );

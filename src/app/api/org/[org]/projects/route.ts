@@ -5,12 +5,12 @@ import mongoose from 'mongoose';
 import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import Project from '@/server/models/ProjectModel';
-import Subscription from '@/server/models/SubscriptionModel';
 import Membership from '@/server/models/MembershipModel';
 import { consumeUsageSlot } from '@/utils/billingLimits';
 import { requireOrgRole } from '@/server/org/permissions';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
+import { ensureSubscriptionWriteAccess } from '@/utils/subscriptionBilling';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,42 +54,7 @@ interface ProjectLean {
     operator: string;
 }
 
-type SubscriptionLean = {
-    status: 'active' | 'trial' | 'suspended' | 'past_due' | 'inactive';
-    periodStart?: Date | string | null;
-    periodEnd?: Date | string | null;
-};
-
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const parseDate = (value: Date | string | null | undefined): Date | null => {
-    if (!value) return null;
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) return null;
-    return date;
-};
-
-const isTrialWindowActive = (sub: SubscriptionLean | null): boolean => {
-    if (!sub || sub.status !== 'trial') return false;
-    const end = parseDate(sub.periodEnd);
-    if (!end) return false;
-    return end.getTime() > Date.now();
-};
-
-const isSubscriptionActive = (sub: SubscriptionLean | null): boolean => {
-    if (!sub) return false;
-    if (sub.status === 'active') return true;
-    if (sub.status === 'trial') return isTrialWindowActive(sub);
-    return false;
-};
-
-const subscriptionBlockReason = (sub: SubscriptionLean | null): string => {
-    if (!sub || sub.status === 'inactive') return 'Подписка не активна';
-    if (sub.status === 'trial' && !isTrialWindowActive(sub)) return 'Пробный период истёк';
-    if (sub.status === 'suspended') return 'Подписка приостановлена';
-    if (sub.status === 'past_due') return 'Оплата подписки просрочена';
-    return 'Тариф не активен';
-};
 
 const normalizeEmailsArray = (value: unknown): string[] => {
     if (!Array.isArray(value)) return [];
@@ -196,9 +161,16 @@ export async function POST(
 
         const { org: orgDoc } = await requireOrgRole(orgSlug, email, ['owner', 'org_admin', 'manager']);
 
-        const sub = await Subscription.findOne({ orgId: orgDoc._id }).lean<SubscriptionLean | null>();
-        if (!isSubscriptionActive(sub)) {
-            return NextResponse.json({ error: subscriptionBlockReason(sub) }, { status: 402 });
+        const access = await ensureSubscriptionWriteAccess(orgDoc._id);
+        if (!access.ok) {
+            return NextResponse.json(
+                {
+                    error: access.reason || 'Недостаточно средств для оплаты подписки',
+                    graceAvailable: access.graceAvailable,
+                    graceUntil: access.graceUntil ? access.graceUntil.toISOString() : null,
+                },
+                { status: 402 }
+            );
         }
 
         const body = (await request.json()) as CreateProjectBody;

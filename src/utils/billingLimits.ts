@@ -3,6 +3,7 @@ import type { ClientSession } from 'mongoose';
 import { Types } from 'mongoose';
 import Subscription, { type SubscriptionPlan } from '@/server/models/SubscriptionModel';
 import BillingUsageModel, { type BillingPeriod, type BillingUsage } from '@/server/models/BillingUsageModel';
+import { getPlanConfig } from '@/utils/planConfig';
 
 export type OrgId = Types.ObjectId | string;
 
@@ -10,11 +11,12 @@ export type PlanLimits = {
     projects: number | null;
     seats: number | null;
     publications: number | null;
+    tasksWeekly: number | null;
 };
 
-type UsageKind = 'projects' | 'publications';
+type UsageKind = 'projects' | 'publications' | 'tasks';
 
-type UsageField = 'projectsUsed' | 'publicationsUsed';
+type UsageField = 'projectsUsed' | 'publicationsUsed' | 'tasksUsed';
 
 export type LimitCheckResult = {
     ok: boolean;
@@ -24,16 +26,10 @@ export type LimitCheckResult = {
     reason?: string;
 };
 
-const BASE_PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
-    basic: { projects: 1, seats: 5, publications: 5 },
-    pro: { projects: 5, seats: 15, publications: 10 },
-    business: { projects: 15, seats: 30, publications: 20 },
-    enterprise: { projects: null, seats: null, publications: null },
-};
-
 const USAGE_FIELD_MAP: Record<UsageKind, UsageField> = {
     projects: 'projectsUsed',
     publications: 'publicationsUsed',
+    tasks: 'tasksUsed',
 };
 
 const normalizeLimit = (value?: number | null): number | null => {
@@ -48,28 +44,44 @@ export const getBillingPeriod = (date: Date = new Date()): BillingPeriod => {
     return `${year}-${month}`;
 };
 
+const getIsoWeek = (date: Date) => {
+    const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    const dayNumber = target.getUTCDay() || 7;
+    target.setUTCDate(target.getUTCDate() + 4 - dayNumber);
+    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((target.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    return { year: target.getUTCFullYear(), week: weekNo };
+};
+
+export const getWeeklyPeriod = (date: Date = new Date()): BillingPeriod => {
+    const { year, week } = getIsoWeek(date);
+    const weekStr = String(week).padStart(2, '0');
+    return `${year}-W${weekStr}`;
+};
+
 export const resolvePlanLimits = (
     plan: SubscriptionPlan,
     overrides?: {
         seats?: number | null;
         projectsLimit?: number | null;
         publicTasksLimit?: number | null;
+        tasksWeeklyLimit?: number | null;
     }
 ): PlanLimits => {
-    const base = BASE_PLAN_LIMITS[plan] ?? BASE_PLAN_LIMITS.basic;
-
     if (plan === 'enterprise') {
         return {
             projects: normalizeLimit(overrides?.projectsLimit),
             seats: normalizeLimit(overrides?.seats),
             publications: normalizeLimit(overrides?.publicTasksLimit),
+            tasksWeekly: normalizeLimit(overrides?.tasksWeeklyLimit),
         };
     }
 
     return {
-        projects: normalizeLimit(overrides?.projectsLimit) ?? base.projects,
-        seats: normalizeLimit(overrides?.seats) ?? base.seats,
-        publications: normalizeLimit(overrides?.publicTasksLimit) ?? base.publications,
+        projects: normalizeLimit(overrides?.projectsLimit),
+        seats: normalizeLimit(overrides?.seats),
+        publications: normalizeLimit(overrides?.publicTasksLimit),
+        tasksWeekly: normalizeLimit(overrides?.tasksWeeklyLimit),
     };
 };
 
@@ -78,13 +90,22 @@ export const loadPlanForOrg = async (
 ): Promise<{ plan: SubscriptionPlan; limits: PlanLimits }> => {
     const sub = await Subscription.findOne({ orgId }).lean();
     const plan = (sub?.plan as SubscriptionPlan | undefined) ?? 'basic';
+    const planConfig = await getPlanConfig(plan);
     const limits = resolvePlanLimits(plan, {
-        seats: sub?.seats,
-        projectsLimit: sub?.projectsLimit,
-        publicTasksLimit: sub?.publicTasksLimit,
+        seats: sub?.seats ?? planConfig.seatsLimit ?? undefined,
+        projectsLimit: sub?.projectsLimit ?? planConfig.projectsLimit ?? undefined,
+        publicTasksLimit: sub?.publicTasksLimit ?? planConfig.publicTasksMonthlyLimit ?? undefined,
+        tasksWeeklyLimit: sub?.tasksWeeklyLimit ?? planConfig.tasksWeeklyLimit ?? undefined,
     });
 
-    return { plan, limits };
+    const resolvedLimits: PlanLimits = {
+        projects: limits.projects ?? planConfig.projectsLimit ?? null,
+        seats: limits.seats ?? planConfig.seatsLimit ?? null,
+        publications: limits.publications ?? planConfig.publicTasksMonthlyLimit ?? null,
+        tasksWeekly: limits.tasksWeekly ?? planConfig.tasksWeeklyLimit ?? null,
+    };
+
+    return { plan, limits: resolvedLimits };
 };
 
 const buildExceeded = (limit: number | null, used: number, plan: SubscriptionPlan, reason: string): LimitCheckResult => ({
@@ -129,7 +150,9 @@ export const consumeUsageSlot = async (
     const limitValue = limits[kind];
     const usageField = USAGE_FIELD_MAP[kind];
     const now = new Date();
-    const period = options?.period ?? getBillingPeriod(now);
+    const period =
+        options?.period ??
+        (kind === 'tasks' ? getWeeklyPeriod(now) : getBillingPeriod(now));
 
     const session = options?.session;
     const existingQuery = BillingUsageModel.findOne({ orgId, period });
@@ -168,6 +191,7 @@ export const consumeUsageSlot = async (
             const initial: Record<UsageField, number> = {
                 projectsUsed: 0,
                 publicationsUsed: 0,
+                tasksUsed: 0,
             };
             initial[usageField] = 1;
 
