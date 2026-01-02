@@ -203,7 +203,7 @@ export const chargeHourlyOverageForOrg = async (orgId: OrgId, now: Date = new Da
             return { ok: true, skipped: true };
         }
 
-        const walletDoc = await OrgWalletModel.findOne({ orgId: orgObjectId }).session(session);
+        const walletDoc = await OrgWalletModel.findOne({ orgId: orgObjectId }).session(session ?? null);
         const walletBalance = walletDoc?.balance ?? 0;
 
         if (walletBalance < hourlyCharge) {
