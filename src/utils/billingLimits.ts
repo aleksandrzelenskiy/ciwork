@@ -17,6 +17,7 @@ export type PlanLimits = {
 type UsageKind = 'projects' | 'publications' | 'tasks';
 
 type UsageField = 'projectsUsed' | 'publicationsUsed' | 'tasksUsed';
+type LimitField = keyof PlanLimits;
 
 export type LimitCheckResult = {
     ok: boolean;
@@ -30,6 +31,12 @@ const USAGE_FIELD_MAP: Record<UsageKind, UsageField> = {
     projects: 'projectsUsed',
     publications: 'publicationsUsed',
     tasks: 'tasksUsed',
+};
+
+const LIMIT_FIELD_MAP: Record<UsageKind, LimitField> = {
+    projects: 'projects',
+    publications: 'publications',
+    tasks: 'tasksWeekly',
 };
 
 const normalizeLimit = (value?: number | null): number | null => {
@@ -147,7 +154,7 @@ export const consumeUsageSlot = async (
     }
 
     const { plan, limits } = await loadPlanForOrg(orgId);
-    const limitValue = limits[kind];
+    const limitValue = limits[LIMIT_FIELD_MAP[kind]];
     const usageField = USAGE_FIELD_MAP[kind];
     const now = new Date();
     const period =
