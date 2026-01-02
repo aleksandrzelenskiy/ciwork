@@ -1117,20 +1117,6 @@ export default function OrgSettingsPage() {
                         >
                             <Button
                                 variant="outlined"
-                                onClick={() => org && router.push(`/org/${encodeURIComponent(org)}/plans`)}
-                                sx={{
-                                    ...actionButtonBaseSx,
-                                    borderColor: headerBorder,
-                                    color: textPrimary,
-                                    backgroundColor: isDarkMode
-                                        ? 'rgba(15,18,28,0.65)'
-                                        : 'rgba(255,255,255,0.85)',
-                                }}
-                            >
-                                Тарифы
-                            </Button>
-                            <Button
-                                variant="outlined"
                                 onClick={goToProjectsPage}
                                 startIcon={<DriveFileMoveIcon />}
                                 sx={{
@@ -1207,6 +1193,15 @@ export default function OrgSettingsPage() {
                             <Typography variant="body2" color={textSecondary}>
                                 {subscriptionStatusDescription}
                             </Typography>
+                            <Button
+                                variant="text"
+                                size="small"
+                                startIcon={<EditOutlinedIcon fontSize="small" />}
+                                onClick={() => org && router.push(`/org/${encodeURIComponent(org)}/plans`)}
+                                sx={{ mt: 1, px: 0, textTransform: 'none' }}
+                            >
+                                Изменить
+                            </Button>
                         </Box>
                         <Box sx={statCardSx}>
                             <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
