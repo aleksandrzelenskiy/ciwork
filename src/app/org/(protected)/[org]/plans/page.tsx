@@ -58,7 +58,34 @@ type BillingInfo = {
 
 type OrgInfoResponse = { org?: { name?: string }; role?: string; error?: string };
 type PlansResponse = { plans: PlanConfig[] } | { error: string };
-type SubscriptionResponse = { subscription: SubscriptionInfo; billing: BillingInfo } | { error: string };
+type SubscriptionResponse =
+    | {
+          subscription: SubscriptionInfo;
+          billing: BillingInfo;
+          payment?: {
+              charged: number;
+              credited: number;
+              balance?: number;
+              pending: boolean;
+          };
+          paymentPreview?: {
+              charged: number;
+              credited: number;
+              pending: boolean;
+              balance: number;
+              required: number;
+              available: number;
+              willFail: boolean;
+              effectiveAt?: string | null;
+          };
+      }
+    | {
+          error: string;
+          payment?: {
+              required?: number;
+              available?: number;
+          };
+      };
 
 const formatLimit = (value: number | null, fallback = 'Без ограничений') =>
     typeof value === 'number' ? value : fallback;
@@ -89,6 +116,8 @@ export default function OrgPlansPage() {
     const [changeDialogOpen, setChangeDialogOpen] = React.useState(false);
     const [changeTarget, setChangeTarget] = React.useState<PlanCode | null>(null);
     const [changeTiming, setChangeTiming] = React.useState<PlanChangeTiming>('immediate');
+    const [paymentPreview, setPaymentPreview] = React.useState<SubscriptionResponse['paymentPreview'] | null>(null);
+    const [previewLoading, setPreviewLoading] = React.useState(false);
 
     const canChangePlan = role === 'owner' || role === 'org_admin';
     const currentPlanConfig = plans.find((plan) => plan.plan === subscription?.plan) ?? plans[0];
@@ -144,12 +173,28 @@ export default function OrgPlansPage() {
             });
             const payload = (await res.json().catch(() => null)) as SubscriptionResponse | { error?: string } | null;
             if (!res.ok || !payload || !('subscription' in payload)) {
-                setNotice(payload && 'error' in payload ? payload.error ?? 'Не удалось сменить тариф' : 'Не удалось сменить тариф');
+                if (payload && 'payment' in payload && payload.payment?.required) {
+                    const required = formatAmount(payload.payment.required);
+                    const available = formatAmount(payload.payment.available ?? 0);
+                    setNotice(`Недостаточно средств: нужно ${required} ₽, доступно ${available} ₽.`);
+                } else {
+                    setNotice(payload && 'error' in payload ? payload.error ?? 'Не удалось сменить тариф' : 'Не удалось сменить тариф');
+                }
                 return;
             }
             setSubscription(payload.subscription);
             setBilling(payload.billing);
-            setNotice(timing === 'period_end' ? 'Смена тарифа запланирована' : 'Тариф обновлен');
+            if (payload.payment && !payload.payment.pending) {
+                if (payload.payment.charged > 0) {
+                    setNotice(`Тариф обновлен. Списано ${formatAmount(payload.payment.charged)} ₽.`);
+                } else if (payload.payment.credited > 0) {
+                    setNotice(`Тариф обновлен. Возврат ${formatAmount(payload.payment.credited)} ₽.`);
+                } else {
+                    setNotice('Тариф обновлен');
+                }
+            } else {
+                setNotice('Смена тарифа запланирована');
+            }
         } catch (err) {
             setNotice(err instanceof Error ? err.message : 'Не удалось сменить тариф');
         } finally {
@@ -191,23 +236,34 @@ export default function OrgPlansPage() {
         }
     };
 
-    const targetPlanConfig = plans.find((plan) => plan.plan === changeTarget);
-    const currentPlanPrice = currentPlanConfig?.priceRubMonthly ?? 0;
-    const targetPlanPrice = targetPlanConfig?.priceRubMonthly ?? 0;
-    const periodStart = subscription?.periodStart ? new Date(subscription.periodStart) : null;
-    const periodEnd = subscription?.periodEnd ? new Date(subscription.periodEnd) : null;
-    const now = Date.now();
-    const hasValidPeriod =
-        periodStart &&
-        periodEnd &&
-        !Number.isNaN(periodStart.getTime()) &&
-        !Number.isNaN(periodEnd.getTime()) &&
-        periodEnd.getTime() > now &&
-        periodStart.getTime() < periodEnd.getTime();
-    const fraction = hasValidPeriod ? (periodEnd.getTime() - now) / (periodEnd.getTime() - periodStart.getTime()) : 1;
-    const unusedValue = currentPlanPrice > 0 && hasValidPeriod ? currentPlanPrice * fraction : 0;
-    const newCost = targetPlanPrice > 0 && hasValidPeriod ? targetPlanPrice * fraction : targetPlanPrice;
-    const delta = roundCurrency(newCost - unusedValue);
+    React.useEffect(() => {
+        if (!changeDialogOpen || !orgSlug || !changeTarget) return;
+        setPreviewLoading(true);
+        setPaymentPreview(null);
+        const controller = new AbortController();
+        const run = async () => {
+            try {
+                const res = await fetch(
+                    `/api/org/${encodeURIComponent(orgSlug)}/subscription?previewPlan=${changeTarget}&previewTiming=${changeTiming}`,
+                    { cache: 'no-store', signal: controller.signal }
+                );
+                const payload = (await res.json().catch(() => null)) as SubscriptionResponse | null;
+                if (res.ok && payload && 'paymentPreview' in payload) {
+                    setPaymentPreview(payload.paymentPreview ?? null);
+                }
+            } catch (err) {
+                if (err instanceof DOMException && err.name === 'AbortError') return;
+            } finally {
+                setPreviewLoading(false);
+            }
+        };
+        void run();
+        return () => controller.abort();
+    }, [changeDialogOpen, orgSlug, changeTarget, changeTiming]);
+
+    const previewDelta = paymentPreview
+        ? roundCurrency(paymentPreview.charged - paymentPreview.credited)
+        : null;
 
     const handleActivateGrace = async () => {
         if (!orgSlug) return;
@@ -394,28 +450,39 @@ export default function OrgPlansPage() {
                             Выберите, когда применить новый тариф. При мгновенной смене мы пересчитаем остаток оплаченного периода.
                         </Typography>
                         <Box sx={{ mb: 2 }}>
-                            {changeTiming === 'immediate' ? (
-                                delta > 0 ? (
-                                    <Typography variant="body2">
-                                        Списание: {formatAmount(delta)} ₽ (пропорционально оставшемуся периоду).
-                                    </Typography>
-                                ) : delta < 0 ? (
-                                    <Typography variant="body2">
-                                        Возврат на баланс: {formatAmount(Math.abs(delta))} ₽.
-                                    </Typography>
+                            {previewLoading ? (
+                                <Typography variant="body2">Расчет обновляется…</Typography>
+                            ) : paymentPreview ? (
+                                changeTiming === 'immediate' ? (
+                                    previewDelta !== null && previewDelta > 0 ? (
+                                        <Typography variant="body2">
+                                            Списание: {formatAmount(previewDelta)} ₽ (пропорционально оставшемуся периоду).
+                                        </Typography>
+                                    ) : previewDelta !== null && previewDelta < 0 ? (
+                                        <Typography variant="body2">
+                                            Возврат на баланс: {formatAmount(Math.abs(previewDelta))} ₽.
+                                        </Typography>
+                                    ) : (
+                                        <Typography variant="body2">
+                                            Перерасчет не требуется, сумма к списанию 0 ₽.
+                                        </Typography>
+                                    )
                                 ) : (
                                     <Typography variant="body2">
-                                        Перерасчет не требуется, сумма к списанию 0 ₽.
+                                        Списания сейчас не будет, новый тариф применится в конце оплаченного периода.
                                     </Typography>
                                 )
                             ) : (
-                                <Typography variant="body2">
-                                    Списания сейчас не будет, новый тариф применится в конце оплаченного периода.
+                                <Typography variant="body2">Расчет недоступен, попробуйте позже.</Typography>
+                            )}
+                            {paymentPreview?.effectiveAt && (
+                                <Typography variant="caption" color="text.secondary">
+                                    Новый тариф вступит в силу {formatDate(paymentPreview.effectiveAt)}.
                                 </Typography>
                             )}
-                            {hasValidPeriod && (
-                                <Typography variant="caption" color="text.secondary">
-                                    Остаток периода: {Math.ceil((periodEnd!.getTime() - now) / (1000 * 60 * 60 * 24))} дн.
+                            {paymentPreview?.willFail && changeTiming === 'immediate' && (
+                                <Typography variant="caption" color="error">
+                                    Недостаточно средств: нужно {formatAmount(paymentPreview.required)} ₽, доступно {formatAmount(paymentPreview.available)} ₽.
                                 </Typography>
                             )}
                         </Box>

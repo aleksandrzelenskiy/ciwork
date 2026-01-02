@@ -4,7 +4,7 @@ import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import Subscription from '@/server/models/SubscriptionModel';
 import { requireOrgRole } from '@/server/org/permissions';
-import { changeSubscriptionPlan, ensureSubscriptionAccess, type PlanChangeTiming } from '@/utils/subscriptionBilling';
+import { changeSubscriptionPlan, ensureSubscriptionAccess, getPlanChangePreview, type PlanChangeTiming } from '@/utils/subscriptionBilling';
 import { getPlanConfig } from '@/utils/planConfig';
 
 export const runtime = 'nodejs';
@@ -52,7 +52,20 @@ type SubscriptionBillingDTO = {
     priceRubMonthly: number;
 };
 
-type GetSubResponse = { subscription: SubscriptionDTO; billing: SubscriptionBillingDTO } | { error: string };
+type PaymentPreviewDTO = {
+    charged: number;
+    credited: number;
+    pending: boolean;
+    balance: number;
+    required: number;
+    available: number;
+    willFail: boolean;
+    effectiveAt?: ISODateString | null;
+};
+
+type GetSubResponse =
+    | { subscription: SubscriptionDTO; billing: SubscriptionBillingDTO; paymentPreview?: PaymentPreviewDTO }
+    | { error: string };
 
 type PatchBody = Partial<
     Pick<
@@ -63,7 +76,25 @@ type PatchBody = Partial<
     changeTiming?: PlanChangeTiming;
     cancelPending?: boolean;
 };
-type PatchSubResponse = { ok: true; subscription: SubscriptionDTO; billing: SubscriptionBillingDTO } | { error: string };
+type PatchSubResponse =
+    | {
+          ok: true;
+          subscription: SubscriptionDTO;
+          billing: SubscriptionBillingDTO;
+          payment?: {
+              charged: number;
+              credited: number;
+              balance?: number;
+              pending: boolean;
+          };
+      }
+    | {
+          error: string;
+          payment?: {
+              required?: number;
+              available?: number;
+          };
+      };
 
 /** Lean-документ подписки, возвращаемый .lean() */
 interface SubscriptionLean {
@@ -169,7 +200,7 @@ const clampTrialWindow = (
 
 // GET /api/org/:org/subscription — получить подписку (видно любому члену)
 export async function GET(
-    _req: NextRequest,
+    req: NextRequest,
     ctx: { params: Promise<{ org: string }> }
 ): Promise<NextResponse<GetSubResponse>> {
     try {
@@ -185,6 +216,29 @@ export async function GET(
             Subscription.findOne({ orgId: org._id }).lean<SubscriptionLean>(),
             ensureSubscriptionAccess(org._id),
         ]);
+
+        const previewPlan = req.nextUrl.searchParams.get('previewPlan');
+        const previewTiming = req.nextUrl.searchParams.get('previewTiming');
+        const shouldPreview =
+            previewPlan === 'basic' || previewPlan === 'pro' || previewPlan === 'business' || previewPlan === 'enterprise';
+        let paymentPreview: PaymentPreviewDTO | undefined;
+        if (shouldPreview) {
+            const preview = await getPlanChangePreview({
+                orgId: org._id,
+                nextPlan: previewPlan as Plan,
+                timing: previewTiming === 'period_end' ? 'period_end' : 'immediate',
+            });
+            paymentPreview = {
+                charged: preview.charged,
+                credited: preview.credited,
+                pending: preview.pending,
+                balance: preview.balance,
+                required: preview.required,
+                available: preview.available,
+                willFail: preview.willFail,
+                effectiveAt: preview.effectiveAt ? preview.effectiveAt.toISOString() : null,
+            };
+        }
         if (!sub) {
             return NextResponse.json({
                 subscription: fallbackDTO(org.orgSlug),
@@ -196,6 +250,7 @@ export async function GET(
                     graceAvailable: access.graceAvailable,
                     priceRubMonthly: access.priceRubMonthly,
                 },
+                paymentPreview,
             });
         }
 
@@ -219,6 +274,7 @@ export async function GET(
                 graceAvailable: access.graceAvailable,
                 priceRubMonthly: access.priceRubMonthly,
             },
+            paymentPreview,
         });
     } catch (e: unknown) {
         return NextResponse.json({ error: errorMessage(e) }, { status: 500 });
@@ -285,7 +341,16 @@ export async function PATCH(
             );
         }
 
-        let planChangeResult: { ok: boolean; subscription?: unknown; pending?: boolean; reason?: string } | null = null;
+        let planChangeResult: {
+            ok: boolean;
+            charged?: number;
+            credited?: number;
+            pending?: boolean;
+            balance?: number;
+            required?: number;
+            available?: number;
+            reason?: string;
+        } | null = null;
         const changeTiming: PlanChangeTiming =
             body.changeTiming === 'period_end' ? 'period_end' : 'immediate';
 
@@ -303,7 +368,13 @@ export async function PATCH(
             }
             if (!planChangeResult.ok) {
                 return NextResponse.json(
-                    { error: 'Недостаточно средств для оплаты подписки' },
+                    {
+                        error: 'Недостаточно средств для оплаты подписки',
+                        payment: {
+                            required: planChangeResult.required,
+                            available: planChangeResult.available,
+                        },
+                    },
                     { status: 402 }
                 );
             }
@@ -354,6 +425,14 @@ export async function PATCH(
                 graceAvailable: access.graceAvailable,
                 priceRubMonthly: access.priceRubMonthly,
             },
+            payment: planChangeResult
+                ? {
+                      charged: planChangeResult.charged ?? 0,
+                      credited: planChangeResult.credited ?? 0,
+                      balance: planChangeResult.balance,
+                      pending: planChangeResult.pending ?? false,
+                  }
+                : undefined,
         });
     } catch (e: unknown) {
         return NextResponse.json({ error: errorMessage(e) }, { status: 500 });

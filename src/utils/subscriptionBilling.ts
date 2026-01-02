@@ -389,6 +389,94 @@ export type PlanChangeResult = {
     credited: number;
     pending: boolean;
     reason?: 'insufficient_funds';
+    balance?: number;
+    required?: number;
+    available?: number;
+};
+
+export type PlanChangePreview = {
+    charged: number;
+    credited: number;
+    pending: boolean;
+    balance: number;
+    required: number;
+    available: number;
+    willFail: boolean;
+    effectiveAt?: Date;
+};
+
+export const getPlanChangePreview = async (params: {
+    orgId: Types.ObjectId;
+    nextPlan: SubscriptionPlan;
+    timing: PlanChangeTiming;
+    now?: Date;
+}): Promise<PlanChangePreview> => {
+    const now = params.now ?? new Date();
+    const subscription =
+        (await Subscription.findOne({ orgId: params.orgId })) ??
+        new Subscription({ orgId: params.orgId, plan: 'basic', status: 'inactive' });
+
+    const currentPlan = (subscription.plan as SubscriptionPlan | undefined) ?? 'basic';
+    const currentStatus = subscription.status ?? 'inactive';
+    const currentPlanConfig = await getPlanConfig(currentPlan);
+    const nextPlanConfig = await getPlanConfig(params.nextPlan);
+    const currentPrice = currentPlanConfig.priceRubMonthly ?? 0;
+    const nextPrice = nextPlanConfig.priceRubMonthly ?? 0;
+
+    const periodStart = parseDate(subscription.periodStart ?? null);
+    const periodEnd = parseDate(subscription.periodEnd ?? null);
+    const hasActivePaidPeriod =
+        currentStatus === 'active' &&
+        currentPrice > 0 &&
+        Boolean(periodStart && periodEnd && periodEnd.getTime() > now.getTime());
+
+    const { wallet } = await ensureOrgWallet(params.orgId);
+    const balance = wallet.balance ?? 0;
+
+    if (params.timing === 'period_end') {
+        const effectiveAt = periodEnd && periodEnd.getTime() > now.getTime()
+            ? periodEnd
+            : getPeriodBounds(now).end;
+        return {
+            charged: 0,
+            credited: 0,
+            pending: true,
+            balance,
+            required: 0,
+            available: balance,
+            willFail: false,
+            effectiveAt,
+        };
+    }
+
+    let chargeAmount = nextPrice;
+    let creditAmount = 0;
+
+    if (hasActivePaidPeriod && periodStart && periodEnd) {
+        const totalMs = Math.max(1, periodEnd.getTime() - periodStart.getTime());
+        const remainingMs = Math.max(0, periodEnd.getTime() - now.getTime());
+        const fraction = remainingMs / totalMs;
+        const unusedValue = currentPrice * fraction;
+        const newCost = nextPrice * fraction;
+        const delta = roundCurrency(newCost - unusedValue);
+        if (delta >= 0) {
+            chargeAmount = delta;
+            creditAmount = 0;
+        } else {
+            chargeAmount = 0;
+            creditAmount = roundCurrency(-delta);
+        }
+    }
+
+    return {
+        charged: chargeAmount,
+        credited: creditAmount,
+        pending: false,
+        balance,
+        required: chargeAmount,
+        available: balance,
+        willFail: chargeAmount > balance,
+    };
 };
 
 export const changeSubscriptionPlan = async (params: {
@@ -427,7 +515,15 @@ export const changeSubscriptionPlan = async (params: {
         subscription.pendingPlanEffectiveAt = effectiveAt;
         subscription.pendingPlanRequestedAt = now;
         await subscription.save();
-        return { ok: true, subscription, charged: 0, credited: 0, pending: true };
+        const { wallet } = await ensureOrgWallet(params.orgId);
+        return {
+            ok: true,
+            subscription,
+            charged: 0,
+            credited: 0,
+            pending: true,
+            balance: wallet.balance ?? 0,
+        };
     }
 
     let chargeAmount = nextPrice;
@@ -467,10 +563,20 @@ export const changeSubscriptionPlan = async (params: {
 
     if (chargeAmount <= 0 && creditAmount <= 0) {
         await applySubscriptionUpdate();
-        return { ok: true, subscription, charged: 0, credited: 0, pending: false };
+        const { wallet } = await ensureOrgWallet(params.orgId);
+        return {
+            ok: true,
+            subscription,
+            charged: 0,
+            credited: 0,
+            pending: false,
+            balance: wallet.balance ?? 0,
+        };
     }
 
     return withOrgWalletTransaction(async (session) => {
+        const { wallet } = await ensureOrgWallet(params.orgId, session);
+        let balanceAfter: number = wallet.balance ?? 0;
         if (chargeAmount > 0) {
             const debit = await debitOrgWallet({
                 orgId: params.orgId,
@@ -486,12 +592,22 @@ export const changeSubscriptionPlan = async (params: {
                 session,
             });
             if (!debit.ok) {
-                return { ok: false, subscription, charged: 0, credited: 0, pending: false, reason: 'insufficient_funds' };
+                return {
+                    ok: false,
+                    subscription,
+                    charged: 0,
+                    credited: 0,
+                    pending: false,
+                    reason: 'insufficient_funds',
+                    required: chargeAmount,
+                    available: debit.available,
+                };
             }
+            balanceAfter = debit.wallet.balance ?? balanceAfter;
         }
 
         if (creditAmount > 0) {
-            await creditOrgWallet({
+            const credit = await creditOrgWallet({
                 orgId: params.orgId,
                 amount: creditAmount,
                 source: 'subscription',
@@ -504,9 +620,17 @@ export const changeSubscriptionPlan = async (params: {
                 },
                 session,
             });
+            balanceAfter = credit.balance ?? balanceAfter;
         }
 
         await applySubscriptionUpdate(session);
-        return { ok: true, subscription, charged: chargeAmount, credited: creditAmount, pending: false };
+        return {
+            ok: true,
+            subscription,
+            charged: chargeAmount,
+            credited: creditAmount,
+            pending: false,
+            balance: balanceAfter,
+        };
     });
 };
