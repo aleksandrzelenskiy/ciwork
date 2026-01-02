@@ -56,6 +56,17 @@ type BillingInfo = {
     priceRubMonthly: number;
 };
 
+type PaymentPreview = {
+    charged: number;
+    credited: number;
+    pending: boolean;
+    balance: number;
+    required: number;
+    available: number;
+    willFail: boolean;
+    effectiveAt?: string | null;
+};
+
 type OrgInfoResponse = { org?: { name?: string }; role?: string; error?: string };
 type PlansResponse = { plans: PlanConfig[] } | { error: string };
 type SubscriptionResponse =
@@ -68,16 +79,7 @@ type SubscriptionResponse =
               balance?: number;
               pending: boolean;
           };
-          paymentPreview?: {
-              charged: number;
-              credited: number;
-              pending: boolean;
-              balance: number;
-              required: number;
-              available: number;
-              willFail: boolean;
-              effectiveAt?: string | null;
-          };
+          paymentPreview?: PaymentPreview;
       }
     | {
           error: string;
@@ -116,7 +118,7 @@ export default function OrgPlansPage() {
     const [changeDialogOpen, setChangeDialogOpen] = React.useState(false);
     const [changeTarget, setChangeTarget] = React.useState<PlanCode | null>(null);
     const [changeTiming, setChangeTiming] = React.useState<PlanChangeTiming>('immediate');
-    const [paymentPreview, setPaymentPreview] = React.useState<SubscriptionResponse['paymentPreview'] | null>(null);
+    const [paymentPreview, setPaymentPreview] = React.useState<PaymentPreview | null>(null);
     const [previewLoading, setPreviewLoading] = React.useState(false);
 
     const canChangePlan = role === 'owner' || role === 'org_admin';
