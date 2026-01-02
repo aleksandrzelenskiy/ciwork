@@ -295,6 +295,12 @@ export async function PATCH(
                 nextPlan: body.plan,
                 timing: changeTiming,
             });
+            if (!planChangeResult) {
+                return NextResponse.json(
+                    { error: 'Не удалось изменить план подписки' },
+                    { status: 500 }
+                );
+            }
             if (!planChangeResult.ok) {
                 return NextResponse.json(
                     { error: 'Недостаточно средств для оплаты подписки' },
