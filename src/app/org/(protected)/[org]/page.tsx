@@ -69,6 +69,14 @@ type ProjectDTO = {
 type Plan = 'basic' | 'pro' | 'business' | 'enterprise';
 type SubscriptionStatus = 'active' | 'trial' | 'suspended' | 'past_due' | 'inactive';
 
+type PlanConfig = {
+    plan: Plan;
+    projectsLimit: number | null;
+    seatsLimit: number | null;
+    tasksWeeklyLimit: number | null;
+    publicTasksMonthlyLimit: number | null;
+};
+
 type SubscriptionInfo = {
     orgSlug: string;
     plan: Plan;
@@ -204,6 +212,7 @@ export default function OrgSettingsPage() {
     const [billing, setBilling] = React.useState<SubscriptionBillingInfo | null>(null);
     const [subscriptionLoading, setSubscriptionLoading] = React.useState(true);
     const [subscriptionError, setSubscriptionError] = React.useState<string | null>(null);
+    const [planConfigs, setPlanConfigs] = React.useState<PlanConfig[]>([]);
     const [startTrialLoading, setStartTrialLoading] = React.useState(false);
     const [walletInfo, setWalletInfo] = React.useState<OrgWalletInfo | null>(null);
     const [walletLoading, setWalletLoading] = React.useState(false);
@@ -563,6 +572,20 @@ export default function OrgSettingsPage() {
         }
     }, [org, canManage]);
 
+    const loadPlanConfigs = React.useCallback(async () => {
+        try {
+            const res = await fetch('/api/plans', { cache: 'no-store' });
+            const data = (await res.json().catch(() => ({}))) as { plans?: PlanConfig[] };
+            if (!res.ok || !Array.isArray(data.plans)) {
+                setPlanConfigs([]);
+                return;
+            }
+            setPlanConfigs(data.plans);
+        } catch {
+            setPlanConfigs([]);
+        }
+    }, []);
+
     // слушаем событие успешного приглашения
     React.useEffect(() => {
         const handler = async () => {
@@ -594,8 +617,9 @@ export default function OrgSettingsPage() {
             void loadSubscription();
             void fetchApplications();
             void fetchWalletInfo();
+            void loadPlanConfigs();
         }
-    }, [canManage, fetchMembers, fetchProjects, fetchOrgSettings, loadSubscription, fetchApplications, fetchWalletInfo]);
+    }, [canManage, fetchMembers, fetchProjects, fetchOrgSettings, loadSubscription, fetchApplications, fetchWalletInfo, loadPlanConfigs]);
 
     const handleRefreshClick = () => {
         void fetchMembers();
@@ -914,9 +938,17 @@ export default function OrgSettingsPage() {
             : 'Добавление участников доступно после активации подписки'
         : 'Пригласить участника';
     const showNotificationsCard = Boolean(walletError || orgSettingsError);
-    const projectsLimitLabel = subscription?.projectsLimit ? String(subscription.projectsLimit) : 'XX';
+    const currentPlanConfig = planConfigs.find((planConfig) => planConfig.plan === (subscription?.plan ?? 'basic'));
+    const resolvedProjectsLimit =
+        typeof subscription?.projectsLimit === 'number'
+            ? subscription.projectsLimit
+            : currentPlanConfig?.projectsLimit ?? null;
+    const resolvedSeatsLimit =
+        typeof subscription?.seats === 'number' ? subscription.seats : currentPlanConfig?.seatsLimit ?? null;
+    const formatLimitLabel = (value: number | null) => (typeof value === 'number' ? String(value) : '∞');
+    const projectsLimitLabel = formatLimitLabel(resolvedProjectsLimit);
     const activeProjectsCount = projects.length;
-    const seatsLabel = typeof subscription?.seats === 'number' ? subscription.seats : '—';
+    const seatsLabel = formatLimitLabel(resolvedSeatsLimit);
     const subscriptionStatusLabel = subscriptionLoading
         ? 'Проверяем…'
         : isSubscriptionActive

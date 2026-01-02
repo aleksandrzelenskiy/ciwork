@@ -5,6 +5,8 @@ import dbConnect from '@/server/db/mongoose';
 import TaskModel from '@/server/models/TaskModel';
 import { GetUserContext } from '@/server-actions/user-context';
 import { ensurePublicTaskSlot } from '@/utils/publicTasks';
+import { getBillingConfig } from '@/utils/billingConfig';
+import { debitOrgWallet, ensureOrgWallet } from '@/utils/orgWallet';
 import { notifyTaskPublished } from '@/server/tasks/notifications';
 
 export const runtime = 'nodejs';
@@ -110,6 +112,12 @@ export async function PATCH(
                 { status: 403 }
             );
         }
+        if ((error as Error).message === 'INSUFFICIENT_FUNDS') {
+            return NextResponse.json(
+                { error: limitError ?? 'Недостаточно средств для публикации задачи' },
+                { status: 402 }
+            );
+        }
         if ((error as Error).message === 'TASK_NOT_FOUND') {
             return NextResponse.json({ error: 'Задача не найдена' }, { status: 404 });
         }
@@ -152,6 +160,23 @@ export async function PATCH(
                 (freshTask.publicStatus === 'closed' && targetPublicStatus !== 'closed'));
 
         if (isPublishingNow) {
+            if (!freshTask.orgId) {
+                limitError = 'Организация не определена для списания';
+                throw new Error('INSUFFICIENT_FUNDS');
+            }
+            const billingConfig = await getBillingConfig();
+            const publishCost = Number.isFinite(billingConfig.taskPublishCostRub)
+                ? billingConfig.taskPublishCostRub
+                : 0;
+
+            if (publishCost > 0 && !currentSession) {
+                const { wallet } = await ensureOrgWallet(freshTask.orgId);
+                if ((wallet.balance ?? 0) < publishCost) {
+                    limitError = `Недостаточно средств для публикации: нужно ${publishCost} ₽`;
+                    throw new Error('INSUFFICIENT_FUNDS');
+                }
+            }
+
             const check = await ensurePublicTaskSlot(freshTask.orgId?.toString() ?? '', {
                 consume: true,
                 session: currentSession ?? undefined,
@@ -159,6 +184,23 @@ export async function PATCH(
             if (!check.ok) {
                 limitError = check.reason ?? 'Лимит публичных задач исчерпан';
                 throw new Error('LIMIT_REACHED');
+            }
+
+            if (publishCost > 0) {
+                const debit = await debitOrgWallet({
+                    orgId: freshTask.orgId,
+                    amount: publishCost,
+                    source: 'publication',
+                    meta: {
+                        taskId: freshTask._id.toString(),
+                        visibility: 'public',
+                    },
+                    session: currentSession ?? undefined,
+                });
+                if (!debit.ok) {
+                    limitError = `Недостаточно средств для публикации: нужно ${publishCost} ₽`;
+                    throw new Error('INSUFFICIENT_FUNDS');
+                }
             }
         }
 

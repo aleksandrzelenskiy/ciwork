@@ -2,9 +2,10 @@
 import mongoose, { type ClientSession, Types } from 'mongoose';
 import WalletModel, { type Wallet } from '@/server/models/WalletModel';
 import WalletTransactionModel from '@/server/models/WalletTransactionModel';
+import { getBillingConfig } from '@/utils/billingConfig';
 
 export const SIGNUP_BONUS_RUB = 1000;
-export const BID_COST_RUB = 50;
+const DEFAULT_BID_COST_RUB = 50;
 
 type EnsureWalletResult = {
     wallet: Wallet;
@@ -17,12 +18,14 @@ export type BidDebitResult =
         wallet: Wallet;
         debitedFromBonus: number;
         debitedFromBalance: number;
+        cost: number;
     }
     | {
         ok: false;
         wallet: Wallet;
         available: number;
         error: string;
+        cost: number;
     };
 
 const withSession = (query: { session?: ClientSession }, session?: ClientSession) =>
@@ -87,20 +90,25 @@ export const debitForBid = async (params: {
     session?: ClientSession;
 }): Promise<BidDebitResult> => {
     const { contractorId, taskId, applicationId, session } = params;
+    const billingConfig = await getBillingConfig();
+    const bidCost = Number.isFinite(billingConfig.bidCostRub)
+        ? billingConfig.bidCostRub
+        : DEFAULT_BID_COST_RUB;
     const { wallet } = await ensureWalletWithBonus(contractorId, session);
 
     const available = (wallet.balance ?? 0) + (wallet.bonusBalance ?? 0);
-    if (available < BID_COST_RUB) {
+    if (available < bidCost) {
         return {
             ok: false,
             wallet,
             available,
             error: 'Недостаточно средств: пополните кошелёк или дождитесь начислений',
+            cost: bidCost,
         };
     }
 
-    const fromBonus = Math.min(wallet.bonusBalance ?? 0, BID_COST_RUB);
-    const fromBalance = BID_COST_RUB - fromBonus;
+    const fromBonus = Math.min(wallet.bonusBalance ?? 0, bidCost);
+    const fromBalance = bidCost - fromBonus;
 
     const updated = await WalletModel.findOneAndUpdate(
         {
@@ -124,6 +132,7 @@ export const debitForBid = async (params: {
             wallet,
             available,
             error: 'Недостаточно средств: пополните кошелёк или дождитесь начислений',
+            cost: bidCost,
         };
     }
 
@@ -132,7 +141,7 @@ export const debitForBid = async (params: {
             {
                 walletId: updated._id,
                 contractorId,
-                amount: BID_COST_RUB,
+                amount: bidCost,
                 type: 'debit',
                 source: 'bid',
                 balanceAfter: updated.balance,
@@ -151,6 +160,7 @@ export const debitForBid = async (params: {
         wallet: updated,
         debitedFromBonus: fromBonus,
         debitedFromBalance: fromBalance,
+        cost: bidCost,
     };
 };
 

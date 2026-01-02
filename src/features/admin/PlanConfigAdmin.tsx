@@ -39,6 +39,8 @@ type PlanConfig = {
 };
 
 type PlanResponse = { plans: PlanConfig[] } | { error: string };
+type BillingConfig = { taskPublishCostRub: number; bidCostRub: number };
+type BillingResponse = { config: BillingConfig } | { error: string };
 
 const formatLimit = (value: number | null) => (typeof value === 'number' ? value : '—');
 
@@ -49,6 +51,10 @@ export default function PlanConfigAdmin() {
     const [selected, setSelected] = React.useState<PlanConfig | null>(null);
     const [saving, setSaving] = React.useState(false);
     const [dialogError, setDialogError] = React.useState<string | null>(null);
+    const [billingConfig, setBillingConfig] = React.useState<BillingConfig | null>(null);
+    const [billingLoading, setBillingLoading] = React.useState(true);
+    const [billingError, setBillingError] = React.useState<string | null>(null);
+    const [billingSaving, setBillingSaving] = React.useState(false);
 
     const loadPlans = React.useCallback(async () => {
         setLoading(true);
@@ -68,9 +74,51 @@ export default function PlanConfigAdmin() {
         }
     }, []);
 
+    const loadBillingConfig = React.useCallback(async () => {
+        setBillingLoading(true);
+        setBillingError(null);
+        try {
+            const res = await fetch('/api/admin/billing', { cache: 'no-store' });
+            const payload = (await res.json().catch(() => null)) as BillingResponse | null;
+            if (!res.ok || !payload || !('config' in payload)) {
+                setBillingError(payload && 'error' in payload ? payload.error ?? 'Не удалось загрузить настройки' : 'Не удалось загрузить настройки');
+                return;
+            }
+            setBillingConfig(payload.config);
+        } catch (err) {
+            setBillingError(err instanceof Error ? err.message : 'Не удалось загрузить настройки');
+        } finally {
+            setBillingLoading(false);
+        }
+    }, []);
+
     React.useEffect(() => {
         void loadPlans();
-    }, [loadPlans]);
+        void loadBillingConfig();
+    }, [loadPlans, loadBillingConfig]);
+
+    const saveBillingConfig = async () => {
+        if (!billingConfig) return;
+        setBillingSaving(true);
+        setBillingError(null);
+        try {
+            const res = await fetch('/api/admin/billing', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(billingConfig),
+            });
+            const payload = (await res.json().catch(() => null)) as BillingResponse | null;
+            if (!res.ok || !payload || !('config' in payload)) {
+                setBillingError(payload && 'error' in payload ? payload.error ?? 'Не удалось сохранить настройки' : 'Не удалось сохранить настройки');
+                return;
+            }
+            setBillingConfig(payload.config);
+        } catch (err) {
+            setBillingError(err instanceof Error ? err.message : 'Не удалось сохранить настройки');
+        } finally {
+            setBillingSaving(false);
+        }
+    };
 
     const handleOpen = (plan: PlanConfig) => {
         setSelected({ ...plan });
@@ -115,8 +163,49 @@ export default function PlanConfigAdmin() {
         setSelected({ ...selected, [key]: value });
     };
 
+    const updateBillingField = <K extends keyof BillingConfig>(key: K, value: BillingConfig[K]) => {
+        if (!billingConfig) return;
+        setBillingConfig({ ...billingConfig, [key]: value });
+    };
+
     return (
         <Box>
+            <Paper variant="outlined" sx={{ p: 2.5, mb: 3 }}>
+                <Stack spacing={2}>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                        Стоимость публикации и отклика
+                    </Typography>
+                    {billingError && <Alert severity="error">{billingError}</Alert>}
+                    {billingLoading || !billingConfig ? (
+                        <Typography>Загрузка…</Typography>
+                    ) : (
+                        <Stack spacing={2} direction={{ xs: 'column', sm: 'row' }}>
+                            <TextField
+                                label="Публикация задачи, ₽"
+                                type="number"
+                                value={billingConfig.taskPublishCostRub}
+                                onChange={(e) => updateBillingField('taskPublishCostRub', Number(e.target.value))}
+                                fullWidth
+                            />
+                            <TextField
+                                label="Отклик исполнителя, ₽"
+                                type="number"
+                                value={billingConfig.bidCostRub}
+                                onChange={(e) => updateBillingField('bidCostRub', Number(e.target.value))}
+                                fullWidth
+                            />
+                            <Button
+                                variant="contained"
+                                onClick={saveBillingConfig}
+                                disabled={billingSaving}
+                                sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
+                            >
+                                {billingSaving ? 'Сохраняем…' : 'Сохранить'}
+                            </Button>
+                        </Stack>
+                    )}
+                </Stack>
+            </Paper>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
             <TableContainer component={Paper} variant="outlined">
                 <Table>

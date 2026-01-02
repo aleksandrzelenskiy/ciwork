@@ -11,7 +11,7 @@ import MembershipModel from '@/server/models/MembershipModel';
 import OrganizationModel from '@/server/models/OrganizationModel';
 import ProjectModel from '@/server/models/ProjectModel';
 import { ensureSeatAvailable } from '@/utils/seats';
-import { debitForBid, BID_COST_RUB } from '@/utils/wallet';
+import { debitForBid } from '@/utils/wallet';
 import {
     notifyApplicationStatusChanged,
     notifyApplicationSubmitted,
@@ -182,6 +182,7 @@ export async function POST(
     let applicationId: mongoose.Types.ObjectId | null = null;
     let applicationObj: Record<string, unknown> | null = null;
     let insufficientFunds = false;
+    let bidCost: number | null = null;
 
     const isDuplicateError = (error: unknown) =>
         typeof error === 'object' &&
@@ -236,6 +237,7 @@ export async function POST(
 
             if (!debit.ok) {
                 insufficientFunds = true;
+                bidCost = debit.cost;
                 return { ok: false, code: 'INSUFFICIENT_FUNDS' };
             }
 
@@ -297,7 +299,7 @@ export async function POST(
         }
         if (creationResult?.code === 'INSUFFICIENT_FUNDS' || insufficientFunds) {
             return NextResponse.json(
-                { error: `Недостаточно средств. На отклик требуется ${BID_COST_RUB} ₽` },
+                { error: `Недостаточно средств. На отклик требуется ${bidCost ?? 0} ₽` },
                 { status: 402 }
             );
         }

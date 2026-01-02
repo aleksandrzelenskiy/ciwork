@@ -135,6 +135,10 @@ export default function OrgStorageUsageCard({
             : 'Лимит не задан';
     const usagePercent = limitBytes ? Math.min(100, (totalBytes / limitBytes) * 100) : null;
     const hasUsage = totalBytes > 0;
+    const usageTotalForBar = limitBytes ?? (hasUsage ? totalBytes : 1);
+    const reportPercent = Math.min(100, (reportBytes / usageTotalForBar) * 100);
+    const attachmentPercent = Math.min(100, (attachmentBytes / usageTotalForBar) * 100);
+    const remainingPercent = Math.max(0, 100 - reportPercent - attachmentPercent);
 
     const breakdown = [
         { label: 'Фотоотчеты', value: reportBytes, color: COLORS.reports },
@@ -181,6 +185,20 @@ export default function OrgStorageUsageCard({
                                     </Typography>
                                 )}
                             </Stack>
+                            <Box
+                                sx={{
+                                    width: '100%',
+                                    height: 14,
+                                    borderRadius: 999,
+                                    backgroundColor: 'rgba(148,163,184,0.25)',
+                                    overflow: 'hidden',
+                                    display: 'flex',
+                                }}
+                            >
+                                <Box sx={{ width: `${reportPercent}%`, backgroundColor: COLORS.reports }} />
+                                <Box sx={{ width: `${attachmentPercent}%`, backgroundColor: COLORS.attachments }} />
+                                <Box sx={{ width: `${remainingPercent}%`, backgroundColor: COLORS.empty }} />
+                            </Box>
                             {usage?.readOnly && (
                                 <Typography variant="caption" color="error">
                                     {usage.readOnlyReason

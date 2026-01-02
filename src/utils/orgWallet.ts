@@ -92,7 +92,7 @@ export const creditOrgWallet = async (params: {
 export const debitOrgWallet = async (params: {
     orgId: Types.ObjectId;
     amount: number;
-    source?: 'storage_overage' | 'subscription' | 'storage_package';
+    source?: 'storage_overage' | 'subscription' | 'storage_package' | 'publication';
     meta?: Record<string, unknown>;
     session?: ClientSession;
 }) => {
