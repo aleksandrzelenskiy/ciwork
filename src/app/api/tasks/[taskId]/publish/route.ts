@@ -164,20 +164,27 @@ export async function PATCH(
                 limitError = 'Организация не определена для списания';
                 throw new Error('INSUFFICIENT_FUNDS');
             }
+            const orgObjectId = mongoose.Types.ObjectId.isValid(freshTask.orgId)
+                ? new mongoose.Types.ObjectId(freshTask.orgId)
+                : null;
+            if (!orgObjectId) {
+                limitError = 'Организация не определена для списания';
+                throw new Error('INSUFFICIENT_FUNDS');
+            }
             const billingConfig = await getBillingConfig();
             const publishCost = Number.isFinite(billingConfig.taskPublishCostRub)
                 ? billingConfig.taskPublishCostRub
                 : 0;
 
             if (publishCost > 0 && !currentSession) {
-                const { wallet } = await ensureOrgWallet(freshTask.orgId);
+                const { wallet } = await ensureOrgWallet(orgObjectId);
                 if ((wallet.balance ?? 0) < publishCost) {
                     limitError = `Недостаточно средств для публикации: нужно ${publishCost} ₽`;
                     throw new Error('INSUFFICIENT_FUNDS');
                 }
             }
 
-            const check = await ensurePublicTaskSlot(freshTask.orgId?.toString() ?? '', {
+            const check = await ensurePublicTaskSlot(orgObjectId.toString(), {
                 consume: true,
                 session: currentSession ?? undefined,
             });
@@ -188,7 +195,7 @@ export async function PATCH(
 
             if (publishCost > 0) {
                 const debit = await debitOrgWallet({
-                    orgId: freshTask.orgId,
+                    orgId: orgObjectId,
                     amount: publishCost,
                     source: 'publication',
                     meta: {
