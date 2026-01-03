@@ -1316,6 +1316,8 @@ export default function OrgSettingsPage() {
                 <Box
                     sx={(theme) => ({
                         width: '100%',
+                        maxWidth: 1200,
+                        mx: 'auto',
                         px: {
                             xs: `calc(${theme.spacing(masonrySpacing.xs)} / 2)`,
                             sm: `calc(${theme.spacing(masonrySpacing.sm)} / 2)`,
