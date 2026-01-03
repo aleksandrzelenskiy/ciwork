@@ -1328,10 +1328,10 @@ export default function OrgSettingsPage() {
                         maxWidth: 1200,
                         mx: 'auto',
                         px: {
-                            xs: `calc(${theme.spacing(panelPadding.xs)} + (${theme.spacing(masonrySpacing.xs)} / 2))`,
-                            sm: `calc(${theme.spacing(panelPadding.xs)} + (${theme.spacing(masonrySpacing.sm)} / 2))`,
-                            md: `calc(${theme.spacing(panelPadding.md)} + (${theme.spacing(masonrySpacing.md)} / 2))`,
-                            lg: `calc(${theme.spacing(panelPadding.md)} + (${theme.spacing(masonrySpacing.md)} / 2))`,
+                            xs: `calc(${theme.spacing(masonrySpacing.xs)} / 2)`,
+                            sm: `calc(${theme.spacing(masonrySpacing.sm)} / 2)`,
+                            md: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
+                            lg: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
                         },
                         boxSizing: 'border-box',
                     })}
