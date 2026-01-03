@@ -40,6 +40,7 @@ import OrgSetDialog, {
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 import OrgWalletTransactionsDialog from '@/features/org/OrgWalletTransactionsDialog';
 import OrgStorageUsageCard from '@/features/org/OrgStorageUsageCard';
+import OrgPlansPanel from '@/features/org/OrgPlansPanel';
 
 type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
 type MemberStatus = 'active' | 'invited';
@@ -224,6 +225,7 @@ export default function OrgSettingsPage() {
     const [projectsDialogOpen, setProjectsDialogOpen] = React.useState(false);
     const [membersDialogOpen, setMembersDialogOpen] = React.useState(false);
     const [applicationsDialogOpen, setApplicationsDialogOpen] = React.useState(false);
+    const [plansDialogOpen, setPlansDialogOpen] = React.useState(false);
 
     // диалог приглашения
     const [inviteOpen, setInviteOpen] = React.useState(false);
@@ -824,7 +826,7 @@ export default function OrgSettingsPage() {
         overflow: 'hidden',
     };
     const panelBaseSx = {
-        borderRadius: 4,
+        borderRadius: theme.shape.borderRadius,
         p: { xs: 2, md: 3 },
         backgroundColor: headerBg,
         border: `1px solid ${headerBorder}`,
@@ -843,8 +845,9 @@ export default function OrgSettingsPage() {
         boxShadow: cardShadow,
         backdropFilter: 'blur(20px)',
     };
+    const buttonRadius = theme.shape.borderRadius;
     const actionButtonBaseSx = {
-        borderRadius: 999,
+        borderRadius: buttonRadius,
         textTransform: 'none',
         fontWeight: 600,
         px: { xs: 2.5, md: 3 },
@@ -877,7 +880,7 @@ export default function OrgSettingsPage() {
         };
         const paletteEntry = palette[tone];
         return {
-            borderRadius: 3,
+            borderRadius: buttonRadius,
             border: `1px solid ${paletteEntry.border}`,
             backgroundColor: paletteEntry.bg,
             backdropFilter: 'blur(18px)',
@@ -1196,8 +1199,7 @@ export default function OrgSettingsPage() {
                             <Button
                                 variant="text"
                                 size="small"
-                                startIcon={<EditOutlinedIcon fontSize="small" />}
-                                onClick={() => org && router.push(`/org/${encodeURIComponent(org)}/plans`)}
+                                onClick={() => setPlansDialogOpen(true)}
                                 sx={{ mt: 1, px: 0, textTransform: 'none' }}
                             >
                                 Изменить
@@ -1354,7 +1356,7 @@ export default function OrgSettingsPage() {
                                                     size="small"
                                                     onClick={() => void fetchOrgSettings()}
                                                     disabled={orgSettingsLoading}
-                                                    sx={{ borderRadius: 999, textTransform: 'none' }}
+                                                    sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                                                 >
                                                     Повторить
                                                 </Button>
@@ -1400,7 +1402,7 @@ export default function OrgSettingsPage() {
                                         setWalletDialogOpen(true);
                                         void fetchWalletTransactions();
                                     }}
-                                    sx={{ borderRadius: 999, textTransform: 'none', alignSelf: 'flex-start' }}
+                                    sx={{ borderRadius: buttonRadius, textTransform: 'none', alignSelf: 'flex-start' }}
                                 >
                                     История операций
                                 </Button>
@@ -1470,7 +1472,7 @@ export default function OrgSettingsPage() {
                                     <Button
                                         variant="contained"
                                         onClick={() => setProjectsDialogOpen(true)}
-                                        sx={{ borderRadius: 999, textTransform: 'none' }}
+                                        sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                                     >
                                         Открыть список
                                     </Button>
@@ -1480,7 +1482,7 @@ export default function OrgSettingsPage() {
                                                 variant="outlined"
                                                 onClick={() => openProjectDialog()}
                                                 disabled={disableCreationActions}
-                                                sx={{ borderRadius: 999, textTransform: 'none' }}
+                                                sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                                             >
                                                 Создать проект
                                             </Button>
@@ -1560,7 +1562,7 @@ export default function OrgSettingsPage() {
                                     <Button
                                         variant="contained"
                                         onClick={() => setMembersDialogOpen(true)}
-                                        sx={{ borderRadius: 999, textTransform: 'none' }}
+                                        sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                                     >
                                         Открыть список
                                     </Button>
@@ -1574,7 +1576,7 @@ export default function OrgSettingsPage() {
                                                     setInviteOpen(true);
                                                 }}
                                                 disabled={disableCreationActions}
-                                                sx={{ borderRadius: 999, textTransform: 'none' }}
+                                                sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                                             >
                                                 Пригласить
                                             </Button>
@@ -1646,7 +1648,7 @@ export default function OrgSettingsPage() {
                                 <Button
                                     variant="contained"
                                     onClick={() => setApplicationsDialogOpen(true)}
-                                    sx={{ borderRadius: 999, textTransform: 'none', alignSelf: 'flex-start' }}
+                                    sx={{ borderRadius: buttonRadius, textTransform: 'none', alignSelf: 'flex-start' }}
                                 >
                                     Открыть список
                                 </Button>
@@ -1654,6 +1656,28 @@ export default function OrgSettingsPage() {
                         </Box>
                     </Masonry>
                 </Box>
+
+                <Dialog
+                    open={plansDialogOpen}
+                    onClose={() => setPlansDialogOpen(false)}
+                    fullScreen
+                    PaperProps={{
+                        sx: {
+                            backgroundColor: 'transparent',
+                            boxShadow: 'none',
+                        },
+                    }}
+                >
+                    <DialogContent sx={{ p: 0 }}>
+                        {org && (
+                            <OrgPlansPanel
+                                orgSlug={org}
+                                showClose
+                                onClose={() => setPlansDialogOpen(false)}
+                            />
+                        )}
+                    </DialogContent>
+                </Dialog>
 
             {/* Диалоги таблиц */}
             <Dialog
@@ -1826,7 +1850,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
-                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={() => setProjectsDialogOpen(false)}>Закрыть</Button>
@@ -2028,7 +2052,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
-                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={() => setMembersDialogOpen(false)}>Закрыть</Button>
@@ -2189,7 +2213,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
-                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={() => setApplicationsDialogOpen(false)}>Закрыть</Button>
@@ -2234,7 +2258,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
-                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
                     }}
                 >
                     <Button variant="text" color="primary" onClick={() => setInviteOpen(false)}>
@@ -2307,7 +2331,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
-                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={() => setRoleDialogOpen(false)}>Отмена</Button>
@@ -2374,7 +2398,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
-                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={closeRemoveDialog} disabled={removing}>Отмена</Button>
@@ -2413,7 +2437,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
-                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={closeRemoveProjectDialog} disabled={removingProject}>Отмена</Button>
@@ -2453,7 +2477,7 @@ export default function OrgSettingsPage() {
                     sx={{
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
                         borderTop: `1px solid ${cardBorder}`,
-                        '& .MuiButton-root': { borderRadius: 999, textTransform: 'none' },
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
                     }}
                 >
                     <Button onClick={closeRemoveApplicationDialog} disabled={removingApplication}>Отмена</Button>
