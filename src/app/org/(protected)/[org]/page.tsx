@@ -825,9 +825,10 @@ export default function OrgSettingsPage() {
         position: 'relative' as const,
         overflow: 'hidden',
     };
+    const panelPadding = { xs: 2, md: 3 };
     const panelBaseSx = {
         borderRadius: theme.shape.borderRadius,
-        p: { xs: 2, md: 3 },
+        p: panelPadding,
         backgroundColor: headerBg,
         border: `1px solid ${headerBorder}`,
         boxShadow: headerShadow,
@@ -897,6 +898,14 @@ export default function OrgSettingsPage() {
         boxShadow: cardShadow,
         borderRadius: theme.shape.borderRadius,
         color: textPrimary,
+    };
+    const masonryCardSx = {
+        ...cardBaseSx,
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: isDarkMode ? '0 40px 90px rgba(0,0,0,0.6)' : '0 40px 90px rgba(15,23,42,0.22)',
+        },
     };
     const cardHeaderSx = {
         borderBottom: `1px solid ${cardBorder}`,
@@ -1319,10 +1328,10 @@ export default function OrgSettingsPage() {
                         maxWidth: 1200,
                         mx: 'auto',
                         px: {
-                            xs: `calc(${theme.spacing(masonrySpacing.xs)} / 2)`,
-                            sm: `calc(${theme.spacing(masonrySpacing.sm)} / 2)`,
-                            md: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
-                            lg: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
+                            xs: `calc(${theme.spacing(panelPadding.xs)} + (${theme.spacing(masonrySpacing.xs)} / 2))`,
+                            sm: `calc(${theme.spacing(panelPadding.xs)} + (${theme.spacing(masonrySpacing.sm)} / 2))`,
+                            md: `calc(${theme.spacing(panelPadding.md)} + (${theme.spacing(masonrySpacing.md)} / 2))`,
+                            lg: `calc(${theme.spacing(panelPadding.md)} + (${theme.spacing(masonrySpacing.md)} / 2))`,
                         },
                         boxSizing: 'border-box',
                     })}
@@ -1337,7 +1346,7 @@ export default function OrgSettingsPage() {
                         }}
                     >
                         {showNotificationsCard && (
-                            <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                            <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
                                 <Stack spacing={1.5}>
                                     <Typography variant="subtitle1" fontWeight={600}>
                                         Уведомления
@@ -1375,14 +1384,14 @@ export default function OrgSettingsPage() {
                             <Box>
                                 <OrgStorageUsageCard
                                     orgSlug={org}
-                                    cardSx={cardBaseSx}
+                                    cardSx={masonryCardSx}
                                     cardHeaderSx={cardHeaderSx}
                                     cardContentSx={cardContentSx}
                                 />
                             </Box>
                         )}
 
-                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                        <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
                             <Stack spacing={1.5}>
                                 <Stack direction="row" spacing={1} alignItems="center">
                                     <AccountBalanceWalletIcon fontSize="small" />
@@ -1411,7 +1420,7 @@ export default function OrgSettingsPage() {
                             </Stack>
                         </Box>
 
-                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                        <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
                             <Stack spacing={2}>
                                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                                     <Typography variant="subtitle1" fontWeight={600}>
@@ -1494,7 +1503,7 @@ export default function OrgSettingsPage() {
                             </Stack>
                         </Box>
 
-                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                        <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
                             <Stack spacing={2}>
                                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                                     <Typography variant="subtitle1" fontWeight={600}>
@@ -1588,7 +1597,7 @@ export default function OrgSettingsPage() {
                             </Stack>
                         </Box>
 
-                        <Box sx={{ ...cardBaseSx, p: { xs: 2, md: 2.5 } }}>
+                        <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
                             <Stack spacing={2}>
                                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                                     <Typography variant="subtitle1" fontWeight={600}>
