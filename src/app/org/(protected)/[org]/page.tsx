@@ -1344,11 +1344,23 @@ export default function OrgSettingsPage() {
                 <Masonry
                     columns={{ xs: 1, sm: 1, md: 2, lg: 3 }}
                     spacing={masonrySpacing}
-                    sx={{
-                        width: '100%',
+                    sx={(muiTheme) => ({
+                        // Offset Masonry gutters so its outer edges align with the header container.
+                        mx: {
+                            xs: `calc(${muiTheme.spacing(masonrySpacing.xs)} / -2)`,
+                            sm: `calc(${muiTheme.spacing(masonrySpacing.sm)} / -2)`,
+                            md: `calc(${muiTheme.spacing(masonrySpacing.md)} / -2)`,
+                            lg: `calc(${muiTheme.spacing(masonrySpacing.md)} / -2)`,
+                        },
+                        width: {
+                            xs: `calc(100% + ${muiTheme.spacing(masonrySpacing.xs)})`,
+                            sm: `calc(100% + ${muiTheme.spacing(masonrySpacing.sm)})`,
+                            md: `calc(100% + ${muiTheme.spacing(masonrySpacing.md)})`,
+                            lg: `calc(100% + ${muiTheme.spacing(masonrySpacing.md)})`,
+                        },
                         boxSizing: 'border-box',
                         '& > *': { boxSizing: 'border-box' },
-                    }}
+                    })}
                 >
                     {showNotificationsCard && (
                         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
