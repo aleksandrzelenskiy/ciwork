@@ -918,7 +918,7 @@ export default function OrgSettingsPage() {
         borderBottomRightRadius: theme.shape.borderRadius,
     };
     const masonrySpacing = { xs: 1.5, sm: 2, md: 2.5 };
-    // Shared container keeps header and Masonry aligned; px uses half-spacing to neutralize Masonry gutters.
+    // Shared container keeps header and Masonry aligned across breakpoints.
     const contentContainerSx = (muiTheme: typeof theme) => ({
         maxWidth: 1200,
         mx: 'auto',
@@ -1343,23 +1343,28 @@ export default function OrgSettingsPage() {
 
                 <Masonry
                     columns={{ xs: 1, sm: 1, md: 2, lg: 3 }}
-                    spacing={masonrySpacing}
+                    spacing={0}
                     sx={(muiTheme) => ({
-                        // Offset Masonry gutters so its outer edges align with the header container.
-                        mx: {
-                            xs: `calc(${muiTheme.spacing(masonrySpacing.xs)} / -2)`,
-                            sm: `calc(${muiTheme.spacing(masonrySpacing.sm)} / -2)`,
-                            md: `calc(${muiTheme.spacing(masonrySpacing.md)} / -2)`,
-                            lg: `calc(${muiTheme.spacing(masonrySpacing.md)} / -2)`,
+                        m: 0,
+                        p: 0,
+                        width: '100%',
+                        maxWidth: '100%',
+                        // Use explicit gaps to avoid Masonry's negative margins when spacing is set.
+                        columnGap: {
+                            xs: muiTheme.spacing(masonrySpacing.xs),
+                            sm: muiTheme.spacing(masonrySpacing.sm),
+                            md: muiTheme.spacing(masonrySpacing.md),
+                            lg: muiTheme.spacing(masonrySpacing.md),
                         },
-                        width: {
-                            xs: `calc(100% + ${muiTheme.spacing(masonrySpacing.xs)})`,
-                            sm: `calc(100% + ${muiTheme.spacing(masonrySpacing.sm)})`,
-                            md: `calc(100% + ${muiTheme.spacing(masonrySpacing.md)})`,
-                            lg: `calc(100% + ${muiTheme.spacing(masonrySpacing.md)})`,
+                        '& > *': {
+                            boxSizing: 'border-box',
+                            mb: {
+                                xs: muiTheme.spacing(masonrySpacing.xs),
+                                sm: muiTheme.spacing(masonrySpacing.sm),
+                                md: muiTheme.spacing(masonrySpacing.md),
+                                lg: muiTheme.spacing(masonrySpacing.md),
+                            },
                         },
-                        boxSizing: 'border-box',
-                        '& > *': { boxSizing: 'border-box' },
                     })}
                 >
                     {showNotificationsCard && (
