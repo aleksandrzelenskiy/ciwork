@@ -21,8 +21,6 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: secret123
     volumes:
       - ciwork_ciwork_db_data:/data/db
-    ports:
-      - '27017:27017'
     restart: unless-stopped
     networks:
       - ciwork_net
