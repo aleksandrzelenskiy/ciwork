@@ -186,7 +186,7 @@ export async function POST(request: Request) {
           newTask.initiatorEmail,
           newTask.executorEmail,
         ]
-            .filter((e) => e && e.trim() !== '')
+            .filter((email): email is string => Boolean(email && email.trim()))
             .filter((v, i, self) => self.indexOf(v) === i);
 
         if (recipients.length === 0) return;
