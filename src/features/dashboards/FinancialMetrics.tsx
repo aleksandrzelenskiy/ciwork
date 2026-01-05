@@ -23,7 +23,7 @@ export default function FinancialMetrics() {
       try {
         const res = await fetch('/api/tasks');
         if (!res.ok) {
-          setError('Error fetching tasks');
+          setError('Не удалось загрузить задачи');
           return;
         }
         const data = await res.json();
@@ -76,10 +76,10 @@ export default function FinancialMetrics() {
 
   // Подготавливаем данные для диаграммы
   const chartData = [
-    { name: 'Sum to Pay', value: sumToPay, color: '#0088FE' },
-    { name: 'Commission', value: commission, color: '#B3B3B3' },
-    { name: 'Tax', value: tax, color: '#FFBB28' },
-    { name: 'Profit', value: profit, color: '#388E3C' },
+    { name: 'К выплате', value: sumToPay, color: '#0088FE' },
+    { name: 'Комиссия', value: commission, color: '#B3B3B3' },
+    { name: 'Налог', value: tax, color: '#FFBB28' },
+    { name: 'Маржа', value: profit, color: '#388E3C' },
   ];
 
   const COLORS = chartData.map((c) => c.color);
@@ -100,7 +100,7 @@ export default function FinancialMetrics() {
   return (
       <Box>
         <Typography variant='h6' sx={{ mb: 2 }}>
-          Financial Metrics
+          Финансовые показатели
         </Typography>
 
         <Box width="100%" height={400} sx={{ fontFamily: '"Roboto","Inter","Segoe UI",Arial,sans-serif' }}>

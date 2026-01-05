@@ -24,7 +24,7 @@ const ContractorDashboard: React.FC<ContractorDashboardProps> = ({
 }) => (
     <Box>
         <Typography variant='h5' gutterBottom>
-            Dashboards (Подрядчик)
+            Панель подрядчика
         </Typography>
         <Box
             sx={(theme) => ({

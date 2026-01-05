@@ -22,6 +22,13 @@ interface MiniMapProps {
   mapHeight?: number;
 }
 
+interface OrgSummary {
+  _id: string;
+  orgSlug: string;
+}
+
+type OrgResponse = { orgs: OrgSummary[] } | { error: string };
+
 export default function MiniMap({
   role,
   clerkUserId,
@@ -34,6 +41,8 @@ export default function MiniMap({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orgSlugById, setOrgSlugById] = useState<Record<string, string>>({});
+  const shouldUseOrgRoutes = role !== null && role !== 'executor';
 
   // 1. Загружаем все задачи с /api/tasks
   useEffect(() => {
@@ -41,19 +50,46 @@ export default function MiniMap({
       try {
         const res = await fetch('/api/tasks');
         if (!res.ok) {
-          setError('Error fetching tasks');
+          setError('Не удалось загрузить задачи');
           return;
         }
         const data = await res.json();
         setTasks(data.tasks);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
       } finally {
         setLoading(false);
       }
     }
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!shouldUseOrgRoutes) return;
+    const controller = new AbortController();
+
+    const fetchOrgs = async () => {
+      try {
+        const res = await fetch('/api/org', { signal: controller.signal });
+        if (!res.ok) return;
+        const data = (await res.json()) as OrgResponse;
+        if (!('orgs' in data) || !Array.isArray(data.orgs)) return;
+
+        const map = data.orgs.reduce<Record<string, string>>((acc, org) => {
+          acc[org._id] = org.orgSlug;
+          return acc;
+        }, {});
+        setOrgSlugById(map);
+      } catch (err: unknown) {
+        if ((err as DOMException)?.name !== 'AbortError') {
+          setOrgSlugById({});
+        }
+      }
+    };
+
+    void fetchOrgs();
+    return () => controller.abort();
+  }, [shouldUseOrgRoutes]);
 
   // 2. Фильтруем задачи на клиенте
   const filteredTasks = useMemo(() => {
@@ -66,6 +102,21 @@ export default function MiniMap({
     }
     return tasks;
   }, [role, clerkUserId, tasks]);
+
+  const resolvedCtaHref = useMemo(() => {
+    if (!shouldUseOrgRoutes) return ctaHref;
+    const taskWithProject = filteredTasks.find(
+      (task) => task.orgId && (task.projectKey || task.projectId)
+    );
+    if (!taskWithProject) return null;
+    const orgId = taskWithProject.orgId as string;
+    const orgRef = orgSlugById[orgId] ?? orgId;
+    const projectRef = taskWithProject.projectKey || taskWithProject.projectId;
+    if (!orgRef || !projectRef) return null;
+    return `/org/${encodeURIComponent(orgRef)}/projects/${encodeURIComponent(
+      projectRef
+    )}/tasks/locations`;
+  }, [ctaHref, filteredTasks, orgSlugById, shouldUseOrgRoutes]);
 
   if (loading) {
     return (
@@ -161,11 +212,13 @@ export default function MiniMap({
             pointerEvents: 'auto',
           }}
         >
-          <Link href={ctaHref}>
-            <Button endIcon={<MapIcon />} variant='contained'>
-              {ctaLabel}
-            </Button>
-          </Link>
+          {resolvedCtaHref && (
+            <Link href={resolvedCtaHref}>
+              <Button endIcon={<MapIcon />} variant='contained'>
+                {ctaLabel}
+              </Button>
+            </Link>
+          )}
         </Box>
       )}
     </Box>

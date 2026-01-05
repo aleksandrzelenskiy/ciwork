@@ -27,7 +27,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <Box>
       <Typography variant='h6' gutterBottom>
-        Admin Dashboards
+        Панель менеджера
       </Typography>
 
       <Box
@@ -54,25 +54,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <Paper sx={{ p: 2 }}>
             <Typography variant='h6' gutterBottom>
-              Last Tasks
+              Последние задачи
             </Typography>
             <MiniTaskTable role={role} clerkUserId={clerkUserId} />
           </Paper>
 
           <Paper sx={{ p: 2 }}>
             <Typography variant='h6' gutterBottom>
-              Last Reports
+              Последние отчеты
             </Typography>
             <MiniReportsList role={role} clerkUserId={clerkUserId} />
           </Paper>
 
           <Paper sx={{ p: 2 }}>
-            <Typography variant='h6'>Task Location</Typography>
+            <Typography variant='h6'>Карта задач</Typography>
             <MiniMap role={role} clerkUserId={clerkUserId} />
           </Paper>
 
           <Paper sx={{ p: 2 }}>
-            <Typography variant='h6'>Metrics</Typography>
+            <Typography variant='h6'>Метрики</Typography>
             <Box sx={{ mb: 2 }}>
               <TaskMetricDiagram role={role} clerkUserId={clerkUserId} />
             </Box>

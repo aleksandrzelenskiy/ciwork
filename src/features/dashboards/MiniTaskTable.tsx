@@ -39,6 +39,13 @@ interface MiniTaskTableProps {
   maxItems?: number;
 }
 
+interface OrgSummary {
+  _id: string;
+  orgSlug: string;
+}
+
+type OrgResponse = { orgs: OrgSummary[] } | { error: string };
+
 // Функция для выбора иконки по приоритету
 function getPriorityIcon(priority: string) {
   switch (priority) {
@@ -65,6 +72,8 @@ export default function MiniTaskTable({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orgSlugById, setOrgSlugById] = useState<Record<string, string>>({});
+  const shouldUseOrgRoutes = role !== null && role !== 'executor';
 
   // 1. Загружаем все задачи
   useEffect(() => {
@@ -72,19 +81,46 @@ export default function MiniTaskTable({
       try {
         const res = await fetch('/api/tasks');
         if (!res.ok) {
-          setError('Failed to fetch tasks');
+          setError('Не удалось загрузить задачи');
           return;
         }
         const data = await res.json();
         setTasks(data.tasks);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
       } finally {
         setLoading(false);
       }
     };
     fetchTasks();
   }, []);
+
+  useEffect(() => {
+    if (!shouldUseOrgRoutes) return;
+    const controller = new AbortController();
+
+    const fetchOrgs = async () => {
+      try {
+        const res = await fetch('/api/org', { signal: controller.signal });
+        if (!res.ok) return;
+        const data = (await res.json()) as OrgResponse;
+        if (!('orgs' in data) || !Array.isArray(data.orgs)) return;
+
+        const map = data.orgs.reduce<Record<string, string>>((acc, org) => {
+          acc[org._id] = org.orgSlug;
+          return acc;
+        }, {});
+        setOrgSlugById(map);
+      } catch (err: unknown) {
+        if ((err as DOMException)?.name !== 'AbortError') {
+          setOrgSlugById({});
+        }
+      }
+    };
+
+    void fetchOrgs();
+    return () => controller.abort();
+  }, [shouldUseOrgRoutes]);
 
   // 2. Фильтруем задачи
   const filteredTasks = useMemo(() => {
@@ -111,6 +147,35 @@ export default function MiniTaskTable({
   const lastFive = sortedTasks.slice(0, rowLimit);
   const tableMaxHeight =
     rowLimit >= 5 ? 310 : Math.max(210, 70 + rowLimit * 48);
+  const resolvedCtaHref = useMemo(() => {
+    if (!shouldUseOrgRoutes) return ctaHref ?? '/tasks';
+    const taskWithProject = sortedTasks.find(
+      (task) => task.orgId && (task.projectKey || task.projectId)
+    );
+    if (!taskWithProject) return ctaHref ?? '/tasks';
+    const orgId = taskWithProject.orgId as string;
+    const orgRef = orgSlugById[orgId] ?? orgId;
+    const projectRef = taskWithProject.projectKey || taskWithProject.projectId;
+    if (!orgRef || !projectRef) return ctaHref ?? '/tasks';
+    return `/org/${encodeURIComponent(orgRef)}/projects/${encodeURIComponent(
+      projectRef
+    )}/tasks`;
+  }, [ctaHref, orgSlugById, shouldUseOrgRoutes, sortedTasks]);
+
+  const resolveTaskHref = (task: Task) => {
+    if (shouldUseOrgRoutes && task.orgId) {
+      const orgRef = orgSlugById[task.orgId] ?? task.orgId;
+      const projectRef = task.projectKey || task.projectId;
+      if (orgRef && projectRef) {
+        return `/org/${encodeURIComponent(
+          orgRef
+        )}/projects/${encodeURIComponent(projectRef)}/tasks/${encodeURIComponent(
+          task.taskId
+        )}`;
+      }
+    }
+    return `/tasks/${task.taskId.toLowerCase()}`;
+  };
 
   if (loading) {
     return (
@@ -136,7 +201,7 @@ export default function MiniTaskTable({
   if (lastFive.length === 0) {
     return (
       <Typography textAlign='center' mt={2}>
-        No tasks found
+        Задач не найдено
       </Typography>
     );
   }
@@ -157,22 +222,22 @@ export default function MiniTaskTable({
             <TableHead>
               <TableRow>
                 <TableCell align='center'>ID</TableCell>
-                <TableCell align='center'>Task</TableCell>
-                <TableCell align='center'>Due Date</TableCell>
+                <TableCell align='center'>Задача</TableCell>
+                <TableCell align='center'>Срок</TableCell>
                 <TableCell align='center'>Статус</TableCell>
-                <TableCell align='center'>Priority</TableCell>
+                <TableCell align='center'>Приоритет</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {lastFive.map((task) => (
                 <TableRow key={task.taskId}>
                   <TableCell>
-                    <Link href={`/tasks/${task.taskId.toLowerCase()}`}>
+                    <Link href={resolveTaskHref(task)}>
                       {task.taskId}
                     </Link>
                   </TableCell>
                   <TableCell>
-                    <Link href={`/tasks/${task.taskId.toLowerCase()}`}>
+                    <Link href={resolveTaskHref(task)}>
                       {task.taskName}
                       {task.bsNumber ? ` / ${task.bsNumber}` : ''}
                     </Link>
@@ -221,8 +286,8 @@ export default function MiniTaskTable({
           textAlign: 'center',
         }}
       >
-      <Link href={ctaHref ?? '/tasks'}>
-        <Button variant='text'>{ctaLabel ?? 'All Tasks'}</Button>
+      <Link href={resolvedCtaHref}>
+        <Button variant='text'>{ctaLabel ?? 'Все задачи'}</Button>
       </Link>
     </Box>
   </Box>

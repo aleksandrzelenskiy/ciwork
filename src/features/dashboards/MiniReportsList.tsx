@@ -66,13 +66,13 @@ export default function MiniReportsList({
       try {
         const res = await fetch('/api/reports');
         if (!res.ok) {
-          setError('Failed to fetch reports');
+          setError('Не удалось загрузить отчеты');
           return;
         }
         // Ожидаем формат ApiResponse { reports: ReportClient[], error?: string }
         const data: ApiResponse = await res.json();
         if (!Array.isArray(data.reports)) {
-          setError('Invalid reports response');
+          setError('Некорректный ответ от сервера');
           return;
         }
         setReports(data.reports);
@@ -80,7 +80,7 @@ export default function MiniReportsList({
         if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError('Unknown error');
+          setError('Неизвестная ошибка');
         }
       } finally {
         setLoading(false);
@@ -136,7 +136,7 @@ export default function MiniReportsList({
   if (lastFive.length === 0) {
     return (
       <Typography textAlign='center' mt={2}>
-        No reports found
+        Отчеты не найдены
       </Typography>
     );
   }
@@ -169,10 +169,9 @@ export default function MiniReportsList({
             <Table size='small' stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell>Report</TableCell>
-
-                  <TableCell>Author</TableCell>
-                  <TableCell>Created</TableCell>
+                  <TableCell>Отчет</TableCell>
+                  <TableCell>Автор</TableCell>
+                  <TableCell>Создан</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -227,7 +226,7 @@ export default function MiniReportsList({
         {/* Кнопка All Reports */}
         <Box sx={{ textAlign: 'center' }}>
           <Link href='/reports'>
-            <Button variant='text'>All Reports</Button>
+            <Button variant='text'>Все отчеты</Button>
           </Link>
         </Box>
       </Box>
@@ -250,9 +249,9 @@ export default function MiniReportsList({
             >
               <Box>
                 <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
-                  {'View the report on "' +
+                  {'Открыть отчет по "' +
                     (selectedReport.taskName || selectedReport.taskId) +
-                    '" at the base station:'}
+                    '" на базовой станции:'}
                 </Typography>
               </Box>
               <IconButton onClick={handleCloseDialog}>
@@ -262,7 +261,7 @@ export default function MiniReportsList({
 
             <DialogContent dividers>
               <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                Created:{' '}
+                Создан:{' '}
                 {new Date(selectedReport.createdAt).toLocaleDateString()}
               </Typography>
 
@@ -301,7 +300,7 @@ export default function MiniReportsList({
                           </Box>
                         }
                         secondary={
-                          'Status changed: ' +
+                          'Статус изменен: ' +
                           new Date(
                             base.latestStatusChangeDate
                           ).toLocaleDateString()
@@ -314,7 +313,7 @@ export default function MiniReportsList({
             </DialogContent>
 
             <DialogActions>
-              <Button onClick={handleCloseDialog}>Close</Button>
+              <Button onClick={handleCloseDialog}>Закрыть</Button>
             </DialogActions>
           </>
         )}

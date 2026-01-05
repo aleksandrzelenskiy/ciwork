@@ -28,6 +28,13 @@ interface TaskMetricDiagramProps {
   clerkUserId: string;
 }
 
+interface OrgSummary {
+  _id: string;
+  orgSlug: string;
+}
+
+type OrgResponse = { orgs: OrgSummary[] } | { error: string };
+
 // Обновлённый тип для элемента payload легенды
 interface CustomLegendPayload {
   color?: string;
@@ -52,14 +59,16 @@ export default function TaskMetricDiagram({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orgSlugById, setOrgSlugById] = useState<Record<string, string>>({});
   const router = useRouter();
+  const shouldUseOrgRoutes = role !== null && role !== 'executor';
 
   useEffect(() => {
     async function fetchTasks() {
       try {
         const res = await fetch('/api/tasks');
         if (!res.ok) {
-          setError('Error fetching tasks');
+          setError('Не удалось загрузить задачи');
           return;
         }
         const data = await res.json();
@@ -76,6 +85,57 @@ export default function TaskMetricDiagram({
     }
     fetchTasks();
   }, []);
+
+  useEffect(() => {
+    if (!shouldUseOrgRoutes) return;
+    const controller = new AbortController();
+
+    const fetchOrgs = async () => {
+      try {
+        const res = await fetch('/api/org', { signal: controller.signal });
+        if (!res.ok) return;
+        const data = (await res.json()) as OrgResponse;
+        if (!('orgs' in data) || !Array.isArray(data.orgs)) return;
+
+        const map = data.orgs.reduce<Record<string, string>>((acc, org) => {
+          acc[org._id] = org.orgSlug;
+          return acc;
+        }, {});
+        setOrgSlugById(map);
+      } catch (err: unknown) {
+        if ((err as DOMException)?.name !== 'AbortError') {
+          setOrgSlugById({});
+        }
+      }
+    };
+
+    void fetchOrgs();
+    return () => controller.abort();
+  }, [shouldUseOrgRoutes]);
+
+  let tasksForMetrics = tasks;
+  if (!role) {
+    tasksForMetrics = tasks;
+  } else if (isAdminRole(role) || role === 'manager' || role === 'viewer') {
+    tasksForMetrics = tasks;
+  } else if (role === 'executor') {
+    tasksForMetrics = tasks.filter((t) => t.executorId === clerkUserId);
+  }
+
+  const orgTasksBase = React.useMemo(() => {
+    if (!shouldUseOrgRoutes) return '/tasks';
+    const taskWithProject = tasksForMetrics.find(
+      (task) => task.orgId && (task.projectKey || task.projectId)
+    );
+    if (!taskWithProject) return null;
+    const orgId = taskWithProject.orgId as string;
+    const orgRef = orgSlugById[orgId] ?? orgId;
+    const projectRef = taskWithProject.projectKey || taskWithProject.projectId;
+    if (!orgRef || !projectRef) return null;
+    return `/org/${encodeURIComponent(orgRef)}/projects/${encodeURIComponent(
+      projectRef
+    )}/tasks`;
+  }, [orgSlugById, shouldUseOrgRoutes, tasksForMetrics]);
 
   if (loading) {
     return (
@@ -96,15 +156,6 @@ export default function TaskMetricDiagram({
         {error}
       </Typography>
     );
-  }
-
-  let tasksForMetrics = tasks;
-  if (!role) {
-    tasksForMetrics = tasks;
-  } else if (isAdminRole(role) || role === 'manager' || role === 'viewer') {
-    tasksForMetrics = tasks;
-  } else if (role === 'executor') {
-    tasksForMetrics = tasks.filter((t) => t.executorId === clerkUserId);
   }
 
   // Группируем задачи по статусам и считаем количество для каждого
@@ -128,7 +179,9 @@ export default function TaskMetricDiagram({
 
   // При клике на сегмент переходим на /tasks с фильтром по статусу
   const handleSegmentClick = (status: string) => {
-    router.push(`/tasks?status=${encodeURIComponent(status)}`);
+    if (shouldUseOrgRoutes && !orgTasksBase) return;
+    const base = orgTasksBase ?? '/tasks';
+    router.push(`${base}?status=${encodeURIComponent(status)}`);
   };
 
   // Кастомный рендер меток внутри сегментов (белым цветом)
@@ -175,19 +228,34 @@ export default function TaskMetricDiagram({
         >
           {payloadTyped?.map((entry) => {
             const data = entry.payload;
+            const baseHref = orgTasksBase ?? '/tasks';
+            const canLink = !shouldUseOrgRoutes || Boolean(orgTasksBase);
             return (
-              <Link
-                key={data.name}
-                href={`/tasks?status=${encodeURIComponent(data.name)}`}
-                style={{
-                  marginRight: 10,
-                  color: entry.color || '#000',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-              >
-                {`${getStatusLabel(data.name)} (${data.count})`}
-              </Link>
+              canLink ? (
+                <Link
+                  key={data.name}
+                  href={{ pathname: baseHref, query: { status: data.name } }}
+                  style={{
+                    marginRight: 10,
+                    color: entry.color || '#000',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {`${getStatusLabel(data.name)} (${data.count})`}
+                </Link>
+              ) : (
+                <Typography
+                  key={data.name}
+                  component='span'
+                  sx={{
+                    marginRight: 1,
+                    color: entry.color || '#000',
+                  }}
+                >
+                  {`${getStatusLabel(data.name)} (${data.count})`}
+                </Typography>
+              )
             );
           })}
         </div>
