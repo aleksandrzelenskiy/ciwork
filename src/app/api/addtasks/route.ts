@@ -91,7 +91,11 @@ export async function POST(request: Request) {
           { status: 400 }
       );
     }
-    if (!taskData.initiatorName || !taskData.initiatorEmail) {
+    const initiatorNameValue = (taskData.initiatorName || '').trim();
+    const initiatorEmailValue = (taskData.initiatorEmail || '').trim();
+    const hasInitiatorName = Boolean(initiatorNameValue);
+    const hasInitiatorEmail = Boolean(initiatorEmailValue);
+    if (hasInitiatorName !== hasInitiatorEmail) {
       return NextResponse.json(
           { error: 'initiatorName and initiatorEmail are required' },
           { status: 400 }

@@ -341,7 +341,11 @@ export async function POST(
         if (!bsNumber) return NextResponse.json({ error: 'bsNumber is required' }, { status: 400 });
         if (!finalBsAddress)
             return NextResponse.json({ error: 'bsAddress is required' }, { status: 400 });
-        if (!initiatorName || !initiatorEmail) {
+        const initiatorNameValue = typeof initiatorName === 'string' ? initiatorName.trim() : '';
+        const initiatorEmailValue = typeof initiatorEmail === 'string' ? initiatorEmail.trim() : '';
+        const hasInitiatorName = Boolean(initiatorNameValue);
+        const hasInitiatorEmail = Boolean(initiatorEmailValue);
+        if (hasInitiatorName !== hasInitiatorEmail) {
             return NextResponse.json(
                 { error: 'initiatorName and initiatorEmail are required' },
                 { status: 400 }
@@ -441,8 +445,8 @@ export async function POST(
             authorEmail: user.emailAddresses?.[0]?.emailAddress,
             authorName: creatorName,
 
-            initiatorName,
-            initiatorEmail,
+            initiatorName: hasInitiatorName ? initiatorNameValue : undefined,
+            initiatorEmail: hasInitiatorEmail ? initiatorEmailValue : undefined,
 
             executorId: hasExecutor ? executorId : undefined,
             executorName: hasExecutor ? executorName : undefined,
