@@ -14,13 +14,12 @@ services:
   mongo:
     image: mongo:6.0
     container_name: mongo_db
-    command:
-      ['mongod', '--setParameter', 'diagnosticDataCollectionEnabled=false']
+    command: [ 'mongod', '--auth', '--setParameter', 'diagnosticDataCollectionEnabled=false' ]
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: secret123
     volumes:
-      - ci-work_db_data:/data/db
+      - ciwork_db_data:/data/db
     restart: unless-stopped
     networks:
       - ciwork_net
@@ -44,8 +43,7 @@ services:
 
 
 volumes:
-  ci-work_db_data:
-    external: true
+  ciwork_db_data:
   caddy_data:
   caddy_config:
 
