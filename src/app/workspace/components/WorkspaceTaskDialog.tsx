@@ -1870,13 +1870,13 @@ export default function WorkspaceTaskDialog({
                                                 value={totalCostNumber > 0 ? contractorPercent.toFixed(2) : ''}
                                                 onChange={(e) => handlePercentInputChange(e.target.value)}
                                                 fullWidth
-                                                inputProps={{ min: 0, max: 200, step: '0.1' }}
+                                                inputProps={{ min: 0, max: 100, step: '0.1' }}
                                                 disabled={totalCostNumber <= 0}
                                             />
                                             <Slider
                                                 value={
                                                     totalCostNumber > 0
-                                                        ? Math.min(Math.max(contractorPercent, 0), 200)
+                                                        ? Math.min(Math.max(contractorPercent, 0), 100)
                                                         : 0
                                                 }
                                                 onChange={(_e, value) =>
@@ -1885,7 +1885,7 @@ export default function WorkspaceTaskDialog({
                                                     )
                                                 }
                                                 min={0}
-                                                max={200}
+                                                max={100}
                                                 step={1}
                                                 disabled={totalCostNumber <= 0}
                                                 valueLabelDisplay="auto"
@@ -1908,21 +1908,43 @@ export default function WorkspaceTaskDialog({
                                     Указать инициатора задачи
                                 </Link>
                             ) : (
-                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                    <TextField
-                                        label="Инициатор (имя)"
-                                        value={initiatorName}
-                                        onChange={(e) => setInitiatorName(e.target.value)}
-                                        fullWidth
-                                        sx={glassInputSx}
-                                    />
-                                    <TextField
-                                        label="Инициатор (email)"
-                                        value={initiatorEmail}
-                                        onChange={(e) => setInitiatorEmail(e.target.value)}
-                                        fullWidth
-                                        sx={glassInputSx}
-                                    />
+                                <Stack spacing={1.5}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                                        <TextField
+                                            label="Инициатор (имя)"
+                                            value={initiatorName}
+                                            onChange={(e) => setInitiatorName(e.target.value)}
+                                            fullWidth
+                                            sx={glassInputSx}
+                                        />
+                                        <TextField
+                                            label="Инициатор (email)"
+                                            value={initiatorEmail}
+                                            onChange={(e) => setInitiatorEmail(e.target.value)}
+                                            fullWidth
+                                            sx={glassInputSx}
+                                        />
+                                    </Stack>
+                                    <Stack direction="row" spacing={1.5} alignItems="center">
+                                        <Button
+                                            size="small"
+                                            variant="text"
+                                            onClick={() => setShowInitiatorFields(false)}
+                                            sx={{ px: 0 }}
+                                        >
+                                            Скрыть поля
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => {
+                                                setInitiatorName('');
+                                                setInitiatorEmail('');
+                                            }}
+                                        >
+                                            Очистить инициатора
+                                        </Button>
+                                    </Stack>
                                 </Stack>
                             )}
 
