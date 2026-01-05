@@ -398,6 +398,7 @@ export default function WorkspaceTaskDialog({
 
     const [initiatorName, setInitiatorName] = React.useState('');
     const [initiatorEmail, setInitiatorEmail] = React.useState('');
+    const [showInitiatorFields, setShowInitiatorFields] = React.useState(false);
 
     const [existingAttachments, setExistingAttachments] = React.useState<
         Array<{ key: string; name: string; url?: string; size?: number }>
@@ -578,6 +579,7 @@ export default function WorkspaceTaskDialog({
         setTaskDescription(initialTask.taskDescription ?? '');
         setInitiatorName(initialTask.initiatorName ?? '');
         setInitiatorEmail(initialTask.initiatorEmail ?? '');
+        setShowInitiatorFields(Boolean(initialTask.initiatorName || initialTask.initiatorEmail));
 
         // стоимость
         setTotalCost(
@@ -1008,6 +1010,7 @@ export default function WorkspaceTaskDialog({
         setSelectedExecutor(null);
         setInitiatorName('');
         setInitiatorEmail('');
+        setShowInitiatorFields(false);
         setExistingAttachments([]);
         setAttachments([]);
         setEstimateFile(null);
@@ -1233,17 +1236,12 @@ export default function WorkspaceTaskDialog({
         if (!orgSlug || !projectRef) return;
         if (hasInvalidCoords) return;
         if (!taskBsAddress) return;
-        if (!initiatorName.trim() || !initiatorEmail.trim()) {
-            setSnackbarMsg('Укажите имя и email инициатора');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
-            return;
-        }
-
         setSaving(true);
         const newTaskId = genId();
         const bsLocation = buildBsLocation();
         const primaryCoords = getPrimaryCoords();
+        const initiatorNameValue = initiatorName.trim();
+        const initiatorEmailValue = initiatorEmail.trim();
 
         try {
             const payload = {
@@ -1261,8 +1259,8 @@ export default function WorkspaceTaskDialog({
                 executorId: selectedExecutor ? selectedExecutor.id : null,
                 executorName: selectedExecutor ? selectedExecutor.name : null,
                 executorEmail: selectedExecutor ? selectedExecutor.email : null,
-                initiatorName: initiatorName.trim(),
-                initiatorEmail: initiatorEmail.trim(),
+                initiatorName: initiatorNameValue || undefined,
+                initiatorEmail: initiatorEmailValue || undefined,
                 totalCost: totalCost.trim() ? Number(totalCost.trim()) : undefined,
                 contractorPayment: contractorPayment.trim() ? Number(contractorPayment.trim()) : undefined,
                 workItems,
@@ -1303,16 +1301,11 @@ export default function WorkspaceTaskDialog({
         if (!orgSlug || !projectRef) return;
         if (hasInvalidCoords) return;
         if (!taskBsAddress) return;
-        if (!initiatorName.trim() || !initiatorEmail.trim()) {
-            setSnackbarMsg('Укажите имя и email инициатора');
-            setSnackbarSeverity('error');
-            setSnackbarOpen(true);
-            return;
-        }
-
         setSaving(true);
         const bsLocation = buildBsLocation();
         const primaryCoords = getPrimaryCoords();
+        const initiatorNameValue = initiatorName.trim();
+        const initiatorEmailValue = initiatorEmail.trim();
 
         try {
             const payload = {
@@ -1328,8 +1321,8 @@ export default function WorkspaceTaskDialog({
                 executorId: selectedExecutor ? selectedExecutor.id : null,
                 executorName: selectedExecutor ? selectedExecutor.name : null,
                 executorEmail: selectedExecutor ? selectedExecutor.email : null,
-                initiatorName: initiatorName.trim(),
-                initiatorEmail: initiatorEmail.trim(),
+                initiatorName: initiatorNameValue || undefined,
+                initiatorEmail: initiatorEmailValue || undefined,
                 totalCost: totalCost.trim() ? Number(totalCost.trim()) : undefined,
                 contractorPayment: contractorPayment.trim() ? Number(contractorPayment.trim()) : undefined,
                 workItems,
@@ -1906,24 +1899,32 @@ export default function WorkspaceTaskDialog({
                                 </Collapse>
                             </Box>
 
-                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                                <TextField
-                                    label="Инициатор (имя)"
-                                    value={initiatorName}
-                                    onChange={(e) => setInitiatorName(e.target.value)}
-                                    fullWidth
-                                    required
-                                    sx={glassInputSx}
-                                />
-                                <TextField
-                                    label="Инициатор (email)"
-                                    value={initiatorEmail}
-                                    onChange={(e) => setInitiatorEmail(e.target.value)}
-                                    fullWidth
-                                    required
-                                    sx={glassInputSx}
-                                />
-                            </Stack>
+                            {!showInitiatorFields ? (
+                                <Link
+                                    component="button"
+                                    onClick={() => setShowInitiatorFields(true)}
+                                    sx={{ alignSelf: 'flex-start' }}
+                                >
+                                    Указать инициатора задачи
+                                </Link>
+                            ) : (
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                                    <TextField
+                                        label="Инициатор (имя)"
+                                        value={initiatorName}
+                                        onChange={(e) => setInitiatorName(e.target.value)}
+                                        fullWidth
+                                        sx={glassInputSx}
+                                    />
+                                    <TextField
+                                        label="Инициатор (email)"
+                                        value={initiatorEmail}
+                                        onChange={(e) => setInitiatorEmail(e.target.value)}
+                                        fullWidth
+                                        sx={glassInputSx}
+                                    />
+                                </Stack>
+                            )}
 
                             <Autocomplete<MemberOption>
                                 options={members}
