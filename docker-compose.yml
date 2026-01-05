@@ -44,7 +44,7 @@ services:
 
 
 volumes:
-  ciwork_ciwork_db_data:
+  ci-work_db_data:
     external: true
   caddy_data:
   caddy_config:
