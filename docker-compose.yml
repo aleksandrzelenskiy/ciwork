@@ -20,7 +20,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: secret123
     volumes:
-      - ciwork_ciwork_db_data:/data/db
+      - ci-work_db_data:/data/db
     restart: unless-stopped
     networks:
       - ciwork_net
