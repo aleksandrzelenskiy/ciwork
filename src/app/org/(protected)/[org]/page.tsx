@@ -1466,7 +1466,30 @@ export default function OrgSettingsPage() {
                         </Stack>
                     </Stack>
 
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mt: { xs: 2.5, md: 3 } }}>
+                    <Box
+                        sx={(muiTheme) => ({
+                            mt: { xs: 2.5, md: 3 },
+                            display: 'grid',
+                            gridTemplateColumns: {
+                                xs: '1fr',
+                                sm: '1fr',
+                                md: 'repeat(2, minmax(0, 1fr))',
+                                lg: 'repeat(3, minmax(0, 1fr))',
+                            },
+                            columnGap: {
+                                xs: muiTheme.spacing(masonrySpacing.xs),
+                                sm: muiTheme.spacing(masonrySpacing.sm),
+                                md: muiTheme.spacing(masonrySpacing.md),
+                                lg: muiTheme.spacing(masonrySpacing.md),
+                            },
+                            rowGap: {
+                                xs: muiTheme.spacing(masonrySpacing.xs),
+                                sm: muiTheme.spacing(masonrySpacing.sm),
+                                md: muiTheme.spacing(masonrySpacing.md),
+                                lg: muiTheme.spacing(masonrySpacing.md),
+                            },
+                        })}
+                    >
                         <Box sx={statCardSx}>
                             <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
                                 Активные проекты
@@ -1519,7 +1542,7 @@ export default function OrgSettingsPage() {
                                 Организация {orgName || org}
                             </Typography>
                         </Box>
-                    </Stack>
+                    </Box>
 
                     <Stack spacing={1.5} sx={{ mt: { xs: 2, md: 2.5 } }}>
                         {subscriptionError && (
