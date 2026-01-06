@@ -9,6 +9,7 @@ import {
   Box,
 } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 const HoverCard = styled(Card)<{ $selected?: boolean }>(
   ({ theme, $selected }) => ({
@@ -17,7 +18,7 @@ const HoverCard = styled(Card)<{ $selected?: boolean }>(
     theme.palette.common.white,
     theme.palette.mode === 'dark' ? 0.2 : 0.35
   ),
-  borderRadius: 24,
+  borderRadius: UI_RADIUS.surface,
   backgroundColor:
     theme.palette.mode === 'dark'
       ? 'rgba(15, 20, 30, 0.75)'
@@ -155,8 +156,7 @@ export default function RoleCard({
           fullWidth
           className='role-card-button'
           sx={{
-            borderRadius: 999,
-            textTransform: 'uppercase',
+            borderRadius: UI_RADIUS.button,
             fontWeight: 700,
             py: 1,
           }}

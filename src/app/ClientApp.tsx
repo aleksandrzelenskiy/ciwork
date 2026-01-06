@@ -42,6 +42,7 @@ import NotificationBell from '@/features/messenger/NotificationBell';
 import MessengerTrigger from '@/features/messenger/MessengerTrigger';
 import RubleAmount from '@/features/shared/RubleAmount';
 import dayjs from 'dayjs';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 export default function ClientApp({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
@@ -147,6 +148,52 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
             default: mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
           },
         },
+        components: {
+          MuiPaper: {
+            styleOverrides: {
+              root: {
+                borderRadius: UI_RADIUS.surface,
+              },
+            },
+          },
+          MuiCard: {
+            styleOverrides: {
+              root: {
+                borderRadius: UI_RADIUS.surface,
+              },
+            },
+          },
+          MuiDialog: {
+            styleOverrides: {
+              paper: {
+                borderRadius: UI_RADIUS.surface,
+              },
+            },
+          },
+          MuiButton: {
+            styleOverrides: {
+              root: {
+                borderRadius: UI_RADIUS.button,
+                textTransform: 'none',
+                fontWeight: 600,
+              },
+            },
+          },
+          MuiIconButton: {
+            styleOverrides: {
+              root: {
+                borderRadius: UI_RADIUS.icon,
+              },
+            },
+          },
+          MuiOutlinedInput: {
+            styleOverrides: {
+              root: {
+                borderRadius: UI_RADIUS.input,
+              },
+            },
+          },
+        },
       }),
     [mode]
   );
@@ -184,7 +231,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
   const appBarIconSize = 42;
   const appBarIconGap = 0.9;
   const toolbarIconButtonSx = {
-      borderRadius: '14px',
+      borderRadius: UI_RADIUS.icon,
       border: `1px solid ${appBarBorder}`,
       backdropFilter: 'blur(6px)',
       width: appBarIconSize,

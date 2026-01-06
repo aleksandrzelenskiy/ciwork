@@ -82,6 +82,7 @@ import {
     TimelineOppositeContent,
 } from '@mui/lab';
 import Masonry from '@mui/lab/Masonry';
+import { UI_RADIUS } from '@/config/uiTokens';
 import { extractFileNameFromUrl, isDocumentUrl } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import type { RelatedTaskRef } from '@/app/types/taskTypes';
@@ -185,7 +186,7 @@ type NcwDefaults = {
 const CardItem = styled(Paper)(({ theme }) => ({
     backgroundColor: '#fff',
     padding: theme.spacing(2),
-    borderRadius: theme.shape.borderRadius,
+    borderRadius: UI_RADIUS.surface,
     boxShadow: theme.shadows[3],
     ...theme.applyStyles?.('dark', {
         backgroundColor: '#1A2027',
