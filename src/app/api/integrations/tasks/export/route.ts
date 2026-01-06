@@ -17,7 +17,7 @@ function parseLimit(value: string | null): number {
 export async function GET(req: NextRequest) {
     try {
         await dbConnect();
-        const auth = await requireIntegrationKey(req.headers, ['tasks:read']);
+        const auth = await requireIntegrationKey(req.headers, ['tasks:read'] as const);
         if (!auth.ok) {
             return NextResponse.json({ error: auth.error }, { status: auth.status });
         }

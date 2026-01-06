@@ -1,6 +1,9 @@
 import 'server-only';
 
-import IntegrationApiKeyModel, { type IntegrationApiKey } from '@/server/models/IntegrationApiKeyModel';
+import IntegrationApiKeyModel, {
+    type IntegrationApiKey,
+    type IntegrationScope,
+} from '@/server/models/IntegrationApiKeyModel';
 import { verifyApiKey } from '@/server/integrations/keys';
 import dbConnect from '@/server/db/mongoose';
 
@@ -19,7 +22,7 @@ function normalizeHeader(value: string | null): string | null {
 
 export async function requireIntegrationKey(
     headers: Headers,
-    requiredScopes: string[]
+    requiredScopes: readonly IntegrationScope[]
 ): Promise<AuthResult> {
     await dbConnect();
 
