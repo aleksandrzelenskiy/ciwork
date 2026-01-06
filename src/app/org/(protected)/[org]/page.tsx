@@ -1469,6 +1469,7 @@ export default function OrgSettingsPage() {
                     <Box
                         sx={(muiTheme) => ({
                             mt: { xs: 2.5, md: 3 },
+                            mx: { xs: -panelPadding.xs, md: -panelPadding.md },
                             display: 'grid',
                             gridTemplateColumns: {
                                 xs: '1fr',
