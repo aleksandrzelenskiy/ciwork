@@ -118,6 +118,9 @@ export default function OrganizationsAdmin() {
     const [walletTopUpInput, setWalletTopUpInput] = React.useState('0');
     const [dialogError, setDialogError] = React.useState<string | null>(null);
     const [saving, setSaving] = React.useState(false);
+    const [orgToDelete, setOrgToDelete] = React.useState<OrganizationRow | null>(null);
+    const [deleteError, setDeleteError] = React.useState<string | null>(null);
+    const [deleting, setDeleting] = React.useState(false);
 
     const fetchOrganizations = React.useCallback(async () => {
         setLoading(true);
@@ -160,6 +163,49 @@ export default function OrganizationsAdmin() {
         if (saving) return;
         setSelectedOrg(null);
         setDialogError(null);
+    };
+
+    const handleOpenDelete = (org: OrganizationRow) => {
+        setOrgToDelete(org);
+        setDeleteError(null);
+    };
+
+    const handleCloseDelete = () => {
+        if (deleting) return;
+        setOrgToDelete(null);
+        setDeleteError(null);
+    };
+
+    const handleDelete = async () => {
+        if (!orgToDelete) return;
+        setDeleting(true);
+        setDeleteError(null);
+        try {
+            const response = await fetch(
+                `/api/admin/organizations/${encodeURIComponent(orgToDelete.orgSlug)}`,
+                { method: 'DELETE' }
+            );
+            const payload = (await response.json().catch(() => null)) as
+                | { ok?: true; error?: string }
+                | null;
+
+            if (!response.ok || !payload || !payload.ok) {
+                const message = payload?.error || 'Не удалось удалить организацию';
+                setDeleteError(message);
+                return;
+            }
+
+            setOrganizations((prev) =>
+                prev.filter((item) => item.orgSlug !== orgToDelete.orgSlug)
+            );
+            setOrgToDelete(null);
+        } catch (err) {
+            const message =
+                err instanceof Error ? err.message : 'Ошибка удаления';
+            setDeleteError(message);
+        } finally {
+            setDeleting(false);
+        }
     };
 
     const handleApply = async () => {
@@ -370,13 +416,23 @@ export default function OrganizationsAdmin() {
                                             {formatDate(org.updatedAt)}
                                         </TableCell>
                                         <TableCell align="right">
-                                            <Button
-                                                variant="contained"
-                                                size="small"
-                                                onClick={() => handleOpenDialog(org)}
-                                            >
-                                                Изменить
-                                            </Button>
+                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    onClick={() => handleOpenDialog(org)}
+                                                >
+                                                    Изменить
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    color="error"
+                                                    size="small"
+                                                    onClick={() => handleOpenDelete(org)}
+                                                >
+                                                    Удалить
+                                                </Button>
+                                            </Stack>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -459,6 +515,44 @@ export default function OrganizationsAdmin() {
                         }
                     >
                         {saving ? 'Сохраняем…' : 'Применить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={Boolean(orgToDelete)}
+                onClose={handleCloseDelete}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle>Удалить организацию?</DialogTitle>
+                <DialogContent dividers>
+                    {orgToDelete ? (
+                        <Stack spacing={1.5}>
+                            <Typography variant="subtitle1">
+                                {orgToDelete.name} · {orgToDelete.orgSlug}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Организация, ее проекты, задачи и связанные данные будут удалены без возможности восстановления.
+                            </Typography>
+                            {deleteError && <Alert severity="error">{deleteError}</Alert>}
+                        </Stack>
+                    ) : null}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDelete} disabled={deleting}>
+                        Отмена
+                    </Button>
+                    <Button
+                        color="error"
+                        variant="contained"
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        startIcon={
+                            deleting ? <CircularProgress size={16} color="inherit" /> : null
+                        }
+                    >
+                        {deleting ? 'Удаляем…' : 'Удалить'}
                     </Button>
                 </DialogActions>
             </Dialog>

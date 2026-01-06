@@ -51,6 +51,9 @@ export default function UsersAdmin() {
     const [walletTopUpInput, setWalletTopUpInput] = React.useState('0');
     const [dialogError, setDialogError] = React.useState<string | null>(null);
     const [saving, setSaving] = React.useState(false);
+    const [userToDelete, setUserToDelete] = React.useState<UserRow | null>(null);
+    const [deleteError, setDeleteError] = React.useState<string | null>(null);
+    const [deleting, setDeleting] = React.useState(false);
 
     const fetchUsers = React.useCallback(async () => {
         setLoading(true);
@@ -90,6 +93,56 @@ export default function UsersAdmin() {
         if (saving) return;
         setSelectedUser(null);
         setDialogError(null);
+    };
+
+    const handleOpenDelete = (user: UserRow) => {
+        setUserToDelete(user);
+        setDeleteError(null);
+    };
+
+    const handleCloseDelete = () => {
+        if (deleting) return;
+        setUserToDelete(null);
+        setDeleteError(null);
+    };
+
+    const handleDelete = async () => {
+        if (!userToDelete) return;
+        setDeleting(true);
+        setDeleteError(null);
+        try {
+            const response = await fetch(
+                `/api/admin/users/${encodeURIComponent(userToDelete.clerkUserId)}`,
+                { method: 'DELETE' }
+            );
+            const payload = (await response.json().catch(() => null)) as
+                | { ok?: true; clerkDeleted?: boolean; clerkError?: string; error?: string }
+                | null;
+
+            if (!response.ok || !payload || !payload.ok) {
+                const message = payload?.error || 'Не удалось удалить пользователя';
+                setDeleteError(message);
+                return;
+            }
+
+            setUsers((prev) =>
+                prev.filter((item) => item.clerkUserId !== userToDelete.clerkUserId)
+            );
+            if (payload.clerkDeleted === false) {
+                setError(
+                    `Пользователь удален из базы, но не удален в Clerk: ${
+                        payload.clerkError || 'неизвестная ошибка'
+                    }`
+                );
+            }
+            setUserToDelete(null);
+        } catch (err) {
+            const message =
+                err instanceof Error ? err.message : 'Ошибка удаления';
+            setDeleteError(message);
+        } finally {
+            setDeleting(false);
+        }
     };
 
     const handleApply = async () => {
@@ -255,13 +308,23 @@ export default function UsersAdmin() {
                                             </Typography>
                                         </TableCell>
                                         <TableCell align="right">
-                                            <Button
-                                                variant="contained"
-                                                size="small"
-                                                onClick={() => handleOpenDialog(user)}
-                                            >
-                                                Изменить
-                                            </Button>
+                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    onClick={() => handleOpenDialog(user)}
+                                                >
+                                                    Изменить
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    color="error"
+                                                    size="small"
+                                                    onClick={() => handleOpenDelete(user)}
+                                                >
+                                                    Удалить
+                                                </Button>
+                                            </Stack>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -310,6 +373,44 @@ export default function UsersAdmin() {
                         }
                     >
                         {saving ? 'Сохраняем…' : 'Применить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={Boolean(userToDelete)}
+                onClose={handleCloseDelete}
+                fullWidth
+                maxWidth="xs"
+            >
+                <DialogTitle>Удалить пользователя?</DialogTitle>
+                <DialogContent dividers>
+                    {userToDelete ? (
+                        <Stack spacing={1.5}>
+                            <Typography variant="subtitle1">
+                                {normalizeValue(userToDelete.name) || '—'} · {userToDelete.clerkUserId}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Пользователь будет удален из базы данных и, по возможности, из Clerk.
+                            </Typography>
+                            {deleteError && <Alert severity="error">{deleteError}</Alert>}
+                        </Stack>
+                    ) : null}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDelete} disabled={deleting}>
+                        Отмена
+                    </Button>
+                    <Button
+                        color="error"
+                        variant="contained"
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        startIcon={
+                            deleting ? <CircularProgress size={16} color="inherit" /> : null
+                        }
+                    >
+                        {deleting ? 'Удаляем…' : 'Удалить'}
                     </Button>
                 </DialogActions>
             </Dialog>
