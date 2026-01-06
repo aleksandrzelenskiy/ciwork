@@ -21,8 +21,6 @@ export interface IUser extends Document {
     activeOrgId?: Types.ObjectId | null;
     regionCode?: string;
     lastActive?: Date | null;
-    // Подрядчик — профиль
-    skills?: string[];
     desiredRate?: number; // фиксированная ставка за типовую задачу
     bio?: string;
     portfolioLinks?: string[];
@@ -81,7 +79,6 @@ const UserSchema = new Schema<IUser>(
             type: Date,
             default: null,
         },
-        skills: { type: [String], default: [] },
         desiredRate: { type: Number },
         bio: { type: String, default: '' },
         portfolioLinks: { type: [String], default: [] },

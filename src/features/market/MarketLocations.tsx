@@ -41,7 +41,6 @@ export type MarketPublicTask = {
     priority?: PriorityLevel;
     budget?: number | null;
     currency?: string;
-    skills?: string[];
     taskDescription?: string;
     publicDescription?: string;
     workItems?: { workType?: string; quantity?: number; unit?: string; note?: string }[];

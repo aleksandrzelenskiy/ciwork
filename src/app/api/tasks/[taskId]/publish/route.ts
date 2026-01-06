@@ -20,7 +20,6 @@ type Payload = {
     budget?: number | null;
     publicDescription?: string | null;
     currency?: string;
-    skills?: string[];
     allowInstantClaim?: boolean;
 };
 
@@ -85,9 +84,6 @@ export async function PATCH(
     }
     if (payload.currency) {
         update.currency = payload.currency;
-    }
-    if (Array.isArray(payload.skills)) {
-        update.skills = payload.skills.map((s) => s.trim()).filter(Boolean);
     }
     if (typeof payload.allowInstantClaim === 'boolean') {
         update.allowInstantClaim = payload.allowInstantClaim;

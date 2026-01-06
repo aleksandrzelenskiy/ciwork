@@ -13,7 +13,6 @@ import {
     Avatar,
     Box,
     Button,
-    Chip,
     CircularProgress,
     FormControl,
     InputLabel,
@@ -25,7 +24,6 @@ import {
     Typography,
     Divider,
 } from '@mui/material';
-import Autocomplete from '@mui/material/Autocomplete';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 
 type ProfileResponse = {
@@ -36,7 +34,6 @@ type ProfileResponse = {
     profilePic: string;
     regionCode: string;
     profileType?: 'employer' | 'contractor';
-    skills?: string[];
     desiredRate?: number | null;
     bio?: string;
     portfolioLinks?: string[];
@@ -65,8 +62,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-    const [skills, setSkills] = useState<string[]>([]);
-    const [skillsInput, setSkillsInput] = useState('');
     const [desiredRate, setDesiredRate] = useState<string>('');
     const [bio, setBio] = useState('');
     const [portfolioLinks, setPortfolioLinks] = useState<string>('');
@@ -130,7 +125,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             setProfile(payload);
             setCanEdit(mode === 'self' ? true : Boolean(data.canEdit));
             deriveNames(payload.name);
-            setSkills(Array.isArray(payload.skills) ? payload.skills : []);
             setDesiredRate(
                 typeof payload.desiredRate === 'number'
                     ? String(payload.desiredRate)
@@ -168,7 +162,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     name: buildFullName(firstName, lastName),
                     phone: profile.phone,
                     regionCode: profile.regionCode,
-                    skills,
                     desiredRate: desiredRate.trim() ? Number(desiredRate.trim()) : null,
                     bio,
                     portfolioLinks: portfolioLinks
@@ -190,7 +183,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     prev ? { ...prev, ...data.profile } : data.profile
                 );
                 deriveNames(data.profile.name);
-                setSkills(Array.isArray(data.profile.skills) ? data.profile.skills : []);
                 setDesiredRate(
                     typeof data.profile.desiredRate === 'number'
                         ? String(data.profile.desiredRate)
@@ -460,39 +452,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                         <Typography variant="h6" fontWeight={600}>
                             Профиль подрядчика
                         </Typography>
-                        <Autocomplete<string, true, false, true>
-                            multiple
-                            freeSolo
-                            options={[]}
-                            value={skills}
-                            inputValue={skillsInput}
-                            onInputChange={(_e, val) => setSkillsInput(val)}
-                            onChange={(_e, val) =>
-                                setSkills(
-                                    (val as string[]).map((v) => v.trim()).filter(Boolean)
-                                )
-                            }
-                            disabled={readOnly}
-                            renderTags={(value, getTagProps) =>
-                                value.map((option, index) => (
-                                    <Chip
-                                        label={option}
-                                        {...getTagProps({ index })}
-                                        key={`${option}-${index}`}
-                                        sx={{ borderRadius: 2 }}
-                                    />
-                                ))
-                            }
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label="Навыки"
-                                    placeholder="Оптика, электрика, сварка"
-                                    helperText="Используется в выдаче публичных задач"
-                                />
-                            )}
-                        />
-
                         <TextField
                             label="Ставка за задачу, ₽"
                             type="number"

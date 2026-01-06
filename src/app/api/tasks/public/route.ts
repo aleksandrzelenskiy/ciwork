@@ -22,8 +22,6 @@ function escapeRegExp(input: string): string {
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const q = (searchParams.get('q') || '').trim();
-    const skillsRaw = (searchParams.get('skills') || '').trim();
-    const skills = skillsRaw ? skillsRaw.split(',').map((s) => s.trim()).filter(Boolean) : [];
     const minBudget = parseNumber(searchParams.get('minBudget'));
     const maxBudget = parseNumber(searchParams.get('maxBudget'));
     const status = (searchParams.get('status') || '').trim();
@@ -59,10 +57,6 @@ export async function GET(request: NextRequest) {
         if (maxBudget !== undefined) {
             (matchStage.budget as Record<string, number>).$lte = maxBudget;
         }
-    }
-
-    if (skills.length > 0) {
-        matchStage.skills = { $all: skills };
     }
 
     if (q) {

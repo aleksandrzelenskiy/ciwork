@@ -135,7 +135,6 @@ type Task = {
     budget?: number | null;
     publicDescription?: string;
     currency?: string;
-    skills?: string[];
     applicationCount?: number;
     acceptedApplicationId?: string;
     allowInstantClaim?: boolean;
@@ -290,8 +289,6 @@ export default function TaskDetailsPage() {
         ...TASK_SECTION_KEYS,
     ]);
     const [publishDialogOpen, setPublishDialogOpen] = React.useState(false);
-    const [publishSkills, setPublishSkills] = React.useState<string[]>([]);
-    const [publishSkillsInput, setPublishSkillsInput] = React.useState('');
     const [publishBudgetInput, setPublishBudgetInput] = React.useState('');
     const [publishInfoInput, setPublishInfoInput] = React.useState('');
     const [publishDialogError, setPublishDialogError] = React.useState<string | null>(null);
@@ -317,7 +314,6 @@ export default function TaskDetailsPage() {
         message: string;
         sev: 'success' | 'error';
     }>({ open: false, message: '', sev: 'success' });
-    const skillsInputRef = React.useRef<HTMLInputElement | null>(null);
     const orderFileInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const asText = (x: unknown): string => {
@@ -359,29 +355,6 @@ export default function TaskDetailsPage() {
     const formatPrice = (v?: number | null) => {
         if (typeof v !== 'number' || Number.isNaN(v)) return '—';
         return new Intl.NumberFormat('ru-RU').format(v) + ' ₽';
-    };
-
-    const normalizeSkillsInput = (raw: string): string[] => {
-        return raw
-            .split(/[,\n;]/)
-            .map((s) => s.trim())
-            .filter(Boolean);
-    };
-
-    const mergeSkillsUnique = (base: string[], additions: string[]): string[] => {
-        const seen = new Set<string>();
-        const result: string[] = [];
-        const push = (skill: string) => {
-            const normalized = skill.trim();
-            if (!normalized) return;
-            const key = normalized.toLowerCase();
-            if (seen.has(key)) return;
-            seen.add(key);
-            result.push(normalized);
-        };
-        base.forEach(push);
-        additions.forEach(push);
-        return result;
     };
 
     const addDays = (v: string, days: number): Date | null => {
@@ -478,7 +451,7 @@ export default function TaskDetailsPage() {
     const handlePublishToggle = React.useCallback(
         async (
             makePublic: boolean,
-            payload?: { skills?: string[]; budget?: number | null; publicDescription?: string }
+            payload?: { budget?: number | null; publicDescription?: string }
         ) => {
             if (!taskId) return false;
             setPublishLoading(true);
@@ -491,7 +464,6 @@ export default function TaskDetailsPage() {
                             ? {
                                 visibility: 'public',
                                 publicStatus: 'open',
-                                skills: payload?.skills,
                                 budget: payload?.budget,
                                 publicDescription: payload?.publicDescription,
                             }
@@ -877,35 +849,8 @@ export default function TaskDetailsPage() {
         }
     };
 
-    const addSkillsFromInput = (raw: string) => {
-        const additions = normalizeSkillsInput(raw);
-        if (additions.length === 0) return;
-        setPublishSkills((prev) => mergeSkillsUnique(prev, additions));
-        setPublishSkillsInput('');
-        setPublishDialogError(null);
-    };
-
-    const handleSkillDelete = (skill: string) => {
-        setPublishSkills((prev) =>
-            prev.filter((item) => item.trim().toLowerCase() !== skill.trim().toLowerCase())
-        );
-    };
-
-    const handleSkillsInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            addSkillsFromInput(publishSkillsInput);
-        }
-    };
-
-    const focusSkillsInput = () => {
-        skillsInputRef.current?.focus();
-    };
-
     const openPublishDialog = () => {
         if (!task) return;
-        setPublishSkills(Array.isArray(task.skills) ? mergeSkillsUnique(task.skills, []) : []);
-        setPublishSkillsInput('');
         setPublishBudgetInput(
             typeof task.budget === 'number' && Number.isFinite(task.budget)
                 ? String(task.budget)
@@ -923,14 +868,6 @@ export default function TaskDetailsPage() {
     };
 
     const handlePublishSubmit = async () => {
-        const skills = mergeSkillsUnique(publishSkills, normalizeSkillsInput(publishSkillsInput));
-        if (skills.length === 0) {
-            setPublishDialogError('Добавьте хотя бы один навык');
-            return;
-        }
-        setPublishSkills(skills);
-        setPublishSkillsInput('');
-
         const budgetRaw = publishBudgetInput.trim();
         let budget: number | null | undefined;
         if (budgetRaw) {
@@ -946,7 +883,6 @@ export default function TaskDetailsPage() {
 
         setPublishDialogError(null);
         const success = await handlePublishToggle(true, {
-            skills,
             budget,
             publicDescription: publishInfoInput.trim(),
         });
@@ -1827,24 +1763,6 @@ export default function TaskDetailsPage() {
                                     </Typography>
                                     <Typography variant="body1">
                                         <strong>Тип задачи:</strong> {task.taskType || '—'}
-                                    </Typography>
-
-                                    <Typography variant="body1">
-                                        <strong>Навыки:</strong>{' '}
-                                        {Array.isArray(task.skills) && task.skills.length > 0 ? (
-                                            <Stack direction="row" spacing={0.5} component="span" sx={{ flexWrap: 'wrap' }}>
-                                                {task.skills.map((skill) => (
-                                                    <Chip
-                                                        key={skill}
-                                                        label={skill}
-                                                        size="small"
-                                                        sx={{ mr: 0.5, mb: 0.5 }}
-                                                    />
-                                                ))}
-                                            </Stack>
-                                        ) : (
-                                            'Не указаны'
-                                        )}
                                     </Typography>
 
                                     {/* Исполнитель (если есть) */}
@@ -2766,49 +2684,10 @@ export default function TaskDetailsPage() {
                 <DialogTitle>Публикация задачи</DialogTitle>
                 <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
                     <Typography variant="body2" color="text.secondary">
-                        Добавьте навыки, плановый бюджет (по умолчанию попадёт в ставку отклика) и
-                        дайте более подробную информацию о задаче. Эти данные увидят подрядчики перед
+                        Добавьте плановый бюджет (по умолчанию попадёт в ставку отклика) и дайте
+                        более подробную информацию о задаче. Эти данные увидят подрядчики перед
                         откликом, но смогут скорректировать ставку.
                     </Typography>
-                    <Stack spacing={0.5}>
-                        <Typography variant="subtitle2">Необходимые навыки</Typography>
-                        <Box
-                            sx={(theme) => ({
-                                display: 'flex',
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: 1,
-                                p: 1,
-                                minHeight: 56,
-                                borderRadius: 1,
-                                border: `1px solid ${theme.palette.divider}`,
-                                cursor: 'text',
-                            })}
-                            onClick={focusSkillsInput}
-                        >
-                            {publishSkills.map((skill) => (
-                                <Chip
-                                    key={skill}
-                                    label={skill}
-                                    onDelete={() => handleSkillDelete(skill)}
-                                    size="small"
-                                />
-                            ))}
-                            <TextField
-                                inputRef={skillsInputRef}
-                                value={publishSkillsInput}
-                                onChange={(e) => setPublishSkillsInput(e.target.value)}
-                                onKeyDown={handleSkillsInputKeyDown}
-                                placeholder="Введите навык и нажмите Enter"
-                                variant="standard"
-                                slotProps={{ input: { disableUnderline: true } }}
-                                sx={{ minWidth: 160, flexGrow: 1 }}
-                            />
-                        </Box>
-                        <Typography variant="caption" color="text.secondary">
-                            Добавляйте навыки по одному, нажимая Enter. Теги можно удалить крестиком.
-                        </Typography>
-                    </Stack>
                     <TextField
                         label="Планируемый бюджет"
                         type="number"

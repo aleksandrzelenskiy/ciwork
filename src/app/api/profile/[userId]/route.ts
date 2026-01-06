@@ -58,7 +58,6 @@ export async function GET(
             regionCode: user.regionCode ?? '',
             profilePic: user.profilePic || '',
             profileType: user.profileType,
-            skills: user.skills ?? [],
             desiredRate: user.desiredRate ?? null,
             bio: user.bio ?? '',
             portfolioLinks: user.portfolioLinks ?? [],

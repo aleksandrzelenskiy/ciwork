@@ -92,7 +92,6 @@ const TaskSchema = new Schema<Task & Document>({
   budget: { type: Number },
   publicDescription: { type: String },
   currency: { type: String, default: 'RUB' },
-  skills: { type: [String], default: [] },
   applicationCount: { type: Number, default: 0 },
   acceptedApplicationId: { type: String },
   allowInstantClaim: { type: Boolean, default: false },

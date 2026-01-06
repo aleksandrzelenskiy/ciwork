@@ -127,7 +127,6 @@ export interface Task {
   budget?: number | null;
   publicDescription?: string;
   currency?: string;
-  skills?: string[];
   applicationCount?: number;
   acceptedApplicationId?: string;
   allowInstantClaim?: boolean;

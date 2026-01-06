@@ -32,7 +32,6 @@ export async function GET() {
       regionCode: user.regionCode ?? '',
       profilePic: user.profilePic || clerkUser.imageUrl || '',
       profileType: user.profileType,
-      skills: user.skills ?? [],
       desiredRate: user.desiredRate ?? null,
       bio: user.bio ?? '',
       portfolioLinks: user.portfolioLinks ?? [],
@@ -52,7 +51,6 @@ type ProfilePatchPayload = {
   name?: string;
   phone?: string;
   regionCode?: string;
-  skills?: string[];
   desiredRate?: number | null;
   bio?: string;
   portfolioLinks?: string[];
@@ -72,11 +70,6 @@ export async function PATCH(request: Request) {
       typeof body.phone === 'string' ? sanitizeString(body.phone) : undefined;
     const nextRegion =
       typeof body.regionCode === 'string' ? sanitizeString(body.regionCode) : undefined;
-    const rawSkills = body.skills;
-    const skillsProvided = Array.isArray(rawSkills);
-    const skills: string[] | undefined = skillsProvided
-      ? rawSkills.map((s) => sanitizeString(s)).filter(Boolean)
-      : undefined;
     const desiredRate =
       typeof body.desiredRate === 'number' && Number.isFinite(body.desiredRate) && body.desiredRate > 0
         ? body.desiredRate
@@ -120,11 +113,6 @@ export async function PATCH(request: Request) {
     }
     if (typeof nextRegion !== 'undefined') {
       updatePayload.regionCode = nextRegion;
-    }
-    if (skillsProvided) {
-      updatePayload.skills = skills ?? [];
-      updatePayload.portfolioStatus = 'pending';
-      updatePayload.moderationComment = '';
     }
     if (typeof desiredRate !== 'undefined') {
       updatePayload.desiredRate = desiredRate === null ? undefined : desiredRate;
@@ -170,7 +158,6 @@ export async function PATCH(request: Request) {
         regionCode: updatedUser.regionCode ?? '',
         profilePic: updatedUser.profilePic || clerkUser.imageUrl || '',
         profileType: updatedUser.profileType,
-        skills: updatedUser.skills ?? [],
         desiredRate: updatedUser.desiredRate ?? null,
         bio: updatedUser.bio ?? '',
         portfolioLinks: updatedUser.portfolioLinks ?? [],

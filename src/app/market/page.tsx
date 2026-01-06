@@ -75,7 +75,6 @@ type PublicTask = {
     taskDescription?: string;
     budget?: number;
     currency?: string;
-    skills?: string[];
     bsAddress?: string;
     bsLocation?: { name?: string; coordinates?: string; address?: string }[];
     dueDate?: string;
@@ -147,7 +146,6 @@ const mapMarketTaskToPublicTask = (task: MarketPublicTask): PublicTask => ({
     orgName: task.orgName,
     budget: task.budget ?? undefined,
     currency: task.currency,
-    skills: task.skills,
     dueDate: task.dueDate,
     priority: task.priority,
     taskType: task.taskType,
@@ -236,14 +234,11 @@ export default function MarketplacePage() {
         organization: string;
         project: string;
         status: PublicTaskStatus | '';
-        skills: string[];
     }>({
         organization: '',
         project: '',
         status: '',
-        skills: [],
     });
-    const [skillInput, setSkillInput] = useState('');
     const [applyMessage, setApplyMessage] = useState('');
     const [applyBudget, setApplyBudget] = useState('');
     const [applyEtaDate, setApplyEtaDate] = useState<Dayjs | null>(null);
@@ -431,32 +426,12 @@ export default function MarketplacePage() {
     const includesQuery = (value: string | undefined | null, query: string) =>
         value?.toLowerCase().includes(query.toLowerCase()) ?? false;
 
-    const handleAddSkill = () => {
-        const trimmed = skillInput.trim();
-        if (!trimmed) return;
-        setFilters((prev) => {
-            const exists = prev.skills.some((skill) => skill.toLowerCase() === trimmed.toLowerCase());
-            if (exists) return prev;
-            return { ...prev, skills: [...prev.skills, trimmed] };
-        });
-        setSkillInput('');
-    };
-
-    const handleRemoveSkill = (skillToRemove: string) => {
-        setFilters((prev) => ({
-            ...prev,
-            skills: prev.skills.filter((skill) => skill !== skillToRemove),
-        }));
-    };
-
     const resetFilters = () => {
         setFilters({
             organization: '',
             project: '',
             status: '',
-            skills: [],
         });
-        setSkillInput('');
         setFiltersDialogOpen(false);
     };
 
@@ -533,8 +508,7 @@ export default function MarketplacePage() {
     const isFiltersApplied =
         Boolean(filters.organization) ||
         Boolean(filters.project) ||
-        Boolean(filters.status) ||
-        filters.skills.length > 0;
+        Boolean(filters.status);
 
     const filteredTasks = tasks.filter((task) => {
         const matchesOrganization = filters.organization
@@ -550,15 +524,7 @@ export default function MarketplacePage() {
 
         const matchesStatus = filters.status ? task.publicStatus === filters.status : true;
 
-        const matchesSkills = filters.skills.length
-            ? filters.skills.every((skill) =>
-                  (task.skills || []).some((taskSkill) =>
-                      taskSkill.toLowerCase().includes(skill.toLowerCase())
-                  )
-              )
-            : true;
-
-        return matchesOrganization && matchesProject && matchesStatus && matchesSkills;
+        return matchesOrganization && matchesProject && matchesStatus;
     });
 
     const selectedFilterChips = [
@@ -595,11 +561,6 @@ export default function MarketplacePage() {
                       })),
               }
             : null,
-        ...filters.skills.map((skill) => ({
-            key: `skill-${skill}`,
-            label: `Навык: ${skill}`,
-            onDelete: () => handleRemoveSkill(skill),
-        })),
     ].filter(Boolean) as { key: string; label: string; onDelete: () => void }[];
 
     const renderWorkItemsTable = (maxHeight?: number | string) => {
@@ -877,18 +838,6 @@ export default function MarketplacePage() {
                                                 <Typography color="text.secondary" sx={{ lineHeight: 1.5 }}>
                                                     {task.publicDescription || task.taskDescription || 'Описание не заполнено'}
                                                 </Typography>
-                                                {task.skills && task.skills.length > 0 && (
-                                                    <Stack direction="row" spacing={1} flexWrap="wrap">
-                                                        {task.skills.map((skill) => (
-                                                            <Chip
-                                                                key={skill}
-                                                                label={skill}
-                                                                size="small"
-                                                                sx={{ borderRadius: 2 }}
-                                                            />
-                                                        ))}
-                                                    </Stack>
-                                                )}
                                                 <Divider flexItem />
                                                 <Stack
                                                     direction={{ xs: 'column', sm: 'row' }}
@@ -1042,33 +991,6 @@ export default function MarketplacePage() {
                                 </MenuItem>
                             ))}
                         </TextField>
-                        <Stack spacing={1}>
-                            <TextField
-                                label="Навыки"
-                                value={skillInput}
-                                onChange={(e) => setSkillInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                        e.preventDefault();
-                                        handleAddSkill();
-                                    }
-                                }}
-                                fullWidth
-                                helperText="Нажмите Enter, чтобы добавить навык"
-                            />
-                            {filters.skills.length > 0 ? (
-                                <Stack direction="row" spacing={1} flexWrap="wrap">
-                                    {filters.skills.map((skill) => (
-                                        <Chip
-                                            key={skill}
-                                            label={skill}
-                                            onDelete={() => handleRemoveSkill(skill)}
-                                            sx={{ borderRadius: 2 }}
-                                        />
-                                    ))}
-                                </Stack>
-                            ) : null}
-                        </Stack>
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, py: 2 }}>
@@ -1384,20 +1306,6 @@ export default function MarketplacePage() {
                                         >
                                             {detailsTask?.publicDescription || detailsTask?.taskDescription}
                                         </Typography>
-                                    </CardItem>
-                                ) : null}
-
-                                {detailsTask?.skills && detailsTask.skills.length > 0 ? (
-                                    <CardItem sx={{ minWidth: 0 }}>
-                                        <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                                            Навыки
-                                        </Typography>
-                                        <Divider sx={{ mb: 1.5 }} />
-                                        <Stack direction="row" spacing={1} flexWrap="wrap">
-                                            {detailsTask.skills.map((skill) => (
-                                                <Chip key={skill} label={skill} sx={{ borderRadius: 2 }} />
-                                            ))}
-                                        </Stack>
                                     </CardItem>
                                 ) : null}
 
