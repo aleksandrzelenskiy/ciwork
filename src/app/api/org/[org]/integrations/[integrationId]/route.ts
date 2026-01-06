@@ -38,7 +38,7 @@ async function resolveProjectId(
     if (!Types.ObjectId.isValid(rawProjectId)) return null;
     const project = await ProjectModel.findOne({ _id: rawProjectId, orgId })
         .select('_id')
-        .lean();
+        .lean<{ _id: Types.ObjectId }>();
     return project?._id ?? null;
 }
 
