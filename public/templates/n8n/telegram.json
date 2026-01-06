@@ -1,0 +1,85 @@
+{
+  "name": "Task Manager -> Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "task-telegram",
+        "httpMethod": "POST",
+        "responseMode": "lastNode",
+        "options": {
+          "responseData": "firstEntryJson"
+        }
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const payload = items[0].json;\nconst task = payload.task || {};\nconst status = task.status || '—';\nconst name = task.taskName || 'Задача';\nconst bs = task.bsNumber ? `БС ${task.bsNumber}` : '—';\nconst msg = `Обновление задачи: ${name}\\nСтатус: ${status}\\n${bs}`;\nreturn [{ json: { message: msg } }];"
+      },
+      "id": "format",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "YOUR_CHAT_ID",
+        "text": "={{$json.message}}"
+      },
+      "id": "telegram",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        520,
+        0
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  }
+}

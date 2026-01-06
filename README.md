@@ -42,3 +42,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - `AWS_S3_INVENTORY_BUCKET` — destination bucket for S3 Inventory reports (used for storage reconciliation).
 - `AWS_S3_INVENTORY_PREFIX` — prefix in the inventory bucket where `manifest.json` files are stored.
 - `REPORT_ACCESS_SECRET` — optional HMAC secret for initiator guest report links (falls back to `NOTIFICATIONS_SOCKET_SECRET` or `CLERK_SECRET_KEY`).
+- `INTEGRATIONS_ENCRYPTION_KEY` — AES key material for encrypting integration configs and webhook secrets at rest.

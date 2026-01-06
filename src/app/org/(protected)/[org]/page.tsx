@@ -19,6 +19,8 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import BusinessIcon from '@mui/icons-material/Business';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import LinkIcon from '@mui/icons-material/Link';
+import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import PersonSearchIcon from '@mui/icons-material/PersonSearch';
@@ -131,6 +133,16 @@ type ApplicationRow = {
     status: string;
     createdAt?: string;
 };
+type IntegrationDTO = {
+    _id: string;
+    type: string;
+    name?: string;
+    status: string;
+    webhookUrl?: string;
+    projectId?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TRIAL_DURATION_DAYS = 10;
@@ -145,6 +157,21 @@ function roleLabel(r: OrgRole) {
         case 'executor': return 'Executor';
         case 'viewer': return 'Viewer';
         default: return r;
+    }
+}
+
+function integrationTypeLabel(value: string) {
+    switch (value) {
+        case 'google_sheets':
+            return 'Google Sheets';
+        case 'telegram':
+            return 'Telegram';
+        case 'erp_1c':
+            return '1C ERP';
+        case 'n8n_webhook':
+            return 'Webhook';
+        default:
+            return value;
     }
 }
 
@@ -222,6 +249,26 @@ export default function OrgSettingsPage() {
     const [walletTx, setWalletTx] = React.useState<OrgWalletTx[]>([]);
     const [walletTxLoading, setWalletTxLoading] = React.useState(false);
     const [walletTxError, setWalletTxError] = React.useState<string | null>(null);
+    const [integrations, setIntegrations] = React.useState<IntegrationDTO[]>([]);
+    const [integrationsLoading, setIntegrationsLoading] = React.useState(false);
+    const [integrationsError, setIntegrationsError] = React.useState<string | null>(null);
+    const [integrationDialogOpen, setIntegrationDialogOpen] = React.useState(false);
+    const [integrationSubmitting, setIntegrationSubmitting] = React.useState(false);
+    const [integrationDialogMode, setIntegrationDialogMode] = React.useState<'create' | 'edit'>('create');
+    const [integrationType, setIntegrationType] = React.useState('google_sheets');
+    const [integrationName, setIntegrationName] = React.useState('');
+    const [integrationWebhookUrl, setIntegrationWebhookUrl] = React.useState('');
+    const [integrationProjectId, setIntegrationProjectId] = React.useState('');
+    const [integrationConfigJson, setIntegrationConfigJson] = React.useState('');
+    const [integrationToEdit, setIntegrationToEdit] = React.useState<IntegrationDTO | null>(null);
+    const [integrationToDelete, setIntegrationToDelete] = React.useState<IntegrationDTO | null>(null);
+    const [integrationDeleting, setIntegrationDeleting] = React.useState(false);
+    const [integrationSecretDialogOpen, setIntegrationSecretDialogOpen] = React.useState(false);
+    const [integrationWebhookSecret, setIntegrationWebhookSecret] = React.useState('');
+    const [integrationKeyDialogOpen, setIntegrationKeyDialogOpen] = React.useState(false);
+    const [generatedKeyId, setGeneratedKeyId] = React.useState('');
+    const [generatedKeySecret, setGeneratedKeySecret] = React.useState('');
+    const [isSuperAdmin, setIsSuperAdmin] = React.useState(false);
     const [projectsDialogOpen, setProjectsDialogOpen] = React.useState(false);
     const [membersDialogOpen, setMembersDialogOpen] = React.useState(false);
     const [applicationsDialogOpen, setApplicationsDialogOpen] = React.useState(false);
@@ -494,6 +541,43 @@ export default function OrgSettingsPage() {
         }
     }, [org, canManage]);
 
+    const fetchIntegrations = React.useCallback(async () => {
+        if (!org || !canManage) return;
+        setIntegrationsLoading(true);
+        setIntegrationsError(null);
+        try {
+            const res = await fetch(`/api/org/${encodeURIComponent(org)}/integrations`, { cache: 'no-store' });
+            const data = (await res.json().catch(() => ({}))) as {
+                integrations?: IntegrationDTO[];
+                error?: string;
+            };
+            if (!res.ok || !Array.isArray(data.integrations)) {
+                setIntegrations([]);
+                setIntegrationsError(data.error || 'Не удалось загрузить интеграции');
+                return;
+            }
+            setIntegrations(data.integrations);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Ошибка загрузки интеграций';
+            setIntegrations([]);
+            setIntegrationsError(msg);
+        } finally {
+            setIntegrationsLoading(false);
+        }
+    }, [org, canManage]);
+
+    const fetchCurrentUser = React.useCallback(async () => {
+        try {
+            const res = await fetch('/api/current-user', { cache: 'no-store' });
+            const data = (await res.json().catch(() => ({}))) as { isSuperAdmin?: boolean };
+            if (res.ok && typeof data.isSuperAdmin === 'boolean') {
+                setIsSuperAdmin(data.isSuperAdmin);
+            }
+        } catch {
+            setIsSuperAdmin(false);
+        }
+    }, []);
+
     const fetchApplications = React.useCallback(async () => {
         if (!org || !canManage) return;
         setApplicationsLoading(true);
@@ -620,8 +704,21 @@ export default function OrgSettingsPage() {
             void fetchApplications();
             void fetchWalletInfo();
             void loadPlanConfigs();
+            void fetchIntegrations();
         }
-    }, [canManage, fetchMembers, fetchProjects, fetchOrgSettings, loadSubscription, fetchApplications, fetchWalletInfo, loadPlanConfigs]);
+        void fetchCurrentUser();
+    }, [
+        canManage,
+        fetchMembers,
+        fetchProjects,
+        fetchOrgSettings,
+        loadSubscription,
+        fetchApplications,
+        fetchWalletInfo,
+        loadPlanConfigs,
+        fetchIntegrations,
+        fetchCurrentUser,
+    ]);
 
     const handleRefreshClick = () => {
         void fetchMembers();
@@ -629,6 +726,170 @@ export default function OrgSettingsPage() {
         void loadSubscription();
         void fetchApplications();
         void fetchWalletInfo();
+        void fetchIntegrations();
+    };
+
+    const openIntegrationDialog = () => {
+        setIntegrationType('google_sheets');
+        setIntegrationName('');
+        setIntegrationWebhookUrl('');
+        setIntegrationProjectId('');
+        setIntegrationConfigJson('');
+        setIntegrationToEdit(null);
+        setIntegrationDialogMode('create');
+        setIntegrationDialogOpen(true);
+    };
+
+    const openEditIntegrationDialog = (integration: IntegrationDTO) => {
+        setIntegrationType(integration.type);
+        setIntegrationName(integration.name || '');
+        setIntegrationWebhookUrl(integration.webhookUrl || '');
+        setIntegrationProjectId(integration.projectId || '');
+        setIntegrationConfigJson('');
+        setIntegrationToEdit(integration);
+        setIntegrationDialogMode('edit');
+        setIntegrationDialogOpen(true);
+    };
+
+    const submitIntegrationRequest = async () => {
+        if (!org || !canRequestIntegrations) return;
+        if (!integrationWebhookUrl.trim()) {
+            setSnack({ open: true, msg: 'Укажите URL вебхука', sev: 'error' });
+            return;
+        }
+        let parsedConfig: Record<string, unknown> = {};
+        if (integrationConfigJson.trim()) {
+            try {
+                parsedConfig = JSON.parse(integrationConfigJson);
+            } catch {
+                setSnack({ open: true, msg: 'Некорректный JSON в конфигурации', sev: 'error' });
+                return;
+            }
+        }
+        setIntegrationSubmitting(true);
+        try {
+            const isEdit = integrationDialogMode === 'edit' && integrationToEdit;
+            const endpoint = isEdit
+                ? `/api/org/${encodeURIComponent(org)}/integrations/${integrationToEdit?._id}`
+                : `/api/org/${encodeURIComponent(org)}/integrations`;
+            const method = isEdit ? 'PATCH' : 'POST';
+            const body = isEdit
+                ? {
+                    name: integrationName.trim() || '',
+                    webhookUrl: integrationWebhookUrl.trim(),
+                    projectId: integrationProjectId || null,
+                    ...(integrationConfigJson.trim() ? { config: parsedConfig } : {}),
+                }
+                : {
+                    type: integrationType,
+                    name: integrationName.trim() || undefined,
+                    webhookUrl: integrationWebhookUrl.trim(),
+                    projectId: integrationProjectId || undefined,
+                    config: parsedConfig,
+                };
+            const res = await fetch(endpoint, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = (await res.json().catch(() => ({}))) as { webhookSecret?: string; error?: string };
+            if (!res.ok) {
+                setSnack({ open: true, msg: data.error || res.statusText, sev: 'error' });
+                return;
+            }
+            if (data.webhookSecret) {
+                setIntegrationWebhookSecret(data.webhookSecret);
+                setIntegrationSecretDialogOpen(true);
+            }
+            setSnack({
+                open: true,
+                msg: isEdit ? 'Интеграция обновлена' : 'Интеграция создана',
+                sev: 'success',
+            });
+            setIntegrationDialogOpen(false);
+            await fetchIntegrations();
+        } finally {
+            setIntegrationSubmitting(false);
+        }
+    };
+
+    const toggleIntegrationStatus = async (integration: IntegrationDTO) => {
+        if (!org || !canRequestIntegrations) return;
+        const nextStatus = integration.status === 'active' ? 'paused' : 'active';
+        try {
+            const res = await fetch(
+                `/api/org/${encodeURIComponent(org)}/integrations/${integration._id}`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: nextStatus }),
+                }
+            );
+            const data = (await res.json().catch(() => ({}))) as { error?: string };
+            if (!res.ok) {
+                setSnack({ open: true, msg: data.error || res.statusText, sev: 'error' });
+                return;
+            }
+            setSnack({
+                open: true,
+                msg: nextStatus === 'active' ? 'Интеграция включена' : 'Интеграция приостановлена',
+                sev: 'success',
+            });
+            await fetchIntegrations();
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Ошибка обновления интеграции';
+            setSnack({ open: true, msg, sev: 'error' });
+        }
+    };
+
+    const confirmDeleteIntegration = async () => {
+        if (!org || !integrationToDelete || !canRequestIntegrations) return;
+        setIntegrationDeleting(true);
+        try {
+            const res = await fetch(
+                `/api/org/${encodeURIComponent(org)}/integrations/${integrationToDelete._id}`,
+                { method: 'DELETE' }
+            );
+            const data = (await res.json().catch(() => ({}))) as { error?: string };
+            if (!res.ok) {
+                setSnack({ open: true, msg: data.error || res.statusText, sev: 'error' });
+                return;
+            }
+            setSnack({ open: true, msg: 'Интеграция удалена', sev: 'success' });
+            setIntegrationToDelete(null);
+            await fetchIntegrations();
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Ошибка удаления интеграции';
+            setSnack({ open: true, msg, sev: 'error' });
+        } finally {
+            setIntegrationDeleting(false);
+        }
+    };
+
+    const generateIntegrationKey = async () => {
+        if (!org || !isSuperAdmin) return;
+        try {
+            const res = await fetch(`/api/org/${encodeURIComponent(org)}/integrations/keys`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scopes: ['tasks:read'] }),
+            });
+            const data = (await res.json().catch(() => ({}))) as {
+                keyId?: string;
+                keySecret?: string;
+                error?: string;
+            };
+            if (!res.ok || !data.keyId || !data.keySecret) {
+                setSnack({ open: true, msg: data.error || res.statusText, sev: 'error' });
+                return;
+            }
+            setGeneratedKeyId(data.keyId);
+            setGeneratedKeySecret(data.keySecret);
+            setIntegrationKeyDialogOpen(true);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : 'Ошибка создания ключа';
+            setSnack({ open: true, msg, sev: 'error' });
+        }
     };
 
     // удаление участника
@@ -1009,12 +1270,19 @@ export default function OrgSettingsPage() {
         : '—';
 
     const canEditOrgSettings = myRole === 'owner' || myRole === 'org_admin';
+    const canRequestIntegrations = myRole === 'owner' || myRole === 'org_admin';
     const settingsButtonDisabled = orgSettingsLoading || !canEditOrgSettings;
     const settingsTooltip = !canEditOrgSettings
         ? 'Только владелец или администратор может менять настройки'
         : orgSettingsLoading
             ? 'Загружаем реквизиты…'
             : 'Настройки организации';
+    const integrationRequestTooltip = !canRequestIntegrations
+        ? 'Только владелец или администратор может подключать интеграции'
+        : 'Подключить интеграцию';
+    const integrationKeyTooltip = !isSuperAdmin
+        ? 'Доступно только супер-администратору'
+        : 'Создать ключ для интеграций';
 
     const filteredMembers = (() => {
         const q = memberSearch.trim().toLowerCase();
@@ -1035,6 +1303,13 @@ export default function OrgSettingsPage() {
         }
         return map;
     })();
+    const projectNameById = React.useMemo(() => {
+        const map = new Map<string, string>();
+        projects.forEach((project) => {
+            map.set(project._id, project.name);
+        });
+        return map;
+    }, [projects]);
     const invitedMembersCount = React.useMemo(
         () => members.filter((m) => m.status === 'invited').length,
         [members]
@@ -1521,6 +1796,177 @@ export default function OrgSettingsPage() {
                                         </Button>
                                     </span>
                                 </Tooltip>
+                            </Stack>
+                        </Stack>
+                    </Box>
+
+                    <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
+                        <Stack spacing={2}>
+                            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <LinkIcon fontSize="small" />
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Интеграции
+                                    </Typography>
+                                </Stack>
+                                <Tooltip title="Обновить">
+                                    <span>
+                                        <IconButton onClick={() => void fetchIntegrations()} disabled={integrationsLoading}>
+                                            <RefreshIcon />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                            </Stack>
+                            <Typography variant="body2" color={textSecondary}>
+                                Подключайте Google Sheets, Telegram, 1C ERP и другие сервисы через n8n.
+                            </Typography>
+                            {integrationsError && (
+                                <Alert severity="warning" sx={getAlertSx('warning')}>
+                                    {integrationsError}
+                                </Alert>
+                            )}
+                            {integrationsLoading ? (
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <CircularProgress size={18} />
+                                    <Typography variant="body2">Загружаем интеграции…</Typography>
+                                </Stack>
+                            ) : integrations.length > 0 ? (
+                                <Stack spacing={1}>
+                                    {integrations.slice(0, 3).map((integration) => {
+                                        const projectLabel =
+                                            integration.projectId && projectNameById.has(integration.projectId)
+                                                ? projectNameById.get(integration.projectId)
+                                                : 'Все проекты';
+                                        const name = integration.name?.trim();
+                                        const canManageIntegration = canRequestIntegrations;
+                                        return (
+                                            <Box
+                                                key={integration._id}
+                                                sx={{
+                                                    borderRadius: 1,
+                                                    p: 1.25,
+                                                    border: `1px solid ${cardBorder}`,
+                                                    backgroundColor: isDarkMode
+                                                        ? 'rgba(12,16,26,0.7)'
+                                                        : 'rgba(255,255,255,0.7)',
+                                                }}
+                                            >
+                                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                                    <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {name || integrationTypeLabel(integration.type)}
+                                                        </Typography>
+                                                        <Chip
+                                                            size="small"
+                                                            color={integration.status === 'active' ? 'success' : 'default'}
+                                                            label={integration.status === 'active' ? 'active' : 'paused'}
+                                                        />
+                                                    </Stack>
+                                                    <Stack direction="row" spacing={0.5}>
+                                                        <Tooltip
+                                                            title={
+                                                                integration.status === 'active'
+                                                                    ? 'Приостановить'
+                                                                    : 'Включить'
+                                                            }
+                                                        >
+                                                            <span>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => void toggleIntegrationStatus(integration)}
+                                                                    disabled={!canManageIntegration}
+                                                                >
+                                                                    {integration.status === 'active' ? (
+                                                                        <PauseCircleOutlineIcon fontSize="small" />
+                                                                    ) : (
+                                                                        <PlayArrowIcon fontSize="small" />
+                                                                    )}
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                        <Tooltip title="Редактировать">
+                                                            <span>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => openEditIntegrationDialog(integration)}
+                                                                    disabled={!canManageIntegration}
+                                                                >
+                                                                    <EditOutlinedIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                        <Tooltip title="Удалить">
+                                                            <span>
+                                                                <IconButton
+                                                                    size="small"
+                                                                    onClick={() => setIntegrationToDelete(integration)}
+                                                                    disabled={!canManageIntegration}
+                                                                >
+                                                                    <DeleteOutlineOutlinedIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </span>
+                                                        </Tooltip>
+                                                    </Stack>
+                                                </Stack>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {integrationTypeLabel(integration.type)} · {projectLabel}
+                                                </Typography>
+                                            </Box>
+                                        );
+                                    })}
+                                </Stack>
+                            ) : (
+                                <Typography variant="body2" color={textSecondary}>
+                                    Интеграций пока нет.
+                                </Typography>
+                            )}
+                            <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                                <Tooltip title={integrationRequestTooltip}>
+                                    <span>
+                                        <Button
+                                            variant="contained"
+                                            onClick={openIntegrationDialog}
+                                            disabled={!canRequestIntegrations}
+                                            sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
+                                        >
+                                            Подключить
+                                        </Button>
+                                    </span>
+                                </Tooltip>
+                                <Tooltip title={integrationKeyTooltip}>
+                                    <span>
+                                        <Button
+                                            variant="outlined"
+                                            onClick={generateIntegrationKey}
+                                            disabled={!isSuperAdmin}
+                                            sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
+                                        >
+                                            Сгенерировать ключ API
+                                        </Button>
+                                    </span>
+                                </Tooltip>
+                            </Stack>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                                <Button
+                                    variant="text"
+                                    component="a"
+                                    href="/templates/n8n/google-sheets.json"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    Шаблон Google Sheets (n8n)
+                                </Button>
+                                <Button
+                                    variant="text"
+                                    component="a"
+                                    href="/templates/n8n/telegram.json"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    sx={{ textTransform: 'none' }}
+                                >
+                                    Шаблон Telegram (n8n)
+                                </Button>
                             </Stack>
                         </Stack>
                     </Box>
@@ -2532,6 +2978,245 @@ export default function OrgSettingsPage() {
                 error={walletTxError}
                 transactions={walletTx}
             />
+
+            <Dialog
+                open={integrationDialogOpen}
+                onClose={integrationSubmitting ? undefined : () => setIntegrationDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: theme.shape.borderRadius,
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={cardHeaderSx}>
+                    {integrationDialogMode === 'edit' ? 'Редактирование интеграции' : 'Запрос на подключение интеграции'}
+                </DialogTitle>
+                <DialogContent dividers sx={{ backgroundColor: cardContentSx.backgroundColor }}>
+                    <Stack spacing={2}>
+                        <TextField
+                            select
+                            label="Тип интеграции"
+                            value={integrationType}
+                            onChange={(e) => setIntegrationType(e.target.value)}
+                            fullWidth
+                            disabled={integrationDialogMode === 'edit'}
+                        >
+                            <MenuItem value="google_sheets">Google Sheets</MenuItem>
+                            <MenuItem value="telegram">Telegram</MenuItem>
+                            <MenuItem value="erp_1c">1C ERP</MenuItem>
+                            <MenuItem value="n8n_webhook">Webhook</MenuItem>
+                        </TextField>
+                        <TextField
+                            label="Название (опционально)"
+                            value={integrationName}
+                            onChange={(e) => setIntegrationName(e.target.value)}
+                            fullWidth
+                        />
+                        <TextField
+                            label="Webhook URL"
+                            value={integrationWebhookUrl}
+                            onChange={(e) => setIntegrationWebhookUrl(e.target.value)}
+                            fullWidth
+                            required
+                        />
+                        <TextField
+                            select
+                            label="Проект (опционально)"
+                            value={integrationProjectId}
+                            onChange={(e) => setIntegrationProjectId(e.target.value)}
+                            fullWidth
+                        >
+                            <MenuItem value="">Все проекты</MenuItem>
+                            {projects.map((project) => (
+                                <MenuItem key={project._id} value={project._id}>
+                                    {project.name}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                        <TextField
+                            label="Config JSON (опционально)"
+                            value={integrationConfigJson}
+                            onChange={(e) => setIntegrationConfigJson(e.target.value)}
+                            fullWidth
+                            multiline
+                            minRows={3}
+                            placeholder='{"sheetId":"...","sheetName":"...","keyField":"taskId"}'
+                            helperText={
+                                integrationDialogMode === 'edit'
+                                    ? 'Оставьте пустым, чтобы не менять конфигурацию'
+                                    : undefined
+                            }
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
+                        borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
+                    }}
+                >
+                    <Button onClick={() => setIntegrationDialogOpen(false)} disabled={integrationSubmitting}>
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={submitIntegrationRequest}
+                        disabled={integrationSubmitting || !canRequestIntegrations}
+                    >
+                        {integrationSubmitting
+                            ? 'Сохраняем…'
+                            : integrationDialogMode === 'edit'
+                                ? 'Сохранить'
+                                : 'Создать'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={integrationSecretDialogOpen}
+                onClose={() => setIntegrationSecretDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: theme.shape.borderRadius,
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={cardHeaderSx}>Секрет вебхука</DialogTitle>
+                <DialogContent dividers sx={{ backgroundColor: cardContentSx.backgroundColor }}>
+                    <Stack spacing={2}>
+                        <Alert severity="warning" sx={getAlertSx('warning')}>
+                            Секрет показывается один раз. Сохраните его в настройках n8n.
+                        </Alert>
+                        <TextField
+                            label="Webhook Secret"
+                            value={integrationWebhookSecret}
+                            fullWidth
+                            InputProps={{ readOnly: true }}
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
+                        borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
+                    }}
+                >
+                    <Button onClick={() => setIntegrationSecretDialogOpen(false)}>Закрыть</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={integrationKeyDialogOpen}
+                onClose={() => setIntegrationKeyDialogOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: theme.shape.borderRadius,
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={cardHeaderSx}>Ключ интеграции</DialogTitle>
+                <DialogContent dividers sx={{ backgroundColor: cardContentSx.backgroundColor }}>
+                    <Stack spacing={2}>
+                        <Alert severity="warning" sx={getAlertSx('warning')}>
+                            Ключ показывается один раз. Сохраните его в безопасном месте.
+                        </Alert>
+                        <TextField
+                            label="Key ID"
+                            value={generatedKeyId}
+                            fullWidth
+                            InputProps={{ readOnly: true }}
+                        />
+                        <TextField
+                            label="Key Secret"
+                            value={generatedKeySecret}
+                            fullWidth
+                            InputProps={{ readOnly: true }}
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
+                        borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
+                    }}
+                >
+                    <Button onClick={() => setIntegrationKeyDialogOpen(false)}>Закрыть</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={Boolean(integrationToDelete)}
+                onClose={integrationDeleting ? undefined : () => setIntegrationToDelete(null)}
+                slotProps={{
+                    paper: {
+                        sx: {
+                            backdropFilter: 'blur(24px)',
+                            backgroundColor: cardBg,
+                            border: `1px solid ${cardBorder}`,
+                            boxShadow: cardShadow,
+                            borderRadius: theme.shape.borderRadius,
+                        },
+                    },
+                }}
+            >
+                <DialogTitle sx={cardHeaderSx}>Удалить интеграцию?</DialogTitle>
+                <DialogContent sx={{ backgroundColor: cardContentSx.backgroundColor }}>
+                    <Typography variant="body2">
+                        Удалить интеграцию{' '}
+                        <b>
+                            {integrationToDelete?.name ||
+                                (integrationToDelete ? integrationTypeLabel(integrationToDelete.type) : 'интеграцию')}
+                        </b>
+                        ? Подключение будет остановлено.
+                    </Typography>
+                </DialogContent>
+                <DialogActions
+                    sx={{
+                        backgroundColor: isDarkMode ? 'rgba(15,18,28,0.8)' : 'rgba(255,255,255,0.85)',
+                        borderTop: `1px solid ${cardBorder}`,
+                        '& .MuiButton-root': { borderRadius: buttonRadius, textTransform: 'none' },
+                    }}
+                >
+                    <Button onClick={() => setIntegrationToDelete(null)} disabled={integrationDeleting}>
+                        Отмена
+                    </Button>
+                    <Button
+                        color="error"
+                        variant="contained"
+                        onClick={confirmDeleteIntegration}
+                        disabled={integrationDeleting}
+                    >
+                        {integrationDeleting ? 'Удаляем…' : 'Удалить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <OrgSetDialog
                 open={orgSettingsOpen}

@@ -4,6 +4,7 @@ import 'server-only';
 
 import mongoose, { Schema, Document, model } from 'mongoose';
 import { Task, PriorityLevel, CurrentStatus } from '@/app/types/taskTypes';
+import { dispatchTaskEvent } from '@/server/integrations/webhook';
 
 const TaskSchema = new Schema<Task & Document>({
   orgId: { type: Schema.Types.ObjectId, ref: 'Organization', required: false, index: true },
@@ -158,6 +159,70 @@ const TaskSchema = new Schema<Task & Document>({
       required: false,
     },
   ],
+});
+
+TaskSchema.pre('save', function preSave(next) {
+  this.$locals.wasNew = this.isNew;
+  next();
+});
+
+TaskSchema.post('save', function postSave(doc) {
+  const wasNew = Boolean(this.$locals?.wasNew);
+  const eventType = wasNew ? 'task.created' : 'task.updated';
+  const orgId = doc?.orgId ?? undefined;
+  const projectId = doc?.projectId ?? undefined;
+  void dispatchTaskEvent({ eventType, task: doc, orgId, projectId }).catch((error) => {
+    console.error('Failed to dispatch task event:', error);
+  });
+});
+
+TaskSchema.post('findOneAndUpdate', async function postFindOneAndUpdate(doc) {
+  try {
+    const updated = doc || (await this.model.findOne(this.getFilter()));
+    if (!updated) return;
+    const orgId = updated?.orgId ?? undefined;
+    const projectId = updated?.projectId ?? undefined;
+    await dispatchTaskEvent({ eventType: 'task.updated', task: updated, orgId, projectId });
+  } catch (error) {
+    console.error('Failed to dispatch task update event:', error);
+  }
+});
+
+TaskSchema.post('updateOne', async function postUpdateOne() {
+  try {
+    const updated = await this.model.findOne(this.getFilter());
+    if (!updated) return;
+    const orgId = updated?.orgId ?? undefined;
+    const projectId = updated?.projectId ?? undefined;
+    await dispatchTaskEvent({ eventType: 'task.updated', task: updated, orgId, projectId });
+  } catch (error) {
+    console.error('Failed to dispatch task update event:', error);
+  }
+});
+
+TaskSchema.post('updateMany', async function postUpdateMany() {
+  try {
+    const updatedDocs = await this.model.find(this.getFilter());
+    if (!updatedDocs.length) return;
+    await Promise.all(
+      updatedDocs.map((doc: typeof updatedDocs[number]) => {
+        const orgId = doc?.orgId ?? undefined;
+        const projectId = doc?.projectId ?? undefined;
+        return dispatchTaskEvent({ eventType: 'task.updated', task: doc, orgId, projectId });
+      })
+    );
+  } catch (error) {
+    console.error('Failed to dispatch task bulk update events:', error);
+  }
+});
+
+TaskSchema.post('findOneAndDelete', function postFindOneAndDelete(doc) {
+  if (!doc) return;
+  const orgId = doc?.orgId ?? undefined;
+  const projectId = doc?.projectId ?? undefined;
+  void dispatchTaskEvent({ eventType: 'task.deleted', task: doc, orgId, projectId }).catch((error) => {
+    console.error('Failed to dispatch task delete event:', error);
+  });
 });
 
 const MODEL_NAME = 'Task';

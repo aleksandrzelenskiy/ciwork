@@ -33,6 +33,7 @@ const serverEnvSchema = z.object({
     AWS_S3_INVENTORY_PREFIX: optionalString,
     BILLING_CRON_SECRET: optionalString,
     STORAGE_RECONCILE_CRON_SECRET: optionalString,
+    INTEGRATIONS_ENCRYPTION_KEY: optionalString,
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
