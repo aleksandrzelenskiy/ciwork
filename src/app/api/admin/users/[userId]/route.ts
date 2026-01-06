@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type DeleteResponse =
-    | { ok: true; clerkDeleted: boolean; clerkError?: string }
+    | { ok: true; clerkDeleted: true }
     | { error: string };
 
 const toErrorMessage = (error: unknown, fallback: string) =>
@@ -41,25 +41,33 @@ export async function DELETE(
 
     const normalizedEmail = user.email?.toLowerCase().trim();
 
-    await Promise.all([
-        WalletModel.deleteMany({ contractorId: user._id }),
-        WalletTransactionModel.deleteMany({ contractorId: user._id }),
-        NotificationModel.deleteMany({ recipientUserId: user._id }),
-        normalizedEmail ? MembershipModel.deleteMany({ userEmail: normalizedEmail }) : Promise.resolve(),
-    ]);
-
-    await UserModel.deleteOne({ _id: user._id });
-
-    let clerkDeleted = false;
-    let clerkError: string | undefined;
-
     try {
         const client = await clerkClient();
         await client.users.deleteUser(clerkUserId);
-        clerkDeleted = true;
     } catch (error) {
-        clerkError = toErrorMessage(error, 'Не удалось удалить пользователя в Clerk');
+        return NextResponse.json(
+            { error: toErrorMessage(error, 'Не удалось удалить пользователя в Clerk') },
+            { status: 502 }
+        );
     }
 
-    return NextResponse.json({ ok: true, clerkDeleted, clerkError });
+    try {
+        await Promise.all([
+            WalletModel.deleteMany({ contractorId: user._id }),
+            WalletTransactionModel.deleteMany({ contractorId: user._id }),
+            NotificationModel.deleteMany({ recipientUserId: user._id }),
+            normalizedEmail
+                ? MembershipModel.deleteMany({ userEmail: normalizedEmail })
+                : Promise.resolve(),
+        ]);
+
+        await UserModel.deleteOne({ _id: user._id });
+    } catch (error) {
+        return NextResponse.json(
+            { error: toErrorMessage(error, 'Не удалось удалить пользователя в базе данных') },
+            { status: 500 }
+        );
+    }
+
+    return NextResponse.json({ ok: true, clerkDeleted: true });
 }

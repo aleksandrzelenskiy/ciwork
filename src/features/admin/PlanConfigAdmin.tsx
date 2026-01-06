@@ -9,6 +9,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    IconButton,
     Paper,
     Stack,
     Table,
@@ -20,6 +21,9 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
+import Tooltip from '@mui/material/Tooltip';
+import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import EditOutlined from '@mui/icons-material/EditOutlined';
 
 type PlanCode = 'basic' | 'pro' | 'business' | 'enterprise';
 
@@ -51,6 +55,9 @@ export default function PlanConfigAdmin() {
     const [selected, setSelected] = React.useState<PlanConfig | null>(null);
     const [saving, setSaving] = React.useState(false);
     const [dialogError, setDialogError] = React.useState<string | null>(null);
+    const [planToDelete, setPlanToDelete] = React.useState<PlanConfig | null>(null);
+    const [deleteError, setDeleteError] = React.useState<string | null>(null);
+    const [deleting, setDeleting] = React.useState(false);
     const [billingConfig, setBillingConfig] = React.useState<BillingConfig | null>(null);
     const [billingLoading, setBillingLoading] = React.useState(true);
     const [billingError, setBillingError] = React.useState<string | null>(null);
@@ -158,6 +165,39 @@ export default function PlanConfigAdmin() {
         }
     };
 
+    const handleOpenDelete = (plan: PlanConfig) => {
+        setPlanToDelete(plan);
+        setDeleteError(null);
+    };
+
+    const handleCloseDelete = () => {
+        if (deleting) return;
+        setPlanToDelete(null);
+        setDeleteError(null);
+    };
+
+    const handleDelete = async () => {
+        if (!planToDelete) return;
+        setDeleting(true);
+        setDeleteError(null);
+        try {
+            const res = await fetch(`/api/admin/plans/${encodeURIComponent(planToDelete.plan)}`, {
+                method: 'DELETE',
+            });
+            const payload = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+            if (!res.ok || !payload?.ok) {
+                setDeleteError(payload?.error || 'Не удалось удалить тариф');
+                return;
+            }
+            await loadPlans();
+            handleCloseDelete();
+        } catch (err) {
+            setDeleteError(err instanceof Error ? err.message : 'Не удалось удалить тариф');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     const updateField = <K extends keyof PlanConfig>(key: K, value: PlanConfig[K]) => {
         if (!selected) return;
         setSelected({ ...selected, [key]: value });
@@ -220,7 +260,7 @@ export default function PlanConfigAdmin() {
                             <TableCell>Овередж/GB/мес</TableCell>
                             <TableCell>Пакет GB</TableCell>
                             <TableCell>Пакет/мес</TableCell>
-                            <TableCell />
+                            <TableCell align="right">Действия</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -235,10 +275,27 @@ export default function PlanConfigAdmin() {
                                 <TableCell>{plan.storageOverageRubPerGbMonth}</TableCell>
                                 <TableCell>{formatLimit(plan.storagePackageGb)}</TableCell>
                                 <TableCell>{formatLimit(plan.storagePackageRubMonthly)}</TableCell>
-                                <TableCell>
-                                    <Button size="small" onClick={() => handleOpen(plan)}>
-                                        Изменить
-                                    </Button>
+                                <TableCell align="right">
+                                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                        <Tooltip title="Изменить">
+                                            <IconButton
+                                                color="primary"
+                                                size="small"
+                                                onClick={() => handleOpen(plan)}
+                                            >
+                                                <EditOutlined fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Удалить">
+                                            <IconButton
+                                                color="error"
+                                                size="small"
+                                                onClick={() => handleOpenDelete(plan)}
+                                            >
+                                                <DeleteOutline fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Stack>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -343,6 +400,36 @@ export default function PlanConfigAdmin() {
                     <Button onClick={handleClose} disabled={saving}>Отмена</Button>
                     <Button onClick={handleSave} disabled={saving} variant="contained">
                         {saving ? 'Сохраняем…' : 'Сохранить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={Boolean(planToDelete)} onClose={handleCloseDelete} maxWidth="xs" fullWidth>
+                <DialogTitle>Удалить тариф?</DialogTitle>
+                <DialogContent dividers>
+                    {planToDelete ? (
+                        <Stack spacing={1.5}>
+                            <Typography variant="subtitle1">
+                                {planToDelete.title} · {planToDelete.plan}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Конфигурация тарифа будет удалена и сброшена к значениям по умолчанию.
+                            </Typography>
+                            {deleteError && <Alert severity="error">{deleteError}</Alert>}
+                        </Stack>
+                    ) : null}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDelete} disabled={deleting}>
+                        Отмена
+                    </Button>
+                    <Button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        variant="contained"
+                        color="error"
+                    >
+                        {deleting ? 'Удаляем…' : 'Удалить'}
                     </Button>
                 </DialogActions>
             </Dialog>

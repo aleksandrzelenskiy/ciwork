@@ -13,6 +13,7 @@ import {
     DialogTitle,
     FormControl,
     InputLabel,
+    IconButton,
     MenuItem,
     Paper,
     Select,
@@ -26,7 +27,10 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
+import Tooltip from '@mui/material/Tooltip';
 import { useTheme } from '@mui/material/styles';
+import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import EditOutlined from '@mui/icons-material/EditOutlined';
 
 type Plan = 'basic' | 'pro' | 'business' | 'enterprise';
 type SubStatus = 'active' | 'trial' | 'suspended' | 'past_due' | 'inactive';
@@ -417,21 +421,24 @@ export default function OrganizationsAdmin() {
                                         </TableCell>
                                         <TableCell align="right">
                                             <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                                <Button
-                                                    variant="contained"
-                                                    size="small"
-                                                    onClick={() => handleOpenDialog(org)}
-                                                >
-                                                    Изменить
-                                                </Button>
-                                                <Button
-                                                    variant="outlined"
-                                                    color="error"
-                                                    size="small"
-                                                    onClick={() => handleOpenDelete(org)}
-                                                >
-                                                    Удалить
-                                                </Button>
+                                                <Tooltip title="Изменить">
+                                                    <IconButton
+                                                        color="primary"
+                                                        size="small"
+                                                        onClick={() => handleOpenDialog(org)}
+                                                    >
+                                                        <EditOutlined fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Удалить">
+                                                    <IconButton
+                                                        color="error"
+                                                        size="small"
+                                                        onClick={() => handleOpenDelete(org)}
+                                                    >
+                                                        <DeleteOutline fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Stack>
                                         </TableCell>
                                     </TableRow>

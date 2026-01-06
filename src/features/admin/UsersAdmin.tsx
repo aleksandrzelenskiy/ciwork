@@ -11,6 +11,7 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    IconButton,
     Paper,
     Stack,
     Table,
@@ -22,7 +23,10 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
+import Tooltip from '@mui/material/Tooltip';
 import { useTheme } from '@mui/material/styles';
+import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import EditOutlined from '@mui/icons-material/EditOutlined';
 
 type UserRow = {
     clerkUserId: string;
@@ -128,13 +132,6 @@ export default function UsersAdmin() {
             setUsers((prev) =>
                 prev.filter((item) => item.clerkUserId !== userToDelete.clerkUserId)
             );
-            if (payload.clerkDeleted === false) {
-                setError(
-                    `Пользователь удален из базы, но не удален в Clerk: ${
-                        payload.clerkError || 'неизвестная ошибка'
-                    }`
-                );
-            }
             setUserToDelete(null);
         } catch (err) {
             const message =
@@ -309,21 +306,24 @@ export default function UsersAdmin() {
                                         </TableCell>
                                         <TableCell align="right">
                                             <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                                <Button
-                                                    variant="contained"
-                                                    size="small"
-                                                    onClick={() => handleOpenDialog(user)}
-                                                >
-                                                    Изменить
-                                                </Button>
-                                                <Button
-                                                    variant="outlined"
-                                                    color="error"
-                                                    size="small"
-                                                    onClick={() => handleOpenDelete(user)}
-                                                >
-                                                    Удалить
-                                                </Button>
+                                                <Tooltip title="Изменить">
+                                                    <IconButton
+                                                        color="primary"
+                                                        size="small"
+                                                        onClick={() => handleOpenDialog(user)}
+                                                    >
+                                                        <EditOutlined fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Tooltip title="Удалить">
+                                                    <IconButton
+                                                        color="error"
+                                                        size="small"
+                                                        onClick={() => handleOpenDelete(user)}
+                                                    >
+                                                        <DeleteOutline fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
                                             </Stack>
                                         </TableCell>
                                     </TableRow>
