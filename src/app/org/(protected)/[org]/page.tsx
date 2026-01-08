@@ -1110,6 +1110,8 @@ export default function OrgSettingsPage() {
         backgroundColor: cardBg,
         boxShadow: cardShadow,
         backdropFilter: 'blur(20px)',
+        flex: '1 1 220px',
+        minWidth: { xs: '100%', md: 220 },
     };
     const buttonRadius = theme.shape.borderRadius;
     const actionButtonBaseSx = {
@@ -1477,30 +1479,15 @@ export default function OrgSettingsPage() {
                         </Stack>
                     </Box>
 
-                    <Box
-                        sx={(muiTheme) => ({
+                    <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={2.5}
+                        useFlexGap
+                        sx={{
                             mt: { xs: 2.5, md: 3 },
+                            flexWrap: { xs: 'nowrap', md: 'wrap' },
                             ...(debugOutlineSx ?? {}),
-                            display: 'grid',
-                            gridTemplateColumns: {
-                                xs: '1fr',
-                                sm: '1fr',
-                                md: 'repeat(2, minmax(0, 1fr))',
-                                lg: 'repeat(3, minmax(0, 1fr))',
-                            },
-                            columnGap: {
-                                xs: muiTheme.spacing(masonrySpacing.xs),
-                                sm: muiTheme.spacing(masonrySpacing.sm),
-                                md: muiTheme.spacing(masonrySpacing.md),
-                                lg: muiTheme.spacing(masonrySpacing.md),
-                            },
-                            rowGap: {
-                                xs: muiTheme.spacing(masonrySpacing.xs),
-                                sm: muiTheme.spacing(masonrySpacing.sm),
-                                md: muiTheme.spacing(masonrySpacing.md),
-                                lg: muiTheme.spacing(masonrySpacing.md),
-                            },
-                        })}
+                        }}
                     >
                         <Box sx={statCardSx}>
                             <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
@@ -1554,7 +1541,7 @@ export default function OrgSettingsPage() {
                                 Организация {orgName || org}
                             </Typography>
                         </Box>
-                    </Box>
+                    </Stack>
 
                     <Box sx={{ px: panelPadding }}>
                         <Stack spacing={1.5} sx={{ mt: { xs: 2, md: 2.5 } }}>
@@ -1658,6 +1645,7 @@ export default function OrgSettingsPage() {
                     spacing={masonrySpacing}
                     sx={{
                         width: '100%',
+                        px: panelPadding,
                         boxSizing: 'border-box',
                         ...(debugOutlineSx ?? {}),
                         '& > *': {
