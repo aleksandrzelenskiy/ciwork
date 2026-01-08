@@ -1,6 +1,6 @@
 export const UI_RADIUS = {
-    surface: 8,
-    input: 8,
-    button: 10,
-    icon: 8,
+    surface: 4,
+    input: 4,
+    button: 6,
+    icon: 6,
 } as const;

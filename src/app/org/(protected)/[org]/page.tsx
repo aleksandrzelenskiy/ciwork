@@ -1655,30 +1655,15 @@ export default function OrgSettingsPage() {
 
                 <Masonry
                     columns={{ xs: 1, sm: 1, md: 2, lg: 3 }}
-                    spacing={0}
-                    sx={(muiTheme) => ({
-                        m: 0,
-                        p: 0,
+                    spacing={masonrySpacing}
+                    sx={{
                         width: '100%',
-                        maxWidth: '100%',
+                        boxSizing: 'border-box',
                         ...(debugOutlineSx ?? {}),
-                        // Use explicit gaps to avoid Masonry's negative margins when spacing is set.
-                        columnGap: {
-                            xs: muiTheme.spacing(masonrySpacing.xs),
-                            sm: muiTheme.spacing(masonrySpacing.sm),
-                            md: muiTheme.spacing(masonrySpacing.md),
-                            lg: muiTheme.spacing(masonrySpacing.md),
-                        },
                         '& > *': {
                             boxSizing: 'border-box',
-                            mb: {
-                                xs: muiTheme.spacing(masonrySpacing.xs),
-                                sm: muiTheme.spacing(masonrySpacing.sm),
-                                md: muiTheme.spacing(masonrySpacing.md),
-                                lg: muiTheme.spacing(masonrySpacing.md),
-                            },
                         },
-                    })}
+                    }}
                 >
                     {showNotificationsCard && (
                         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
