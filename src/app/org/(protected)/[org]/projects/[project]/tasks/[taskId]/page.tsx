@@ -226,7 +226,7 @@ export default function TaskDetailsPage() {
 
     const router = useRouter();
     const theme = useTheme();
-    const { masonryCardSx, cardBaseSx, cardBorder, panelBaseSx } = getOrgPageStyles(theme);
+    const { masonryCardSx, cardBaseSx, cardBorder } = getOrgPageStyles(theme);
     const cardPadding = React.useMemo(() => ({ xs: 2, md: 2.5 }), []);
     const accordionSx = {
         backgroundColor: 'transparent',
@@ -1540,21 +1540,28 @@ export default function TaskDetailsPage() {
             }}
         >
             {/* Header */}
-            <Box sx={{ ...panelBaseSx, px: cardPadding }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+            <Box sx={{ py: { xs: 0.5, sm: 1 } }}>
+                <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    alignItems={{ xs: 'flex-start', md: 'center' }}
+                    justifyContent="space-between"
+                    gap={{ xs: 1.5, md: 1 }}
+                >
+                    <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0, width: '100%' }}>
                         <Tooltip title="Назад">
                             <IconButton onClick={() => router.back()}>
                                 <ArrowBackIcon />
                             </IconButton>
                         </Tooltip>
-                        <Box sx={{ minWidth: 0 }}>
-                            <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap">
-                                <Typography variant="h6" sx={{ wordBreak: 'break-word' }}>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap" sx={{ rowGap: 0.75 }}>
+                                <Typography variant="h6" sx={{ wordBreak: 'break-word', minWidth: 0 }}>
                                     {task?.taskName || 'Задача'}
                                 </Typography>
                                 {task?.bsNumber && (
-                                    <Typography variant="h6">{task.bsNumber}</Typography>
+                                    <Typography variant="h6" sx={{ wordBreak: 'break-word' }}>
+                                        {task.bsNumber}
+                                    </Typography>
                                 )}
 
                                 {task?.taskId && (
@@ -1604,7 +1611,13 @@ export default function TaskDetailsPage() {
                             </Typography>
                         </Box>
                     </Stack>
-                    <Stack direction="row" spacing={1}>
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        flexWrap="wrap"
+                        useFlexGap
+                        sx={{ width: { xs: '100%', md: 'auto' } }}
+                    >
                         {task && !executorAssigned && (
                             <Button
                                 variant={task.visibility === 'public' ? 'outlined' : 'contained'}
