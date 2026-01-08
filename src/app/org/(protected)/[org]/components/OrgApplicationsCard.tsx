@@ -13,6 +13,7 @@ import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { ApplicationRow } from '@/types/org';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type OrgApplicationsCardProps = {
     applicationsLoading: boolean;
@@ -77,7 +78,7 @@ export default function OrgApplicationsCard({
                             <Box
                                 key={app._id}
                                 sx={{
-                                    borderRadius: 1,
+                                    borderRadius: UI_RADIUS.thin,
                                     p: 1.25,
                                     border: `1px solid ${cardBorder}`,
                                     backgroundColor: isDarkMode

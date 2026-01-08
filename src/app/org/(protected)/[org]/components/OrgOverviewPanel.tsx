@@ -14,6 +14,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import SettingsIcon from '@mui/icons-material/Settings';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type OrgOverviewPanelProps = {
     orgName?: string;
@@ -146,7 +147,7 @@ export default function OrgOverviewPanel({
                                 sx={{
                                     width: 44,
                                     height: 44,
-                                    borderRadius: '16px',
+                                    borderRadius: UI_RADIUS.overlay,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',

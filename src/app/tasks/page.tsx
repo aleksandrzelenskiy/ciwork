@@ -39,6 +39,7 @@ import type { EffectiveOrgRole } from '@/app/types/roles';
 import { defaultTaskFilters, type TaskFilterOptions, type TaskFilters } from '@/app/types/taskFilters';
 import { getPriorityLabelRu } from '@/utils/priorityIcons';
 import { getStatusLabel } from '@/utils/statusLabels';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type ViewMode = 'table' | 'kanban';
 
@@ -239,7 +240,7 @@ export default function TasksPage() {
                 <Box
                     sx={{
                         mb: 3,
-                        borderRadius: 4,
+                        borderRadius: UI_RADIUS.surface,
                         p: { xs: 2, md: 3 },
                         backgroundColor: headerBg,
                         border: `1px solid ${headerBorder}`,
@@ -275,7 +276,7 @@ export default function TasksPage() {
                                 <IconButton
                                     onClick={handleSearchIconClick}
                                     sx={{
-                                        borderRadius: '16px',
+                                        borderRadius: UI_RADIUS.overlay,
                                         border: `1px solid ${iconBorderColor}`,
                                         backgroundColor: searchOpen || searchQuery ? iconActiveBg : iconBg,
                                         color: searchOpen || searchQuery ? iconActiveText : iconText,
@@ -295,7 +296,7 @@ export default function TasksPage() {
                                 <IconButton
                                     onClick={handleFilterButtonClick}
                                     sx={{
-                                        borderRadius: '16px',
+                                        borderRadius: UI_RADIUS.overlay,
                                         border: `1px solid ${iconBorderColor}`,
                                         color: filterOpen || hasActiveFilters ? iconActiveText : iconText,
                                         backgroundColor: filterOpen || hasActiveFilters ? iconActiveBg : iconBg,
@@ -317,7 +318,7 @@ export default function TasksPage() {
                                     <IconButton
                                         onClick={handleColumnsClick}
                                         sx={{
-                                            borderRadius: '16px',
+                                            borderRadius: UI_RADIUS.overlay,
                                             border: `1px solid ${iconBorderColor}`,
                                             backgroundColor: iconBg,
                                             color: iconText,
@@ -340,7 +341,7 @@ export default function TasksPage() {
                                         onClick={() => setRefreshToken((prev) => prev + 1)}
                                         disabled={false}
                                         sx={{
-                                            borderRadius: '16px',
+                                            borderRadius: UI_RADIUS.overlay,
                                             border: `1px solid ${iconBorderColor}`,
                                             backgroundColor: iconBg,
                                             color: iconText,
@@ -369,7 +370,7 @@ export default function TasksPage() {
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                 PaperProps={{
                     sx: {
-                        borderRadius: 3,
+                        borderRadius: UI_RADIUS.tooltip,
                         border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)'}`,
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.95)' : 'rgba(255,255,255,0.9)',
                         boxShadow: isDarkMode ? '0 25px 70px rgba(0,0,0,0.6)' : '0 25px 70px rgba(15,23,42,0.15)',
@@ -411,7 +412,7 @@ export default function TasksPage() {
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                 PaperProps={{
                     sx: {
-                        borderRadius: 3,
+                        borderRadius: UI_RADIUS.tooltip,
                         border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)'}`,
                         backgroundColor: isDarkMode ? 'rgba(15,18,28,0.95)' : 'rgba(255,255,255,0.9)',
                         boxShadow: isDarkMode ? '0 25px 70px rgba(0,0,0,0.6)' : '0 25px 70px rgba(15,23,42,0.15)',
@@ -489,7 +490,7 @@ export default function TasksPage() {
                 variant="outlined"
                 sx={{
                     p: { xs: 2, md: 3 },
-                    borderRadius: 4,
+                    borderRadius: UI_RADIUS.surface,
                     border: `1px solid ${sectionBorder}`,
                     backgroundColor: sectionBg,
                     boxShadow: sectionShadow,
@@ -515,7 +516,7 @@ export default function TasksPage() {
                             sx={{
                                 textTransform: 'uppercase',
                                 fontWeight: 600,
-                                borderRadius: '10px',
+                                borderRadius: UI_RADIUS.tab,
                                 minHeight: 0,
                                 px: 2.5,
                                 py: 1.2,
@@ -535,7 +536,7 @@ export default function TasksPage() {
                             sx={{
                                 textTransform: 'uppercase',
                                 fontWeight: 600,
-                                borderRadius: '10px',
+                                borderRadius: UI_RADIUS.tab,
                                 minHeight: 0,
                                 px: 2.5,
                                 py: 1.2,

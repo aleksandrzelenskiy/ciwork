@@ -31,6 +31,7 @@ import type { PhotoReport } from '@/app/types/taskTypes';
 import { usePhotoReports } from '@/hooks/usePhotoReports';
 import ReportSummaryList from '@/features/reports/ReportSummaryList';
 import { getPhotoReportPermissions, type PhotoReportRole } from '@/utils/photoReportState';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type ReportPayload = {
     taskId: string;
@@ -286,7 +287,7 @@ export default function PhotoReportPage() {
                         />
                         <Box
                             sx={{
-                                borderRadius: 3,
+                                borderRadius: UI_RADIUS.tooltip,
                                 border: '1px solid rgba(15,23,42,0.08)',
                                 backgroundColor: '#fff',
                                 p: 2,
@@ -310,7 +311,7 @@ export default function PhotoReportPage() {
                                 onClick={handleDownloadReport}
                                 disabled={downloading}
                                 startIcon={<CloudDownloadIcon />}
-                                sx={{ borderRadius: 999, textTransform: 'none' }}
+                                sx={{ borderRadius: UI_RADIUS.pill, textTransform: 'none' }}
                             >
                                 {downloading ? 'Скачиваем…' : 'Скачать отчет'}
                             </Button>

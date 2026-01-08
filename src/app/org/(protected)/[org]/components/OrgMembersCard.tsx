@@ -14,6 +14,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 import type { MemberDTO } from '@/types/org';
 import { roleLabel } from '@/utils/org';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type OrgMembersCardProps = {
     loading: boolean;
@@ -84,7 +85,7 @@ export default function OrgMembersCard({
                             <Box
                                 key={member._id}
                                 sx={{
-                                    borderRadius: 1,
+                                    borderRadius: UI_RADIUS.thin,
                                     p: 1.25,
                                     border: `1px solid ${cardBorder}`,
                                     backgroundColor: isDarkMode

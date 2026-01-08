@@ -62,6 +62,7 @@ import type { TaskApplication } from '@/app/types/application';
 import MarketLocations, { type MarketPublicTask } from '@/features/market/MarketLocations';
 import { REGION_MAP } from '@/app/utils/regions';
 import { getPriorityLabelRu } from '@/utils/priorityIcons';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 dayjs.locale('ru');
 
@@ -114,7 +115,7 @@ type BudgetDisplay = {
 
 const glassPaperStyles = (theme: { palette: { mode: string } }) => ({
     p: 3,
-    borderRadius: 3,
+    borderRadius: UI_RADIUS.tooltip,
     border: '1px solid',
     borderColor:
         theme.palette.mode === 'dark'
@@ -169,7 +170,7 @@ const statusChipMap: Record<PublicTaskStatus, { label: string; color: 'default' 
 const CardItem = styled(Paper)(({ theme }) => ({
     backgroundColor: '#fff',
     padding: theme.spacing(2),
-    borderRadius: theme.shape.borderRadius,
+    borderRadius: UI_RADIUS.surface,
     boxShadow: theme.shadows[3],
     ...theme.applyStyles?.('dark', {
         backgroundColor: '#1A2027',
@@ -610,7 +611,7 @@ export default function MarketplacePage() {
     };
 
     const heroActionButtonBaseSx = {
-        borderRadius: 2,
+        borderRadius: UI_RADIUS.item,
         border: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
@@ -622,7 +623,7 @@ export default function MarketplacePage() {
             sx={{
                 position: 'relative',
                 overflow: 'hidden',
-                borderRadius: 4,
+                borderRadius: UI_RADIUS.surface,
                 px: { xs: 2, md: 5 },
                 py: { xs: 3, md: 5 },
                 mb: 4,
@@ -658,7 +659,7 @@ export default function MarketplacePage() {
                                         <SearchIcon />
                                     </InputAdornment>
                                 ),
-                                sx: { borderRadius: 3 },
+                                sx: { borderRadius: UI_RADIUS.tooltip },
                             },
                         }}
                         sx={{ flexGrow: 1, minWidth: { xs: 260, sm: 320 }, maxWidth: 520 }}
@@ -775,21 +776,21 @@ export default function MarketplacePage() {
                                                         color="default"
                                                         variant="outlined"
                                                         label={task.project?.key || 'Публичная задача'}
-                                                        sx={{ borderRadius: 2 }}
+                                                        sx={{ borderRadius: UI_RADIUS.item }}
                                                     />
                                                     {chipMeta && (
                                                         <Chip
                                                             size="small"
                                                             color={chipMeta.color}
                                                             label={chipMeta.label}
-                                                            sx={{ borderRadius: 2 }}
+                                                            sx={{ borderRadius: UI_RADIUS.item }}
                                                         />
                                                     )}
                                                     <Chip
                                                         size="small"
                                                         icon={<StarRoundedIcon fontSize="small" />}
                                                         label={`${task.applicationCount ?? 0} откликов`}
-                                                        sx={{ borderRadius: 2 }}
+                                                        sx={{ borderRadius: UI_RADIUS.item }}
                                                     />
                                                 </Stack>
                                                 <Stack spacing={1}>
@@ -853,7 +854,7 @@ export default function MarketplacePage() {
                                                             setDetailsTask(task);
                                                         }}
                                                         sx={{
-                                                            borderRadius: 2,
+                                                            borderRadius: UI_RADIUS.item,
                                                             textTransform: 'none',
                                                         }}
                                                     >
@@ -868,7 +869,7 @@ export default function MarketplacePage() {
                                                                 void handleWithdrawApplication(task);
                                                             }}
                                                             disabled={isCanceling}
-                                                            sx={{ borderRadius: 2 }}
+                                                            sx={{ borderRadius: UI_RADIUS.item }}
                                                         >
                                                             {isCanceling ? 'Отменяем…' : 'Отменить отклик'}
                                                         </Button>
@@ -882,7 +883,7 @@ export default function MarketplacePage() {
                                                                 setSelectedTask(task);
                                                             }}
                                                             sx={{
-                                                                borderRadius: 2.5,
+                                                                borderRadius: UI_RADIUS.compact,
                                                                 px: 3.5,
                                                                 py: 1.25,
                                                                 textTransform: 'none',
@@ -906,7 +907,7 @@ export default function MarketplacePage() {
                 onClose={() => setFiltersDialogOpen(false)}
                 maxWidth="sm"
                 fullWidth
-                PaperProps={{ sx: { borderRadius: 3 } }}
+                PaperProps={{ sx: { borderRadius: UI_RADIUS.tooltip } }}
             >
                 <DialogTitle>Фильтры</DialogTitle>
                 <DialogContent dividers>
@@ -922,7 +923,7 @@ export default function MarketplacePage() {
                                             key={chip.key}
                                             label={chip.label}
                                             onDelete={chip.onDelete}
-                                            sx={{ borderRadius: 2 }}
+                                            sx={{ borderRadius: UI_RADIUS.item }}
                                         />
                                     ))}
                                 </Stack>
@@ -1049,7 +1050,7 @@ export default function MarketplacePage() {
                 fullWidth
                 PaperProps={{
                     sx: {
-                        borderRadius: 3,
+                        borderRadius: UI_RADIUS.tooltip,
                         p: 1,
                     },
                 }}
@@ -1181,7 +1182,7 @@ export default function MarketplacePage() {
                                                 label={detailsTask.project.key}
                                                 variant="outlined"
                                                 size="small"
-                                                sx={{ borderRadius: 2 }}
+                                                sx={{ borderRadius: UI_RADIUS.item }}
                                             />
                                         )}
                                     </Stack>
@@ -1190,7 +1191,7 @@ export default function MarketplacePage() {
                                     <IconButton
                                         onClick={() => setDetailsTask(null)}
                                         sx={{
-                                            borderRadius: 2,
+                                            borderRadius: UI_RADIUS.item,
                                             border: '1px solid',
                                             borderColor: 'divider',
                                             bgcolor: 'background.paper',
@@ -1403,7 +1404,7 @@ export default function MarketplacePage() {
                                             Boolean(cancelLoadingId) &&
                                             detailsTask.myApplication?._id === cancelLoadingId
                                         }
-                                        sx={{ borderRadius: 2 }}
+                                        sx={{ borderRadius: UI_RADIUS.item }}
                                     >
                                         {Boolean(cancelLoadingId) &&
                                         detailsTask.myApplication?._id === cancelLoadingId
@@ -1420,7 +1421,7 @@ export default function MarketplacePage() {
                                             setDetailsTask(null);
                                         }}
                                         sx={{
-                                            borderRadius: 2.5,
+                                            borderRadius: UI_RADIUS.compact,
                                             px: 3.5,
                                             py: 1.25,
                                             textTransform: 'none',

@@ -31,6 +31,7 @@ import { useTheme } from '@mui/material/styles';
 import ArrowBackIos from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIos from '@mui/icons-material/ArrowForwardIos';
 import Today from '@mui/icons-material/Today';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 // Типы
 type Status = 'TO DO' | 'IN PROGRESS' | 'DONE';
@@ -190,7 +191,7 @@ export default function ProjectTaskCalendar({
                 height: 'calc(100vh - 260px)',
                 '& .rbc-calendar': {
                     backgroundColor: calendarBg,
-                    borderRadius: 3,
+                    borderRadius: UI_RADIUS.tooltip,
                     border: `1px solid ${calendarBorder}`,
                     boxShadow: isDark ? '0 30px 80px rgba(0,0,0,0.55)' : '0 20px 50px rgba(15,23,42,0.15)',
                     overflow: 'hidden',
@@ -218,7 +219,7 @@ export default function ProjectTaskCalendar({
                     color: theme.palette.text.primary,
                 },
                 '& .rbc-event': {
-                    borderRadius: 8,
+                    borderRadius: UI_RADIUS.panel,
                     boxShadow: isDark ? '0 10px 25px rgba(0,0,0,0.35)' : '0 10px 25px rgba(15,23,42,0.15)',
                     border: 'none',
                 },

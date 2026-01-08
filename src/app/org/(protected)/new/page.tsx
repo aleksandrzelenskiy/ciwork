@@ -13,6 +13,7 @@ import {
     Container,
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type CreateOrgSuccess = { ok: true; org: { orgSlug: string } };
 type CreateOrgError = { error: string };
@@ -141,7 +142,7 @@ export default function NewOrgPage() {
                             elevation={0}
                             sx={{
                                 p: { xs: 3, md: 4 },
-                                borderRadius: 4,
+                                borderRadius: UI_RADIUS.surface,
                                 border: '1px solid',
                                 borderColor: (theme) =>
                                     theme.palette.mode === 'dark'
@@ -201,7 +202,7 @@ export default function NewOrgPage() {
                         <Paper
                             variant="outlined"
                             sx={{
-                                borderRadius: 3,
+                                borderRadius: UI_RADIUS.tooltip,
                                 p: { xs: 2.5, md: 3 },
                                 textAlign: 'center',
                                 backgroundColor: (theme) =>

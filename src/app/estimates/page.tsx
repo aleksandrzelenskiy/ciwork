@@ -45,6 +45,7 @@ import {
   Remove as RemoveIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 interface ExcelData {
   [sheetName: string]: Array<Record<string, unknown>>;
@@ -146,9 +147,16 @@ const EstimateUploadPage: React.FC = () => {
       try {
         setLoadingUsers(true);
         const response = await fetch('/api/users');
-        if (!response.ok) throw new Error('Error loading users');
-        const data = await response.json();
-        setUsers(data);
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          const message =
+              typeof data === 'object' && data && 'error' in data
+                  ? String((data as { error?: string }).error || 'Error loading users')
+                  : 'Error loading users';
+          setError(message);
+          return;
+        }
+        setUsers(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error(error);
         setError('Failed to load users');
@@ -294,12 +302,19 @@ const EstimateUploadPage: React.FC = () => {
         body: formData,
       });
 
+      const result = await response.json().catch(() => null);
       if (!response.ok) {
-        const result = await response.json();
-        throw new Error(result.error || 'File upload error');
+        const message =
+            typeof result === 'object' && result && 'error' in result
+                ? String((result as { error?: string }).error || 'File upload error')
+                : 'File upload error';
+        showNotification(message, 'error');
+        return;
       }
-
-      const result = await response.json();
+      if (!result || typeof result !== 'object' || !('data' in result)) {
+        showNotification('File upload error', 'error');
+        return;
+      }
       setParsedData(result.data);
       const parsedValues = parseData(result.data);
       setValues(parsedValues);
@@ -424,8 +439,13 @@ const EstimateUploadPage: React.FC = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error creating task');
+        const errorData = await response.json().catch(() => null);
+        const message =
+            typeof errorData === 'object' && errorData && 'error' in errorData
+                ? String((errorData as { error?: string }).error || 'Error creating task')
+                : 'Error creating task';
+        showNotification(message, 'error');
+        return;
       }
 
       setOpenDialog(false);
@@ -520,7 +540,7 @@ const EstimateUploadPage: React.FC = () => {
                 {...getRootProps()}
                 sx={{
                   border: '2px dashed #1976d2',
-                  borderRadius: 2,
+                  borderRadius: UI_RADIUS.item,
                   padding: 4,
                   cursor: 'pointer',
                   backgroundColor: isDragActive ? '#e3f2fd' : '#fafafa',
@@ -856,7 +876,7 @@ const EstimateUploadPage: React.FC = () => {
                         {...getAttachmentRootProps()}
                         sx={{
                           border: '2px dashed #1976d2',
-                          borderRadius: 2,
+                          borderRadius: UI_RADIUS.item,
                           padding: 4,
                           cursor: 'pointer',
                           backgroundColor: isDragActive ? '#e3f2fd' : '#fafafa',

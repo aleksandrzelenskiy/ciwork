@@ -14,6 +14,7 @@ import { useTheme } from '@mui/material/styles';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type Props = {
     anchorPosition: { top: number; left: number } | null;
@@ -48,7 +49,7 @@ export default function TaskContextMenu({
                 paper: {
                     sx: {
                         minWidth: 180,
-                        borderRadius: 2.5,
+                        borderRadius: UI_RADIUS.compact,
                         backgroundColor: menuBg,
                         border: `1px solid ${menuBorder}`,
                         boxShadow: menuShadow,

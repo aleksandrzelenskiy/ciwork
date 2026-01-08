@@ -196,14 +196,14 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
           MuiAppBar: {
             styleOverrides: {
               root: {
-                borderRadius: 0,
+                borderRadius: UI_RADIUS.none,
               },
             },
           },
           MuiDrawer: {
             styleOverrides: {
               paper: {
-                borderRadius: 0,
+                borderRadius: UI_RADIUS.none,
               },
             },
           },
@@ -546,7 +546,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                             p: 2,
                             border: `1px solid ${appBarBorder}`,
                             boxShadow: appBarShadow,
-                            borderRadius: 3,
+                            borderRadius: UI_RADIUS.tooltip,
                             backdropFilter: 'blur(18px)',
                             background: isDarkMode
                               ? 'linear-gradient(145deg, rgba(17,20,28,0.96), rgba(12,15,23,0.92))'

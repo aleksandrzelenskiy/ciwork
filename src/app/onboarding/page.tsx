@@ -25,6 +25,7 @@ import {
   type RegionOption,
 } from '@/app/utils/regions';
 import type { Theme } from '@mui/material/styles';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type ProfileResponse = {
   profileType?: ProfileType;
@@ -418,7 +419,7 @@ export default function OnboardingPage() {
               <Paper
                   elevation={0}
                   sx={{
-                    borderRadius: 4,
+                    borderRadius: UI_RADIUS.surface,
                     border: '1px solid',
                     borderColor: (theme) =>
                         theme.palette.mode === 'dark'
@@ -661,7 +662,7 @@ export default function OnboardingPage() {
                 variant='outlined'
                 sx={{
                   mt: 5,
-                  borderRadius: 3,
+                  borderRadius: UI_RADIUS.tooltip,
                   p: { xs: 2.5, md: 3 },
                   textAlign: 'center',
                   backgroundColor: (theme) =>

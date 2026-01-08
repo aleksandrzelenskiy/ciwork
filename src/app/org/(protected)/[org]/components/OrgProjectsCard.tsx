@@ -13,6 +13,7 @@ import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 
 import type { ProjectDTO } from '@/types/org';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type OrgProjectsCardProps = {
     projectsLoading: boolean;
@@ -87,7 +88,7 @@ export default function OrgProjectsCard({
                             <Box
                                 key={project._id}
                                 sx={{
-                                    borderRadius: 1,
+                                    borderRadius: UI_RADIUS.thin,
                                     p: 1.25,
                                     border: `1px solid ${cardBorder}`,
                                     backgroundColor: isDarkMode

@@ -10,6 +10,7 @@ import { useTheme } from '@mui/material/styles';
 import OrganizationsAdmin from '@/features/admin/OrganizationsAdmin';
 import UsersAdmin from '@/features/admin/UsersAdmin';
 import PlanConfigAdmin from '@/features/admin/PlanConfigAdmin';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type AdminTab = 'organizations' | 'users' | 'plans';
 
@@ -41,7 +42,7 @@ export default function AdminPage() {
                     sx={{
                         textTransform: 'uppercase',
                         fontWeight: 600,
-                        borderRadius: '10px',
+                        borderRadius: UI_RADIUS.tab,
                         minHeight: 0,
                         px: 2.5,
                         py: 1.2,
@@ -57,7 +58,7 @@ export default function AdminPage() {
                     sx={{
                         textTransform: 'uppercase',
                         fontWeight: 600,
-                        borderRadius: '10px',
+                        borderRadius: UI_RADIUS.tab,
                         minHeight: 0,
                         px: 2.5,
                         py: 1.2,
@@ -73,7 +74,7 @@ export default function AdminPage() {
                     sx={{
                         textTransform: 'uppercase',
                         fontWeight: 600,
-                        borderRadius: '10px',
+                        borderRadius: UI_RADIUS.tab,
                         minHeight: 0,
                         px: 2.5,
                         py: 1.2,

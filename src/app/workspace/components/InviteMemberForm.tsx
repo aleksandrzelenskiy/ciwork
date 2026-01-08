@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import Autocomplete from '@mui/material/Autocomplete';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
 
@@ -171,7 +172,7 @@ export default function InviteMemberForm({
         <Box
             sx={{
                 backgroundColor: panelBg,
-                borderRadius: 3,
+                borderRadius: UI_RADIUS.tooltip,
                 border: `1px solid ${panelBorder}`,
                 boxShadow: panelShadow,
                 backdropFilter: 'blur(10px)',
@@ -222,7 +223,7 @@ export default function InviteMemberForm({
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     backgroundColor: inputBg,
-                                    borderRadius: 3,
+                                    borderRadius: UI_RADIUS.tooltip,
                                     color: isDarkMode ? '#e2e8f0' : undefined,
                                 },
                             }}
@@ -244,7 +245,7 @@ export default function InviteMemberForm({
                     sx={{
                         '& .MuiOutlinedInput-root': {
                             backgroundColor: inputBg,
-                            borderRadius: 3,
+                            borderRadius: UI_RADIUS.tooltip,
                             color: isDarkMode ? '#e2e8f0' : undefined,
                         },
                     }}
@@ -265,7 +266,7 @@ export default function InviteMemberForm({
                 <Alert
                     severity="info"
                     sx={{
-                        borderRadius: 3,
+                        borderRadius: UI_RADIUS.tooltip,
                         backgroundColor: infoBg,
                         color: infoColor,
                         border: isDarkMode ? '1px solid rgba(59,130,246,0.35)' : undefined,
@@ -283,7 +284,7 @@ export default function InviteMemberForm({
                     onClick={handleInvite}
                     disabled={inviting || !selectedUser || emailAlreadyInOrg}
                     sx={{
-                        borderRadius: 999,
+                        borderRadius: UI_RADIUS.pill,
                         px: 3,
                         textTransform: 'none',
                         boxShadow: buttonShadow,

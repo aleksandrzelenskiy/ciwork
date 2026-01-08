@@ -14,6 +14,7 @@ import {
     Container,
     Paper,
 } from '@mui/material';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type ApiOk = { ok: true };
 type ApiErr = { error: string };
@@ -218,7 +219,7 @@ export default function OrgJoinPage() {
                             elevation={0}
                             sx={{
                                 p: { xs: 3, md: 4 },
-                                borderRadius: 4,
+                                borderRadius: UI_RADIUS.surface,
                                 border: '1px solid',
                                 borderColor: (theme) =>
                                     theme.palette.mode === 'dark'
@@ -303,7 +304,7 @@ export default function OrgJoinPage() {
                         <Paper
                             variant="outlined"
                             sx={{
-                                borderRadius: 3,
+                                borderRadius: UI_RADIUS.tooltip,
                                 p: { xs: 2.5, md: 3 },
                                 textAlign: 'center',
                                 backgroundColor: (theme) =>

@@ -19,6 +19,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { IntegrationDTO } from '@/types/org';
 import { integrationTypeLabel } from '@/utils/org';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type OrgIntegrationsCardProps = {
     integrations: IntegrationDTO[];
@@ -107,7 +108,7 @@ export default function OrgIntegrationsCard({
                                 <Box
                                     key={integration._id}
                                     sx={{
-                                        borderRadius: 1,
+                                        borderRadius: UI_RADIUS.thin,
                                         p: 1.25,
                                         border: `1px solid ${cardBorder}`,
                                         backgroundColor: isDarkMode

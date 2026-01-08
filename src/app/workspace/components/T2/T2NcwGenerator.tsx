@@ -22,6 +22,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/ru';
 import { PdfTemplate } from '@/features/shared/PdfTemplate';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 dayjs.locale('ru');
 
@@ -88,7 +89,7 @@ export const T2NcwGenerator = ({
     };
     const cardSx = {
         p: 2.5,
-        borderRadius: 3,
+        borderRadius: UI_RADIUS.tooltip,
         background: cardBg,
         border: `1px solid ${cardBorder}`,
         boxShadow: cardShadow,
@@ -398,7 +399,7 @@ export const T2NcwGenerator = ({
                     <Typography variant="h5">Предпросмотр</Typography>
                     <Box
                         sx={{
-                            borderRadius: 2,
+                            borderRadius: UI_RADIUS.item,
                             border: `1px solid ${cardBorder}`,
                             overflow: 'hidden',
                             height: { xs: 380, md: 560 },

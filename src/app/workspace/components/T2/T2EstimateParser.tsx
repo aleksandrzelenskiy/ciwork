@@ -24,6 +24,7 @@ import { useTheme } from '@mui/material/styles';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 interface ExcelData {
     [sheetName: string]: Array<Record<string, unknown>>;
@@ -268,7 +269,7 @@ const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLab
                 sx: {
                     backgroundColor: dialogBg,
                     border: `1px solid ${dialogBorder}`,
-                    borderRadius: 3,
+                    borderRadius: UI_RADIUS.tooltip,
                     boxShadow: isDark
                         ? '0 35px 80px rgba(0,0,0,0.65)'
                         : '0 25px 60px rgba(15,23,42,0.15)',
@@ -282,7 +283,7 @@ const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLab
                     <Box
                         {...getRootProps()}
                         sx={{
-                            borderRadius: 3,
+                            borderRadius: UI_RADIUS.tooltip,
                             p: 2,
                             cursor: 'pointer',
                             background: isDragActive ? dropHoverBg : cardBg,
@@ -357,7 +358,7 @@ const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLab
                             variant="outlined"
                             sx={{
                                 p: 2,
-                                borderRadius: 3,
+                                borderRadius: UI_RADIUS.tooltip,
                                 background: previewBg,
                                 boxShadow: isDark
                                     ? '0 20px 50px rgba(0,0,0,0.45)'
@@ -391,7 +392,7 @@ const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLab
                                     <Paper
                                         variant="outlined"
                                         sx={{
-                                            borderRadius: 2,
+                                            borderRadius: UI_RADIUS.item,
                                             borderColor: surfaceBorder,
                                             backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : undefined,
                                         }}

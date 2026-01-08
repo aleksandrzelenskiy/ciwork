@@ -1895,7 +1895,7 @@ export default function TaskDetailsPage() {
                                                 <Paper
                                                     key={appId || app.contractorEmail || app.contractorId}
                                                     variant="outlined"
-                                                    sx={{ p: 1.5, borderRadius: 2 }}
+                                                    sx={{ p: 1.5, borderRadius: UI_RADIUS.item }}
                                                 >
                                                     <Stack
                                                         direction="row"
@@ -2052,7 +2052,7 @@ export default function TaskDetailsPage() {
                                                         underline="hover"
                                                         sx={{
                                                             display: 'block',
-                                                            borderRadius: 2,
+                                                            borderRadius: UI_RADIUS.item,
                                                             p: 1,
                                                             '&:hover': {
                                                                 backgroundColor: 'rgba(59,130,246,0.04)',
@@ -2825,7 +2825,7 @@ export default function TaskDetailsPage() {
                                     borderColor: orderDragActive
                                         ? theme.palette.primary.main
                                         : theme.palette.divider,
-                                    borderRadius: 1.5,
+                                    borderRadius: UI_RADIUS.subtle,
                                     p: 2,
                                     textAlign: 'center',
                                     backgroundColor: orderDragActive

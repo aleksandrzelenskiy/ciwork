@@ -1052,7 +1052,7 @@ export default function TaskDetailPage() {
                                         : null;
                                     const sharedSx = {
                                         display: 'block',
-                                        borderRadius: 2,
+                                        borderRadius: UI_RADIUS.item,
                                         p: 1,
                                         '&:hover': {
                                             backgroundColor: 'rgba(59,130,246,0.04)',
@@ -1399,7 +1399,7 @@ export default function TaskDetailPage() {
                             left: guideRect.left,
                             width: guideRect.width,
                             height: guideRect.height,
-                            borderRadius: 999,
+                            borderRadius: UI_RADIUS.pill,
                             border: '2px solid rgba(255,255,255,0.95)',
                             boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.72)',
                             pointerEvents: 'none',
@@ -1413,7 +1413,7 @@ export default function TaskDetailPage() {
                             width: tooltipWidth,
                             maxWidth: 'calc(100vw - 32px)',
                             p: 2,
-                            borderRadius: 3,
+                            borderRadius: UI_RADIUS.tooltip,
                             background:
                                 'linear-gradient(135deg, rgba(255,255,255,0.98), rgba(235,242,255,0.98))',
                             border: '1px solid rgba(255,255,255,0.85)',
@@ -1448,7 +1448,7 @@ export default function TaskDetailPage() {
                             left: issuesGuideRect.left - issuesHighlightPadding,
                             width: issuesGuideRect.width + issuesHighlightPadding * 2,
                             height: issuesGuideRect.height + issuesHighlightPadding * 2,
-                            borderRadius: 16,
+                            borderRadius: UI_RADIUS.overlay,
                             border: '2px solid rgba(255,255,255,0.95)',
                             boxShadow: '0 0 0 9999px rgba(9, 12, 18, 0.72)',
                             pointerEvents: 'none',
@@ -1463,7 +1463,7 @@ export default function TaskDetailPage() {
                 slotProps={{
                     paper: {
                         sx: {
-                            borderRadius: 4,
+                            borderRadius: UI_RADIUS.surface,
                             background:
                                 'linear-gradient(160deg, rgba(255,255,255,0.92), rgba(244,247,252,0.94))',
                             border: '1px solid rgba(255,255,255,0.6)',
@@ -1542,7 +1542,7 @@ export default function TaskDetailPage() {
                 slotProps={{
                     paper: {
                         sx: {
-                            borderRadius: 4,
+                            borderRadius: UI_RADIUS.surface,
                             background:
                                 'linear-gradient(160deg, rgba(255,255,255,0.92), rgba(244,247,252,0.94))',
                             border: '1px solid rgba(255,255,255,0.6)',

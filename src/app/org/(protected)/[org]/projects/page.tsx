@@ -32,6 +32,7 @@ import ProjectDialog, {
     ProjectDialogValues,
     ProjectManagerOption,
 } from '@/app/workspace/components/ProjectDialog';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 const getRegionInfo = (code: string) => REGION_MAP.get(code) ?? REGION_ISO_MAP.get(code);
 const getRegionLabel = (code: string): string => getRegionInfo(code)?.label ?? code;
@@ -272,7 +273,7 @@ export default function OrgProjectsPage() {
     };
 
     const panelBaseSx = {
-        borderRadius: 4,
+        borderRadius: UI_RADIUS.surface,
         p: { xs: 2, md: 3 },
         backgroundColor: headerBg,
         border: `1px solid ${headerBorder}`,
@@ -283,7 +284,7 @@ export default function OrgProjectsPage() {
         overflow: 'hidden',
     };
     const statCardSx = {
-        borderRadius: 3,
+        borderRadius: UI_RADIUS.tooltip,
         px: { xs: 2, md: 2.5 },
         py: { xs: 1.25, md: 1.5 },
         border: `1px solid ${cardBorder}`,
@@ -292,7 +293,7 @@ export default function OrgProjectsPage() {
         backdropFilter: 'blur(20px)',
     };
     const pillSx = {
-        borderRadius: 999,
+        borderRadius: UI_RADIUS.pill,
         px: 1.5,
         py: 0.4,
         fontSize: '0.75rem',
@@ -303,7 +304,7 @@ export default function OrgProjectsPage() {
         letterSpacing: 0.3,
     };
     const actionButtonBaseSx = {
-        borderRadius: 999,
+        borderRadius: UI_RADIUS.pill,
         textTransform: 'none',
         fontWeight: 600,
         px: { xs: 2.5, md: 3 },
@@ -336,7 +337,7 @@ export default function OrgProjectsPage() {
         };
         const paletteEntry = palette[tone];
         return {
-            borderRadius: 3,
+            borderRadius: UI_RADIUS.tooltip,
             border: `1px solid ${paletteEntry.border}`,
             backgroundColor: paletteEntry.bg,
             backdropFilter: 'blur(18px)',
@@ -347,7 +348,7 @@ export default function OrgProjectsPage() {
         };
     };
     const getCardIconButtonSx = (variant: 'default' | 'danger' = 'default') => ({
-        borderRadius: '12px',
+        borderRadius: UI_RADIUS.sheet,
         border: `1px solid ${
             variant === 'danger'
                 ? isDarkMode
@@ -805,7 +806,7 @@ export default function OrgProjectsPage() {
                                     sx={{
                                         width: 44,
                                         height: 44,
-                                        borderRadius: '16px',
+                                        borderRadius: UI_RADIUS.overlay,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -956,7 +957,7 @@ export default function OrgProjectsPage() {
                                         aria-label={`Открыть задачи проекта ${p.name}`}
                                         sx={{
                                             p: { xs: 2, md: 2.5 },
-                                            borderRadius: 4,
+                                            borderRadius: UI_RADIUS.surface,
                                             border: `1px solid ${cardBorder}`,
                                             backgroundColor: cardBg,
                                             boxShadow: cardShadow,

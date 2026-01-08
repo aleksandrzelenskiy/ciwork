@@ -15,6 +15,7 @@ import { useTheme } from '@mui/material/styles';
 import TopicIcon from '@mui/icons-material/Topic';
 import { RUSSIAN_REGIONS, REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
 
@@ -139,7 +140,7 @@ export default function ProjectDialog({
     const glassInputSx = {
         '& .MuiOutlinedInput-root': {
             backgroundColor: inputBg,
-            borderRadius: 3,
+            borderRadius: UI_RADIUS.tooltip,
             '& fieldset': { borderColor: inputBorder },
             '&:hover fieldset': { borderColor: inputHoverBorder },
             '&.Mui-focused fieldset': { borderColor: inputFocusBorder },
@@ -182,7 +183,7 @@ export default function ProjectDialog({
                     backdropFilter: 'blur(28px)',
                     backgroundColor: dialogPaperBg,
                     border: `1px solid ${dialogPaperBorder}`,
-                    borderRadius: 4,
+                    borderRadius: UI_RADIUS.surface,
                     boxShadow: dialogShadow,
                 },
             }}
@@ -302,7 +303,7 @@ export default function ProjectDialog({
                     borderTop: `1px solid ${headerBorder}`,
                 }}
             >
-                <Button onClick={onClose} disabled={busy} sx={{ borderRadius: 999, px: 2 }}>
+                <Button onClick={onClose} disabled={busy} sx={{ borderRadius: UI_RADIUS.pill, px: 2 }}>
                     Отмена
                 </Button>
                 <Button
@@ -310,7 +311,7 @@ export default function ProjectDialog({
                     onClick={handleSubmit}
                     disabled={isSubmitDisabled}
                     sx={{
-                        borderRadius: 999,
+                        borderRadius: UI_RADIUS.pill,
                         px: 3,
                         textTransform: 'none',
                         boxShadow: '0 15px 35px rgba(59,130,246,0.45)',

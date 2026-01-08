@@ -27,6 +27,7 @@ import { STATUS_ORDER, getStatusLabel, normalizeStatusTitle } from '@/utils/stat
 import type { CurrentStatus } from '@/app/types/taskTypes';
 import WorkspaceTaskDialog, { TaskForEdit } from '@/app/workspace/components/WorkspaceTaskDialog';
 import TaskContextMenu from '@/app/workspace/components/TaskContextMenu';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type StatusTitle = CurrentStatus;
 
@@ -309,7 +310,7 @@ export default function ProjectTaskBoard({
                             minWidth: 260,
                             backgroundColor: columnBg,
                             p: 2,
-                            borderRadius: 2,
+                            borderRadius: UI_RADIUS.item,
                             border: '1px solid',
                             borderColor: columnBorder,
                             boxShadow: columnShadow,

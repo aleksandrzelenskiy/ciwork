@@ -38,6 +38,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ViewColumnOutlinedIcon from '@mui/icons-material/ViewColumnOutlined';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import type { SelectChangeEvent } from '@mui/material/Select';
+import { UI_RADIUS } from '@/config/uiTokens';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -398,7 +399,7 @@ export default function ProjectTasksPage() {
         const active = options?.active ?? false;
         const disabled = options?.disabled ?? false;
         return {
-            borderRadius: '16px',
+            borderRadius: UI_RADIUS.overlay,
             border: `1px solid ${disabled ? 'transparent' : iconBorderColor}`,
             backgroundColor: disabled
                 ? 'transparent'
@@ -501,7 +502,7 @@ export default function ProjectTasksPage() {
                 <Box
                     sx={{
                         mb: 3,
-                        borderRadius: 4,
+                        borderRadius: UI_RADIUS.surface,
                         p: { xs: 2, md: 3 },
                         backgroundColor: headerBg,
                         border: `1px solid ${headerBorder}`,
@@ -643,7 +644,7 @@ export default function ProjectTasksPage() {
                                 variant="contained"
                                 startIcon={<AddTaskIcon />}
                                 sx={{
-                                    borderRadius: 999,
+                                    borderRadius: UI_RADIUS.pill,
                                     textTransform: 'none',
                                     fontWeight: 600,
                                     px: { xs: 2.5, md: 3 },
@@ -665,7 +666,7 @@ export default function ProjectTasksPage() {
                     transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                     PaperProps={{
                         sx: {
-                            borderRadius: 3,
+                            borderRadius: UI_RADIUS.tooltip,
                             border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)'}`,
                             backgroundColor: isDarkMode
                                 ? 'rgba(15,18,28,0.95)'
@@ -828,7 +829,7 @@ export default function ProjectTasksPage() {
                     variant="outlined"
                     sx={{
                         p: { xs: 2, md: 3 },
-                        borderRadius: 4,
+                        borderRadius: UI_RADIUS.surface,
                         border: `1px solid ${sectionBorder}`,
                         backgroundColor: sectionBg,
                         boxShadow: sectionShadow,
@@ -841,7 +842,7 @@ export default function ProjectTasksPage() {
                         sx={{
                             minHeight: 0,
                             mb: 2.5,
-                            borderRadius: 3,
+                            borderRadius: UI_RADIUS.tooltip,
                             border: `1px solid ${tabBorderColor}`,
                             backgroundColor: isDarkMode ? 'rgba(15,18,28,0.65)' : 'rgba(255,255,255,0.7)',
                             '& .MuiTabs-indicator': {
@@ -858,7 +859,7 @@ export default function ProjectTasksPage() {
                                 textTransform: 'none',
                                 fontWeight: 600,
                                 fontSize: { xs: '0.9rem', md: '1rem' },
-                                borderRadius: 3,
+                                borderRadius: UI_RADIUS.tooltip,
                                 px: { xs: 1.5, md: 2.5 },
                                 py: 1,
                                 minHeight: 0,
@@ -878,7 +879,7 @@ export default function ProjectTasksPage() {
                                 textTransform: 'none',
                                 fontWeight: 600,
                                 fontSize: { xs: '0.9rem', md: '1rem' },
-                                borderRadius: 3,
+                                borderRadius: UI_RADIUS.tooltip,
                                 px: { xs: 1.5, md: 2.5 },
                                 py: 1,
                                 minHeight: 0,
@@ -898,7 +899,7 @@ export default function ProjectTasksPage() {
                                 textTransform: 'none',
                                 fontWeight: 600,
                                 fontSize: { xs: '0.9rem', md: '1rem' },
-                                borderRadius: 3,
+                                borderRadius: UI_RADIUS.tooltip,
                                 px: { xs: 1.5, md: 2.5 },
                                 py: 1,
                                 minHeight: 0,

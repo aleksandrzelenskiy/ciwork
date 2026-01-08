@@ -27,6 +27,7 @@ import type { CurrentStatus, PriorityLevel } from '@/app/types/taskTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
 import { getStatusLabel } from '@/utils/statusLabels';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type TaskLocation = {
     _id?: string;
@@ -317,7 +318,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
         return {
             p: 1.5,
             boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
-            borderRadius: 3,
+            borderRadius: UI_RADIUS.tooltip,
             backdropFilter: 'blur(16px)',
             background: isDark
                 ? 'rgba(18,24,36,0.78)'
@@ -376,7 +377,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
                         sx={{
                             width: 48,
                             height: 48,
-                            borderRadius: '50%',
+                            borderRadius: UI_RADIUS.circle,
                             bgcolor: filterButtonBg,
                             color: filterButtonColor,
                             border: `1px solid ${filterButtonBorder}`,
@@ -422,7 +423,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                 }}
                                 sx={{
                                     '& .MuiFilledInput-root': {
-                                        borderRadius: 2,
+                                        borderRadius: UI_RADIUS.item,
                                         backgroundColor: alpha(isDark ? '#0b1220' : '#ffffff', isDark ? 0.5 : 0.9),
                                         backdropFilter: 'blur(12px)',
                                     },
@@ -459,7 +460,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                                         sx={{
                                                             width: 10,
                                                             height: 10,
-                                                            borderRadius: '50%',
+                                                            borderRadius: UI_RADIUS.circle,
                                                             backgroundColor: getStatusColor(status),
                                                         }}
                                                     />

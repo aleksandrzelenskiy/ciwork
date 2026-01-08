@@ -1,3 +1,5 @@
+import { UI_RADIUS } from '@/config/uiTokens';
+
 export const authAppearance = {
     variables: {
         colorPrimary: '#0f4c3a',
@@ -7,7 +9,7 @@ export const authAppearance = {
         colorInputText: '#111827',
         colorTextOnPrimaryBackground: '#ffffff',
         fontFamily: 'inherit',
-        borderRadius: '16px',
+        borderRadius: `${UI_RADIUS.overlay}px`,
     },
     elements: {
         rootBox: 'w-full',

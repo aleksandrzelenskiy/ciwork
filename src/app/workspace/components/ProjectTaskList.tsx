@@ -57,6 +57,7 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getPriorityIcon, getPriorityLabelRu, normalizePriority, type Priority as Pri } from '@/utils/priorityIcons';
 import { STATUS_ORDER, getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 import type { CurrentStatus } from '@/app/types/taskTypes';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 
 import WorkspaceTaskDialog, { TaskForEdit } from '@/app/workspace/components/WorkspaceTaskDialog';
@@ -375,7 +376,7 @@ const ProjectTaskListInner = (
                 component={Box}
                 sx={{
                     backgroundColor: tableBg,
-                    borderRadius: 3,
+                    borderRadius: UI_RADIUS.tooltip,
                     border: `1px solid ${cellBorder}`,
                     boxShadow: tableShadow,
                     overflow: 'hidden',
@@ -667,7 +668,7 @@ const ProjectTaskListInner = (
                         paper: {
                             sx: {
                                 minWidth: 220,
-                                borderRadius: 3,
+                                borderRadius: UI_RADIUS.tooltip,
                                 backgroundColor: menuBg,
                                 border: `1px solid ${menuBorder}`,
                                 boxShadow: menuShadow,
@@ -681,7 +682,7 @@ const ProjectTaskListInner = (
                 >
                     <MMenuItem
                         sx={{
-                            borderRadius: 2,
+                            borderRadius: UI_RADIUS.item,
                             color: menuText,
                             px: 1.5,
                             py: 1,
@@ -702,7 +703,7 @@ const ProjectTaskListInner = (
                                 sx={{
                                     width: 34,
                                     height: 34,
-                                    borderRadius: 2,
+                                    borderRadius: UI_RADIUS.item,
                                     backgroundColor: menuIconBg,
                                     display: 'inline-flex',
                                     alignItems: 'center',
@@ -718,7 +719,7 @@ const ProjectTaskListInner = (
 
                     <MMenuItem
                         sx={{
-                            borderRadius: 2,
+                            borderRadius: UI_RADIUS.item,
                             color: menuText,
                             px: 1.5,
                             py: 1,
@@ -736,7 +737,7 @@ const ProjectTaskListInner = (
                                 sx={{
                                     width: 34,
                                     height: 34,
-                                    borderRadius: 2,
+                                    borderRadius: UI_RADIUS.item,
                                     backgroundColor: menuIconBg,
                                     display: 'inline-flex',
                                     alignItems: 'center',
@@ -754,7 +755,7 @@ const ProjectTaskListInner = (
 
                     <MMenuItem
                         sx={{
-                            borderRadius: 2,
+                            borderRadius: UI_RADIUS.item,
                             color: menuIconDangerColor,
                             px: 1.5,
                             py: 1,
@@ -772,7 +773,7 @@ const ProjectTaskListInner = (
                                 sx={{
                                     width: 34,
                                     height: 34,
-                                    borderRadius: 2,
+                                    borderRadius: UI_RADIUS.item,
                                     backgroundColor: menuIconDangerBg,
                                     display: 'inline-flex',
                                     alignItems: 'center',

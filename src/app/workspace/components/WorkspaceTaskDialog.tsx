@@ -54,6 +54,7 @@ import { isDocumentUrl } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import type { RelatedTaskRef } from '@/app/types/taskTypes';
 import WorkItemsEditorDialog from '@/app/workspace/components/WorkItemsEditorDialog';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 
 
@@ -334,7 +335,7 @@ export default function WorkspaceTaskDialog({
         () => ({
             '& .MuiOutlinedInput-root': {
                 backgroundColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.92)',
-                borderRadius: 3,
+                borderRadius: UI_RADIUS.tooltip,
                 '& fieldset': {
                     borderColor: isDarkMode ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.6)',
                 },
@@ -1470,7 +1471,7 @@ export default function WorkspaceTaskDialog({
                                 sx={{
                                     width: 50,
                                     height: 50,
-                                    borderRadius: 16,
+                                    borderRadius: UI_RADIUS.overlay,
                                     background:
                                         'linear-gradient(135deg, rgba(59,130,246,0.95), rgba(14,165,233,0.85))',
                                     display: 'flex',
@@ -1556,7 +1557,7 @@ export default function WorkspaceTaskDialog({
                                             <Box
                                                 key={entry.id}
                                                 sx={{
-                                                    borderRadius: 3,
+                                                    borderRadius: UI_RADIUS.tooltip,
                                                     border: `1px solid ${cardBorder}`,
                                                     p: 1.5,
                                                     backgroundColor: cardBg,
@@ -1741,7 +1742,7 @@ export default function WorkspaceTaskDialog({
                                                         </Alert>
                                                         <Box
                                                             sx={{
-                                                                borderRadius: 3,
+                                                                borderRadius: UI_RADIUS.tooltip,
                                                                 overflow: 'hidden',
                                                                 height: 220,
                                                                 boxShadow: isDarkMode
@@ -1805,7 +1806,7 @@ export default function WorkspaceTaskDialog({
                                     startIcon={<TableRowsIcon />}
                                     onClick={openWorkItemsDialog}
                                     disabled={saving || uploading}
-                                    sx={{ borderRadius: 2 }}
+                                    sx={{ borderRadius: UI_RADIUS.item }}
                                 >
                                     Состав работ
                                 </Button>
@@ -1858,7 +1859,7 @@ export default function WorkspaceTaskDialog({
                                         sx={{
                                             mt: 1,
                                             p: 2,
-                                            borderRadius: 2,
+                                            borderRadius: UI_RADIUS.item,
                                             border: `1px solid ${percentBorder}`,
                                             backgroundColor: percentBg,
                                         }}
@@ -2189,7 +2190,7 @@ export default function WorkspaceTaskDialog({
                                     borderColor: dragActive
                                         ? 'rgba(59,130,246,0.8)'
                                         : dropBorder,
-                                    borderRadius: 3,
+                                    borderRadius: UI_RADIUS.tooltip,
                                     p: 3,
                                     textAlign: 'center',
                                     cursor: 'pointer',
@@ -2241,7 +2242,7 @@ export default function WorkspaceTaskDialog({
                         <Button
                             onClick={handleClose}
                             disabled={saving || uploading}
-                            sx={{ borderRadius: 999, px: 3 }}
+                            sx={{ borderRadius: UI_RADIUS.pill, px: 3 }}
                         >
                             Отмена
                         </Button>
@@ -2251,7 +2252,7 @@ export default function WorkspaceTaskDialog({
                                 variant="contained"
                                 disabled={saveDisabled}
                                 sx={{
-                                    borderRadius: 999,
+                                    borderRadius: UI_RADIUS.pill,
                                     px: 3,
                                     textTransform: 'none',
                                     boxShadow:
@@ -2270,7 +2271,7 @@ export default function WorkspaceTaskDialog({
                                 variant="contained"
                                 disabled={saveDisabled}
                                 sx={{
-                                    borderRadius: 999,
+                                    borderRadius: UI_RADIUS.pill,
                                     px: 3,
                                     textTransform: 'none',
                                     boxShadow:

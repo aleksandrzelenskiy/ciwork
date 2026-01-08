@@ -20,6 +20,7 @@ import FullscreenRoundedIcon from '@mui/icons-material/FullscreenRounded';
 import FullscreenExitRoundedIcon from '@mui/icons-material/FullscreenExitRounded';
 import { useTheme } from '@mui/material/styles';
 import type { ParsedWorkItem } from '@/app/workspace/components/T2/T2EstimateParser';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type WorkItemRow = {
     id: GridRowId;
@@ -209,7 +210,7 @@ export default function WorkItemsEditorDialog({
             fullScreen={isFullscreen}
             PaperProps={{
                 sx: {
-                    borderRadius: isFullscreen ? 0 : 4,
+                    borderRadius: isFullscreen ? UI_RADIUS.none : UI_RADIUS.surface,
                     background: dialogBg,
                     boxShadow: isFullscreen ? '0 0 0 rgba(0,0,0,0)' : dialogShadow,
                     border: `1px solid ${dialogBorder}`,
@@ -255,7 +256,7 @@ export default function WorkItemsEditorDialog({
             <DialogContent sx={{ pt: 0.5 }}>
                 <Box
                     sx={{
-                        borderRadius: 3,
+                        borderRadius: UI_RADIUS.tooltip,
                         overflow: 'hidden',
                         border: `1px solid ${gridBorder}`,
                         boxShadow: isFullscreen
@@ -305,7 +306,7 @@ export default function WorkItemsEditorDialog({
                     variant="contained"
                     onClick={handleSave}
                     sx={{
-                        borderRadius: 2,
+                        borderRadius: UI_RADIUS.item,
                         boxShadow: '0 20px 45px rgba(59,130,246,0.35)',
                         textTransform: 'none',
                     }}

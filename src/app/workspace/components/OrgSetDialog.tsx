@@ -25,6 +25,7 @@ import { useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import DoneIcon from '@mui/icons-material/Done';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 export type OrgSettingsFormValues = {
     plan: 'basic' | 'pro' | 'business' | 'enterprise';
@@ -170,7 +171,7 @@ export default function OrgSetDialog({
                     backgroundColor: paperBg,
                     border: `1px solid ${paperBorder}`,
                     boxShadow: paperShadow,
-                    borderRadius: theme.shape.borderRadius,
+                    borderRadius: UI_RADIUS.surface,
                 },
             }}
         >
@@ -370,7 +371,7 @@ export default function OrgSetDialog({
                         sx={{
                             backgroundColor: sectionBg,
                             border: `1px solid ${sectionBorder}`,
-                            borderRadius: 2,
+                            borderRadius: UI_RADIUS.item,
                             '&::before': { display: 'none' },
                         }}
                     >

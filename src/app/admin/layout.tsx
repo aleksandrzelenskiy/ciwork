@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { GetUserContext } from '@/server-actions/user-context';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type AdminLayoutProps = {
     children: ReactNode;
@@ -27,7 +28,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
                     style={{
                         maxWidth: 440,
                         padding: '1.5rem',
-                        borderRadius: '1rem',
+                        borderRadius: `${UI_RADIUS.overlay}px`,
                         border: '1px solid rgba(0,0,0,0.1)',
                         boxShadow: '0 24px 60px rgba(0,0,0,0.08)',
                         backgroundColor: '#fff',
