@@ -139,6 +139,13 @@ export function getOrgPageStyles(theme: Theme) {
     const masonrySx = {
         width: '100%',
         boxSizing: 'border-box' as const,
+        mx: {
+            xs: `calc(${theme.spacing(masonrySpacing.xs)} / -2)`,
+            sm: `calc(${theme.spacing(masonrySpacing.sm)} / -2)`,
+            md: `calc(${theme.spacing(masonrySpacing.md)} / -2)`,
+            lg: `calc(${theme.spacing(masonrySpacing.lg)} / -2)`,
+            xl: `calc(${theme.spacing(masonrySpacing.xl)} / -2)`,
+        },
         '& > *': {
             minWidth: 0,
             boxSizing: 'border-box' as const,
