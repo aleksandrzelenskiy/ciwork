@@ -11,7 +11,6 @@ import {
     TextField, Button,
     MenuItem,
 } from '@mui/material';
-import Masonry from '@mui/lab/Masonry';
 import { useTheme } from '@mui/material/styles';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
@@ -1084,7 +1083,7 @@ export default function OrgSettingsPage() {
         ? { outline: '1px dashed rgba(255, 99, 71, 0.9)', outlineOffset: -1 }
         : null;
     const debugHeaderBgSx = layoutDebug ? { backgroundColor: 'rgba(34,197,94,0.06)' } : null;
-    const debugMasonryBgSx = layoutDebug ? { backgroundColor: 'rgba(59,130,246,0.06)' } : null;
+    const debugGridBgSx = layoutDebug ? { backgroundColor: 'rgba(59,130,246,0.06)' } : null;
     const pageWrapperSx = {
         minHeight: '100%',
         py: { xs: 4, md: 6 },
@@ -1188,7 +1187,7 @@ export default function OrgSettingsPage() {
         borderBottomRightRadius: theme.shape.borderRadius,
     };
     const masonrySpacing = { xs: 1, sm: 1.5, md: 2 } as const;
-    // Shared container keeps header and Masonry aligned across breakpoints.
+    // Shared container keeps header and grid aligned across breakpoints.
     const contentContainerSx = (muiTheme: typeof theme) => ({
         maxWidth: 1200,
         mx: 'auto',
@@ -1200,6 +1199,27 @@ export default function OrgSettingsPage() {
             lg: `calc(${muiTheme.spacing(masonrySpacing.md)} / 2)`,
         },
         boxSizing: 'border-box',
+    });
+    const gridSx = (muiTheme: typeof theme) => ({
+        display: 'grid',
+        gridTemplateColumns: {
+            xs: '1fr',
+            md: 'repeat(2, minmax(0, 1fr))',
+            lg: 'repeat(3, minmax(0, 1fr))',
+        },
+        gap: {
+            xs: muiTheme.spacing(masonrySpacing.xs),
+            sm: muiTheme.spacing(masonrySpacing.sm),
+            md: muiTheme.spacing(masonrySpacing.md),
+        },
+        gridAutoFlow: 'dense',
+        alignItems: 'start',
+        width: '100%',
+        boxSizing: 'border-box',
+        '& > *': {
+            minWidth: 0,
+            boxSizing: 'border-box',
+        },
     });
     const renderStatusPanel = (content: React.ReactNode) => (
         <Box sx={pageWrapperSx}>
@@ -1644,18 +1664,7 @@ export default function OrgSettingsPage() {
                     </Box>
                 </Box>
 
-                <Box sx={{ px: panelPadding, ...(debugMasonryBgSx ?? {}), ...(debugOutlineSx ?? {}) }}>
-                    <Masonry
-                        columns={{ xs: 1, sm: 1, md: 2, lg: 3 }}
-                        spacing={masonrySpacing}
-                        sx={{
-                            width: '100%',
-                            boxSizing: 'border-box',
-                            '& > *': {
-                                boxSizing: 'border-box',
-                            },
-                        }}
-                    >
+                <Box sx={(muiTheme) => ({ ...gridSx(muiTheme), ...(debugGridBgSx ?? {}), ...(debugOutlineSx ?? {}) })}>
                         {showNotificationsCard && (
                             <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
                                 <Stack spacing={1.5}>
@@ -1691,16 +1700,14 @@ export default function OrgSettingsPage() {
                             </Box>
                         )}
 
-                    {org && (
-                        <Box>
+                        {org && (
                             <OrgStorageUsageCard
                                 orgSlug={org}
                                 cardSx={masonryCardSx}
                                 cardHeaderSx={cardHeaderSx}
                                 cardContentSx={cardContentSx}
                             />
-                        </Box>
-                    )}
+                        )}
 
                         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
                             <Stack spacing={1.5}>
@@ -2147,7 +2154,6 @@ export default function OrgSettingsPage() {
                                 </Button>
                             </Stack>
                         </Box>
-                    </Masonry>
                 </Box>
             </Box>
 
