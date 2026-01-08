@@ -9,6 +9,7 @@ import {
     Typography,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import type { ResponsiveStyleValue } from '@mui/system';
 import BusinessIcon from '@mui/icons-material/Business';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
@@ -27,7 +28,7 @@ type OrgOverviewPanelProps = {
     inviteTooltip: string;
     actionButtonBaseSx: SxProps<Theme>;
     panelBaseSx: SxProps<Theme>;
-    panelPadding: SxProps<Theme>;
+    panelPadding: ResponsiveStyleValue<number | string>;
     statCardSx: SxProps<Theme>;
     textPrimary: string;
     textSecondary: string;
