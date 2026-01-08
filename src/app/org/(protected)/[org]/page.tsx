@@ -1183,7 +1183,7 @@ export default function OrgSettingsPage() {
         borderBottomLeftRadius: theme.shape.borderRadius,
         borderBottomRightRadius: theme.shape.borderRadius,
     };
-    const masonrySpacing = { xs: 1.5, sm: 2, md: 2.5 };
+    const masonrySpacing = { xs: 1, sm: 1.5, md: 2 } as const;
     // Shared container keeps header and Masonry aligned across breakpoints.
     const contentContainerSx = (muiTheme: typeof theme) => ({
         maxWidth: 1200,
