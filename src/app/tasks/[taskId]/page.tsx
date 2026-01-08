@@ -66,11 +66,12 @@ import type { Task, WorkItem, TaskEvent } from '@/app/types/taskTypes';
 import { extractFileNameFromUrl, isDocumentUrl } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { usePhotoReports } from '@/hooks/usePhotoReports';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 const CardItem = styled(Paper)(({ theme }) => ({
     backgroundColor: '#fff',
     padding: theme.spacing(2),
-    borderRadius: theme.shape.borderRadius,
+    borderRadius: UI_RADIUS.surface,
     boxShadow: theme.shadows[3],
     ...theme.applyStyles?.('dark', {
         backgroundColor: '#1A2027',
@@ -622,6 +623,7 @@ export default function TaskDetailPage() {
                     variant="outlined"
                     onClick={() => void loadTask()}
                     startIcon={<RefreshIcon />}
+                    sx={{ borderRadius: UI_RADIUS.button }}
                 >
                     Повторить
                 </Button>
@@ -641,6 +643,7 @@ export default function TaskDetailPage() {
                     variant="text"
                     onClick={() => router.push('/tasks')}
                     startIcon={<ArrowBackIcon />}
+                    sx={{ borderRadius: UI_RADIUS.button }}
                 >
                     К списку задач
                 </Button>
@@ -679,7 +682,11 @@ export default function TaskDetailPage() {
                 <Typography color="text.secondary">
                     Пожалуйста, используйте соответствующий личный кабинет.
                 </Typography>
-                <Button variant="contained" onClick={() => router.push('/tasks')}>
+                <Button
+                    variant="contained"
+                    onClick={() => router.push('/tasks')}
+                    sx={{ borderRadius: UI_RADIUS.button }}
+                >
                     К списку задач
                 </Button>
             </Container>
@@ -714,7 +721,11 @@ export default function TaskDetailPage() {
                 <Typography color="text.secondary">
                     Для просмотра нужно, чтобы задача была назначена вам.
                 </Typography>
-                <Button variant="contained" onClick={() => router.push('/tasks')}>
+                <Button
+                    variant="contained"
+                    onClick={() => router.push('/tasks')}
+                    sx={{ borderRadius: UI_RADIUS.button }}
+                >
                     К списку задач
                 </Button>
             </Container>
@@ -910,7 +921,7 @@ export default function TaskDetailPage() {
                                             }}
                                             disabled={decisionLoading}
                                             sx={{
-                                                borderRadius: 999,
+                                                borderRadius: UI_RADIUS.button,
                                                 textTransform: 'none',
                                                 px: 2.75,
                                                 py: 1.1,
@@ -933,7 +944,7 @@ export default function TaskDetailPage() {
                                             }}
                                             disabled={decisionLoading}
                                             sx={{
-                                                borderRadius: 999,
+                                                borderRadius: UI_RADIUS.button,
                                                 textTransform: 'none',
                                                 px: 2.75,
                                                 py: 1.1,
@@ -965,7 +976,7 @@ export default function TaskDetailPage() {
                                         disabled={completeLoading}
                                         fullWidth
                                         sx={{
-                                            borderRadius: 999,
+                                            borderRadius: UI_RADIUS.button,
                                             textTransform: 'none',
                                             py: 1.1,
                                             fontWeight: 700,
@@ -1007,7 +1018,7 @@ export default function TaskDetailPage() {
                                         ref={uploadButtonRef}
                                         sx={{
                                             textTransform: 'none',
-                                            borderRadius: 1.5,
+                                            borderRadius: UI_RADIUS.button,
                                             fontWeight: 700,
                                         }}
                                     >
@@ -1490,7 +1501,7 @@ export default function TaskDetailPage() {
                         disabled={completeLoading}
                         sx={{
                             textTransform: 'none',
-                            borderRadius: 999,
+                            borderRadius: UI_RADIUS.button,
                             px: 2.25,
                             py: 1,
                             color: '#111',
@@ -1508,7 +1519,7 @@ export default function TaskDetailPage() {
                         disabled={completeLoading}
                         sx={{
                             textTransform: 'none',
-                            borderRadius: 999,
+                            borderRadius: UI_RADIUS.button,
                             px: 2.75,
                             py: 1,
                             fontWeight: 700,
@@ -1573,7 +1584,7 @@ export default function TaskDetailPage() {
                         disabled={decisionLoading}
                         sx={{
                             textTransform: 'none',
-                            borderRadius: 999,
+                            borderRadius: UI_RADIUS.button,
                             px: 2.25,
                             py: 1,
                             color: '#111',
@@ -1591,7 +1602,7 @@ export default function TaskDetailPage() {
                         disabled={decisionLoading}
                         sx={{
                             textTransform: 'none',
-                            borderRadius: 999,
+                            borderRadius: UI_RADIUS.button,
                             px: 2.75,
                             py: 1,
                             fontWeight: 700,

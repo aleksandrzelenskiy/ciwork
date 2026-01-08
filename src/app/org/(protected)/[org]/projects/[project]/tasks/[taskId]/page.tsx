@@ -1606,6 +1606,7 @@ export default function TaskDetailsPage() {
                                     : openPublishDialog()
                             }
                             disabled={publishLoading}
+                            sx={{ borderRadius: UI_RADIUS.button }}
                         >
                             {publishLoading
                                 ? 'Сохраняем…'
@@ -1662,7 +1663,11 @@ export default function TaskDetailsPage() {
                     <Typography color="error" sx={{ mb: 1 }}>
                         {error}
                     </Typography>
-                    <Button variant="outlined" onClick={() => void load()}>
+                    <Button
+                        variant="outlined"
+                        onClick={() => void load()}
+                        sx={{ borderRadius: UI_RADIUS.button }}
+                    >
                         Повторить
                     </Button>
                 </Paper>
@@ -1993,6 +1998,7 @@ export default function TaskDetailsPage() {
                                                                             <CircularProgress size={16} color="inherit" />
                                                                         ) : undefined
                                                                     }
+                                                                    sx={{ borderRadius: UI_RADIUS.button }}
                                                                 >
                                                                     {isAccepted ? 'Снять' : 'Назначить'}
                                                                 </Button>
@@ -2354,6 +2360,7 @@ export default function TaskDetailsPage() {
                                                 startIcon={<AddIcon />}
                                                 variant="outlined"
                                                 onClick={openAddDocumentDialog}
+                                                sx={{ borderRadius: UI_RADIUS.button }}
                                             >
                                                 Добавить
                                             </Button>
@@ -2370,6 +2377,7 @@ export default function TaskDetailsPage() {
                                                 startIcon={<AddIcon />}
                                                 variant="outlined"
                                                 onClick={openAddDocumentDialog}
+                                                sx={{ borderRadius: UI_RADIUS.button }}
                                             >
                                                 Добавить
                                             </Button>
@@ -2425,7 +2433,7 @@ export default function TaskDetailsPage() {
                                             target="_blank"
                                             rel="noreferrer"
                                             variant="text"
-                                            sx={{ alignSelf: 'flex-start' }}
+                                            sx={{ alignSelf: 'flex-start', borderRadius: UI_RADIUS.button }}
                                         >
                                             Открыть заказ
                                         </Button>
@@ -2625,7 +2633,9 @@ export default function TaskDetailsPage() {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={closeProfileDialog}>Закрыть</Button>
+                    <Button onClick={closeProfileDialog} sx={{ borderRadius: UI_RADIUS.button }}>
+                        Закрыть
+                    </Button>
                 </DialogActions>
             </Dialog>
 
@@ -2666,10 +2676,18 @@ export default function TaskDetailsPage() {
                     ))}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleSelectAllSections} startIcon={<CheckBoxIcon />}>
+                    <Button
+                        onClick={handleSelectAllSections}
+                        startIcon={<CheckBoxIcon />}
+                        sx={{ borderRadius: UI_RADIUS.button }}
+                    >
                         Выбрать все
                     </Button>
-                    <Button onClick={handleClearSections} startIcon={<CheckBoxOutlineBlankIcon />}>
+                    <Button
+                        onClick={handleClearSections}
+                        startIcon={<CheckBoxOutlineBlankIcon />}
+                        sx={{ borderRadius: UI_RADIUS.button }}
+                    >
                         Очистить
                     </Button>
                 </DialogActions>
@@ -2713,7 +2731,11 @@ export default function TaskDetailsPage() {
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={closePublishDialog} disabled={publishLoading}>
+                    <Button
+                        onClick={closePublishDialog}
+                        disabled={publishLoading}
+                        sx={{ borderRadius: UI_RADIUS.button }}
+                    >
                         Отмена
                     </Button>
                     <Button
@@ -2723,6 +2745,7 @@ export default function TaskDetailsPage() {
                         startIcon={
                             publishLoading ? <CircularProgress size={18} color="inherit" /> : undefined
                         }
+                        sx={{ borderRadius: UI_RADIUS.button }}
                     >
                         Опубликовать
                     </Button>
@@ -2746,7 +2769,7 @@ export default function TaskDetailsPage() {
                                 variant="outlined"
                                 onClick={handleSelectOrderDocument}
                                 startIcon={<ArticleOutlinedIcon />}
-                                sx={{ alignSelf: 'flex-start' }}
+                                sx={{ alignSelf: 'flex-start', borderRadius: UI_RADIUS.button }}
                             >
                                 Заказ на выполнение работ
                             </Button>
@@ -2755,7 +2778,7 @@ export default function TaskDetailsPage() {
                                     variant="outlined"
                                     onClick={openNcwCreator}
                                     startIcon={<DescriptionOutlinedIcon />}
-                                    sx={{ alignSelf: 'flex-start' }}
+                                    sx={{ alignSelf: 'flex-start', borderRadius: UI_RADIUS.button }}
                                 >
                                     Создать уведомление
                                 </Button>
@@ -2844,7 +2867,11 @@ export default function TaskDetailsPage() {
                 </DialogContent>
                 {selectedDocumentType === 'order' && (
                     <DialogActions>
-                        <Button onClick={closeAddDocumentDialog} disabled={orderUploading}>
+                        <Button
+                            onClick={closeAddDocumentDialog}
+                            disabled={orderUploading}
+                            sx={{ borderRadius: UI_RADIUS.button }}
+                        >
                             Отмена
                         </Button>
                         <Button
@@ -2854,6 +2881,7 @@ export default function TaskDetailsPage() {
                             startIcon={
                                 orderUploading ? <CircularProgress size={18} color="inherit" /> : null
                             }
+                            sx={{ borderRadius: UI_RADIUS.button }}
                         >
                             Загрузить
                         </Button>
@@ -2982,7 +3010,11 @@ export default function TaskDetailsPage() {
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={closeDeleteDocumentDialog} disabled={documentDeleting}>
+                    <Button
+                        onClick={closeDeleteDocumentDialog}
+                        disabled={documentDeleting}
+                        sx={{ borderRadius: UI_RADIUS.button }}
+                    >
                         Отмена
                     </Button>
                     <Button
@@ -2993,6 +3025,7 @@ export default function TaskDetailsPage() {
                         startIcon={
                             documentDeleting ? <CircularProgress size={18} color="inherit" /> : null
                         }
+                        sx={{ borderRadius: UI_RADIUS.button }}
                     >
                         Удалить
                     </Button>
@@ -3007,7 +3040,11 @@ export default function TaskDetailsPage() {
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDeleteOpen(false)} disabled={deleting}>
+                    <Button
+                        onClick={() => setDeleteOpen(false)}
+                        disabled={deleting}
+                        sx={{ borderRadius: UI_RADIUS.button }}
+                    >
                         Отмена
                     </Button>
                     <Button
@@ -3016,6 +3053,7 @@ export default function TaskDetailsPage() {
                         variant="contained"
                         disabled={deleting}
                         startIcon={deleting ? <CircularProgress size={18} color="inherit" /> : null}
+                        sx={{ borderRadius: UI_RADIUS.button }}
                     >
                         Удалить
                     </Button>
@@ -3039,7 +3077,11 @@ export default function TaskDetailsPage() {
                     </Typography>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={closeApplicationConfirm} disabled={!!applicationActionLoading}>
+                    <Button
+                        onClick={closeApplicationConfirm}
+                        disabled={!!applicationActionLoading}
+                        sx={{ borderRadius: UI_RADIUS.button }}
+                    >
                         Отмена
                     </Button>
                     <Button
@@ -3052,6 +3094,7 @@ export default function TaskDetailsPage() {
                                 <CircularProgress size={18} color="inherit" />
                             ) : null
                         }
+                        sx={{ borderRadius: UI_RADIUS.button }}
                     >
                         {applicationConfirm.action === 'assign' ? 'Назначить' : 'Снять'}
                     </Button>
