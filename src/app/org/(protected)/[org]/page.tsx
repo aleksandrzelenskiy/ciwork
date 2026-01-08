@@ -8,6 +8,7 @@ import {
     Snackbar, Alert, Typography,
     CircularProgress,
 } from '@mui/material';
+import Masonry from '@mui/lab/Masonry';
 import { useTheme } from '@mui/material/styles';
 
 import ProjectDialog from '@/app/workspace/components/ProjectDialog';
@@ -340,7 +341,8 @@ export default function OrgSettingsPage() {
         cardHeaderSx,
         cardContentSx,
         contentContainerSx,
-        gridSx,
+        masonrySpacing,
+        masonrySx,
     } = getOrgPageStyles(theme);
     const dialogPaperSx = {
         backdropFilter: 'blur(24px)',
@@ -549,7 +551,11 @@ export default function OrgSettingsPage() {
                     getAlertSx={getAlertSx}
                 />
 
-                <Box sx={gridSx}>
+                <Masonry
+                    columns={{ xs: 1, sm: 1, md: 2, lg: 3, xl: 3 }}
+                    spacing={masonrySpacing}
+                    sx={masonrySx}
+                >
                         {showNotificationsCard && (
                             <OrgNotificationsCard
                                 walletError={walletError}
@@ -655,7 +661,7 @@ export default function OrgSettingsPage() {
                             textSecondary={textSecondary}
                             buttonRadius={buttonRadius}
                         />
-                </Box>
+                </Masonry>
             </Box>
 
             <OrgPlansDialog

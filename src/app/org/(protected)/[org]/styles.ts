@@ -135,20 +135,7 @@ export function getOrgPageStyles(theme: Theme) {
         },
         boxSizing: 'border-box' as const,
     };
-    const gridSx = {
-        display: 'grid',
-        gridTemplateColumns: {
-            xs: '1fr',
-            md: 'repeat(2, minmax(0, 1fr))',
-            lg: 'repeat(2, minmax(0, 1fr))',
-        },
-        gap: {
-            xs: theme.spacing(masonrySpacing.xs),
-            sm: theme.spacing(masonrySpacing.sm),
-            md: theme.spacing(masonrySpacing.md),
-        },
-        gridAutoFlow: 'dense',
-        alignItems: 'start',
+    const masonrySx = {
         width: '100%',
         boxSizing: 'border-box' as const,
         '& > *': {
@@ -187,6 +174,7 @@ export function getOrgPageStyles(theme: Theme) {
         cardHeaderSx,
         cardContentSx,
         contentContainerSx,
-        gridSx,
+        masonrySpacing,
+        masonrySx,
     };
 }
