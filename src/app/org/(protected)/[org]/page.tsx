@@ -1092,14 +1092,6 @@ export default function OrgSettingsPage() {
         overflow: 'hidden',
     };
     const panelPadding = { xs: 2, md: 3 };
-    const masonryPanelPadSx = (muiTheme: typeof theme) => ({
-        px: {
-            xs: `calc(${muiTheme.spacing(panelPadding.xs)} + ${muiTheme.spacing(masonrySpacing.xs)} / 2)`,
-            sm: `calc(${muiTheme.spacing(panelPadding.xs)} + ${muiTheme.spacing(masonrySpacing.sm)} / 2)`,
-            md: `calc(${muiTheme.spacing(panelPadding.md)} + ${muiTheme.spacing(masonrySpacing.md)} / 2)`,
-            lg: `calc(${muiTheme.spacing(panelPadding.md)} + ${muiTheme.spacing(masonrySpacing.md)} / 2)`,
-        },
-    });
     const panelBaseSx = {
         borderRadius: theme.shape.borderRadius,
         py: panelPadding,
@@ -1652,54 +1644,52 @@ export default function OrgSettingsPage() {
                     </Box>
                 </Box>
 
-                <Masonry
-                    columns={{ xs: 1, sm: 1, md: 2, lg: 3 }}
-                    spacing={masonrySpacing}
-                    sx={(muiTheme) => ({
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        ...masonryPanelPadSx(muiTheme),
-                        ...(debugMasonryBgSx ?? {}),
-                        ...(debugOutlineSx ?? {}),
-                        '& > *': {
+                <Box sx={{ px: panelPadding, ...(debugMasonryBgSx ?? {}), ...(debugOutlineSx ?? {}) }}>
+                    <Masonry
+                        columns={{ xs: 1, sm: 1, md: 2, lg: 3 }}
+                        spacing={masonrySpacing}
+                        sx={{
+                            width: '100%',
                             boxSizing: 'border-box',
-                        },
-                    })}
-                >
-                    {showNotificationsCard && (
-                        <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
-                            <Stack spacing={1.5}>
-                                <Typography variant="subtitle1" fontWeight={600}>
-                                    Уведомления
-                                </Typography>
-                                {walletError && (
-                                    <Alert severity="warning" sx={getAlertSx('warning')}>
-                                        Не удалось загрузить баланс: {walletError}
-                                    </Alert>
-                                )}
-                                {orgSettingsError && (
-                                    <Alert
-                                        severity="warning"
-                                        variant="outlined"
-                                        sx={getAlertSx('warning')}
-                                        action={
-                                            <Button
-                                                color="inherit"
-                                                size="small"
-                                                onClick={() => void fetchOrgSettings()}
-                                                disabled={orgSettingsLoading}
-                                                sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
-                                            >
-                                                Повторить
-                                            </Button>
-                                        }
-                                    >
-                                        Не удалось загрузить реквизиты: {orgSettingsError}
-                                    </Alert>
-                                )}
-                            </Stack>
-                        </Box>
-                    )}
+                            '& > *': {
+                                boxSizing: 'border-box',
+                            },
+                        }}
+                    >
+                        {showNotificationsCard && (
+                            <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
+                                <Stack spacing={1.5}>
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Уведомления
+                                    </Typography>
+                                    {walletError && (
+                                        <Alert severity="warning" sx={getAlertSx('warning')}>
+                                            Не удалось загрузить баланс: {walletError}
+                                        </Alert>
+                                    )}
+                                    {orgSettingsError && (
+                                        <Alert
+                                            severity="warning"
+                                            variant="outlined"
+                                            sx={getAlertSx('warning')}
+                                            action={
+                                                <Button
+                                                    color="inherit"
+                                                    size="small"
+                                                    onClick={() => void fetchOrgSettings()}
+                                                    disabled={orgSettingsLoading}
+                                                    sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
+                                                >
+                                                    Повторить
+                                                </Button>
+                                            }
+                                        >
+                                            Не удалось загрузить реквизиты: {orgSettingsError}
+                                        </Alert>
+                                    )}
+                                </Stack>
+                            </Box>
+                        )}
 
                     {org && (
                         <Box>
@@ -1712,117 +1702,117 @@ export default function OrgSettingsPage() {
                         </Box>
                     )}
 
-                    <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
-                        <Stack spacing={1.5}>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <AccountBalanceWalletIcon fontSize="small" />
-                                <Typography variant="subtitle1" fontWeight={600}>
-                                    Баланс организации
-                                </Typography>
-                            </Stack>
-                            <Typography variant="h4" fontWeight={700}>
-                                {walletLoading
-                                    ? '—'
-                                    : `${(walletInfo?.balance ?? 0).toFixed(2)} ${walletInfo?.currency ?? 'RUB'}`}
-                            </Typography>
-                            <Typography variant="body2" color={textSecondary}>
-                                Списания за хранение рассчитываются почасово.
-                            </Typography>
-                            <Button
-                                variant="outlined"
-                                onClick={() => {
-                                    setWalletDialogOpen(true);
-                                    void fetchWalletTransactions();
-                                }}
-                                sx={{ borderRadius: buttonRadius, textTransform: 'none', alignSelf: 'flex-start' }}
-                            >
-                                История операций
-                            </Button>
-                        </Stack>
-                    </Box>
-
-                    <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
-                        <Stack spacing={2}>
-                            <Stack direction="row" alignItems="center" justifyContent="space-between">
-                                <Typography variant="subtitle1" fontWeight={600}>
-                                    Проекты
-                                </Typography>
-                                <Stack direction="row" spacing={1}>
-                                    <Tooltip title="Открыть список">
-                                        <span>
-                                            <IconButton onClick={() => setProjectsDialogOpen(true)}>
-                                                <PreviewIcon />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                    <Tooltip title="К проектам">
-                                        <span>
-                                            <IconButton onClick={goToProjectsPage}>
-                                                <DriveFileMoveIcon />
-                                            </IconButton>
-                                        </span>
-                                    </Tooltip>
-                                </Stack>
-                            </Stack>
-                            <Typography variant="body2" color={textSecondary}>
-                                Активных проектов: {activeProjectsCount} из {projectsLimitLabel}.
-                            </Typography>
-                            {projectsLoading ? (
+                        <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
+                            <Stack spacing={1.5}>
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <CircularProgress size={18} />
-                                    <Typography variant="body2">Загружаем проекты…</Typography>
+                                    <AccountBalanceWalletIcon fontSize="small" />
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Баланс организации
+                                    </Typography>
                                 </Stack>
-                            ) : projectPreview.length > 0 ? (
-                                <Stack spacing={1}>
-                                    {projectPreview.map((project) => (
-                                        <Box
-                                            key={project._id}
-                                            sx={{
-                                                borderRadius: 1,
-                                                p: 1.25,
-                                                border: `1px solid ${cardBorder}`,
-                                                backgroundColor: isDarkMode
-                                                    ? 'rgba(12,16,26,0.7)'
-                                                    : 'rgba(255,255,255,0.7)',
-                                            }}
-                                        >
-                                            <Typography variant="body2" fontWeight={600}>
-                                                {project.name}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {project.key} · {project.regionCode || '—'}
-                                            </Typography>
-                                        </Box>
-                                    ))}
-                                </Stack>
-                            ) : (
-                                <Typography variant="body2" color={textSecondary}>
-                                    Проектов пока нет.
+                                <Typography variant="h4" fontWeight={700}>
+                                    {walletLoading
+                                        ? '—'
+                                        : `${(walletInfo?.balance ?? 0).toFixed(2)} ${walletInfo?.currency ?? 'RUB'}`}
                                 </Typography>
-                            )}
-                            <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                                <Typography variant="body2" color={textSecondary}>
+                                    Списания за хранение рассчитываются почасово.
+                                </Typography>
                                 <Button
-                                    variant="contained"
-                                    onClick={() => setProjectsDialogOpen(true)}
-                                    sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
+                                    variant="outlined"
+                                    onClick={() => {
+                                        setWalletDialogOpen(true);
+                                        void fetchWalletTransactions();
+                                    }}
+                                    sx={{ borderRadius: buttonRadius, textTransform: 'none', alignSelf: 'flex-start' }}
                                 >
-                                    Открыть список
+                                    История операций
                                 </Button>
-                                <Tooltip title={creationTooltip} disableHoverListener={!disableCreationActions}>
-                                    <span>
-                                        <Button
-                                            variant="outlined"
-                                            onClick={() => openProjectDialog()}
-                                            disabled={disableCreationActions}
-                                            sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
-                                        >
-                                            Создать проект
-                                        </Button>
-                                    </span>
-                                </Tooltip>
                             </Stack>
-                        </Stack>
-                    </Box>
+                        </Box>
+
+                        <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
+                            <Stack spacing={2}>
+                                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        Проекты
+                                    </Typography>
+                                    <Stack direction="row" spacing={1}>
+                                        <Tooltip title="Открыть список">
+                                            <span>
+                                                <IconButton onClick={() => setProjectsDialogOpen(true)}>
+                                                    <PreviewIcon />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                        <Tooltip title="К проектам">
+                                            <span>
+                                                <IconButton onClick={goToProjectsPage}>
+                                                    <DriveFileMoveIcon />
+                                                </IconButton>
+                                            </span>
+                                        </Tooltip>
+                                    </Stack>
+                                </Stack>
+                                <Typography variant="body2" color={textSecondary}>
+                                    Активных проектов: {activeProjectsCount} из {projectsLimitLabel}.
+                                </Typography>
+                                {projectsLoading ? (
+                                    <Stack direction="row" spacing={1} alignItems="center">
+                                        <CircularProgress size={18} />
+                                        <Typography variant="body2">Загружаем проекты…</Typography>
+                                    </Stack>
+                                ) : projectPreview.length > 0 ? (
+                                    <Stack spacing={1}>
+                                        {projectPreview.map((project) => (
+                                            <Box
+                                                key={project._id}
+                                                sx={{
+                                                    borderRadius: 1,
+                                                    p: 1.25,
+                                                    border: `1px solid ${cardBorder}`,
+                                                    backgroundColor: isDarkMode
+                                                        ? 'rgba(12,16,26,0.7)'
+                                                        : 'rgba(255,255,255,0.7)',
+                                                }}
+                                            >
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {project.name}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {project.key} · {project.regionCode || '—'}
+                                                </Typography>
+                                            </Box>
+                                        ))}
+                                    </Stack>
+                                ) : (
+                                    <Typography variant="body2" color={textSecondary}>
+                                        Проектов пока нет.
+                                    </Typography>
+                                )}
+                                <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                                    <Button
+                                        variant="contained"
+                                        onClick={() => setProjectsDialogOpen(true)}
+                                        sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
+                                    >
+                                        Открыть список
+                                    </Button>
+                                    <Tooltip title={creationTooltip} disableHoverListener={!disableCreationActions}>
+                                        <span>
+                                            <Button
+                                                variant="outlined"
+                                                onClick={() => openProjectDialog()}
+                                                disabled={disableCreationActions}
+                                                sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
+                                            >
+                                                Создать проект
+                                            </Button>
+                                        </span>
+                                    </Tooltip>
+                                </Stack>
+                            </Stack>
+                        </Box>
 
                     <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
                         <Stack spacing={2}>
@@ -2157,7 +2147,8 @@ export default function OrgSettingsPage() {
                                 </Button>
                             </Stack>
                         </Box>
-                </Masonry>
+                    </Masonry>
+                </Box>
             </Box>
 
             <Dialog
