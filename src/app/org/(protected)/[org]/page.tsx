@@ -26,6 +26,7 @@ import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import CancelIcon from '@mui/icons-material/Cancel';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import SettingsIcon from '@mui/icons-material/Settings';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import PreviewIcon from '@mui/icons-material/Preview';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
@@ -702,6 +703,7 @@ export default function OrgSettingsPage() {
             void loadSubscription();
             void fetchApplications();
             void fetchWalletInfo();
+            void fetchWalletTransactions();
             void loadPlanConfigs();
             void fetchIntegrations();
         }
@@ -714,6 +716,7 @@ export default function OrgSettingsPage() {
         loadSubscription,
         fetchApplications,
         fetchWalletInfo,
+        fetchWalletTransactions,
         loadPlanConfigs,
         fetchIntegrations,
         fetchCurrentUser,
@@ -725,6 +728,7 @@ export default function OrgSettingsPage() {
         void loadSubscription();
         void fetchApplications();
         void fetchWalletInfo();
+        void fetchWalletTransactions();
         void fetchIntegrations();
     };
 
@@ -1078,12 +1082,6 @@ export default function OrgSettingsPage() {
     const iconShadow = isDarkMode ? '0 6px 20px rgba(0,0,0,0.45)' : '0 6px 20px rgba(15,23,42,0.12)';
     const disabledIconColor = isDarkMode ? 'rgba(148,163,184,0.6)' : 'rgba(148,163,184,0.45)';
     const buttonShadow = isDarkMode ? '0 25px 45px rgba(0,0,0,0.55)' : '0 25px 45px rgba(15,23,42,0.15)';
-    const layoutDebug = true;
-    const debugOutlineSx = layoutDebug
-        ? { outline: '1px dashed rgba(255, 99, 71, 0.9)', outlineOffset: -1 }
-        : null;
-    const debugHeaderBgSx = layoutDebug ? { backgroundColor: 'rgba(34,197,94,0.06)' } : null;
-    const debugGridBgSx = layoutDebug ? { backgroundColor: 'rgba(59,130,246,0.06)' } : null;
     const pageWrapperSx = {
         minHeight: '100%',
         py: { xs: 4, md: 6 },
@@ -1205,7 +1203,7 @@ export default function OrgSettingsPage() {
         gridTemplateColumns: {
             xs: '1fr',
             md: 'repeat(2, minmax(0, 1fr))',
-            lg: 'repeat(3, minmax(0, 1fr))',
+            lg: 'repeat(2, minmax(0, 1fr))',
         },
         gap: {
             xs: muiTheme.spacing(masonrySpacing.xs),
@@ -1374,14 +1372,11 @@ export default function OrgSettingsPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 3,
-                    ...(debugOutlineSx ?? {}),
                 })}
             >
                 <Box
                     sx={{
                         ...panelBaseSx,
-                        ...(debugHeaderBgSx ?? {}),
-                        ...(debugOutlineSx ?? {}),
                         '&::after': {
                             content: '""',
                             position: 'absolute',
@@ -1510,7 +1505,6 @@ export default function OrgSettingsPage() {
                             mt: { xs: 2.5, md: 3 },
                             px: { xs: 2, md: 2.5 },
                             flexWrap: { xs: 'nowrap', md: 'wrap' },
-                            ...(debugOutlineSx ?? {}),
                         }}
                     >
                         <Box sx={statCardSx}>
@@ -1664,7 +1658,7 @@ export default function OrgSettingsPage() {
                     </Box>
                 </Box>
 
-                <Box sx={(muiTheme) => ({ ...gridSx(muiTheme), ...(debugGridBgSx ?? {}), ...(debugOutlineSx ?? {}) })}>
+                <Box sx={(muiTheme) => gridSx(muiTheme)}>
                         {showNotificationsCard && (
                             <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
                                 <Stack spacing={1.5}>
@@ -1725,6 +1719,33 @@ export default function OrgSettingsPage() {
                                 <Typography variant="body2" color={textSecondary}>
                                     Списания за хранение рассчитываются почасово.
                                 </Typography>
+                                <Stack spacing={0.75}>
+                                    {walletTxLoading ? (
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <CircularProgress size={16} />
+                                            <Typography variant="body2">Загружаем операции…</Typography>
+                                        </Stack>
+                                    ) : walletTxError ? (
+                                        <Typography variant="body2" color={textSecondary}>
+                                            Не удалось загрузить операции: {walletTxError}
+                                        </Typography>
+                                    ) : walletTx.length > 0 ? (
+                                        walletTx.slice(0, 3).map((tx) => (
+                                            <Stack key={tx.id} direction="row" justifyContent="space-between">
+                                                <Typography variant="body2" color={textSecondary}>
+                                                    {tx.type}
+                                                </Typography>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {tx.amount.toFixed(2)} {walletInfo?.currency ?? 'RUB'}
+                                                </Typography>
+                                            </Stack>
+                                        ))
+                                    ) : (
+                                        <Typography variant="body2" color={textSecondary}>
+                                            Операций пока нет.
+                                        </Typography>
+                                    )}
+                                </Stack>
                                 <Button
                                     variant="outlined"
                                     onClick={() => {
@@ -1748,7 +1769,7 @@ export default function OrgSettingsPage() {
                                         <Tooltip title="Открыть список">
                                             <span>
                                                 <IconButton onClick={() => setProjectsDialogOpen(true)}>
-                                                    <PreviewIcon />
+                                                    <OpenInFullIcon />
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
@@ -1783,7 +1804,18 @@ export default function OrgSettingsPage() {
                                                         : 'rgba(255,255,255,0.7)',
                                                 }}
                                             >
-                                                <Typography variant="body2" fontWeight={600}>
+                                                <Typography
+                                                    variant="body2"
+                                                    fontWeight={600}
+                                                    sx={{
+                                                        cursor: org ? 'pointer' : 'default',
+                                                        '&:hover': { textDecoration: org ? 'underline' : 'none' },
+                                                    }}
+                                                    onClick={() => {
+                                                        if (!org) return;
+                                                        router.push(`/org/${org}/projects/${project._id}/tasks`);
+                                                    }}
+                                                >
                                                     {project.name}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
@@ -2002,7 +2034,7 @@ export default function OrgSettingsPage() {
                                         <Tooltip title="Открыть список">
                                             <span>
                                                 <IconButton onClick={() => setMembersDialogOpen(true)}>
-                                                    <PreviewIcon />
+                                                    <OpenInFullIcon />
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
@@ -2096,7 +2128,7 @@ export default function OrgSettingsPage() {
                                         <Tooltip title="Открыть список">
                                             <span>
                                                 <IconButton onClick={() => setApplicationsDialogOpen(true)}>
-                                                    <PreviewIcon />
+                                                    <OpenInFullIcon />
                                                 </IconButton>
                                             </span>
                                         </Tooltip>
