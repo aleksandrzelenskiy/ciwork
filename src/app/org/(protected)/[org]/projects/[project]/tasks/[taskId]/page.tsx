@@ -226,14 +226,24 @@ export default function TaskDetailsPage() {
 
     const router = useRouter();
     const theme = useTheme();
-    const { masonryCardSx } = getOrgPageStyles(theme);
+    const { masonryCardSx, cardBaseSx, cardBorder, panelBaseSx } = getOrgPageStyles(theme);
+    const cardPadding = React.useMemo(() => ({ xs: 2, md: 2.5 }), []);
+    const accordionSx = {
+        backgroundColor: 'transparent',
+        '&:before': { display: 'none' },
+    } as const;
+    const accordionSummarySx = {
+        px: 0,
+        '& .MuiAccordionSummary-content': { m: 0 },
+    } as const;
+    const accordionDetailsSx = { pt: 0, px: 0 } as const;
     const CardItem = React.useMemo(() => {
         const Component = React.forwardRef<HTMLDivElement, PaperProps>(({ sx, ...rest }, ref) => (
-            <Paper ref={ref} {...rest} sx={{ ...masonryCardSx, ...sx }} />
+            <Paper ref={ref} {...rest} sx={{ ...masonryCardSx, p: cardPadding, minWidth: 0, ...sx }} />
         ));
         Component.displayName = 'CardItem';
         return Component;
-    }, [masonryCardSx]);
+    }, [cardPadding, masonryCardSx]);
 
     const pageGutter = { xs: 1.5, sm: 2.5, md: 3, lg: 3.5, xl: 4 };
     const masonrySpacing = { xs: 1, sm: 1.5, md: 2 } as const;
@@ -1530,128 +1540,130 @@ export default function TaskDetailsPage() {
             }}
         >
             {/* Header */}
-            <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-                    <Tooltip title="Назад">
-                        <IconButton onClick={() => router.back()}>
-                            <ArrowBackIcon />
-                        </IconButton>
-                    </Tooltip>
-                    <Box sx={{ minWidth: 0 }}>
-                        <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap">
-                            <Typography variant="h6" sx={{ wordBreak: 'break-word' }}>
-                                {task?.taskName || 'Задача'}
+            <Box sx={{ ...panelBaseSx, px: cardPadding }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                        <Tooltip title="Назад">
+                            <IconButton onClick={() => router.back()}>
+                                <ArrowBackIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <Box sx={{ minWidth: 0 }}>
+                            <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap">
+                                <Typography variant="h6" sx={{ wordBreak: 'break-word' }}>
+                                    {task?.taskName || 'Задача'}
+                                </Typography>
+                                {task?.bsNumber && (
+                                    <Typography variant="h6">{task.bsNumber}</Typography>
+                                )}
+
+                                {task?.taskId && (
+                                    <Chip
+                                        label={task.taskId}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{ mt: 0.5 }}
+                                    />
+                                )}
+                                {task?.status && (
+                                    <Chip
+                                        label={getStatusLabel(task.status)}
+                                        size="small"
+                                        sx={{
+                                            bgcolor: getStatusColor(normalizeStatusTitle(task.status)),
+                                            color: '#fff',
+                                            fontWeight: 500,
+                                        }}
+                                    />
+                                )}
+                            </Stack>
+
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 0 }}
+                            >
+                                Организация:{' '}
+                                <Link
+                                    href={`/org/${encodeURIComponent(org)}`}
+                                    underline="hover"
+                                    color="inherit"
+                                >
+                                    {orgName || org}
+                                </Link>
+                                • Проект:{' '}
+                                <Link
+                                    href={`/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
+                                        project
+                                    )}/tasks`}
+                                    underline="hover"
+                                    color="inherit"
+                                >
+                                    {project}
+                                </Link>
                             </Typography>
-                            {task?.bsNumber && (
-                                <Typography variant="h6">{task.bsNumber}</Typography>
-                            )}
-
-                            {task?.taskId && (
-                                <Chip
-                                    label={task.taskId}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ mt: 0.5 }}
-                                />
-                            )}
-                            {task?.status && (
-                                <Chip
-                                    label={getStatusLabel(task.status)}
-                                    size="small"
-                                    sx={{
-                                        bgcolor: getStatusColor(normalizeStatusTitle(task.status)),
-                                        color: '#fff',
-                                        fontWeight: 500,
-                                    }}
-                                />
-                            )}
-                        </Stack>
-
-                        <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}
-                        >
-                            Организация:{' '}
-                            <Link
-                                href={`/org/${encodeURIComponent(org)}`}
-                                underline="hover"
-                                color="inherit"
+                        </Box>
+                    </Stack>
+                    <Stack direction="row" spacing={1}>
+                        {task && !executorAssigned && (
+                            <Button
+                                variant={task.visibility === 'public' ? 'outlined' : 'contained'}
+                                color={task.visibility === 'public' ? 'inherit' : 'primary'}
+                                size="small"
+                                startIcon={<GroupsIcon />}
+                                onClick={() =>
+                                    task.visibility === 'public'
+                                        ? void handlePublishToggle(false)
+                                        : openPublishDialog()
+                                }
+                                disabled={publishLoading}
+                                sx={{ borderRadius: UI_RADIUS.button }}
                             >
-                                {orgName || org}
-                            </Link>
-                            • Проект:{' '}
-                            <Link
-                                href={`/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
-                                    project
-                                )}/tasks`}
-                                underline="hover"
-                                color="inherit"
-                            >
-                                {project}
-                            </Link>
-                        </Typography>
-                    </Box>
-                </Stack>
-                <Stack direction="row" spacing={1}>
-                    {task && !executorAssigned && (
-                        <Button
-                            variant={task.visibility === 'public' ? 'outlined' : 'contained'}
-                            color={task.visibility === 'public' ? 'inherit' : 'primary'}
-                            size="small"
-                            startIcon={<GroupsIcon />}
-                            onClick={() =>
-                                task.visibility === 'public'
-                                    ? void handlePublishToggle(false)
-                                    : openPublishDialog()
-                            }
-                            disabled={publishLoading}
-                            sx={{ borderRadius: UI_RADIUS.button }}
-                        >
-                            {publishLoading
-                                ? 'Сохраняем…'
-                                : task.visibility === 'public'
-                                    ? 'Снять с публикации'
-                                    : 'Опубликовать'}
-                        </Button>
-                    )}
-                    <Tooltip title="Настроить">
-                        <IconButton
-                            onClick={() => setSectionDialogOpen(true)}
-                            color={hasCustomVisibility ? 'primary' : 'default'}
-                        >
-                            <GridViewOutlinedIcon />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Обновить">
-                        <span>
-                            <IconButton onClick={() => void load()} disabled={loading}>
-                                <RefreshIcon />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
-                    <Tooltip title="Редактировать">
-                        <span>
+                                {publishLoading
+                                    ? 'Сохраняем…'
+                                    : task.visibility === 'public'
+                                        ? 'Снять с публикации'
+                                        : 'Опубликовать'}
+                            </Button>
+                        )}
+                        <Tooltip title="Настроить">
                             <IconButton
-                                onClick={() => task && setEditOpen(true)}
-                                disabled={loading || !task}
+                                onClick={() => setSectionDialogOpen(true)}
+                                color={hasCustomVisibility ? 'primary' : 'default'}
                             >
-                                <EditNoteIcon />
+                                <GridViewOutlinedIcon />
                             </IconButton>
-                        </span>
-                    </Tooltip>
-                    <Tooltip title="Удалить">
-                        <span>
-                            <IconButton
-                                onClick={() => task && setDeleteOpen(true)}
-                                disabled={loading || !task}
-                            >
-                                <DeleteOutlineIcon />
-                            </IconButton>
-                        </span>
-                    </Tooltip>
+                        </Tooltip>
+                        <Tooltip title="Обновить">
+                            <span>
+                                <IconButton onClick={() => void load()} disabled={loading}>
+                                    <RefreshIcon />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Редактировать">
+                            <span>
+                                <IconButton
+                                    onClick={() => task && setEditOpen(true)}
+                                    disabled={loading || !task}
+                                >
+                                    <EditNoteIcon />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title="Удалить">
+                            <span>
+                                <IconButton
+                                    onClick={() => task && setDeleteOpen(true)}
+                                    disabled={loading || !task}
+                                >
+                                    <DeleteOutlineIcon />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                    </Stack>
                 </Stack>
-            </Stack>
+            </Box>
 
             {/* Content */}
             {loading ? (
@@ -1659,7 +1671,7 @@ export default function TaskDetailsPage() {
                     <CircularProgress />
                 </Box>
             ) : error ? (
-                <Paper variant="outlined" sx={{ p: 2 }}>
+                <Paper sx={{ ...cardBaseSx, p: cardPadding }}>
                     <Typography color="error" sx={{ mb: 1 }}>
                         {error}
                     </Typography>
@@ -1672,7 +1684,7 @@ export default function TaskDetailsPage() {
                     </Button>
                 </Paper>
             ) : !task ? (
-                <Paper variant="outlined" sx={{ p: 2 }}>
+                <Paper sx={{ ...cardBaseSx, p: cardPadding }}>
                     <Typography>Задача не найдена.</Typography>
                 </Paper>
             ) : (
@@ -1895,7 +1907,15 @@ export default function TaskDetailsPage() {
                                                 <Paper
                                                     key={appId || app.contractorEmail || app.contractorId}
                                                     variant="outlined"
-                                                    sx={{ p: 1.5, borderRadius: UI_RADIUS.item }}
+                                                    sx={{
+                                                        p: 1.5,
+                                                        borderRadius: UI_RADIUS.item,
+                                                        borderColor: cardBorder,
+                                                        backgroundColor:
+                                                            theme.palette.mode === 'dark'
+                                                                ? 'rgba(12,16,26,0.7)'
+                                                                : 'rgba(255,255,255,0.75)',
+                                                    }}
                                                 >
                                                     <Stack
                                                         direction="row"
@@ -2019,9 +2039,9 @@ export default function TaskDetailsPage() {
                                     defaultExpanded
                                     disableGutters
                                     elevation={0}
-                                    sx={{ '&:before': { display: 'none' } }}
+                                    sx={accordionSx}
                                 >
-                                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
                                         <Typography
                                             variant="subtitle1"
                                             fontWeight={600}
@@ -2031,7 +2051,7 @@ export default function TaskDetailsPage() {
                                             Связанные задачи
                                         </Typography>
                                     </AccordionSummary>
-                                    <AccordionDetails sx={{ pt: 0 }}>
+                                    <AccordionDetails sx={accordionDetailsSx}>
                                         <Divider sx={{ mb: 1.5 }} />
                                         <Stack spacing={1}>
                                             {relatedTasks.map((related) => {
@@ -2127,9 +2147,9 @@ export default function TaskDetailsPage() {
                                     defaultExpanded
                                     disableGutters
                                     elevation={0}
-                                    sx={{ '&:before': { display: 'none' } }}
+                                    sx={accordionSx}
                                 >
-                                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
                                         <Box
                                             sx={{
                                                 display: 'flex',
@@ -2166,7 +2186,7 @@ export default function TaskDetailsPage() {
                                             </Tooltip>
                                         </Box>
                                     </AccordionSummary>
-                                    <AccordionDetails sx={{ pt: 0 }}>
+                                    <AccordionDetails sx={accordionDetailsSx}>
                                         <Divider sx={{ mb: 1.5 }} />
                                         {renderWorkItemsTable()}
                                     </AccordionDetails>
@@ -2449,9 +2469,9 @@ export default function TaskDetailsPage() {
                                     defaultExpanded={!!task?.comments?.length}
                                     disableGutters
                                     elevation={0}
-                                    sx={{ '&:before': { display: 'none' } }}
+                                    sx={accordionSx}
                                 >
-                                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
                                         <Box
                                             sx={{
                                                 display: 'flex',
@@ -2488,7 +2508,7 @@ export default function TaskDetailsPage() {
                                             </Tooltip>
                                         </Box>
                                     </AccordionSummary>
-                                    <AccordionDetails sx={{ pt: 0 }}>
+                                    <AccordionDetails sx={accordionDetailsSx}>
                                         <Divider sx={{ mb: 1.5 }} />
                                         {renderCommentsSection()}
                                     </AccordionDetails>
@@ -2498,13 +2518,13 @@ export default function TaskDetailsPage() {
 
                         {/* История */}
                         {isSectionVisible('history') && (
-                            <CardItem sx={{ p: 0, minWidth: 0 }}>
+                            <CardItem sx={{ minWidth: 0 }}>
                                 <Accordion
                                     disableGutters
                                     elevation={0}
-                                    sx={{ '&:before': { display: 'none' } }}
+                                    sx={accordionSx}
                                 >
-                                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
                                         <Typography
                                             variant="subtitle1"
                                             fontWeight={600}
@@ -2519,12 +2539,12 @@ export default function TaskDetailsPage() {
                                             История
                                         </Typography>
                                     </AccordionSummary>
-                                    <AccordionDetails sx={{ pt: 0 }}>
+                                    <AccordionDetails sx={accordionDetailsSx}>
                                         <Divider sx={{ mb: 1.5 }} />
                                         {sortedEvents.length === 0 ? (
                                             <Typography
                                                 color="text.secondary"
-                                                sx={{ px: 2, pb: 1.5 }}
+                                                sx={{ pb: 1 }}
                                             >
                                                 История пуста
                                             </Typography>
@@ -2533,8 +2553,7 @@ export default function TaskDetailsPage() {
                                                 sx={{
                                                     p: 0,
                                                     m: 0,
-                                                    px: 2,
-                                                    pb: 1.5,
+                                                    pb: 1,
                                                     '& .MuiTimelineOppositeContent-root': {
                                                         flex: '0 0 110px',
                                                         whiteSpace: 'normal',
