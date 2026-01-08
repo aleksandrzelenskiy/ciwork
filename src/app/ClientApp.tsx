@@ -193,6 +193,20 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
               },
             },
           },
+          MuiAppBar: {
+            styleOverrides: {
+              root: {
+                borderRadius: 0,
+              },
+            },
+          },
+          MuiDrawer: {
+            styleOverrides: {
+              paper: {
+                borderRadius: 0,
+              },
+            },
+          },
         },
       }),
     [mode]

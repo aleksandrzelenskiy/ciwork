@@ -1079,6 +1079,10 @@ export default function OrgSettingsPage() {
     const iconShadow = isDarkMode ? '0 6px 20px rgba(0,0,0,0.45)' : '0 6px 20px rgba(15,23,42,0.12)';
     const disabledIconColor = isDarkMode ? 'rgba(148,163,184,0.6)' : 'rgba(148,163,184,0.45)';
     const buttonShadow = isDarkMode ? '0 25px 45px rgba(0,0,0,0.55)' : '0 25px 45px rgba(15,23,42,0.15)';
+    const layoutDebug = true;
+    const debugOutlineSx = layoutDebug
+        ? { outline: '1px dashed rgba(255, 99, 71, 0.9)', outlineOffset: -1 }
+        : null;
     const pageWrapperSx = {
         minHeight: '100%',
         py: { xs: 4, md: 6 },
@@ -1348,6 +1352,8 @@ export default function OrgSettingsPage() {
                 <Box
                     sx={{
                         ...panelBaseSx,
+                        px: 0,
+                        ...(debugOutlineSx ?? {}),
                         '&::after': {
                             content: '""',
                             position: 'absolute',
@@ -1359,117 +1365,119 @@ export default function OrgSettingsPage() {
                         },
                     }}
                 >
-                    <Stack
-                        direction={{ xs: 'column', md: 'row' }}
-                        spacing={{ xs: 2, md: 3 }}
-                        alignItems={{ xs: 'flex-start', md: 'center' }}
-                        justifyContent="space-between"
-                    >
-                        <Box sx={{ width: '100%' }}>
-                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
-                                <Box
+                    <Box sx={{ px: panelPadding }}>
+                        <Stack
+                            direction={{ xs: 'column', md: 'row' }}
+                            spacing={{ xs: 2, md: 3 }}
+                            alignItems={{ xs: 'flex-start', md: 'center' }}
+                            justifyContent="space-between"
+                        >
+                            <Box sx={{ width: '100%' }}>
+                                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+                                    <Box
+                                        sx={{
+                                            width: 44,
+                                            height: 44,
+                                            borderRadius: '16px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            backgroundColor: isDarkMode
+                                                ? 'rgba(59,130,246,0.18)'
+                                                : 'rgba(59,130,246,0.15)',
+                                            color: isDarkMode ? '#93c5fd' : '#1d4ed8',
+                                            boxShadow: iconShadow,
+                                        }}
+                                    >
+                                        <BusinessIcon />
+                                    </Box>
+                                    <Typography
+                                        variant="h5"
+                                        fontWeight={700}
+                                        color={textPrimary}
+                                        sx={{ fontSize: { xs: '1.55rem', md: '1.95rem' } }}
+                                    >
+                                        {orgName || org} — Организация
+                                    </Typography>
+                                    <Tooltip title={settingsTooltip}>
+                                        <span>
+                                            <IconButton
+                                                onClick={canEditOrgSettings ? () => setOrgSettingsOpen(true) : undefined}
+                                                disabled={settingsButtonDisabled}
+                                                sx={{
+                                                    borderRadius: '12px',
+                                                    border: `1px solid ${iconBorderColor}`,
+                                                    backgroundColor: iconBg,
+                                                    boxShadow: iconShadow,
+                                                    '&:hover': { backgroundColor: iconHoverBg },
+                                                    '&.Mui-disabled': { color: disabledIconColor },
+                                                }}
+                                            >
+                                                <SettingsIcon />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                </Stack>
+                                <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
+                                    Управляйте подпиской, участниками и проектами организации.
+                                </Typography>
+                            </Box>
+                            <Stack
+                                direction={{ xs: 'column', sm: 'row' }}
+                                spacing={1.25}
+                                alignItems={{ xs: 'stretch', sm: 'center' }}
+                                sx={{ width: '100%', justifyContent: 'flex-end', flexWrap: 'wrap', rowGap: 1 }}
+                            >
+                                <Button
+                                    variant="outlined"
+                                    onClick={goToProjectsPage}
+                                    startIcon={<DriveFileMoveIcon />}
                                     sx={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: '16px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
+                                        ...actionButtonBaseSx,
+                                        borderColor: headerBorder,
+                                        color: textPrimary,
                                         backgroundColor: isDarkMode
-                                            ? 'rgba(59,130,246,0.18)'
-                                            : 'rgba(59,130,246,0.15)',
-                                        color: isDarkMode ? '#93c5fd' : '#1d4ed8',
-                                        boxShadow: iconShadow,
+                                            ? 'rgba(15,18,28,0.65)'
+                                            : 'rgba(255,255,255,0.85)',
                                     }}
                                 >
-                                    <BusinessIcon />
-                                </Box>
-                                <Typography
-                                    variant="h5"
-                                    fontWeight={700}
-                                    color={textPrimary}
-                                    sx={{ fontSize: { xs: '1.55rem', md: '1.95rem' } }}
-                                >
-                                    {orgName || org} — Организация
-                                </Typography>
-                                <Tooltip title={settingsTooltip}>
-                                    <span>
-                                        <IconButton
-                                            onClick={canEditOrgSettings ? () => setOrgSettingsOpen(true) : undefined}
-                                            disabled={settingsButtonDisabled}
+                                    К проектам
+                                </Button>
+                                <Tooltip title={inviteTooltip} disableHoverListener={!disableCreationActions}>
+                                    <span style={{ display: 'inline-flex' }}>
+                                        <Button
+                                            variant="contained"
+                                            disableElevation
+                                            startIcon={<PersonAddIcon />}
+                                            onClick={() => {
+                                                if (disableCreationActions) return;
+                                                setInviteExistingEmails(members.map((m) => m.userEmail.toLowerCase()));
+                                                setInviteOpen(true);
+                                            }}
+                                            disabled={disableCreationActions}
                                             sx={{
-                                                borderRadius: '12px',
-                                                border: `1px solid ${iconBorderColor}`,
-                                                backgroundColor: iconBg,
-                                                boxShadow: iconShadow,
-                                                '&:hover': { backgroundColor: iconHoverBg },
-                                                '&.Mui-disabled': { color: disabledIconColor },
+                                                ...actionButtonBaseSx,
+                                                border: 'none',
+                                                color: '#ffffff',
+                                                backgroundImage: disableCreationActions
+                                                    ? isDarkMode
+                                                        ? 'linear-gradient(120deg, rgba(148,163,184,0.4), rgba(100,116,139,0.35))'
+                                                        : 'linear-gradient(120deg, rgba(148,163,184,0.3), rgba(100,116,139,0.25))'
+                                                    : 'linear-gradient(120deg, #3b82f6, #6366f1)',
                                             }}
                                         >
-                                            <SettingsIcon />
-                                        </IconButton>
+                                            Пригласить
+                                        </Button>
                                     </span>
                                 </Tooltip>
                             </Stack>
-                            <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                Управляйте подпиской, участниками и проектами организации.
-                            </Typography>
-                        </Box>
-                        <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            spacing={1.25}
-                            alignItems={{ xs: 'stretch', sm: 'center' }}
-                            sx={{ width: '100%', justifyContent: 'flex-end', flexWrap: 'wrap', rowGap: 1 }}
-                        >
-                            <Button
-                                variant="outlined"
-                                onClick={goToProjectsPage}
-                                startIcon={<DriveFileMoveIcon />}
-                                sx={{
-                                    ...actionButtonBaseSx,
-                                    borderColor: headerBorder,
-                                    color: textPrimary,
-                                    backgroundColor: isDarkMode
-                                        ? 'rgba(15,18,28,0.65)'
-                                        : 'rgba(255,255,255,0.85)',
-                                }}
-                            >
-                                К проектам
-                            </Button>
-                            <Tooltip title={inviteTooltip} disableHoverListener={!disableCreationActions}>
-                                <span style={{ display: 'inline-flex' }}>
-                                    <Button
-                                        variant="contained"
-                                        disableElevation
-                                        startIcon={<PersonAddIcon />}
-                                        onClick={() => {
-                                            if (disableCreationActions) return;
-                                            setInviteExistingEmails(members.map((m) => m.userEmail.toLowerCase()));
-                                            setInviteOpen(true);
-                                        }}
-                                        disabled={disableCreationActions}
-                                        sx={{
-                                            ...actionButtonBaseSx,
-                                            border: 'none',
-                                            color: '#ffffff',
-                                            backgroundImage: disableCreationActions
-                                                ? isDarkMode
-                                                    ? 'linear-gradient(120deg, rgba(148,163,184,0.4), rgba(100,116,139,0.35))'
-                                                    : 'linear-gradient(120deg, rgba(148,163,184,0.3), rgba(100,116,139,0.25))'
-                                                : 'linear-gradient(120deg, #3b82f6, #6366f1)',
-                                        }}
-                                    >
-                                        Пригласить
-                                    </Button>
-                                </span>
-                            </Tooltip>
                         </Stack>
-                    </Stack>
+                    </Box>
 
                     <Box
                         sx={(muiTheme) => ({
                             mt: { xs: 2.5, md: 3 },
-                            mx: { xs: -panelPadding.xs, md: -panelPadding.md },
+                            ...(debugOutlineSx ?? {}),
                             display: 'grid',
                             gridTemplateColumns: {
                                 xs: '1fr',
@@ -1545,99 +1553,101 @@ export default function OrgSettingsPage() {
                         </Box>
                     </Box>
 
-                    <Stack spacing={1.5} sx={{ mt: { xs: 2, md: 2.5 } }}>
-                        {subscriptionError && (
-                            <Alert severity="error" sx={getAlertSx('error')}>
-                                Не удалось получить статус подписки: {subscriptionError}
-                            </Alert>
-                        )}
-                        {!subscriptionError && subscriptionLoading && (
-                            <Alert severity="info" sx={getAlertSx('info')}>
-                                Проверяем статус подписки…
-                            </Alert>
-                        )}
-                        {!subscriptionError && !subscriptionLoading && billing?.readOnly && (
-                            <Alert
-                                severity="warning"
-                                sx={getAlertSx('warning')}
-                                action={
-                                    billing.graceAvailable && isOwnerOrAdmin ? (
-                                        <Button
-                                            size="small"
-                                            variant="contained"
-                                            onClick={handleActivateGrace}
-                                            sx={{
-                                                ...actionButtonBaseSx,
-                                                px: 2,
-                                                py: 0.6,
-                                                backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
-                                                color: '#2f1000',
-                                            }}
-                                        >
-                                            Grace 3 дня
-                                        </Button>
-                                    ) : undefined
-                                }
-                            >
-                                {billing.reason ?? 'Доступ ограничен: недостаточно средств'}
-                            </Alert>
-                        )}
-                        {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && (
-                            <Alert severity="warning" sx={getAlertSx('warning')}>
-                                <Stack
-                                    direction={{ xs: 'column', sm: 'row' }}
-                                    spacing={2}
-                                    alignItems={{ xs: 'flex-start', sm: 'center' }}
-                                    justifyContent="space-between"
+                    <Box sx={{ px: panelPadding }}>
+                        <Stack spacing={1.5} sx={{ mt: { xs: 2, md: 2.5 } }}>
+                            {subscriptionError && (
+                                <Alert severity="error" sx={getAlertSx('error')}>
+                                    Не удалось получить статус подписки: {subscriptionError}
+                                </Alert>
+                            )}
+                            {!subscriptionError && subscriptionLoading && (
+                                <Alert severity="info" sx={getAlertSx('info')}>
+                                    Проверяем статус подписки…
+                                </Alert>
+                            )}
+                            {!subscriptionError && !subscriptionLoading && billing?.readOnly && (
+                                <Alert
+                                    severity="warning"
+                                    sx={getAlertSx('warning')}
+                                    action={
+                                        billing.graceAvailable && isOwnerOrAdmin ? (
+                                            <Button
+                                                size="small"
+                                                variant="contained"
+                                                onClick={handleActivateGrace}
+                                                sx={{
+                                                    ...actionButtonBaseSx,
+                                                    px: 2,
+                                                    py: 0.6,
+                                                    backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
+                                                    color: '#2f1000',
+                                                }}
+                                            >
+                                                Grace 3 дня
+                                            </Button>
+                                        ) : undefined
+                                    }
                                 >
-                                    <Box>
-                                        <Typography fontWeight={600} color={textPrimary}>
-                                            Подписка не активна.
-                                        </Typography>
-                                        {isTrialExpired && formattedTrialEnd && (
-                                            <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                                Пробный период завершился {formattedTrialEnd}.
+                                    {billing.reason ?? 'Доступ ограничен: недостаточно средств'}
+                                </Alert>
+                            )}
+                            {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && (
+                                <Alert severity="warning" sx={getAlertSx('warning')}>
+                                    <Stack
+                                        direction={{ xs: 'column', sm: 'row' }}
+                                        spacing={2}
+                                        alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                        justifyContent="space-between"
+                                    >
+                                        <Box>
+                                            <Typography fontWeight={600} color={textPrimary}>
+                                                Подписка не активна.
                                             </Typography>
-                                        )}
-                                        <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                            Получите бесплатный пробный период на 10 дней с тарифом PRO.
-                                        </Typography>
-                                        {!canStartTrial && (
+                                            {isTrialExpired && formattedTrialEnd && (
+                                                <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
+                                                    Пробный период завершился {formattedTrialEnd}.
+                                                </Typography>
+                                            )}
                                             <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                                Обратитесь к владельцу организации, чтобы активировать подписку.
+                                                Получите бесплатный пробный период на 10 дней с тарифом PRO.
                                             </Typography>
+                                            {!canStartTrial && (
+                                                <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
+                                                    Обратитесь к владельцу организации, чтобы активировать подписку.
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                        {canStartTrial && (
+                                            <Button
+                                                variant="contained"
+                                                onClick={handleStartTrial}
+                                                disabled={startTrialLoading}
+                                                sx={{
+                                                    ...actionButtonBaseSx,
+                                                    px: { xs: 2.25, md: 2.75 },
+                                                    py: 0.9,
+                                                    backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
+                                                    color: '#2f1000',
+                                                }}
+                                            >
+                                                {startTrialLoading ? 'Запускаем…' : 'Активировать'}
+                                            </Button>
                                         )}
-                                    </Box>
-                                    {canStartTrial && (
-                                        <Button
-                                            variant="contained"
-                                            onClick={handleStartTrial}
-                                            disabled={startTrialLoading}
-                                            sx={{
-                                                ...actionButtonBaseSx,
-                                                px: { xs: 2.25, md: 2.75 },
-                                                py: 0.9,
-                                                backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
-                                                color: '#2f1000',
-                                            }}
-                                        >
-                                            {startTrialLoading ? 'Запускаем…' : 'Активировать'}
-                                        </Button>
+                                    </Stack>
+                                </Alert>
+                            )}
+                            {!subscriptionError && !subscriptionLoading && isTrialActive && (
+                                <Alert severity="info" sx={getAlertSx('info')}>
+                                    Пробный период активен до {formattedTrialEnd ?? '—'}
+                                    {typeof trialDaysLeft === 'number' && (
+                                        <Typography component="span" sx={{ ml: 0.5 }}>
+                                            (осталось {trialDaysLeft} дн.)
+                                        </Typography>
                                     )}
-                                </Stack>
-                            </Alert>
-                        )}
-                        {!subscriptionError && !subscriptionLoading && isTrialActive && (
-                            <Alert severity="info" sx={getAlertSx('info')}>
-                                Пробный период активен до {formattedTrialEnd ?? '—'}
-                                {typeof trialDaysLeft === 'number' && (
-                                    <Typography component="span" sx={{ ml: 0.5 }}>
-                                        (осталось {trialDaysLeft} дн.)
-                                    </Typography>
-                                )}
-                            </Alert>
-                        )}
-                    </Stack>
+                                </Alert>
+                            )}
+                        </Stack>
+                    </Box>
                 </Box>
 
                 <Masonry
@@ -1648,6 +1658,7 @@ export default function OrgSettingsPage() {
                         p: 0,
                         width: '100%',
                         maxWidth: '100%',
+                        ...(debugOutlineSx ?? {}),
                         // Use explicit gaps to avoid Masonry's negative margins when spacing is set.
                         columnGap: {
                             xs: muiTheme.spacing(masonrySpacing.xs),
