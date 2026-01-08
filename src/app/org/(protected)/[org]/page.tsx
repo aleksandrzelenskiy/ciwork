@@ -382,6 +382,7 @@ export default function OrgSettingsPage() {
         subscriptionStatusColor,
         subscriptionStatusDescription,
         roleLabelRu,
+        formatExpire,
         canEditOrgSettings,
         canRequestIntegrations,
         settingsTooltip,
