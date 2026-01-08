@@ -1092,7 +1092,8 @@ export default function OrgSettingsPage() {
     const panelPadding = { xs: 2, md: 3 };
     const panelBaseSx = {
         borderRadius: theme.shape.borderRadius,
-        p: panelPadding,
+        py: panelPadding,
+        px: 0,
         backgroundColor: headerBg,
         border: `1px solid ${headerBorder}`,
         boxShadow: headerShadow,
@@ -1199,7 +1200,9 @@ export default function OrgSettingsPage() {
     const renderStatusPanel = (content: React.ReactNode) => (
         <Box sx={pageWrapperSx}>
             <Box sx={(theme) => ({ ...contentContainerSx(theme), maxWidth: 720 })}>
-                <Box sx={panelBaseSx}>{content}</Box>
+                <Box sx={panelBaseSx}>
+                    <Box sx={{ px: panelPadding }}>{content}</Box>
+                </Box>
             </Box>
         </Box>
     );
@@ -1347,12 +1350,12 @@ export default function OrgSettingsPage() {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 3,
+                    ...(debugOutlineSx ?? {}),
                 })}
             >
                 <Box
                     sx={{
                         ...panelBaseSx,
-                        px: 0,
                         ...(debugOutlineSx ?? {}),
                         '&::after': {
                             content: '""',
