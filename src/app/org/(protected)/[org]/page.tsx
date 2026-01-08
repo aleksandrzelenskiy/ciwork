@@ -1083,6 +1083,8 @@ export default function OrgSettingsPage() {
     const debugOutlineSx = layoutDebug
         ? { outline: '1px dashed rgba(255, 99, 71, 0.9)', outlineOffset: -1 }
         : null;
+    const debugHeaderBgSx = layoutDebug ? { backgroundColor: 'rgba(34,197,94,0.06)' } : null;
+    const debugMasonryBgSx = layoutDebug ? { backgroundColor: 'rgba(59,130,246,0.06)' } : null;
     const pageWrapperSx = {
         minHeight: '100%',
         py: { xs: 4, md: 6 },
@@ -1366,6 +1368,7 @@ export default function OrgSettingsPage() {
                 <Box
                     sx={{
                         ...panelBaseSx,
+                        ...(debugHeaderBgSx ?? {}),
                         ...(debugOutlineSx ?? {}),
                         '&::after': {
                             content: '""',
@@ -1656,6 +1659,7 @@ export default function OrgSettingsPage() {
                         width: '100%',
                         boxSizing: 'border-box',
                         ...masonryPanelPadSx(muiTheme),
+                        ...(debugMasonryBgSx ?? {}),
                         ...(debugOutlineSx ?? {}),
                         '& > *': {
                             boxSizing: 'border-box',
