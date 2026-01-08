@@ -122,7 +122,7 @@ export function getOrgPageStyles(theme: Theme) {
         borderBottomLeftRadius: surfaceRadius,
         borderBottomRightRadius: surfaceRadius,
     };
-    const masonrySpacing = { xs: 1, sm: 1.5, md: 2 } as const;
+    const masonrySpacing = { xs: 1, sm: 1.5, md: 2, lg: 2, xl: 2 } as const;
     const contentContainerSx = {
         maxWidth: 1200,
         mx: 'auto',
@@ -131,7 +131,8 @@ export function getOrgPageStyles(theme: Theme) {
             xs: `calc(${theme.spacing(masonrySpacing.xs)} / 2)`,
             sm: `calc(${theme.spacing(masonrySpacing.sm)} / 2)`,
             md: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
-            lg: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
+            lg: `calc(${theme.spacing(masonrySpacing.lg)} / 2)`,
+            xl: `calc(${theme.spacing(masonrySpacing.xl)} / 2)`,
         },
         boxSizing: 'border-box' as const,
     };
