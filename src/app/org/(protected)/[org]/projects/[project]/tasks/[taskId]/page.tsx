@@ -34,8 +34,9 @@ import {
     Container,
     Checkbox,
     FormControlLabel,
+    type PaperProps,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import GroupsIcon from '@mui/icons-material/Groups';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -83,6 +84,7 @@ import {
 } from '@mui/lab';
 import Masonry from '@mui/lab/Masonry';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
 import { extractFileNameFromUrl, isDocumentUrl } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import type { RelatedTaskRef } from '@/app/types/taskTypes';
@@ -181,17 +183,6 @@ type NcwDefaults = {
     address?: string | null;
 };
 
-// карточка с тенью как в примере MUI
-const CardItem = styled(Paper)(({ theme }) => ({
-    backgroundColor: '#fff',
-    padding: theme.spacing(2),
-    borderRadius: UI_RADIUS.surface,
-    boxShadow: theme.shadows[3],
-    ...theme.applyStyles?.('dark', {
-        backgroundColor: '#1A2027',
-    }),
-}));
-
 const TASK_SECTION_KEYS = [
     'info',
     'applications',
@@ -234,6 +225,15 @@ export default function TaskDetailsPage() {
     };
 
     const router = useRouter();
+    const theme = useTheme();
+    const { masonryCardSx } = getOrgPageStyles(theme);
+    const CardItem = React.useMemo(() => {
+        const Component = React.forwardRef<HTMLDivElement, PaperProps>(({ sx, ...rest }, ref) => (
+            <Paper ref={ref} {...rest} sx={{ ...masonryCardSx, ...sx }} />
+        ));
+        Component.displayName = 'CardItem';
+        return Component;
+    }, [masonryCardSx]);
 
     const pageGutter = { xs: 1.5, sm: 2.5, md: 3, lg: 3.5, xl: 4 };
     const masonrySpacing = { xs: 1, sm: 1.5, md: 2 } as const;
