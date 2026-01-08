@@ -11,7 +11,7 @@ type UseMembersState = {
     memberSearch: string;
     showMemberSearch: boolean;
     setMemberSearch: (value: string) => void;
-    setShowMemberSearch: (value: boolean) => void;
+    setShowMemberSearch: React.Dispatch<React.SetStateAction<boolean>>;
     filteredMembers: MemberDTO[];
     invitedMembersCount: number;
     activeMembersCount: number;
