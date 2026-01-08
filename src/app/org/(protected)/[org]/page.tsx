@@ -1090,6 +1090,14 @@ export default function OrgSettingsPage() {
         overflow: 'hidden',
     };
     const panelPadding = { xs: 2, md: 3 };
+    const masonryPanelPadSx = (muiTheme: typeof theme) => ({
+        px: {
+            xs: `calc(${muiTheme.spacing(panelPadding.xs)} + ${muiTheme.spacing(masonrySpacing.xs)} / 2)`,
+            sm: `calc(${muiTheme.spacing(panelPadding.xs)} + ${muiTheme.spacing(masonrySpacing.sm)} / 2)`,
+            md: `calc(${muiTheme.spacing(panelPadding.md)} + ${muiTheme.spacing(masonrySpacing.md)} / 2)`,
+            lg: `calc(${muiTheme.spacing(panelPadding.md)} + ${muiTheme.spacing(masonrySpacing.md)} / 2)`,
+        },
+    });
     const panelBaseSx = {
         borderRadius: theme.shape.borderRadius,
         py: panelPadding,
@@ -1481,10 +1489,11 @@ export default function OrgSettingsPage() {
 
                     <Stack
                         direction={{ xs: 'column', md: 'row' }}
-                        spacing={2.5}
+                        spacing={{ xs: 2, md: 2.5 }}
                         useFlexGap
                         sx={{
                             mt: { xs: 2.5, md: 3 },
+                            px: { xs: 2, md: 2.5 },
                             flexWrap: { xs: 'nowrap', md: 'wrap' },
                             ...(debugOutlineSx ?? {}),
                         }}
@@ -1643,15 +1652,15 @@ export default function OrgSettingsPage() {
                 <Masonry
                     columns={{ xs: 1, sm: 1, md: 2, lg: 3 }}
                     spacing={masonrySpacing}
-                    sx={{
+                    sx={(muiTheme) => ({
                         width: '100%',
-                        px: panelPadding,
                         boxSizing: 'border-box',
+                        ...masonryPanelPadSx(muiTheme),
                         ...(debugOutlineSx ?? {}),
                         '& > *': {
                             boxSizing: 'border-box',
                         },
-                    }}
+                    })}
                 >
                     {showNotificationsCard && (
                         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
