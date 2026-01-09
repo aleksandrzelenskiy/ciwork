@@ -17,6 +17,10 @@ FROM base AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+ARG MONGODB_URI
+ENV MONGODB_URI=$MONGODB_URI
+
 RUN npm run build
 
 # ---------- runner ----------

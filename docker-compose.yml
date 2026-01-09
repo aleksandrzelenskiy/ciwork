@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        MONGODB_URI: "mongodb://dummy:dummy@localhost:27017/ciwork?authSource=admin"
     container_name: ciwork_app
     env_file:
       - .env.app
