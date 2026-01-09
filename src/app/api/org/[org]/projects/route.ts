@@ -251,6 +251,9 @@ export async function POST(
                 };
                 return { ok: true };
             } catch (error) {
+                if (isTransactionNotSupportedError(error)) {
+                    throw error;
+                }
                 return { ok: false, code: 'UNKNOWN', error };
             }
         };

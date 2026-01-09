@@ -17,7 +17,17 @@ services:
   mongo:
     image: mongo:6.0
     container_name: ciwork_mongo
-    command: ["mongod", "--bind_ip", "0.0.0.0", "--auth", "--setParameter", "diagnosticDataCollectionEnabled=false"]
+    command:
+      [
+        "mongod",
+        "--bind_ip",
+        "0.0.0.0",
+        "--auth",
+        "--setParameter",
+        "diagnosticDataCollectionEnabled=false",
+        "--replSet",
+        "rs0"
+      ]
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
@@ -25,6 +35,32 @@ services:
     volumes:
       - ciwork_db_data:/data/db
     restart: unless-stopped
+    networks:
+      - internal
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh --username \"$${MONGO_ROOT_USERNAME}\" --password \"$${MONGO_ROOT_PASSWORD}\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+  mongo-init:
+    image: mongo:6.0
+    container_name: ciwork_mongo_init
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "mongosh --username \"$${MONGO_ROOT_USERNAME}\" --password \"$${MONGO_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'try { rs.status() } catch (e) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] }) }' && echo 'Replica set initialized'"
+    restart: "no"
     networks:
       - internal
 
