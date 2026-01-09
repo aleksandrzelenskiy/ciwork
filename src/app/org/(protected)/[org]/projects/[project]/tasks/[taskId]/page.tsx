@@ -62,6 +62,8 @@ import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import GroupOffOutlinedIcon from '@mui/icons-material/GroupOffOutlined';
 import WorkspaceTaskDialog from '@/app/workspace/components/WorkspaceTaskDialog';
 import type { TaskForEdit } from '@/app/workspace/components/WorkspaceTaskDialog';
 import TaskComments from '@/features/tasks/TaskComments';
@@ -127,6 +129,7 @@ type Task = {
     _id: string;
     taskId: string;
     taskName: string;
+    projectKey?: string;
     status?: string;
     visibility?: 'public' | 'private';
     publicStatus?: 'open' | 'in_review' | 'assigned' | 'closed';
@@ -1644,7 +1647,7 @@ export default function TaskDetailsPage() {
                                     underline="hover"
                                     color="inherit"
                                 >
-                                    {project}
+                                    {task?.projectKey || project}
                                 </Link>
                             </Typography>
                         </Box>
@@ -1656,27 +1659,6 @@ export default function TaskDetailsPage() {
                         useFlexGap
                         sx={{ width: { xs: '100%', md: 'auto' } }}
                     >
-                        {task && !executorAssigned && (
-                            <Button
-                                variant={task.visibility === 'public' ? 'outlined' : 'contained'}
-                                color={task.visibility === 'public' ? 'inherit' : 'primary'}
-                                size="small"
-                                startIcon={<GroupsIcon />}
-                                onClick={() =>
-                                    task.visibility === 'public'
-                                        ? void handlePublishToggle(false)
-                                        : openPublishDialog()
-                                }
-                                disabled={publishLoading}
-                                sx={{ borderRadius: UI_RADIUS.button }}
-                            >
-                                {publishLoading
-                                    ? 'Сохраняем…'
-                                    : task.visibility === 'public'
-                                        ? 'Снять с публикации'
-                                        : 'Опубликовать'}
-                            </Button>
-                        )}
                         <Stack
                             direction="row"
                             spacing={1}
@@ -1689,6 +1671,37 @@ export default function TaskDetailsPage() {
                                 '&::-webkit-scrollbar': { display: 'none' },
                             }}
                         >
+                            {task && !executorAssigned && (
+                                <Tooltip
+                                    title={
+                                        task.visibility === 'public'
+                                            ? 'Снять с публикации'
+                                            : 'Опубликовать на бирже'
+                                    }
+                                >
+                                    <span>
+                                        <IconButton
+                                            onClick={() =>
+                                                task.visibility === 'public'
+                                                    ? void handlePublishToggle(false)
+                                                    : openPublishDialog()
+                                            }
+                                            disabled={publishLoading}
+                                            sx={getIconButtonSx({
+                                                active: task.visibility === 'public',
+                                                activeColor: theme.palette.primary.main,
+                                                disabled: publishLoading,
+                                            })}
+                                        >
+                                            {task.visibility === 'public' ? (
+                                                <GroupOffOutlinedIcon />
+                                            ) : (
+                                                <PeopleAltOutlinedIcon />
+                                            )}
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                            )}
                             <Tooltip title="Настроить">
                                 <IconButton
                                     onClick={() => setSectionDialogOpen(true)}
