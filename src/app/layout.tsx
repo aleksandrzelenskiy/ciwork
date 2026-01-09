@@ -1,11 +1,6 @@
-'use client';
-
 import './globals.css';
-import { ClerkProvider } from '@clerk/nextjs';
-import { ruRU } from '@clerk/localizations';
-import ClientApp from './ClientApp';
 import localFont from 'next/font/local';
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import Providers from './Providers';
 
 // Локальный шрифт, чтобы не тянуть Google Fonts при сборке без сети
 const primaryFont = localFont({
@@ -17,13 +12,6 @@ const primaryFont = localFont({
         },
     ],
     display: 'swap',
-});
-
-// Создаём тему MUI, где переопределяем основной шрифт
-const theme = createTheme({
-    typography: {
-        fontFamily: `${primaryFont.style.fontFamily}, 'Open Sans', sans-serif`,
-    },
 });
 
 export default function RootLayout({
@@ -40,33 +28,16 @@ export default function RootLayout({
         throw new Error('Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY. Check your .env.local configuration.');
     }
 
-    if (!publishableKey && isBuildPhase) {
-        return (
-            <html lang="ru">
-                <body className={primaryFont.className}>
-                    <ThemeProvider theme={theme}>
-                        <CssBaseline />
-                        <ClientApp>{children}</ClientApp>
-                    </ThemeProvider>
-                </body>
-            </html>
-        );
-    }
-
     return (
-        <ClerkProvider
-            publishableKey={publishableKey}
-            localization={ruRU}
-            dynamic
-        >
-            <html lang="ru">
-                <body className={primaryFont.className}>
-                    <ThemeProvider theme={theme}>
-                        <CssBaseline />
-                        <ClientApp>{children}</ClientApp>
-                    </ThemeProvider>
-                </body>
-            </html>
-        </ClerkProvider>
+        <html lang="ru">
+            <body className={primaryFont.className}>
+                <Providers
+                    publishableKey={publishableKey}
+                    fontFamily={primaryFont.style.fontFamily}
+                >
+                    {children}
+                </Providers>
+            </body>
+        </html>
     );
 }
