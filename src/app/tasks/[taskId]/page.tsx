@@ -145,8 +145,8 @@ export default function TaskDetailPage() {
         return Component;
     }, [cardPadding, masonryCardSx]);
 
-    const pageGutter = { xs: 1.5, sm: 2.5, md: 3, lg: 3.5, xl: 4 };
-    const masonrySpacing = { xs: 1, sm: 1.5, md: 2 } as const;
+    const pageGutter = { xs: 1, sm: 2.5, md: 3, lg: 3.5, xl: 4 };
+    const masonrySpacing = { xs: 0.5, sm: 1.5, md: 2 } as const;
 
     const [task, setTask] = React.useState<Task | null>(null);
     const [loading, setLoading] = React.useState(true);
