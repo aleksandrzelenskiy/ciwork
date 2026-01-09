@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -75,14 +76,20 @@ export default function ProjectsDialog({
             onClose={onClose}
             maxWidth="lg"
             fullWidth
+            fullScreen
             slotProps={{
                 paper: {
-                    sx: dialogPaperSx,
+                    sx: { ...dialogPaperSx, borderRadius: 0 },
                 },
             }}
         >
             <DialogTitle sx={cardHeaderSx}>
-                Проекты организации
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Typography variant="inherit">Проекты организации</Typography>
+                    <IconButton onClick={onClose}>
+                        <CloseFullscreenIcon />
+                    </IconButton>
+                </Stack>
             </DialogTitle>
             <DialogContent dividers sx={{ backgroundColor: dialogContentBg }}>
                 <Card variant="outlined" sx={cardBaseSx}>

@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
+import FolderIcon from '@mui/icons-material/Folder';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 
 import type { ProjectDTO } from '@/types/org';
@@ -54,9 +55,12 @@ export default function OrgProjectsCard({
         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
             <Stack spacing={2}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="subtitle1" fontWeight={600}>
-                        Проекты
-                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <FolderIcon fontSize="small" />
+                        <Typography variant="subtitle1" fontWeight={600}>
+                            Проекты
+                        </Typography>
+                    </Stack>
                     <Stack direction="row" spacing={1}>
                         <Tooltip title="Открыть список">
                             <span>

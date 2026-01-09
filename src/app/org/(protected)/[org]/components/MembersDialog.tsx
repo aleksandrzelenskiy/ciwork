@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import CancelIcon from '@mui/icons-material/Cancel';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import LinkIcon from '@mui/icons-material/Link';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
@@ -102,14 +103,20 @@ export default function MembersDialog({
             onClose={onClose}
             maxWidth="lg"
             fullWidth
+            fullScreen
             slotProps={{
                 paper: {
-                    sx: dialogPaperSx,
+                    sx: { ...dialogPaperSx, borderRadius: 0 },
                 },
             }}
         >
             <DialogTitle sx={cardHeaderSx}>
-                Участники организации
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Typography variant="inherit">Участники организации</Typography>
+                    <IconButton onClick={onClose}>
+                        <CloseFullscreenIcon />
+                    </IconButton>
+                </Stack>
             </DialogTitle>
             <DialogContent dividers sx={{ backgroundColor: dialogContentBg }}>
                 <Card variant="outlined" sx={cardBaseSx}>

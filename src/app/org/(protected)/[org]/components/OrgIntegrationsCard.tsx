@@ -13,6 +13,7 @@ import {
 import type { SxProps, Theme } from '@mui/material/styles';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import IntegrationInstructionsIcon from '@mui/icons-material/IntegrationInstructions';
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -71,6 +72,7 @@ export default function OrgIntegrationsCard({
             <Stack spacing={2}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                     <Stack direction="row" spacing={1} alignItems="center">
+                        <IntegrationInstructionsIcon fontSize="small" />
                         <Typography variant="subtitle1" fontWeight={600}>
                             Интеграции
                         </Typography>

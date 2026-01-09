@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Avatar,
     Box,
     Button,
     CircularProgress,
@@ -9,6 +10,7 @@ import {
     Typography,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import GroupIcon from '@mui/icons-material/Group';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
@@ -32,6 +34,14 @@ type OrgMembersCardProps = {
     buttonRadius: number;
 };
 
+const initialsFromMember = (member: MemberDTO) => {
+    const base = member.userName || member.userEmail || '';
+    const parts = base.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
+
 export default function OrgMembersCard({
     loading,
     membersPreview,
@@ -51,9 +61,12 @@ export default function OrgMembersCard({
         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
             <Stack spacing={2}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="subtitle1" fontWeight={600}>
-                        Участники
-                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <GroupIcon fontSize="small" />
+                        <Typography variant="subtitle1" fontWeight={600}>
+                            Участники
+                        </Typography>
+                    </Stack>
                     <Stack direction="row" spacing={1}>
                         <Tooltip title="Открыть список">
                             <span>
@@ -93,12 +106,19 @@ export default function OrgMembersCard({
                                         : 'rgba(255,255,255,0.7)',
                                 }}
                             >
-                                <Typography variant="body2" fontWeight={600}>
-                                    {member.userName || 'Без имени'}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {member.userEmail} · {roleLabel(member.role)}
-                                </Typography>
+                                <Stack direction="row" spacing={1} alignItems="center">
+                                    <Avatar sx={{ width: 32, height: 32 }}>
+                                        {initialsFromMember(member)}
+                                    </Avatar>
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={600}>
+                                            {member.userName || 'Без имени'}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {member.userEmail} · {roleLabel(member.role)}
+                                        </Typography>
+                                    </Box>
+                                </Stack>
                             </Box>
                         ))}
                     </Stack>

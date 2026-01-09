@@ -9,6 +9,7 @@ import {
     Typography,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import FrontHandIcon from '@mui/icons-material/FrontHand';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
@@ -28,6 +29,13 @@ type OrgApplicationsCardProps = {
     buttonRadius: number;
 };
 
+const statusLabel = (status: string) => {
+    if (status === 'accepted') return 'Принят';
+    if (status === 'rejected') return 'Отклонен';
+    if (status === 'submitted') return 'Отправлен';
+    return status || '—';
+};
+
 export default function OrgApplicationsCard({
     applicationsLoading,
     applicationsPreview,
@@ -44,9 +52,12 @@ export default function OrgApplicationsCard({
         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
             <Stack spacing={2}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="subtitle1" fontWeight={600}>
-                        Отклики на задачи
-                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <FrontHandIcon fontSize="small" />
+                        <Typography variant="subtitle1" fontWeight={600}>
+                            Отклики на задачи
+                        </Typography>
+                    </Stack>
                     <Stack direction="row" spacing={1}>
                         <Tooltip title="Открыть список">
                             <span>
@@ -88,9 +99,10 @@ export default function OrgApplicationsCard({
                             >
                                 <Typography variant="body2" fontWeight={600}>
                                     {app.taskName}
+                                    {app.bsNumber ? ` · BS${app.bsNumber}` : ''}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    {app.contractorName || app.contractorEmail || 'Без кандидата'} · {app.status}
+                                    {app.contractorName || app.contractorEmail || 'Без кандидата'} · {statusLabel(app.status)}
                                 </Typography>
                             </Box>
                         ))}

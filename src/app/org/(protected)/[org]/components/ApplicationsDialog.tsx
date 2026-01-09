@@ -22,6 +22,7 @@ import {
     Typography,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import PreviewIcon from '@mui/icons-material/Preview';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -45,6 +46,13 @@ type ApplicationsDialogProps = {
     dialogActionsSx: SxProps<Theme>;
     dialogContentBg?: string;
     alertSx: SxProps<Theme>;
+};
+
+const statusLabel = (status: string) => {
+    if (status === 'accepted') return 'Принят';
+    if (status === 'rejected') return 'Отклонен';
+    if (status === 'submitted') return 'Отправлен';
+    return status || '—';
 };
 
 export default function ApplicationsDialog({
@@ -71,14 +79,20 @@ export default function ApplicationsDialog({
             onClose={onClose}
             maxWidth="lg"
             fullWidth
+            fullScreen
             slotProps={{
                 paper: {
-                    sx: dialogPaperSx,
+                    sx: { ...dialogPaperSx, borderRadius: 0 },
                 },
             }}
         >
             <DialogTitle sx={cardHeaderSx}>
-                Отклики на публичные задачи
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Typography variant="inherit">Отклики на публичные задачи</Typography>
+                    <IconButton onClick={onClose}>
+                        <CloseFullscreenIcon />
+                    </IconButton>
+                </Stack>
             </DialogTitle>
             <DialogContent dividers sx={{ backgroundColor: dialogContentBg }}>
                 <Card variant="outlined" sx={cardBaseSx}>
@@ -129,6 +143,7 @@ export default function ApplicationsDialog({
                                             <TableCell sx={{ maxWidth: 220 }}>
                                                 <Typography variant="body2" fontWeight={600} noWrap>
                                                     {app.taskName}
+                                                    {app.bsNumber ? ` · BS${app.bsNumber}` : ''}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary" noWrap>
                                                     {app.bsNumber ? `БС ${app.bsNumber}` : '—'}
@@ -155,7 +170,7 @@ export default function ApplicationsDialog({
                                             <TableCell>
                                                 <Chip
                                                     size="small"
-                                                    label={app.status}
+                                                    label={statusLabel(app.status)}
                                                     color={
                                                         app.status === 'accepted'
                                                             ? 'success'

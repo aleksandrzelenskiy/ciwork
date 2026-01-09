@@ -18,6 +18,14 @@ type OrgWalletTransactionsDialogProps = {
     transactions: WalletTx[];
 };
 
+const actionLabel = (source: string) => {
+    if (source === 'storage_overage') return 'Хранение сверх лимита';
+    if (source === 'subscription') return 'Оплата подписки';
+    if (source === 'storage_package') return 'Покупка пакета хранения';
+    if (source === 'manual') return 'Ручная корректировка';
+    return source ? `Операция ${source}` : 'Действие не указано';
+};
+
 const formatAmount = (tx: WalletTx) => {
     const sign = tx.type === 'debit' ? '-' : '+';
     return `${sign}${tx.amount.toFixed(2)} ₽`;
@@ -40,26 +48,27 @@ const formatTitle = (tx: WalletTx) => {
 };
 
 const formatDetails = (tx: WalletTx) => {
+    const debitAction = tx.type === 'debit' ? `Действие: ${actionLabel(tx.source)}` : '';
     if (tx.source === 'storage_overage' && tx.meta) {
         const overageGb = tx.meta.overageGb as number | undefined;
         const hourKey = tx.meta.hourKey as string | undefined;
-        return `Сверх лимита: ${overageGb ?? '—'} ГБ · период ${hourKey ?? '—'}`;
+        return `Сверх лимита: ${overageGb ?? '—'} ГБ · период ${hourKey ?? '—'}${debitAction ? ` · ${debitAction}` : ''}`;
     }
     if (tx.source === 'subscription' && tx.meta) {
         const plan = tx.meta.plan as string | undefined;
         const periodStart = tx.meta.periodStart as string | undefined;
         const periodEnd = tx.meta.periodEnd as string | undefined;
-        return `Тариф ${plan ?? '—'} · период ${periodStart ?? '—'} → ${periodEnd ?? '—'}`;
+        return `Тариф ${plan ?? '—'} · период ${periodStart ?? '—'} → ${periodEnd ?? '—'}${debitAction ? ` · ${debitAction}` : ''}`;
     }
     if (tx.source === 'storage_package' && tx.meta) {
         const packageGb = tx.meta.packageGb as number | undefined;
         const quantity = tx.meta.quantity as number | undefined;
-        return `Пакет: ${packageGb ?? '—'} GB · шт: ${quantity ?? 1}`;
+        return `Пакет: ${packageGb ?? '—'} GB · шт: ${quantity ?? 1}${debitAction ? ` · ${debitAction}` : ''}`;
     }
     if (tx.source === 'manual') {
-        return 'Изменено вручную администратором';
+        return `Изменено вручную администратором${debitAction ? ` · ${debitAction}` : ''}`;
     }
-    return '';
+    return debitAction;
 };
 
 export default function OrgWalletTransactionsDialog({

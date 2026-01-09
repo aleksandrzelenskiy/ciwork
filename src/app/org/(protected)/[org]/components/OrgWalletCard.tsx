@@ -11,6 +11,12 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
 import type { OrgWalletInfo, OrgWalletTx } from '@/types/org';
 
+const txTypeLabel = (type: string) => {
+    if (type === 'debit') return 'Списание';
+    if (type === 'credit') return 'Пополнение';
+    return type || '—';
+};
+
 type OrgWalletCardProps = {
     walletLoading: boolean;
     walletInfo: OrgWalletInfo | null;
@@ -64,8 +70,11 @@ export default function OrgWalletCard({
                     ) : walletTx.length > 0 ? (
                         walletTx.slice(0, 3).map((tx) => (
                             <Stack key={tx.id} direction="row" justifyContent="space-between">
-                                <Typography variant="body2" color={textSecondary}>
-                                    {tx.type}
+                                <Typography
+                                    variant="body2"
+                                    color={tx.type === 'debit' ? 'error.main' : tx.type === 'credit' ? 'success.main' : textSecondary}
+                                >
+                                    {txTypeLabel(tx.type)}
                                 </Typography>
                                 <Typography variant="body2" fontWeight={600}>
                                     {tx.amount.toFixed(2)} {walletInfo?.currency ?? 'RUB'}

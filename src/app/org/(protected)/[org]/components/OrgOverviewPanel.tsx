@@ -166,7 +166,7 @@ export default function OrgOverviewPanel({
                                 color={textPrimary}
                                 sx={{ fontSize: { xs: '1.55rem', md: '1.95rem' } }}
                             >
-                                {orgName || orgSlug} — Организация
+                                {orgName || orgSlug}
                             </Typography>
                             <Tooltip title={settingsTooltip}>
                                 <span>
