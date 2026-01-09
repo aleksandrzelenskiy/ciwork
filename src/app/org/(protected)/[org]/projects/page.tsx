@@ -1,7 +1,7 @@
 // src/app/org/[org]/projects/page.tsx
 'use client';
 
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Box,
     Button,
@@ -351,6 +351,13 @@ export default function OrgProjectsPage() {
     const [managerOptions, setManagerOptions] = useState<ProjectManagerOption[]>([]);
     const [managerOptionsError, setManagerOptionsError] = useState<string | null>(null);
     const [activeMembersCount, setActiveMembersCount] = useState(0);
+    const managerNameByEmail = useMemo(() => {
+        const entries = managerOptions.map((member) => [
+            member.email.toLowerCase(),
+            member.name ?? member.email,
+        ]);
+        return Object.fromEntries(entries) as Record<string, string>;
+    }, [managerOptions]);
 
     const loadManagerOptions = useCallback(async () => {
         if (!orgSlug) return;
@@ -719,9 +726,12 @@ export default function OrgProjectsPage() {
                 ) : (
                     <Grid container spacing={{ xs: 2, md: 3 }}>
                         {projects.map((p) => {
-                            const manager =
+                            const managerEmail =
                                 p.managerEmail ??
-                                (Array.isArray(p.managers) && p.managers.length > 0 ? p.managers[0] : '—');
+                                (Array.isArray(p.managers) && p.managers.length > 0 ? p.managers[0] : '');
+                            const manager = managerEmail
+                                ? managerNameByEmail[managerEmail.toLowerCase()] ?? managerEmail
+                                : '—';
                             const regionLabel = getRegionLabel(p.regionCode);
                             const operatorLabel = OPERATORS.find((item) => item.value === p.operator)?.label ?? p.operator;
 

@@ -29,8 +29,9 @@ import {
     DialogContent,
     DialogTitle,
     Container,
+    type PaperProps,
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RefreshIcon from '@mui/icons-material/Refresh';
@@ -51,6 +52,7 @@ import {
     TimelineOppositeContent,
     TimelineSeparator,
 } from '@mui/lab';
+import Masonry from '@mui/lab/Masonry';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
@@ -67,16 +69,7 @@ import { extractFileNameFromUrl, isDocumentUrl } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { usePhotoReports } from '@/hooks/usePhotoReports';
 import { UI_RADIUS } from '@/config/uiTokens';
-
-const CardItem = styled(Paper)(({ theme }) => ({
-    backgroundColor: '#fff',
-    padding: theme.spacing(2),
-    borderRadius: UI_RADIUS.surface,
-    boxShadow: theme.shadows[3],
-    ...theme.applyStyles?.('dark', {
-        backgroundColor: '#1A2027',
-    }),
-}));
+import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
 
 const parseUserInfo = (userString?: string) => {
     if (!userString) return { name: 'N/A', email: 'N/A' };
@@ -90,8 +83,71 @@ export default function TaskDetailPage() {
     const taskId = params?.taskId?.trim() || '';
     const router = useRouter();
     const searchParams = useSearchParams();
+    const theme = useTheme();
+    const {
+        masonryCardSx,
+        iconBorderColor,
+        iconBg,
+        iconHoverBg,
+        iconShadow,
+        textPrimary,
+        disabledIconColor,
+    } = getOrgPageStyles(theme);
+    const isDarkMode = theme.palette.mode === 'dark';
+    const iconText = textPrimary;
+    const iconActiveBg = isDarkMode ? 'rgba(59,130,246,0.4)' : 'rgba(15,23,42,0.9)';
+    const iconActiveText = '#ffffff';
+    const getIconButtonSx = (
+        options?: { active?: boolean; disabled?: boolean; activeColor?: string; activeBg?: string }
+    ) => {
+        const active = options?.active ?? false;
+        const disabled = options?.disabled ?? false;
+        return {
+            borderRadius: UI_RADIUS.overlay,
+            border: `1px solid ${disabled ? 'transparent' : iconBorderColor}`,
+            backgroundColor: disabled
+                ? 'transparent'
+                : active
+                    ? options?.activeBg ?? iconActiveBg
+                    : iconBg,
+            color: disabled
+                ? disabledIconColor
+                : active
+                    ? options?.activeColor ?? iconActiveText
+                    : iconText,
+            boxShadow: disabled ? 'none' : iconShadow,
+            backdropFilter: 'blur(14px)',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+                transform: disabled ? 'none' : 'translateY(-2px)',
+                backgroundColor: disabled
+                    ? 'transparent'
+                    : active
+                        ? options?.activeBg ?? iconActiveBg
+                        : iconHoverBg,
+            },
+        };
+    };
+    const cardPadding = React.useMemo(() => ({ xs: 2, md: 2.5 }), []);
+    const accordionSx = {
+        backgroundColor: 'transparent',
+        '&:before': { display: 'none' },
+    } as const;
+    const accordionSummarySx = {
+        px: 0,
+        '& .MuiAccordionSummary-content': { m: 0 },
+    } as const;
+    const accordionDetailsSx = { pt: 0, px: 0 } as const;
+    const CardItem = React.useMemo(() => {
+        const Component = React.forwardRef<HTMLDivElement, PaperProps>(({ sx, ...rest }, ref) => (
+            <Paper ref={ref} {...rest} sx={{ ...masonryCardSx, p: cardPadding, minWidth: 0, ...sx }} />
+        ));
+        Component.displayName = 'CardItem';
+        return Component;
+    }, [cardPadding, masonryCardSx]);
 
     const pageGutter = { xs: 1.5, sm: 2.5, md: 3, lg: 3.5, xl: 4 };
+    const masonrySpacing = { xs: 1, sm: 1.5, md: 2 } as const;
 
     const [task, setTask] = React.useState<Task | null>(null);
     const [loading, setLoading] = React.useState(true);
@@ -744,250 +800,306 @@ export default function TaskDetailPage() {
                 gap: 2,
             }}
         >
-            <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-                    <Tooltip title="Назад">
-                        <IconButton onClick={() => router.back()}>
-                            <ArrowBackIcon />
-                        </IconButton>
-                    </Tooltip>
-                    <Box sx={{ minWidth: 0 }}>
-                        <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap">
-                            <Typography variant="h6" sx={{ wordBreak: 'break-word' }}>
-                                {task.taskName || 'Задача'}
-                            </Typography>
-                            {bsNumberDisplay !== '—' && <Typography variant="h6">{bsNumberDisplay}</Typography>}
-
-                            {task.taskId && (
-                                <Chip
-                                    label={task.taskId}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{ mt: 0.5 }}
-                                />
-                            )}
-                            {task.status && (
-                                <Chip
-                                    label={getStatusLabel(task.status)}
-                                    size="small"
-                                    sx={{
-                                        bgcolor: getStatusColor(normalizeStatusTitle(task.status)),
-                                        color: '#fff',
-                                        fontWeight: 500,
-                                    }}
-                                />
-                            )}
-                        </Stack>
-
-                        {(task.projectName || task.projectKey) && (
-                            <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1 }}
-                            >
-                                Проект:{' '}
-                                {task.projectKey && task.orgId ? (
-                                    <Link
-                                        href={`/org/${encodeURIComponent(task.orgId ?? '')}/projects/${encodeURIComponent(
-                                            task.projectKey
-                                        )}/tasks`}
-                                        underline="hover"
-                                        color="inherit"
-                                    >
-                                        {task.projectName || task.projectKey}
-                                    </Link>
-                                ) : (
-                                    task.projectName || task.projectKey
-                                )}
-                            </Typography>
-                        )}
-
-                    </Box>
-                </Stack>
-                <Stack direction="row" spacing={1}>
-                    <Tooltip title="Обновить">
-                        <span>
-                            <IconButton onClick={() => void loadTask()} disabled={loading}>
-                                <RefreshIcon />
+            <Box sx={{ py: { xs: 0.5, sm: 1 } }}>
+                <Stack
+                    direction={{ xs: 'column', md: 'row' }}
+                    alignItems={{ xs: 'flex-start', md: 'center' }}
+                    justifyContent="space-between"
+                    gap={{ xs: 1.5, md: 1 }}
+                >
+                    <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0, width: '100%' }}>
+                        <Tooltip title="Назад">
+                            <IconButton onClick={() => router.back()} sx={getIconButtonSx()}>
+                                <ArrowBackIcon />
                             </IconButton>
-                        </span>
-                    </Tooltip>
+                        </Tooltip>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap" sx={{ rowGap: 0.75 }}>
+                                <Typography variant="h6" sx={{ wordBreak: 'break-word', minWidth: 0 }}>
+                                    {task.taskName || 'Задача'}
+                                </Typography>
+                                {bsNumberDisplay !== '—' && (
+                                    <Typography variant="h6" sx={{ wordBreak: 'break-word' }}>
+                                        {bsNumberDisplay}
+                                    </Typography>
+                                )}
+
+                                {task.taskId && (
+                                    <Chip
+                                        label={task.taskId}
+                                        size="small"
+                                        variant="outlined"
+                                        sx={{ mt: 0.5 }}
+                                    />
+                                )}
+                                {task.status && (
+                                    <Chip
+                                        label={getStatusLabel(task.status)}
+                                        size="small"
+                                        sx={{
+                                            bgcolor: getStatusColor(normalizeStatusTitle(task.status)),
+                                            color: '#fff',
+                                            fontWeight: 500,
+                                        }}
+                                    />
+                                )}
+                            </Stack>
+
+                            {(task.projectName || task.projectKey) && (
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 0 }}
+                                >
+                                    Проект:{' '}
+                                    {task.projectKey && task.orgId ? (
+                                        <Link
+                                            href={`/org/${encodeURIComponent(task.orgId ?? '')}/projects/${encodeURIComponent(
+                                                task.projectKey
+                                            )}/tasks`}
+                                            underline="hover"
+                                            color="inherit"
+                                        >
+                                            {task.projectName || task.projectKey}
+                                        </Link>
+                                    ) : (
+                                        task.projectName || task.projectKey
+                                    )}
+                                </Typography>
+                            )}
+                        </Box>
+                    </Stack>
+                    <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1}
+                        alignItems={{ xs: 'stretch', sm: 'center' }}
+                        useFlexGap
+                        sx={{ width: { xs: '100%', md: 'auto' } }}
+                    >
+                        <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{
+                                flexWrap: 'nowrap',
+                                overflowX: { xs: 'auto', sm: 'visible' },
+                                pb: { xs: 0.25, sm: 0 },
+                                scrollbarWidth: 'none',
+                                '&::-webkit-scrollbar': { display: 'none' },
+                            }}
+                        >
+                            <Tooltip title="Обновить">
+                                <span>
+                                    <IconButton
+                                        onClick={() => void loadTask()}
+                                        disabled={loading}
+                                        sx={getIconButtonSx({ disabled: loading })}
+                                    >
+                                        <RefreshIcon />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                        </Stack>
+                    </Stack>
                 </Stack>
-            </Stack>
+            </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Stack spacing={2}>
-                    <CardItem sx={{ minWidth: 0 }}>
-                        <Typography
-                            variant="subtitle1"
-                            fontWeight={600}
-                            gutterBottom
-                            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                        >
-                            <InfoOutlinedIcon fontSize="small" />
-                            Информация
-                        </Typography>
-                        <Divider sx={{ mb: 1.5 }} />
-
-                        <Stack spacing={1}>
-                            <Typography variant="body1">
-                                <strong>Базовая станция:</strong> {bsNumberDisplay}
-                            </Typography>
-
-                            <Typography variant="body1">
-                                <strong>Адрес:</strong> {task.bsAddress || 'Адрес не указан'}
-                            </Typography>
-
-                            <Typography variant="body1">
-                                <strong>Срок:</strong> {task.dueDate ? formatDate(task.dueDate) : '—'}
-                            </Typography>
+                <Box
+                    sx={(theme) => ({
+                        width: '100%',
+                        px: {
+                            xs: `calc(${theme.spacing(masonrySpacing.xs)} / 2)`,
+                            sm: `calc(${theme.spacing(masonrySpacing.sm)} / 2)`,
+                            md: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
+                            lg: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
+                            xl: `calc(${theme.spacing(masonrySpacing.md)} / 2)`,
+                        },
+                        boxSizing: 'border-box',
+                    })}
+                >
+                    <Masonry
+                        columns={{ xs: 1, sm: 1, md: 2, lg: 3, xl: 4 }}
+                        spacing={masonrySpacing}
+                        sx={{
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            '& > *': {
+                                boxSizing: 'border-box',
+                            },
+                        }}
+                    >
+                        <CardItem sx={{ minWidth: 0 }}>
                             <Typography
-                                variant="body1"
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 0.75,
-                                    flexWrap: 'wrap',
-                                }}
+                                variant="subtitle1"
+                                fontWeight={600}
+                                gutterBottom
+                                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                             >
-                                <strong>Приоритет:</strong>
-                                <Box
-                                    component="span"
+                                <InfoOutlinedIcon fontSize="small" />
+                                Информация
+                            </Typography>
+                            <Divider sx={{ mb: 1.5 }} />
+
+                            <Stack spacing={1}>
+                                <Typography variant="body1">
+                                    <strong>Базовая станция:</strong> {bsNumberDisplay}
+                                </Typography>
+
+                                <Typography variant="body1">
+                                    <strong>Адрес:</strong> {task.bsAddress || 'Адрес не указан'}
+                                </Typography>
+
+                                <Typography variant="body1">
+                                    <strong>Срок:</strong> {task.dueDate ? formatDate(task.dueDate) : '—'}
+                                </Typography>
+                                <Typography
+                                    variant="body1"
                                     sx={{
-                                        display: 'inline-flex',
+                                        display: 'flex',
                                         alignItems: 'center',
-                                        gap: 0.5,
+                                        gap: 0.75,
+                                        flexWrap: 'wrap',
                                     }}
                                 >
-                                    {getPriorityIcon(
-                                        (normalizePriority(task.priority as string) ?? 'medium') as
-                                            'urgent' | 'high' | 'medium' | 'low'
-                                    )}
-                                    <span>{task.priority || '—'}</span>
-                                </Box>
-                            </Typography>
-
-                            <Typography variant="body1">
-                                <strong>Стоимость:</strong> {renderCost()}
-                            </Typography>
-                            <Typography variant="body1">
-                                <strong>Тип задачи:</strong> {task.taskType || '—'}
-                            </Typography>
-
-                            {(task.executorName || task.executorEmail) && (
-                                <Typography variant="body1">
-                                    <strong>Исполнитель:</strong> {task.executorName || task.executorEmail}
-                                </Typography>
-                            )}
-
-                            {(task.initiatorName || task.initiatorEmail) && (
-                                <Typography variant="body1">
-                                    <strong>Инициатор:</strong>{' '}
-                                    {task.initiatorName && task.initiatorEmail
-                                        ? `${task.initiatorName} (${task.initiatorEmail})`
-                                        : task.initiatorName || task.initiatorEmail}
-                                </Typography>
-                            )}
-
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    gap: 3,
-                                    alignItems: 'center',
-                                    flexWrap: 'wrap',
-                                    pt: 0.5,
-                                }}
-                            >
-                                <Typography variant="body1">
-                                    <strong>Создана:</strong>{' '}
-                                    {task.createdAt ? formatDate(task.createdAt) : '—'}
-                                </Typography>
-                            </Box>
-
-                            <Divider sx={{ mt: 1.5, mb: 1 }} />
-                            {task.status === 'Assigned' && (
-                                <Stack spacing={1}>
-                                    <Stack
-                                        direction={{ xs: 'column', sm: 'row' }}
-                                        spacing={1.5}
-                                        alignItems={{ xs: 'stretch', sm: 'center' }}
-                                        justifyContent="flex-start"
-                                    >
-                                        <Button
-                                            variant="contained"
-                                            onClick={() => {
-                                                setDecisionError(null);
-                                                setPendingDecision('accept');
-                                            }}
-                                            disabled={decisionLoading}
-                                            sx={{
-                                                borderRadius: UI_RADIUS.button,
-                                                textTransform: 'none',
-                                                px: 2.75,
-                                                py: 1.1,
-                                                fontWeight: 700,
-                                                background: 'linear-gradient(135deg, #2fd66b, #1ecf5a)',
-                                                boxShadow: '0 10px 28px rgba(38, 189, 104, 0.35)',
-                                                color: '#0b2916',
-                                                '&:hover': {
-                                                    background: 'linear-gradient(135deg, #29c961, #1abf51)',
-                                                },
-                                            }}
-                                        >
-                                            Принять
-                                        </Button>
-                                        <Button
-                                            variant="contained"
-                                            onClick={() => {
-                                                setDecisionError(null);
-                                                setPendingDecision('reject');
-                                            }}
-                                            disabled={decisionLoading}
-                                            sx={{
-                                                borderRadius: UI_RADIUS.button,
-                                                textTransform: 'none',
-                                                px: 2.75,
-                                                py: 1.1,
-                                                fontWeight: 700,
-                                                background: 'linear-gradient(135deg, #f4f6fa, #e8ebf1)',
-                                                boxShadow: '0 8px 22px rgba(15, 16, 20, 0.12)',
-                                                color: '#0f1115',
-                                                border: '1px solid rgba(0,0,0,0.06)',
-                                                '&:hover': {
-                                                    background: 'linear-gradient(135deg, #e6e9ef, #d9dce4)',
-                                                },
-                                            }}
-                                        >
-                                            Отказать
-                                        </Button>
-                                    </Stack>
-                                    <Typography variant="caption" color="text.secondary">
-                                        Статус после принятия: At work. После отказа: To do.
-                                    </Typography>
-                                </Stack>
-                            )}
-                            {task.status === 'At work' && (
-                                <Box sx={{ pt: 0.5 }}>
-                                    <Divider sx={{ mb: 1.5 }} />
-                                    <Button
-                                        variant="contained"
-                                        color="success"
-                                        onClick={handleCompleteClick}
-                                        disabled={completeLoading}
-                                        fullWidth
+                                    <strong>Приоритет:</strong>
+                                    <Box
+                                        component="span"
                                         sx={{
-                                            borderRadius: UI_RADIUS.button,
-                                            textTransform: 'none',
-                                            py: 1.1,
-                                            fontWeight: 700,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 0.5,
                                         }}
                                     >
-                                        Завершено
-                                    </Button>
+                                        {getPriorityIcon(
+                                            (normalizePriority(task.priority as string) ?? 'medium') as
+                                                'urgent' | 'high' | 'medium' | 'low'
+                                        )}
+                                        <span>{task.priority || '—'}</span>
+                                    </Box>
+                                </Typography>
+
+                                <Typography variant="body1">
+                                    <strong>Стоимость:</strong> {renderCost()}
+                                </Typography>
+                                <Typography variant="body1">
+                                    <strong>Тип задачи:</strong> {task.taskType || '—'}
+                                </Typography>
+
+                                {(task.executorName || task.executorEmail) && (
+                                    <Typography variant="body1">
+                                        <strong>Исполнитель:</strong> {task.executorName || task.executorEmail}
+                                    </Typography>
+                                )}
+
+                                {(task.initiatorName || task.initiatorEmail) && (
+                                    <Typography variant="body1">
+                                        <strong>Инициатор:</strong>{' '}
+                                        {task.initiatorName && task.initiatorEmail
+                                            ? `${task.initiatorName} (${task.initiatorEmail})`
+                                            : task.initiatorName || task.initiatorEmail}
+                                    </Typography>
+                                )}
+
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        gap: 3,
+                                        alignItems: 'center',
+                                        flexWrap: 'wrap',
+                                        pt: 0.5,
+                                    }}
+                                >
+                                    <Typography variant="body1">
+                                        <strong>Создана:</strong>{' '}
+                                        {task.createdAt ? formatDate(task.createdAt) : '—'}
+                                    </Typography>
                                 </Box>
-                            )}
-                        </Stack>
-                    </CardItem>
+
+                                <Divider sx={{ mt: 1.5, mb: 1 }} />
+                                {task.status === 'Assigned' && (
+                                    <Stack spacing={1}>
+                                        <Stack
+                                            direction={{ xs: 'column', sm: 'row' }}
+                                            spacing={1.5}
+                                            alignItems={{ xs: 'stretch', sm: 'center' }}
+                                            justifyContent="flex-start"
+                                        >
+                                            <Button
+                                                variant="contained"
+                                                onClick={() => {
+                                                    setDecisionError(null);
+                                                    setPendingDecision('accept');
+                                                }}
+                                                disabled={decisionLoading}
+                                                sx={{
+                                                    borderRadius: UI_RADIUS.button,
+                                                    textTransform: 'none',
+                                                    px: 2.75,
+                                                    py: 1.1,
+                                                    fontWeight: 700,
+                                                    background: 'linear-gradient(135deg, #2fd66b, #1ecf5a)',
+                                                    boxShadow: '0 10px 28px rgba(38, 189, 104, 0.35)',
+                                                    color: '#0b2916',
+                                                    '&:hover': {
+                                                        background: 'linear-gradient(135deg, #29c961, #1abf51)',
+                                                    },
+                                                }}
+                                            >
+                                                Принять
+                                            </Button>
+                                            <Button
+                                                variant="contained"
+                                                onClick={() => {
+                                                    setDecisionError(null);
+                                                    setPendingDecision('reject');
+                                                }}
+                                                disabled={decisionLoading}
+                                                sx={{
+                                                    borderRadius: UI_RADIUS.button,
+                                                    textTransform: 'none',
+                                                    px: 2.75,
+                                                    py: 1.1,
+                                                    fontWeight: 700,
+                                                    background: 'linear-gradient(135deg, #f4f6fa, #e8ebf1)',
+                                                    boxShadow: '0 8px 22px rgba(15, 16, 20, 0.12)',
+                                                    color: '#0f1115',
+                                                    border: '1px solid rgba(0,0,0,0.06)',
+                                                    '&:hover': {
+                                                        background: 'linear-gradient(135deg, #e6e9ef, #d9dce4)',
+                                                    },
+                                                }}
+                                            >
+                                                Отказать
+                                            </Button>
+                                        </Stack>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Статус после принятия: At work. После отказа: To do.
+                                        </Typography>
+                                    </Stack>
+                                )}
+                                {task.status === 'At work' && (
+                                    <Box sx={{ pt: 0.5 }}>
+                                        <Divider sx={{ mb: 1.5 }} />
+                                        <Button
+                                            variant="contained"
+                                            color="success"
+                                            onClick={handleCompleteClick}
+                                            disabled={completeLoading}
+                                            fullWidth
+                                            sx={{
+                                                borderRadius: UI_RADIUS.button,
+                                                textTransform: 'none',
+                                                py: 1.1,
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            Завершено
+                                        </Button>
+                                    </Box>
+                                )}
+                            </Stack>
+                        </CardItem>
 
                     {showReportActions && (
                         <CardItem ref={issuesSectionRef} sx={{ minWidth: 0 }}>
@@ -1160,13 +1272,8 @@ export default function TaskDetailPage() {
 
                     {(hasWorkItems || Array.isArray(task.workItems)) && (
                         <CardItem sx={{ minWidth: 0 }}>
-                            <Accordion
-                                defaultExpanded
-                                disableGutters
-                                elevation={0}
-                                sx={{ '&:before': { display: 'none' } }}
-                            >
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Accordion defaultExpanded disableGutters elevation={0} sx={accordionSx}>
+                                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
                                     <Box
                                         sx={{
                                             display: 'flex',
@@ -1203,7 +1310,7 @@ export default function TaskDetailPage() {
                                         </Tooltip>
                                     </Box>
                                 </AccordionSummary>
-                                <AccordionDetails sx={{ pt: 0 }}>
+                                <AccordionDetails sx={accordionDetailsSx}>
                                     <Divider sx={{ mb: 1.5 }} />
                                     {renderWorkItemsTable()}
                                 </AccordionDetails>
@@ -1244,9 +1351,9 @@ export default function TaskDetailPage() {
                             defaultExpanded={!!task?.comments?.length}
                             disableGutters
                             elevation={0}
-                            sx={{ '&:before': { display: 'none' } }}
+                            sx={accordionSx}
                         >
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
                                 <Box
                                     sx={{
                                         display: 'flex',
@@ -1283,7 +1390,7 @@ export default function TaskDetailPage() {
                                     </Tooltip>
                                 </Box>
                             </AccordionSummary>
-                            <AccordionDetails sx={{ pt: 0 }}>
+                            <AccordionDetails sx={accordionDetailsSx}>
                                 <Divider sx={{ mb: 1.5 }} />
                                 {renderCommentsSection()}
                             </AccordionDetails>
@@ -1291,8 +1398,8 @@ export default function TaskDetailPage() {
                     </CardItem>
 
                     <CardItem sx={{ p: 0, minWidth: 0 }}>
-                        <Accordion disableGutters elevation={0} sx={{ '&:before': { display: 'none' } }}>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Accordion disableGutters elevation={0} sx={accordionSx}>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
                                 <Typography
                                     variant="subtitle1"
                                     fontWeight={600}
@@ -1307,7 +1414,7 @@ export default function TaskDetailPage() {
                                     История
                                 </Typography>
                             </AccordionSummary>
-                            <AccordionDetails sx={{ pt: 0 }}>
+                            <AccordionDetails sx={accordionDetailsSx}>
                                 <Divider sx={{ mb: 1.5 }} />
                                 {sortedEvents.length === 0 ? (
                                     <Typography color="text.secondary" sx={{ px: 2, pb: 1.5 }}>
@@ -1360,8 +1467,8 @@ export default function TaskDetailPage() {
                             </AccordionDetails>
                         </Accordion>
                     </CardItem>
-
-                </Stack>
+                    </Masonry>
+                </Box>
             </Box>
 
             <PhotoReportUploader
