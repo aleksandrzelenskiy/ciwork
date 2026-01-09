@@ -21,6 +21,17 @@ function toHttpError(e: unknown) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
 }
 
+const isTransactionNotSupportedError = (error: unknown): boolean => {
+    const mongoError = error as { code?: number; codeName?: string; message?: string };
+    return (
+        mongoError?.code === 20 ||
+        mongoError?.codeName === 'IllegalOperation' ||
+        mongoError?.message?.includes?.(
+            'Transaction numbers are only allowed on a replica set member or mongos'
+        ) === true
+    );
+};
+
 type ProjectDTO = {
     _id: string;
     name: string;
@@ -190,15 +201,20 @@ export async function POST(
         let project: ProjectDTO | null = null;
         let limitError: string | null = null;
 
-        try {
-            await session.withTransaction(async () => {
-                const limit = await consumeUsageSlot(orgDoc._id, 'projects', { session });
+        type CreationResult =
+            | { ok: true }
+            | { ok: false; code: 'LIMIT' | 'UNKNOWN'; error?: unknown };
+
+        const runCreation = async (txnSession?: mongoose.ClientSession): Promise<CreationResult> => {
+            const sessionOptions = txnSession ? { session: txnSession } : undefined;
+            try {
+                const limit = await consumeUsageSlot(orgDoc._id, 'projects', sessionOptions ? { session: txnSession } : undefined);
                 if (!limit.ok) {
                     const limitValue = Number.isFinite(limit.limit ?? null) ? limit.limit : '∞';
                     limitError =
                         limit.reason ||
                         `Достигнут лимит проектов: ${limit.used}/${limitValue}`;
-                    throw new Error('LIMIT_REACHED');
+                    return { ok: false, code: 'LIMIT' };
                 }
 
                 const [created] = await Project.create(
@@ -214,7 +230,7 @@ export async function POST(
                             operator: body.operator,
                         },
                     ],
-                    { session }
+                    sessionOptions
                 );
 
                 const createdManagers: string[] = Array.isArray(
@@ -233,17 +249,46 @@ export async function POST(
                     regionCode: created.regionCode,
                     operator: created.operator,
                 };
-            });
-        } catch (e) {
-            if ((e as Error).message === 'LIMIT_REACHED') {
+                return { ok: true };
+            } catch (error) {
+                return { ok: false, code: 'UNKNOWN', error };
+            }
+        };
+
+        let creationResult: CreationResult | null = null;
+        try {
+            try {
+                await session.withTransaction(async () => {
+                    creationResult = await runCreation(session);
+                    if (!creationResult?.ok) {
+                        await session.abortTransaction();
+                    }
+                });
+            } catch (error) {
+                if (isTransactionNotSupportedError(error)) {
+                    creationResult = await runCreation();
+                } else {
+                    if (!creationResult || creationResult.ok) {
+                        creationResult = { ok: false, code: 'UNKNOWN', error };
+                    }
+                }
+            }
+        } finally {
+            await session.endSession();
+        }
+
+        if (!creationResult?.ok) {
+            if (creationResult?.code === 'LIMIT') {
                 return NextResponse.json(
                     { error: limitError ?? 'Лимит проектов исчерпан' },
                     { status: 402 }
                 );
             }
-            return toHttpError(e);
-        } finally {
-            await session.endSession();
+            if (creationResult?.error) {
+                console.error('Failed to create project', creationResult.error);
+                return toHttpError(creationResult.error);
+            }
+            return NextResponse.json({ error: 'Не удалось создать проект' }, { status: 500 });
         }
 
         if (!project) {
