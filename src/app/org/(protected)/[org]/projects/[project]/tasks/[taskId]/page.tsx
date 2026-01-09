@@ -1646,7 +1646,7 @@ export default function TaskDetailsPage() {
                                 • Проект:{' '}
                                 <Link
                                     href={`/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
-                                        project
+                                        projectKey || project
                                     )}/tasks`}
                                     underline="hover"
                                     color="inherit"
@@ -2148,7 +2148,9 @@ export default function TaskDetailsPage() {
                                                     : undefined;
                                                 const href = `/org/${encodeURIComponent(
                                                     org || ''
-                                                )}/projects/${encodeURIComponent(project || '')}/tasks/${encodeURIComponent(
+                                                )}/projects/${encodeURIComponent(
+                                                    projectKey || project || ''
+                                                )}/tasks/${encodeURIComponent(
                                                     related.taskId || related._id
                                                 )}`;
                                                 return (

@@ -373,11 +373,11 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
               ? '/org/new'
               : null;
     const projectsChildren =
-        isEmployerView && managerOrgs.length > 1
-            ? managerOrgs.map((org) => ({
-                  label: org.orgSlug,
-                  secondary: org.orgName,
-                  path: `/org/${encodeURIComponent(org.orgSlug)}/projects`,
+        isEmployerView && managerProjectPaths.length > 1
+            ? managerProjectPaths.map((project) => ({
+                  label: project.projectKey,
+                  secondary: project.projectName,
+                  path: project.tasksPath,
               }))
             : undefined;
     const navItems = React.useMemo<NavItem[]>(() => {
