@@ -27,6 +27,10 @@ type OrgOverviewPanelProps = {
     onInvite: () => void;
     disableCreationActions: boolean;
     inviteTooltip: string;
+    primaryActionLabel?: string;
+    primaryActionIcon?: React.ReactNode;
+    secondaryActionLabel?: string;
+    secondaryActionIcon?: React.ReactNode;
     actionButtonBaseSx: SxProps<Theme>;
     panelBaseSx: SxProps<Theme>;
     panelPadding: ResponsiveStyleValue<number | string>;
@@ -79,6 +83,10 @@ export default function OrgOverviewPanel({
     onInvite,
     disableCreationActions,
     inviteTooltip,
+    primaryActionLabel,
+    primaryActionIcon,
+    secondaryActionLabel,
+    secondaryActionIcon,
     actionButtonBaseSx,
     panelBaseSx,
     panelPadding,
@@ -119,6 +127,11 @@ export default function OrgOverviewPanel({
     isTrialActive,
     getAlertSx,
 }: OrgOverviewPanelProps) {
+    const primaryLabel = primaryActionLabel ?? 'К проектам';
+    const secondaryLabel = secondaryActionLabel ?? 'Пригласить';
+    const primaryIcon = primaryActionIcon ?? <DriveFileMoveIcon />;
+    const secondaryIcon = secondaryActionIcon ?? <PersonAddIcon />;
+
     return (
         <Box
             sx={{
@@ -200,7 +213,7 @@ export default function OrgOverviewPanel({
                         <Button
                             variant="outlined"
                             onClick={onGoToProjects}
-                            startIcon={<DriveFileMoveIcon />}
+                            startIcon={primaryIcon}
                             sx={{
                                 ...actionButtonBaseSx,
                                 borderColor: headerBorder,
@@ -210,14 +223,14 @@ export default function OrgOverviewPanel({
                                     : 'rgba(255,255,255,0.85)',
                             }}
                         >
-                            К проектам
+                            {primaryLabel}
                         </Button>
                         <Tooltip title={inviteTooltip} disableHoverListener={!disableCreationActions}>
                             <span style={{ display: 'inline-flex' }}>
                                 <Button
                                     variant="contained"
                                     disableElevation
-                                    startIcon={<PersonAddIcon />}
+                                    startIcon={secondaryIcon}
                                     onClick={onInvite}
                                     disabled={disableCreationActions}
                                     sx={{
@@ -231,7 +244,7 @@ export default function OrgOverviewPanel({
                                             : 'linear-gradient(120deg, #3b82f6, #6366f1)',
                                     }}
                                 >
-                                    Пригласить
+                                    {secondaryLabel}
                                 </Button>
                             </span>
                         </Tooltip>

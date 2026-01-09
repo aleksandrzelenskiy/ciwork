@@ -24,10 +24,10 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import BusinessIcon from '@mui/icons-material/Business';
-import TopicIcon from '@mui/icons-material/Topic';
 import { useRouter, useParams } from 'next/navigation';
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
+import OrgOverviewPanel from '@/app/org/(protected)/[org]/components/OrgOverviewPanel';
 import ProjectDialog, {
     ProjectDialogValues,
     ProjectManagerOption,
@@ -244,6 +244,11 @@ export default function OrgProjectsPage() {
         : '';
     const activeProjectsCount = projects.length;
     const projectsLimitLabel = subscription?.projectsLimit ? String(subscription.projectsLimit) : 'XX';
+    const seatsLabel = subscription?.seats ? String(subscription.seats) : '—';
+    const canEditOrgSettings = isOwnerOrAdmin;
+    const settingsTooltip = canEditOrgSettings
+        ? 'Настройки организации'
+        : 'Недостаточно прав для изменения настроек';
 
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
@@ -282,6 +287,10 @@ export default function OrgProjectsPage() {
         backdropFilter: 'blur(26px)',
         position: 'relative' as const,
         overflow: 'hidden',
+    };
+    const overviewPanelBaseSx = {
+        ...panelBaseSx,
+        p: 0,
     };
     const statCardSx = {
         borderRadius: UI_RADIUS.tooltip,
@@ -371,6 +380,7 @@ export default function OrgProjectsPage() {
             color: disabledIconColor,
         },
     });
+    const panelPadding = { xs: 2, md: 2.5 };
     const renderBackdrop = (content: ReactNode) => (
         <Box sx={pageWrapperSx}>
             {content}
@@ -401,6 +411,7 @@ export default function OrgProjectsPage() {
     // ---- Участники для менеджеров ----
     const [managerOptions, setManagerOptions] = useState<ProjectManagerOption[]>([]);
     const [managerOptionsError, setManagerOptionsError] = useState<string | null>(null);
+    const [activeMembersCount, setActiveMembersCount] = useState(0);
 
     const loadManagerOptions = useCallback(async () => {
         if (!orgSlug) return;
@@ -416,13 +427,16 @@ export default function OrgProjectsPage() {
                 const message = 'error' in data ? data.error : 'Не удалось загрузить участников';
                 setManagerOptionsError(message);
                 setManagerOptions([]);
+                setActiveMembersCount(0);
                 return;
             }
 
-            const filtered = data.members
-                .filter((member) => member.status === 'active')
-                .filter((member) => ['owner', 'org_admin', 'manager'].includes(member.role));
+            const activeMembers = data.members.filter((member) => member.status === 'active');
+            const filtered = activeMembers.filter((member) =>
+                ['owner', 'org_admin', 'manager'].includes(member.role)
+            );
 
+            setActiveMembersCount(activeMembers.length);
             setManagerOptions(
                 filtered.map((member) => ({
                     email: member.userEmail,
@@ -434,6 +448,7 @@ export default function OrgProjectsPage() {
             const msg = e instanceof Error ? e.message : 'Ошибка загрузки участников';
             setManagerOptionsError(msg);
             setManagerOptions([]);
+            setActiveMembersCount(0);
         }
     }, [orgSlug]);
 
@@ -646,110 +661,6 @@ export default function OrgProjectsPage() {
             </Box>
         );
 
-    const subscriptionAlerts: ReactNode[] = [];
-    if (subscriptionError) {
-        subscriptionAlerts.push(
-            <Alert key="sub-error" severity="error" sx={getAlertSx('error')}>
-                Не удалось получить статус подписки: {subscriptionError}
-            </Alert>
-        );
-    }
-    if (!subscriptionError && subscriptionLoading) {
-        subscriptionAlerts.push(
-            <Alert key="sub-loading" severity="info" sx={getAlertSx('info')}>
-                Проверяем статус подписки…
-            </Alert>
-        );
-    }
-    if (!subscriptionError && !subscriptionLoading && billing?.readOnly) {
-        subscriptionAlerts.push(
-            <Alert
-                key="sub-billing-readonly"
-                severity="warning"
-                sx={getAlertSx('warning')}
-                action={
-                    billing.graceAvailable && (myRole === 'owner' || myRole === 'org_admin') ? (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            onClick={handleActivateGrace}
-                            sx={{
-                                ...actionButtonBaseSx,
-                                px: 2,
-                                py: 0.6,
-                                backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
-                                color: '#2f1000',
-                            }}
-                        >
-                            Grace 3 дня
-                        </Button>
-                    ) : undefined
-                }
-            >
-                {billing.reason ?? 'Доступ ограничен: недостаточно средств'}
-            </Alert>
-        );
-    }
-    if (!subscriptionError && !subscriptionLoading && !isSubscriptionActive) {
-        subscriptionAlerts.push(
-            <Alert key="sub-inactive" severity="warning" sx={getAlertSx('warning')}>
-                <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={2}
-                    alignItems={{ xs: 'flex-start', sm: 'center' }}
-                    justifyContent="space-between"
-                >
-                    <Box>
-                        <Typography fontWeight={600} color={textPrimary}>
-                            Подписка не активна
-                        </Typography>
-                        {isTrialExpired && formattedTrialEnd && (
-                            <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                Пробный период завершился {formattedTrialEnd}.
-                            </Typography>
-                        )}
-                        <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                            Получите бесплатный 10-дневный период PRO, чтобы запускать проекты без ограничений.
-                        </Typography>
-                        {!canStartTrial && (
-                            <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                Обратитесь к владельцу организации, чтобы активировать подписку.
-                            </Typography>
-                        )}
-                    </Box>
-                    {canStartTrial && (
-                        <Button
-                            variant="contained"
-                            onClick={handleStartTrial}
-                            disabled={startTrialLoading}
-                            sx={{
-                                ...actionButtonBaseSx,
-                                px: { xs: 2.25, md: 2.75 },
-                                py: 0.9,
-                                backgroundImage: 'linear-gradient(120deg, #f97316, #facc15)',
-                                color: '#2f1000',
-                            }}
-                        >
-                            {startTrialLoading ? 'Запускаем…' : 'Активировать'}
-                        </Button>
-                    )}
-                </Stack>
-            </Alert>
-        );
-    }
-    if (!subscriptionError && !subscriptionLoading && isTrialActive) {
-        subscriptionAlerts.push(
-            <Alert key="sub-trial" severity="info" sx={getAlertSx('info')}>
-                Пробный период активен до {formattedTrialEnd ?? '—'}
-                {typeof trialDaysLeft === 'number' && (
-                    <Typography component="span" sx={{ ml: 0.5 }}>
-                        (осталось {trialDaysLeft} дн.)
-                    </Typography>
-                )}
-            </Alert>
-        );
-    }
-
     const secondaryAlerts: ReactNode[] = [];
     if (managerOptionsError) {
         secondaryAlerts.push(
@@ -786,148 +697,70 @@ export default function OrgProjectsPage() {
     return renderBackdrop(
         <>
             <Box sx={{ maxWidth: 1200, mx: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <Box
-                    sx={{
-                        ...panelBaseSx,
-                        '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            inset: 0,
-                            background: isDarkMode
-                                ? 'linear-gradient(120deg, rgba(59,130,246,0.18), transparent 60%)'
-                                : 'linear-gradient(120deg, rgba(59,130,246,0.15), transparent 55%)',
-                            pointerEvents: 'none',
-                        },
+                <OrgOverviewPanel
+                    orgName={`${orgName} - Проекты`}
+                    orgSlug={orgSlug}
+                    settingsTooltip={settingsTooltip}
+                    settingsButtonDisabled={!canEditOrgSettings}
+                    canEditOrgSettings={canEditOrgSettings}
+                    onOpenOrgSettings={() => {
+                        if (!orgSlug) return;
+                        router.push(`/org/${encodeURIComponent(orgSlug)}`);
                     }}
-                >
-                    <Stack
-                        direction={{ xs: 'column', md: 'row' }}
-                        spacing={{ xs: 2, md: 3 }}
-                        alignItems={{ xs: 'flex-start', md: 'center' }}
-                        justifyContent="space-between"
-                    >
-                        <Box sx={{ width: '100%' }}>
-                            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
-                                <Box
-                                    sx={{
-                                        width: 44,
-                                        height: 44,
-                                        borderRadius: UI_RADIUS.overlay,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        backgroundColor: isDarkMode
-                                            ? 'rgba(59,130,246,0.18)'
-                                            : 'rgba(59,130,246,0.15)',
-                                        color: isDarkMode ? '#93c5fd' : '#1d4ed8',
-                                        boxShadow: iconShadow,
-                                    }}
-                                >
-                                    <TopicIcon />
-                                </Box>
-                                <Typography
-                                    variant="h5"
-                                    fontWeight={700}
-                                    color={textPrimary}
-                                    sx={{ fontSize: { xs: '1.55rem', md: '1.95rem' } }}
-                                >
-                                    {orgName} - Проекты
-                                </Typography>
-                            </Stack>
-                            <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                Создайте проект. Выберите регион и оператора и управляйте задачами максимально эффективно!
-                            </Typography>
-                        </Box>
-                        <Stack
-                            direction={{ xs: 'column', sm: 'row' }}
-                            spacing={1.25}
-                            alignItems={{ xs: 'stretch', sm: 'center' }}
-                            sx={{ width: '100%', justifyContent: 'flex-end', flexWrap: 'wrap', rowGap: 1 }}
-                        >
-                            <Button
-                                variant="outlined"
-                                startIcon={<BusinessIcon />}
-                                onClick={() => {
-                                    if (!orgSlug) return;
-                                    router.push(`/org/${encodeURIComponent(orgSlug)}`);
-                                }}
-                                sx={{
-                                    ...actionButtonBaseSx,
-                                    borderColor: headerBorder,
-                                    color: textPrimary,
-                                    backgroundColor: isDarkMode
-                                        ? 'rgba(15,18,28,0.65)'
-                                        : 'rgba(255,255,255,0.85)',
-                                }}
-                            >
-                                Организация
-                            </Button>
-                            <Tooltip title={createButtonTooltip} disableHoverListener={!createButtonTooltip}>
-                                <span style={{ display: 'inline-flex' }}>
-                                    <Button
-                                        variant="contained"
-                                        disableElevation
-                                        startIcon={<AddIcon />}
-                                        onClick={openCreateDialog}
-                                        disabled={disableCreateButton}
-                                        sx={{
-                                            ...actionButtonBaseSx,
-                                            border: 'none',
-                                            color: '#ffffff',
-                                            backgroundImage: disableCreateButton
-                                                ? isDarkMode
-                                                    ? 'linear-gradient(120deg, rgba(148,163,184,0.4), rgba(100,116,139,0.35))'
-                                                    : 'linear-gradient(120deg, rgba(148,163,184,0.3), rgba(100,116,139,0.25))'
-                                                : 'linear-gradient(120deg, #3b82f6, #6366f1)',
-                                        }}
-                                    >
-                                        Новый проект
-                                    </Button>
-                                </span>
-                            </Tooltip>
-                        </Stack>
-                    </Stack>
-
-                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2.5} sx={{ mt: { xs: 2.5, md: 3 } }}>
-                        <Box sx={statCardSx}>
-                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                Активные проекты
-                            </Typography>
-                            <Typography variant="h4" fontWeight={700} color={textPrimary}>
-                                {activeProjectsCount}
-                            </Typography>
-                            <Typography variant="body2" color={textSecondary}>
-                                из {projectsLimitLabel}
-                            </Typography>
-                        </Box>
-                        <Box sx={statCardSx}>
-                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                Статус подписки
-                            </Typography>
-                            <Typography variant="h6" fontWeight={600} sx={{ color: subscriptionStatusColor }}>
-                                {subscriptionStatusLabel}
-                            </Typography>
-                            <Typography variant="body2" color={textSecondary}>
-                                {subscriptionStatusDescription}
-                            </Typography>
-                        </Box>
-                        <Box sx={statCardSx}>
-                            <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                                Ваша роль
-                            </Typography>
-                            <Typography variant="h6" fontWeight={600} color={textPrimary}>
-                                {roleLabel}
-                            </Typography>
-                            <Typography variant="body2" color={textSecondary}>
-                                Организация {orgName}
-                            </Typography>
-                        </Box>
-                    </Stack>
-                </Box>
-
-                {subscriptionAlerts.length > 0 && (
-                    <Stack spacing={2}>{subscriptionAlerts}</Stack>
-                )}
+                    onGoToProjects={() => {
+                        if (!orgSlug) return;
+                        router.push(`/org/${encodeURIComponent(orgSlug)}`);
+                    }}
+                    onInvite={openCreateDialog}
+                    disableCreationActions={disableCreateButton}
+                    inviteTooltip={createButtonTooltip}
+                    primaryActionLabel="Организация"
+                    primaryActionIcon={<BusinessIcon />}
+                    secondaryActionLabel="Новый проект"
+                    secondaryActionIcon={<AddIcon />}
+                    actionButtonBaseSx={actionButtonBaseSx}
+                    panelBaseSx={overviewPanelBaseSx}
+                    panelPadding={panelPadding}
+                    statCardSx={statCardSx}
+                    textPrimary={textPrimary}
+                    textSecondary={textSecondary}
+                    headerBorder={headerBorder}
+                    iconBorderColor={iconBorderColor}
+                    iconBg={iconBg}
+                    iconHoverBg={iconHoverBg}
+                    iconShadow={iconShadow}
+                    disabledIconColor={disabledIconColor}
+                    iconRadius={UI_RADIUS.sheet}
+                    isDarkMode={isDarkMode}
+                    activeProjectsCount={activeProjectsCount}
+                    projectsLimitLabel={projectsLimitLabel}
+                    activeMembersCount={activeMembersCount}
+                    seatsLabel={seatsLabel}
+                    subscriptionStatusLabel={subscriptionStatusLabel}
+                    subscriptionStatusColor={subscriptionStatusColor}
+                    subscriptionStatusDescription={subscriptionStatusDescription}
+                    roleLabelRu={roleLabel}
+                    onOpenPlansDialog={() => {
+                        if (!orgSlug) return;
+                        router.push(`/org/${encodeURIComponent(orgSlug)}/plans`);
+                    }}
+                    subscriptionError={subscriptionError}
+                    subscriptionLoading={subscriptionLoading}
+                    billingReadOnly={Boolean(billing?.readOnly)}
+                    billingReason={billing?.reason}
+                    billingGraceAvailable={Boolean(billing?.graceAvailable)}
+                    isOwnerOrAdmin={isOwnerOrAdmin}
+                    onActivateGrace={handleActivateGrace}
+                    isSubscriptionActive={isSubscriptionActive}
+                    isTrialExpired={isTrialExpired}
+                    formattedTrialEnd={formattedTrialEnd}
+                    canStartTrial={canStartTrial}
+                    startTrialLoading={startTrialLoading}
+                    onStartTrial={handleStartTrial}
+                    trialDaysLeft={trialDaysLeft}
+                    isTrialActive={isTrialActive}
+                    getAlertSx={getAlertSx}
+                />
 
                 {secondaryAlerts.length > 0 && (
                     <Stack spacing={2}>{secondaryAlerts}</Stack>
