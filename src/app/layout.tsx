@@ -40,6 +40,19 @@ export default function RootLayout({
         throw new Error('Missing NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY. Check your .env.local configuration.');
     }
 
+    if (!publishableKey && isBuildPhase) {
+        return (
+            <html lang="ru">
+                <body className={primaryFont.className}>
+                    <ThemeProvider theme={theme}>
+                        <CssBaseline />
+                        <ClientApp>{children}</ClientApp>
+                    </ThemeProvider>
+                </body>
+            </html>
+        );
+    }
+
     return (
         <ClerkProvider
             publishableKey={publishableKey}
