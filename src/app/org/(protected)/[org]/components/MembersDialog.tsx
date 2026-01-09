@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Avatar,
     Button,
     Card,
     CardContent,
@@ -33,6 +34,14 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { MemberDTO, MemberStatus } from '@/types/org';
 import { makeAbsoluteUrl, roleLabel } from '@/utils/org';
+
+const initialsFromMember = (member: MemberDTO) => {
+    const base = member.userName || member.userEmail || '';
+    const parts = base.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
 
 type MembersDialogProps = {
     open: boolean;
@@ -209,7 +218,14 @@ export default function MembersDialog({
                                                 sx={isInvited ? { opacity: 0.85 } : undefined}
                                                 title={isInvited ? 'Приглашение отправлено, ожидаем подтверждения' : undefined}
                                             >
-                                                <TableCell>{member.userName || '—'}</TableCell>
+                                                <TableCell>
+                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                        <Avatar src={member.profilePic} sx={{ width: 28, height: 28 }}>
+                                                            {initialsFromMember(member)}
+                                                        </Avatar>
+                                                        <Typography variant="body2">{member.userName || '—'}</Typography>
+                                                    </Stack>
+                                                </TableCell>
                                                 <TableCell>{member.userEmail}</TableCell>
                                                 <TableCell>{roleLabel(member.role)}</TableCell>
                                                 <TableCell>

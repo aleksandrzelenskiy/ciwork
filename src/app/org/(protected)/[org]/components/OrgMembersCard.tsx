@@ -107,7 +107,7 @@ export default function OrgMembersCard({
                                 }}
                             >
                                 <Stack direction="row" spacing={1} alignItems="center">
-                                    <Avatar sx={{ width: 32, height: 32 }}>
+                                    <Avatar src={member.profilePic} sx={{ width: 32, height: 32 }}>
                                         {initialsFromMember(member)}
                                     </Avatar>
                                     <Box>

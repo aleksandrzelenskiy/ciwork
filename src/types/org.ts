@@ -6,6 +6,7 @@ export type MemberDTO = {
     orgSlug: string;
     userEmail: string;
     userName?: string;
+    profilePic?: string;
     role: OrgRole;
     status: MemberStatus;
     inviteToken?: string;
