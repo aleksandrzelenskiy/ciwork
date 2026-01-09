@@ -197,6 +197,46 @@ function isLngValueValid(v: string): boolean {
     return Number.isFinite(n) && n >= -180 && n <= 180;
 }
 
+function parseDmsToDecimal(raw: string): number | null {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    const hasDmsMarkers = /[°'"]/.test(trimmed) || /[NSEW]/i.test(trimmed);
+    if (!hasDmsMarkers) return null;
+
+    const directionMatch = trimmed.match(/[NSEW]/i);
+    let sign = 1;
+    if (directionMatch && /[SW]/i.test(directionMatch[0])) {
+        sign = -1;
+    }
+    if (trimmed.startsWith('-')) {
+        sign = -1;
+    }
+
+    const parts = trimmed
+        .replace(/[NSEW]/gi, '')
+        .replace(/[^\d,.\-]+/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (!parts.length) return null;
+
+    const deg = Number(parts[0].replace(',', '.'));
+    const min = parts.length > 1 ? Number(parts[1].replace(',', '.')) : 0;
+    const sec = parts.length > 2 ? Number(parts[2].replace(',', '.')) : 0;
+
+    if (![deg, min, sec].every((n) => Number.isFinite(n))) return null;
+    if (Math.abs(min) >= 60 || Math.abs(sec) >= 60) return null;
+
+    const absDeg = Math.abs(deg);
+    const decimal = absDeg + Math.abs(min) / 60 + Math.abs(sec) / 3600;
+    return sign * decimal;
+}
+
+function formatDecimalCoord(value: number): string {
+    return value.toFixed(6).replace(/\.?0+$/, '');
+}
+
 function parseLatLonFromCoordinates(coord?: string | null): { lat: string; lon: string } {
     if (!coord) return { lat: '', lon: '' };
     const parts = coord.split(/\s+/).filter(Boolean);
@@ -1699,8 +1739,12 @@ export default function WorkspaceTaskDialog({
                                                         type="text"
                                                         value={entry.bsLatitude}
                                                         onChange={(e) => {
-                                                            const v = e.target.value.replace(',', '.');
-                                                            updateBsEntry(index, { bsLatitude: v });
+                                                            const raw = e.target.value;
+                                                            const dmsValue = parseDmsToDecimal(raw);
+                                                            const nextValue = dmsValue !== null
+                                                                ? formatDecimalCoord(dmsValue)
+                                                                : raw.replace(',', '.');
+                                                            updateBsEntry(index, { bsLatitude: nextValue });
                                                         }}
                                                         error={!latValid}
                                                         placeholder="52.219319"
@@ -1718,8 +1762,12 @@ export default function WorkspaceTaskDialog({
                                                         type="text"
                                                         value={entry.bsLongitude}
                                                         onChange={(e) => {
-                                                            const v = e.target.value.replace(',', '.');
-                                                            updateBsEntry(index, { bsLongitude: v });
+                                                            const raw = e.target.value;
+                                                            const dmsValue = parseDmsToDecimal(raw);
+                                                            const nextValue = dmsValue !== null
+                                                                ? formatDecimalCoord(dmsValue)
+                                                                : raw.replace(',', '.');
+                                                            updateBsEntry(index, { bsLongitude: nextValue });
                                                         }}
                                                         error={!lngValid}
                                                         placeholder="104.26913"
