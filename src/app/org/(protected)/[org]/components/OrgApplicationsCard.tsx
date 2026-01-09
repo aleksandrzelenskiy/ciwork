@@ -36,6 +36,13 @@ const statusLabel = (status: string) => {
     return status || '—';
 };
 
+const statusColor = (status: string, fallback: string) => {
+    if (status === 'accepted') return 'success.main';
+    if (status === 'rejected') return 'error.main';
+    if (status === 'submitted') return 'text.secondary';
+    return fallback;
+};
+
 export default function OrgApplicationsCard({
     applicationsLoading,
     applicationsPreview,
@@ -102,7 +109,10 @@ export default function OrgApplicationsCard({
                                     {app.bsNumber ? ` · BS${app.bsNumber}` : ''}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    {app.contractorName || app.contractorEmail || 'Без кандидата'} · {statusLabel(app.status)}
+                                    {app.contractorName || app.contractorEmail || 'Без кандидата'} ·{' '}
+                                    <Box component="span" sx={{ color: statusColor(app.status, textSecondary) }}>
+                                        {statusLabel(app.status)}
+                                    </Box>
                                 </Typography>
                             </Box>
                         ))}

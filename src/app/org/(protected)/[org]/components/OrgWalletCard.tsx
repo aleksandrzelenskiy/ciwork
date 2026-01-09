@@ -87,13 +87,21 @@ export default function OrgWalletCard({
                         </Typography>
                     )}
                 </Stack>
-                <Button
-                    variant="outlined"
-                    onClick={onOpenHistory}
-                    sx={{ borderRadius: buttonRadius, textTransform: 'none', alignSelf: 'flex-start' }}
-                >
-                    История операций
-                </Button>
+                <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                    <Button
+                        variant="contained"
+                        sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
+                    >
+                        Пополнить
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        onClick={onOpenHistory}
+                        sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
+                    >
+                        История операций
+                    </Button>
+                </Stack>
             </Stack>
         </Box>
     );
