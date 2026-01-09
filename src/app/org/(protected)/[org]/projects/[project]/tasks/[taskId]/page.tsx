@@ -62,8 +62,7 @@ import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
-import GroupOffOutlinedIcon from '@mui/icons-material/GroupOffOutlined';
+import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
 import WorkspaceTaskDialog from '@/app/workspace/components/WorkspaceTaskDialog';
 import type { TaskForEdit } from '@/app/workspace/components/WorkspaceTaskDialog';
 import TaskComments from '@/features/tasks/TaskComments';
@@ -1693,11 +1692,7 @@ export default function TaskDetailsPage() {
                                                 disabled: publishLoading,
                                             })}
                                         >
-                                            {task.visibility === 'public' ? (
-                                                <GroupOffOutlinedIcon />
-                                            ) : (
-                                                <PeopleAltOutlinedIcon />
-                                            )}
+                                            <CampaignOutlinedIcon />
                                         </IconButton>
                                     </span>
                                 </Tooltip>
