@@ -42,12 +42,13 @@ services:
       test:
         [
           "CMD-SHELL",
-          "mongosh --username \"$${MONGO_ROOT_USERNAME}\" --password \"$${MONGO_ROOT_PASSWORD}\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1"
+          "if [ \"$${MONGO_AUTH}\" = \"0\" ]; then mongosh --quiet --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1; else mongosh --username \"$${MONGO_ROOT_USERNAME}\" --password \"$${MONGO_ROOT_PASSWORD}\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1; fi"
         ]
       interval: 10s
       timeout: 5s
       retries: 12
-      start_period: 30s
+      start_period: 20s
+
     security_opt:
       - no-new-privileges:true
 
