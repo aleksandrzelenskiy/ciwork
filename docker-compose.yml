@@ -26,10 +26,10 @@ services:
         exec mongod --bind_ip 0.0.0.0 --auth --setParameter diagnosticDataCollectionEnabled=false --replSet rs0 --keyFile /etc/mongo-keyfile/keyfile;
       fi"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_AUTH: "0"
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 1HVSDVD9
       MONGO_INITDB_DATABASE: ciwork
-      MONGO_AUTH: ${MONGO_AUTH:-1}
     volumes:
       - ciwork_db_data:/data/db
       - ./mongo-keyfile:/etc/mongo-keyfile:ro
@@ -54,11 +54,11 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME}
-      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
-      MONGO_AUTH: ${MONGO_AUTH:-1}
+      MONGO_AUTH: "0"
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: 1HVSDVD9
+      MONGO_APP_USERNAME: ciwork_app
+      MONGO_APP_PASSWORD: Eseniya2019!Miroslava2023!
     entrypoint: ["/bin/sh", "-c"]
     command: >
       "if [ \"$${MONGO_AUTH}\" = \"0\" ]; then
