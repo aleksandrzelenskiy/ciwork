@@ -287,7 +287,7 @@ export default function TaskDetailsPage() {
         return Component;
     }, [cardPadding, masonryCardSx]);
 
-    const pageGutter = { xs: 1, sm: 2.5, md: 3, lg: 3.5, xl: 4 };
+    const pageGutter = { xs: 0.25, sm: 2.5, md: 3, lg: 3.5, xl: 4 };
     const masonrySpacing = { xs: 0.5, sm: 1.5, md: 2 } as const;
 
     const org = params.org?.trim();
