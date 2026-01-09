@@ -94,6 +94,7 @@ export interface Task {
   projectId?: string;
   projectKey?: string;
   projectName?: string;
+  projectOperator?: string;
   taskId: string;
   taskName: string;
 

@@ -11,6 +11,11 @@ import MapIcon from '@mui/icons-material/Map';
 import { Task, BsLocation } from '@/app/types/taskTypes';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
+import {
+  OPERATOR_CLUSTER_PRESETS,
+  OPERATOR_COLORS,
+  normalizeOperator,
+} from '@/utils/operatorColors';
 
 interface MiniMapProps {
   role: EffectiveOrgRole | null; // admin | manager | executor | viewer
@@ -118,6 +123,24 @@ export default function MiniMap({
     )}/tasks/locations`;
   }, [ctaHref, filteredTasks, orgSlugById, shouldUseOrgRoutes]);
 
+  // 3. Собираем координаты всех базовых станций (уже отфильтрованных задач)
+  const coordinatesList = filteredTasks.flatMap((task) =>
+    task.bsLocation.map((loc: BsLocation) => ({
+      coordinates: loc.coordinates, // строка "lat lon"
+      bsName: loc.name,
+      taskName: task.taskName,
+      operator: normalizeOperator(task.projectOperator),
+    }))
+  );
+  const clusterPreset = useMemo(() => {
+    const unique = new Set(coordinatesList.map((item) => item.operator));
+    if (unique.size === 1) {
+      const [only] = Array.from(unique.values());
+      return OPERATOR_CLUSTER_PRESETS[only];
+    }
+    return 'islands#grayClusterIcons';
+  }, [coordinatesList]);
+
   if (loading) {
     return (
       <Box
@@ -139,15 +162,6 @@ export default function MiniMap({
     );
   }
 
-  // 3. Собираем координаты всех базовых станций (уже отфильтрованных задач)
-  const coordinatesList = filteredTasks.flatMap((task) =>
-    task.bsLocation.map((loc: BsLocation) => ({
-      coordinates: loc.coordinates, // строка "lat lon"
-      bsName: loc.name,
-      taskName: task.taskName,
-    }))
-  );
-
   return (
     <Box sx={{ position: 'relative', width: '100%', height: mapHeight }}>
       <YMaps query={{ apikey: process.env.NEXT_PUBLIC_YANDEX_MAPS_APIKEY }}>
@@ -161,7 +175,7 @@ export default function MiniMap({
         >
           <Clusterer
             options={{
-              preset: 'islands#invertedBlueClusterIcons',
+              preset: clusterPreset,
               groupByCoordinates: false,
               clusterDisableClickZoom: true,
               clusterOpenBalloonOnClick: true,
@@ -178,7 +192,8 @@ export default function MiniMap({
                     balloonContent: `${item.taskName} - ${item.bsName}`,
                   }}
                   options={{
-                    preset: 'islands#blueIcon',
+                    preset: 'islands#circleIcon',
+                    iconColor: OPERATOR_COLORS[item.operator],
                   }}
                 />
               );

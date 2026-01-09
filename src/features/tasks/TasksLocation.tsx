@@ -27,6 +27,12 @@ import type { CurrentStatus, PriorityLevel } from '@/app/types/taskTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
 import { getStatusLabel } from '@/utils/statusLabels';
+import {
+    OPERATOR_CLUSTER_PRESETS,
+    OPERATOR_COLORS,
+    normalizeOperator,
+    type OperatorSlug,
+} from '@/utils/operatorColors';
 
 type TaskLocation = {
     _id?: string;
@@ -39,6 +45,7 @@ type TaskLocation = {
     executorName?: string | null;
     status?: CurrentStatus;
     priority?: PriorityLevel;
+    projectOperator?: string | null;
 };
 
 type MapPoint = {
@@ -52,6 +59,7 @@ type MapPoint = {
     status?: CurrentStatus;
     priority?: PriorityLevel;
     executorName?: string | null;
+    operator: OperatorSlug;
 };
 
 type UserIdentity = {
@@ -235,6 +243,7 @@ export default function TasksLocation(): React.ReactElement {
                     status: task.status,
                     priority: task.priority,
                     executorName: task.executorName ?? null,
+                    operator: normalizeOperator(task.projectOperator),
                 });
             });
         }
@@ -281,6 +290,14 @@ export default function TasksLocation(): React.ReactElement {
     }, []);
 
     const mapKey = `${mapCenter[0].toFixed(4)}-${mapCenter[1].toFixed(4)}-${filteredPlacemarks.length}`;
+    const clusterPreset = React.useMemo(() => {
+        const unique = new Set(filteredPlacemarks.map((point) => point.operator));
+        if (unique.size === 1) {
+            const [only] = Array.from(unique.values());
+            return OPERATOR_CLUSTER_PRESETS[only];
+        }
+        return 'islands#grayClusterIcons';
+    }, [filteredPlacemarks]);
     const showEmptyState = !loading && !error && filteredPlacemarks.length === 0;
     const filtersPristine = React.useMemo(() => {
         if (search.trim()) return false;
@@ -587,7 +604,7 @@ export default function TasksLocation(): React.ReactElement {
 
                             <Clusterer
                                 options={{
-                                    preset: 'islands#redClusterIcons',
+                                    preset: clusterPreset,
                                     groupByCoordinates: false,
                                     gridSize: 80,
 
@@ -619,8 +636,8 @@ export default function TasksLocation(): React.ReactElement {
                                             iconCaption: point.bsNumber,
                                         }}
                                         options={{
-                                            preset: 'islands#redIcon',
-                                            iconColor: '#ef4444',
+                                            preset: 'islands#circleIcon',
+                                            iconColor: OPERATOR_COLORS[point.operator],
                                             hideIconOnBalloonOpen: false,
                                         }}
                                         modules={['geoObject.addon.balloon', 'geoObject.addon.hint']}

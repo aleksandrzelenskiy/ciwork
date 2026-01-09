@@ -28,6 +28,12 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { UI_RADIUS } from '@/config/uiTokens';
+import {
+    OPERATOR_CLUSTER_PRESETS,
+    OPERATOR_COLORS,
+    normalizeOperator,
+    type OperatorSlug,
+} from '@/utils/operatorColors';
 
 type TaskLocation = {
     _id?: string;
@@ -39,6 +45,7 @@ type TaskLocation = {
     priority?: PriorityLevel;
     projectName?: string | null;
     projectKey?: string | null;
+    projectOperator?: string | null;
     executorName?: string | null;
     executorEmail?: string | null;
 };
@@ -55,6 +62,7 @@ type MapPoint = {
     priority?: PriorityLevel;
     projectName?: string | null;
     projectKey?: string | null;
+    operator: OperatorSlug;
     executorName?: string | null;
     executorEmail?: string | null;
 };
@@ -148,12 +156,64 @@ export default function ProjectTaskLocation(): React.ReactElement {
 
     React.useEffect(() => {
         let active = true;
+        const extractTasks = (payload: unknown): TaskLocation[] => {
+            if (!payload || typeof payload !== 'object') return [];
+            const value = payload as { tasks?: unknown; items?: unknown };
+            if (Array.isArray(value.tasks)) return value.tasks as TaskLocation[];
+            if (Array.isArray(value.items)) return value.items as TaskLocation[];
+            return [];
+        };
+
+        const fetchProjectTasks = async (orgRef: string, projectRef: string) => {
+            const pageSize = 100;
+            let page = 1;
+            let collected: TaskLocation[] = [];
+            while (true) {
+                const res = await fetch(
+                    `/api/org/${encodeURIComponent(orgRef)}/projects/${encodeURIComponent(
+                        projectRef
+                    )}/tasks?page=${page}&limit=${pageSize}`,
+                    { cache: 'no-store' }
+                );
+                const payload = (await res.json().catch(() => null)) as
+                    | { items?: TaskLocation[]; total?: number; error?: string }
+                    | null;
+                if (!res.ok) {
+                    return { error: payload?.error ?? 'Не удалось загрузить задачи' };
+                }
+                const items = extractTasks(payload);
+                collected = collected.concat(items);
+                const total = typeof payload?.total === 'number' ? payload.total : null;
+                if (items.length < pageSize || (total !== null && collected.length >= total)) {
+                    break;
+                }
+                page += 1;
+            }
+            return { tasks: collected };
+        };
+
         (async () => {
             setLoading(true);
             setError(null);
             try {
+                const response = orgSlug && projectSlug
+                    ? await fetchProjectTasks(orgSlug, projectSlug)
+                    : null;
+                if (!active) return;
+                if (response?.error) {
+                    setError(response.error);
+                    setTasks([]);
+                    return;
+                }
+                if (response?.tasks) {
+                    setTasks(response.tasks);
+                    return;
+                }
+
                 const tasksResponse = await fetch('/api/tasks', { cache: 'no-store' });
-                const payload = (await tasksResponse.json()) as { tasks?: TaskLocation[]; error?: string };
+                const payload = (await tasksResponse.json().catch(() => null)) as
+                    | { tasks?: TaskLocation[]; error?: string }
+                    | null;
                 if (!active) return;
 
                 if (!tasksResponse.ok) {
@@ -161,7 +221,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
                     setTasks([]);
                     return;
                 }
-                setTasks(Array.isArray(payload.tasks) ? payload.tasks : []);
+                setTasks(extractTasks(payload));
             } catch (err) {
                 if (!active) return;
                 setError(err instanceof Error ? err.message : 'Не удалось загрузить данные');
@@ -176,7 +236,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
         return () => {
             active = false;
         };
-    }, []);
+    }, [orgSlug, projectSlug]);
 
     const placemarks = React.useMemo(() => {
         const result: MapPoint[] = [];
@@ -206,6 +266,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
                     priority: task.priority,
                     projectKey: task.projectKey ?? null,
                     projectName: task.projectName ?? null,
+                    operator: normalizeOperator(task.projectOperator),
                     executorName: task.executorName ?? null,
                     executorEmail: task.executorEmail ?? null,
                 });
@@ -256,6 +317,14 @@ export default function ProjectTaskLocation(): React.ReactElement {
     }, []);
 
     const mapKey = `${mapCenter[0].toFixed(4)}-${mapCenter[1].toFixed(4)}-${filteredPlacemarks.length}`;
+    const clusterPreset = React.useMemo(() => {
+        const unique = new Set(filteredPlacemarks.map((point) => point.operator));
+        if (unique.size === 1) {
+            const [only] = Array.from(unique.values());
+            return OPERATOR_CLUSTER_PRESETS[only];
+        }
+        return 'islands#grayClusterIcons';
+    }, [filteredPlacemarks]);
     const showEmptyState = !loading && !error && filteredPlacemarks.length === 0;
     const filtersPristine = React.useMemo(() => {
         if (search.trim()) return false;
@@ -579,7 +648,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
                             <ZoomControl options={{ position: { right: 16, top: 80 } }} />
                             <Clusterer
                                 options={{
-                                    preset: 'islands#redClusterIcons',
+                                    preset: clusterPreset,
                                     groupByCoordinates: false,
                                     gridSize: 80,
 
@@ -610,8 +679,8 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                             iconCaption: point.bsNumber,
                                         }}
                                         options={{
-                                            preset: 'islands#redIcon',
-                                            iconColor: '#ef4444',
+                                            preset: 'islands#circleIcon',
+                                            iconColor: OPERATOR_COLORS[point.operator],
                                             hideIconOnBalloonOpen: false,
                                         }}
                                         modules={['geoObject.addon.balloon', 'geoObject.addon.hint']}

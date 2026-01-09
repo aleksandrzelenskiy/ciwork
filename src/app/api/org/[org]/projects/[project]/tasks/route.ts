@@ -258,12 +258,19 @@ export async function GET(
             TaskModel.countDocuments(filter),
         ]);
 
+        const projectOperator =
+            typeof rel.projectDoc.operator === 'string' ? rel.projectDoc.operator : undefined;
         const normalizedItems = items.map((task: Record<string, unknown>) => {
             const { attachments, documents } = splitAttachmentsAndDocuments(
                 (task as { attachments?: unknown }).attachments,
                 (task as { documents?: unknown }).documents
             );
-            return { ...task, attachments, documents };
+            return {
+                ...task,
+                attachments,
+                documents,
+                projectOperator,
+            };
         });
 
         return NextResponse.json({ ok: true, page, limit, total, items: normalizedItems });

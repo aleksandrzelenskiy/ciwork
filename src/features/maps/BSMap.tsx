@@ -34,6 +34,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
 import AddLocationOutlinedIcon from '@mui/icons-material/AddLocationOutlined';
+import {
+    OPERATOR_CLUSTER_PRESETS,
+    OPERATOR_COLORS,
+    normalizeOperator,
+} from '@/utils/operatorColors';
 
 type BaseStation = {
     _id: string;
@@ -136,18 +141,6 @@ const OPERATORS = [
     { value: 'megafon', label: 'Мегафон' },
     { value: 'mts', label: 'МТС' },
 ] as const;
-const OPERATOR_COLORS: Record<typeof OPERATORS[number]['value'], string> = {
-    t2: '#1f1f1f',
-    beeline: '#fbc02d',
-    megafon: '#388e3c',
-    mts: '#d32f2f',
-};
-const OPERATOR_CLUSTER_PRESETS: Record<typeof OPERATORS[number]['value'], string> = {
-    t2: 'islands#blackClusterIcons',
-    beeline: 'islands#yellowClusterIcons',
-    megafon: 'islands#greenClusterIcons',
-    mts: 'islands#redClusterIcons',
-};
 const ACTION_ICON_WRAPPER_STYLE = 'display:flex;align-items:center;gap:12px;margin-top:12px;';
 const ACTION_ICON_STYLE =
     'display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid #d1d5db;background:#fff;color:#1976d2;cursor:pointer;';
@@ -155,13 +148,6 @@ const EDIT_ICON_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M11 11h2.12l6.16-6.16-2.12-2.12L11 8.88zm9.71-9L20 1.29a.996.996 0 0 0-1.41 0l-.72.72 2.12 2.12.72-.72c.39-.39.39-1.02 0-1.41M17.9 9.05c.06.36.1.74.1 1.15 0 1.71-1.08 4.64-6 9.14-4.92-4.49-6-7.43-6-9.14C6 6.17 9.09 4 12 4c.32 0 .65.03.97.08l1.65-1.65C13.78 2.16 12.9 2 12 2c-4.2 0-8 3.22-8 8.2 0 3.32 2.67 7.25 8 11.8 5.33-4.55 8-8.48 8-11.8 0-1.01-.16-1.94-.45-2.8z"/></svg>';
 const DELETE_ICON_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zm2-10h8v10H8zm7.5-5-1-1h-5l-1 1H5v2h14V4z"/></svg>';
-const normalizeOperator = (value: string | null | undefined): typeof OPERATORS[number]['value'] => {
-    const normalized = (value ?? '').toLowerCase();
-    if (normalized === 't2' || normalized === 'beeline' || normalized === 'megafon' || normalized === 'mts') {
-        return normalized;
-    }
-    return 't2';
-};
 type RegionOption = { code: string; label: string };
 const ALL_REGIONS_OPTION: RegionOption = { code: 'ALL', label: 'Все регионы' };
 const RUSSIAN_REGIONS: readonly RegionOption[] = [

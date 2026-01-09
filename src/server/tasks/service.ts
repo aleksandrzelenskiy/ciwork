@@ -114,6 +114,7 @@ export const listTasksForCurrentUser = async () => {
             $addFields: {
                 projectKey: { $arrayElemAt: ['$projectDoc.key', 0] },
                 projectName: { $arrayElemAt: ['$projectDoc.name', 0] },
+                projectOperator: { $arrayElemAt: ['$projectDoc.operator', 0] },
             },
         },
         {
