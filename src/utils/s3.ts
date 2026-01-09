@@ -30,7 +30,10 @@ const INVENTORY_PREFIX = env.AWS_S3_INVENTORY_PREFIX;
 const useS3 = !!(BUCKET && REGION && ENDPOINT && ACCESS_KEY_ID && SECRET_ACCESS_KEY);
 
 let s3: S3Client | null = null;
-const shouldLogStorageMode = process.env.NODE_ENV !== 'test';
+const isBuildPhase =
+  process.env.NEXT_PHASE === 'phase-production-build' ||
+  process.env.NEXT_PHASE === 'phase-export';
+const shouldLogStorageMode = process.env.NODE_ENV !== 'test' && !isBuildPhase;
 
 if (useS3) {
   s3 = new S3Client({
