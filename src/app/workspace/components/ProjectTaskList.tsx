@@ -72,6 +72,7 @@ type Task = {
     taskId: string;
     taskName: string;
     status?: string;
+    projectKey?: string;
     dueDate?: string;
     createdAt?: string;
     bsNumber?: string;
@@ -292,8 +293,9 @@ const ProjectTaskListInner = (
 
     const openTaskPage = (task: TaskWithStatus, target: '_self' | '_blank' = '_self') => {
         const slug = task.taskId;
+        const projectRef = task.projectKey || project;
         const href = `/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
-            project
+            projectRef
         )}/tasks/${encodeURIComponent(slug)}`;
         if (target === '_blank' && typeof window !== 'undefined') {
             window.open(href, '_blank', 'noopener,noreferrer');
@@ -326,8 +328,9 @@ const ProjectTaskListInner = (
         try {
             setDeleteLoading(true);
             setDeleteError(null);
+            const projectRef = selectedTask.projectKey || project;
             const url = `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
-                project
+                projectRef
             )}/tasks/${encodeURIComponent(selectedTask.taskId)}`;
             const res = await fetch(url, { method: 'DELETE' });
             if (!res.ok) {

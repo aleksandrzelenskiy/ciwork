@@ -78,9 +78,10 @@ export default function useProjectDialog({
                 operator: values.operator,
                 managers: values.managers,
             };
+            const projectRef = projectToEdit?.key || projectToEdit?._id;
             const url =
-                projectDialogMode === 'edit' && projectToEdit?._id
-                    ? `/api/org/${encodeURIComponent(org)}/projects/${projectToEdit._id}`
+                projectDialogMode === 'edit' && projectRef
+                    ? `/api/org/${encodeURIComponent(org)}/projects/${projectRef}`
                     : `/api/org/${encodeURIComponent(org)}/projects`;
             const method = projectDialogMode === 'edit' ? 'PATCH' : 'POST';
             const res = await fetch(url, {

@@ -44,6 +44,7 @@ type Task = {
     taskName: string;
     bsNumber?: string;
     bsAddress?: string;
+    projectKey?: string;
     totalCost?: number;
     createdAt?: string;
     dueDate?: string;
@@ -152,8 +153,9 @@ export default function ProjectTaskCalendar({
     const openTaskPage = (task: Task) => {
         if (!org || !project) return;
         const slug = task.taskId;
+        const projectRef = task.projectKey || project;
         router.push(
-            `/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(project)}/tasks/${encodeURIComponent(slug)}`
+            `/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(projectRef)}/tasks/${encodeURIComponent(slug)}`
         );
     };
 

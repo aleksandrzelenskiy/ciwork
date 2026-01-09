@@ -218,8 +218,9 @@ export default function ProjectTaskBoard({
     // ЛКМ - переход на страницу задачи
     const openTaskPage = (task: Task) => {
         const slug = task.taskId;
+        const projectRef = task.projectKey || project;
         router.push(
-            `/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(project)}/tasks/${encodeURIComponent(slug)}`
+            `/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(projectRef)}/tasks/${encodeURIComponent(slug)}`
         );
     };
     const handleCardClick = (t: Task) => {
@@ -262,8 +263,9 @@ export default function ProjectTaskBoard({
         try {
             setDeleteLoading(true);
             setDeleteError(null);
+            const projectRef = menuTask.projectKey || project;
             const url = `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
-                project
+                projectRef
             )}/tasks/${encodeURIComponent(menuTask.taskId)}`;
             const res = await fetch(url, { method: 'DELETE' });
             if (!res.ok) {

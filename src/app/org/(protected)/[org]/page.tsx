@@ -264,10 +264,11 @@ export default function OrgSettingsPage() {
     };
 
     const confirmRemoveProject = async () => {
-        if (!org || !projectToRemove?._id || !canManage) return;
+        const projectRef = projectToRemove?.key || projectToRemove?._id;
+        if (!org || !projectRef || !canManage) return;
         setRemovingProject(true);
         try {
-            const ok = await removeProject(projectToRemove._id);
+            const ok = await removeProject(projectRef);
             if (ok) {
                 closeRemoveProjectDialog();
             }

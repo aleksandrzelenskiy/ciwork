@@ -340,10 +340,11 @@ export default function ProjectTaskLocation(): React.ReactElement {
 
     const buildBalloonContent = React.useCallback(
         (point: MapPoint) => {
+            const projectRef = point.projectKey || projectSlug;
             const linkHref =
-                point.taskIdentifier && orgSlug && projectSlug
+                point.taskIdentifier && orgSlug && projectRef
                     ? `/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
-                          projectSlug
+                          projectRef
                       )}/tasks/${encodeURIComponent(point.taskIdentifier)}`
                     : null;
             const relatedBlock = point.relatedNumbers

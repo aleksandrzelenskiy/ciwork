@@ -485,9 +485,10 @@ export default function OrgProjectsPage() {
                 managers: values.managers,
             };
 
+            const projectRef = projectToEdit?.key || projectToEdit?._id;
             const url =
-                projectDialogMode === 'edit' && projectToEdit?._id
-                    ? `/api/org/${encodeURIComponent(orgSlug)}/projects/${projectToEdit._id}`
+                projectDialogMode === 'edit' && projectRef
+                    ? `/api/org/${encodeURIComponent(orgSlug)}/projects/${projectRef}`
                     : `/api/org/${encodeURIComponent(orgSlug)}/projects`;
             const method = projectDialogMode === 'edit' ? 'PATCH' : 'POST';
 
@@ -533,7 +534,12 @@ export default function OrgProjectsPage() {
     const handleDeleteConfirm = async (): Promise<void> => {
         if (!deleteProject) return;
         try {
-            const res = await fetch(`/api/org/${encodeURIComponent(orgSlug)}/projects/${deleteProject._id}`, {
+            const projectRef = deleteProject?.key || deleteProject?._id;
+            if (!projectRef) {
+                showSnack('Проект не найден', 'error');
+                return;
+            }
+            const res = await fetch(`/api/org/${encodeURIComponent(orgSlug)}/projects/${projectRef}`, {
                 method: 'DELETE',
             });
             const data: { ok: true } | ApiError = await res.json();

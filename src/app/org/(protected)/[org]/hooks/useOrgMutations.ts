@@ -83,9 +83,12 @@ export default function useOrgMutations({
         async (projectId: string) => {
             if (!org || !projectId || !canManage) return false;
             try {
-                const res = await fetch(`/api/org/${encodeURIComponent(org)}/projects/${projectId}`, {
-                    method: 'DELETE',
-                });
+                const res = await fetch(
+                    `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(projectId)}`,
+                    {
+                        method: 'DELETE',
+                    }
+                );
                 const data = (await res.json().catch(() => ({}))) as { error?: string };
                 if (!res.ok) {
                     setSnack({ open: true, msg: data?.error || res.statusText, sev: 'error' });
