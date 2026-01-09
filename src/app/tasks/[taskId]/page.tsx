@@ -34,7 +34,6 @@ import {
 import { useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import RefreshIcon from '@mui/icons-material/Refresh';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
@@ -678,7 +677,6 @@ export default function TaskDetailPage() {
                 <Button
                     variant="outlined"
                     onClick={() => void loadTask()}
-                    startIcon={<RefreshIcon />}
                     sx={{ borderRadius: UI_RADIUS.button }}
                 >
                     Повторить
@@ -868,38 +866,6 @@ export default function TaskDetailPage() {
                                 </Typography>
                             )}
                         </Box>
-                    </Stack>
-                    <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        spacing={1}
-                        alignItems={{ xs: 'stretch', sm: 'center' }}
-                        useFlexGap
-                        sx={{ width: { xs: '100%', md: 'auto' } }}
-                    >
-                        <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                            sx={{
-                                flexWrap: 'nowrap',
-                                overflowX: { xs: 'auto', sm: 'visible' },
-                                pb: { xs: 0.25, sm: 0 },
-                                scrollbarWidth: 'none',
-                                '&::-webkit-scrollbar': { display: 'none' },
-                            }}
-                        >
-                            <Tooltip title="Обновить">
-                                <span>
-                                    <IconButton
-                                        onClick={() => void loadTask()}
-                                        disabled={loading}
-                                        sx={getIconButtonSx({ disabled: loading })}
-                                    >
-                                        <RefreshIcon />
-                                    </IconButton>
-                                </span>
-                            </Tooltip>
-                        </Stack>
                     </Stack>
                 </Stack>
             </Box>
@@ -1399,7 +1365,10 @@ export default function TaskDetailPage() {
 
                     <CardItem sx={{ p: 0, minWidth: 0 }}>
                         <Accordion disableGutters elevation={0} sx={accordionSx}>
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
+                            <AccordionSummary
+                                expandIcon={<ExpandMoreIcon />}
+                                sx={{ ...accordionSummarySx, px: cardPadding, pt: cardPadding, pb: 0 }}
+                            >
                                 <Typography
                                     variant="subtitle1"
                                     fontWeight={600}
