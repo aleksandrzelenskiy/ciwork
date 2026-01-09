@@ -9,7 +9,7 @@ import {
     Typography,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import FrontHandIcon from '@mui/icons-material/FrontHand';
+import WavingHandIcon from '@mui/icons-material/WavingHand';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
@@ -53,7 +53,7 @@ export default function OrgApplicationsCard({
             <Stack spacing={2}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                     <Stack direction="row" spacing={1} alignItems="center">
-                        <FrontHandIcon fontSize="small" />
+                        <WavingHandIcon fontSize="small" />
                         <Typography variant="subtitle1" fontWeight={600}>
                             Отклики на задачи
                         </Typography>
