@@ -64,8 +64,8 @@ services:
       MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      "mongosh --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'try { rs.status() } catch (e) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] }) }' &&
-      mongosh --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'const u=\"$${MONGO_APP_USERNAME}\"; const p=\"$${MONGO_APP_PASSWORD}\"; if (u && p) { const adminDb = db.getSiblingDB(\"admin\"); const existing = adminDb.getUser(u); if (!existing) { adminDb.createUser({ user: u, pwd: p, roles: [{ role: \"readWrite\", db: \"ciwork\" }] }); } }' &&
+      "mongosh --host mongo --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'try { rs.status() } catch (e) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] }) }' &&
+      mongosh --host mongo --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'const u=\"$${MONGO_APP_USERNAME}\"; const p=\"$${MONGO_APP_PASSWORD}\"; if (u && p) { const adminDb = db.getSiblingDB(\"admin\"); const existing = adminDb.getUser(u); if (!existing) { adminDb.createUser({ user: u, pwd: p, roles: [{ role: \"readWrite\", db: \"ciwork\" }] }); } }' &&
       echo 'Replica set initialized'"
     restart: "no"
     networks:
