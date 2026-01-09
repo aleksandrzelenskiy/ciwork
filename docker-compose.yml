@@ -26,7 +26,9 @@ services:
         "--setParameter",
         "diagnosticDataCollectionEnabled=false",
         "--replSet",
-        "rs0"
+        "rs0",
+        "--keyFile",
+        "/etc/mongo-keyfile/keyfile"
       ]
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
@@ -34,6 +36,7 @@ services:
       MONGO_INITDB_DATABASE: ciwork
     volumes:
       - ciwork_db_data:/data/db
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
     restart: unless-stopped
     networks:
       - internal
@@ -57,9 +60,13 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD}
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      "mongosh --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'try { rs.status() } catch (e) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] }) }' && echo 'Replica set initialized'"
+      "mongosh --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'try { rs.status() } catch (e) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] }) }' &&
+      mongosh --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'const u=\"$${MONGO_APP_USERNAME}\"; const p=\"$${MONGO_APP_PASSWORD}\"; if (u && p) { const adminDb = db.getSiblingDB(\"admin\"); const existing = adminDb.getUser(u); if (!existing) { adminDb.createUser({ user: u, pwd: p, roles: [{ role: \"readWrite\", db: \"ciwork\" }] }); } }' &&
+      echo 'Replica set initialized'"
     restart: "no"
     networks:
       - internal
