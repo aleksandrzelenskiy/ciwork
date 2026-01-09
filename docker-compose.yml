@@ -26,7 +26,7 @@ services:
         exec mongod --bind_ip 0.0.0.0 --auth --setParameter diagnosticDataCollectionEnabled=false --replSet rs0 --keyFile /etc/mongo-keyfile/keyfile;
       fi"
     environment:
-      MONGO_AUTH: "0"
+      MONGO_AUTH: "1"
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: 1HVSDVD9
       MONGO_INITDB_DATABASE: ciwork
@@ -54,7 +54,7 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      MONGO_AUTH: "0"
+      MONGO_AUTH: "1"
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: 1HVSDVD9
       MONGO_APP_USERNAME: ciwork_app
