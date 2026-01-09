@@ -239,7 +239,7 @@ export default function TaskDetailsPage() {
     const iconActiveText = '#ffffff';
     const disabledIconColor = isDarkMode ? 'rgba(148,163,184,0.7)' : 'rgba(15,23,42,0.35)';
     const getIconButtonSx = (
-        options?: { active?: boolean; disabled?: boolean; activeColor?: string }
+        options?: { active?: boolean; disabled?: boolean; activeColor?: string; activeBg?: string }
     ) => {
         const active = options?.active ?? false;
         const disabled = options?.disabled ?? false;
@@ -248,7 +248,9 @@ export default function TaskDetailsPage() {
             border: `1px solid ${disabled ? 'transparent' : iconBorderColor}`,
             backgroundColor: disabled
                 ? 'transparent'
-                : iconBg,
+                : active
+                    ? options?.activeBg ?? iconActiveBg
+                    : iconBg,
             color: disabled
                 ? disabledIconColor
                 : active
@@ -262,7 +264,7 @@ export default function TaskDetailsPage() {
                 backgroundColor: disabled
                     ? 'transparent'
                     : active
-                        ? iconActiveBg
+                        ? options?.activeBg ?? iconActiveBg
                         : iconHoverBg,
             },
         };
@@ -317,6 +319,7 @@ export default function TaskDetailsPage() {
 
     const [orgName, setOrgName] = React.useState<string | null>(null);
     const [projectOperator, setProjectOperator] = React.useState<string | null>(null);
+    const [projectKey, setProjectKey] = React.useState<string | null>(null);
     const [workItemsFullScreen, setWorkItemsFullScreen] = React.useState(false);
     const [commentsFullScreen, setCommentsFullScreen] = React.useState(false);
     const [documentDialogOpen, setDocumentDialogOpen] = React.useState(false);
@@ -468,10 +471,12 @@ export default function TaskDetailsPage() {
                 setProjectOperator(null);
                 return;
             }
-            const data = (await res.json()) as { project?: { operator?: string } };
+            const data = (await res.json()) as { project?: { operator?: string; key?: string } };
             setProjectOperator(data.project?.operator ?? null);
+            setProjectKey(data.project?.key ?? null);
         } catch {
             setProjectOperator(null);
+            setProjectKey(null);
         }
     }, [org, project]);
 
@@ -1646,7 +1651,7 @@ export default function TaskDetailsPage() {
                                     underline="hover"
                                     color="inherit"
                                 >
-                                    {task?.projectKey || project}
+                                    {projectKey || task?.projectKey || project}
                                 </Link>
                             </Typography>
                         </Box>
@@ -1688,7 +1693,8 @@ export default function TaskDetailsPage() {
                                             disabled={publishLoading}
                                             sx={getIconButtonSx({
                                                 active: task.visibility === 'public',
-                                                activeColor: theme.palette.primary.main,
+                                                activeColor: '#ffffff',
+                                                activeBg: theme.palette.primary.main,
                                                 disabled: publishLoading,
                                             })}
                                         >
