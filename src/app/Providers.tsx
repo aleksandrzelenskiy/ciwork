@@ -1,7 +1,7 @@
+// src/app/Providers.tsx
 'use client';
 
 import { ClerkProvider } from '@clerk/nextjs';
-import { ruRU } from '@clerk/localizations';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import ClientApp from './ClientApp';
 
@@ -11,28 +11,14 @@ type ProvidersProps = {
     children: React.ReactNode;
 };
 
-export default function Providers({
-    publishableKey,
-    fontFamily,
-    children,
-}: ProvidersProps) {
+export default function Providers({ publishableKey, fontFamily, children }: ProvidersProps) {
     const theme = createTheme({
-        typography: {
-            fontFamily: `${fontFamily}, 'Open Sans', sans-serif`,
-        },
+        typography: { fontFamily: `${fontFamily}, 'Open Sans', sans-serif` },
     });
 
-    if (!publishableKey) {
-        return (
-            <ThemeProvider theme={theme}>
-                <CssBaseline />
-                <ClientApp>{children}</ClientApp>
-            </ThemeProvider>
-        );
-    }
-
+    // publishableKey сюда уже приходит либо настоящий, либо pk_build_dummy на build
     return (
-        <ClerkProvider publishableKey={publishableKey} localization={ruRU} dynamic>
+        <ClerkProvider publishableKey={publishableKey} dynamic>
             <ThemeProvider theme={theme}>
                 <CssBaseline />
                 <ClientApp>{children}</ClientApp>
