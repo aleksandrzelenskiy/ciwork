@@ -268,7 +268,8 @@ export async function POST(
                 if (isTransactionNotSupportedError(error)) {
                     creationResult = await runCreation();
                 } else {
-                    if (!creationResult || creationResult.ok) {
+                    const resultOk = (creationResult as { ok?: boolean } | null)?.ok === true;
+                    if (!creationResult || resultOk) {
                         creationResult = { ok: false, code: 'UNKNOWN', error };
                     }
                 }
