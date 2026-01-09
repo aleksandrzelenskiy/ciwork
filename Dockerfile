@@ -1,10 +1,10 @@
-# Базовый образ Node.js (20, Alpine)
+# ---------- base ----------
 FROM node:20-alpine AS base
 
-# Устанавливаем необходимые шрифты и ffmpeg
 RUN echo "https://mirror.yandex.ru/mirrors/alpine/latest-stable/main" > /etc/apk/repositories \
-    && echo "https://mirror.yandex.ru/mirrors/alpine/latest-stable/community" >> /etc/apk/repositories
-RUN apk update && apk add --no-cache ttf-dejavu ffmpeg
+    && echo "https://mirror.yandex.ru/mirrors/alpine/latest-stable/community" >> /etc/apk/repositories \
+    && apk update \
+    && apk add --no-cache ttf-dejavu ffmpeg
 
 # ---------- deps ----------
 FROM base AS deps
@@ -23,12 +23,20 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+
+# ставим только prod зависимости
 COPY package*.json ./
 RUN npm ci --omit=dev
+
+# копируем только артефакты
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
 COPY --from=build /app/next.config.* ./
-COPY --from=build /app/.env.production ./.env
+
+# НЕ копируем .env* внутрь образа
+
+# запускаем не от root
+USER node
 
 EXPOSE 3000
 CMD ["npm", "run", "start"]

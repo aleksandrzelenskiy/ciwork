@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   app:
     build:
@@ -7,29 +5,31 @@ services:
       dockerfile: Dockerfile
     container_name: ciwork_app
     env_file:
-      - .env.production
+      - .env.app
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - internal
+    security_opt:
+      - no-new-privileges:true
 
   mongo:
     image: mongo:6.0
     container_name: ciwork_mongo
-    entrypoint: ["/bin/sh", "-c"]
-    command: >
-      "set -e;
-      if [ \"$${MONGO_AUTH}\" = \"0\" ]; then
-        exec mongod --bind_ip 0.0.0.0 --setParameter diagnosticDataCollectionEnabled=false --replSet rs0;
-      else
-        exec mongod --bind_ip 0.0.0.0 --auth --setParameter diagnosticDataCollectionEnabled=false --replSet rs0 --keyFile /etc/mongo-keyfile/keyfile;
-      fi"
-    environment:
-      MONGO_AUTH: "1"
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: 1HVSDVD9
-      MONGO_INITDB_DATABASE: ciwork
+    env_file:
+      - .env.mongo
+    command:
+      - mongod
+      - --replSet
+      - rs0
+      - --auth
+      - --keyFile
+      - /etc/mongo-keyfile/keyfile
+      - --bind_ip_all
+      - --setParameter
+      - diagnosticDataCollectionEnabled=false
     volumes:
       - ciwork_db_data:/data/db
       - ./mongo-keyfile:/etc/mongo-keyfile:ro
@@ -40,38 +40,66 @@ services:
       test:
         [
           "CMD-SHELL",
-          "if [ \"$${MONGO_AUTH}\" = \"0\" ]; then mongosh --quiet --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1; else mongosh --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1; fi"
+          "mongosh --username \"$${MONGO_ROOT_USERNAME}\" --password \"$${MONGO_ROOT_PASSWORD}\" --authenticationDatabase admin --quiet --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1"
         ]
       interval: 10s
       timeout: 5s
-      retries: 6
-      start_period: 20s
+      retries: 12
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
 
   mongo-init:
     image: mongo:6.0
     container_name: ciwork_mongo_init
+    env_file:
+      - .env.mongo
     depends_on:
       mongo:
         condition: service_healthy
-    environment:
-      MONGO_AUTH: "1"
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: 1HVSDVD9
-      MONGO_APP_USERNAME: ciwork_app
-      MONGO_APP_PASSWORD: Eseniya2019!Miroslava2023!
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      "if [ \"$${MONGO_AUTH}\" = \"0\" ]; then
-        mongosh --host mongo --eval 'try { rs.status() } catch (e) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] }) }' &&
-        mongosh --host mongo --eval 'const u=\"$${MONGO_APP_USERNAME}\"; const p=\"$${MONGO_APP_PASSWORD}\"; const rootU=\"$${MONGO_INITDB_ROOT_USERNAME}\"; const rootP=\"$${MONGO_INITDB_ROOT_PASSWORD}\"; const adminDb = db.getSiblingDB(\"admin\"); if (!adminDb.getUser(rootU)) { adminDb.createUser({ user: rootU, pwd: rootP, roles: [\"root\"] }); } if (u && p && !adminDb.getUser(u)) { adminDb.createUser({ user: u, pwd: p, roles: [{ role: \"readWrite\", db: \"ciwork\" }] }); }';
-      else
-        mongosh --host mongo --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'try { rs.status() } catch (e) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] }) }' &&
-        mongosh --host mongo --username \"$${MONGO_INITDB_ROOT_USERNAME}\" --password \"$${MONGO_INITDB_ROOT_PASSWORD}\" --authenticationDatabase admin --eval 'const u=\"$${MONGO_APP_USERNAME}\"; const p=\"$${MONGO_APP_PASSWORD}\"; if (u && p) { const adminDb = db.getSiblingDB(\"admin\"); const existing = adminDb.getUser(u); if (!existing) { adminDb.createUser({ user: u, pwd: p, roles: [{ role: \"readWrite\", db: \"ciwork\" }] }); } }';
-      fi &&
-      echo 'Replica set initialized'"
+      "set -e;
+      echo '==> Init replica set (idempotent)...';
+      mongosh --host mongo
+        --username \"$${MONGO_ROOT_USERNAME}\"
+        --password \"$${MONGO_ROOT_PASSWORD}\"
+        --authenticationDatabase admin
+        --quiet
+        --eval '
+          try {
+            const st = rs.status();
+          } catch (e) {
+            rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] });
+          }
+        ';
+
+      echo '==> Ensure users (idempotent)...';
+      mongosh --host mongo
+        --username \"$${MONGO_ROOT_USERNAME}\"
+        --password \"$${MONGO_ROOT_PASSWORD}\"
+        --authenticationDatabase admin
+        --quiet
+        --eval '
+          const adminDb = db.getSiblingDB(\"admin\");
+          const appU = \"$${MONGO_APP_USERNAME}\";
+          const appP = \"$${MONGO_APP_PASSWORD}\";
+          if (appU && appP) {
+            const existing = adminDb.getUser(appU);
+            if (!existing) {
+              adminDb.createUser({ user: appU, pwd: appP, roles: [{ role: \"readWrite\", db: \"ciwork\" }] });
+            } else {
+              adminDb.updateUser(appU, { pwd: appP, roles: [{ role: \"readWrite\", db: \"ciwork\" }] });
+            }
+          }
+        ';
+
+      echo 'Replica set initialized and users ensured.'"
     restart: "no"
     networks:
       - internal
+    security_opt:
+      - no-new-privileges:true
 
   caddy:
     image: caddy:2
@@ -86,6 +114,8 @@ services:
       - caddy_config:/config
     networks:
       - internal
+    security_opt:
+      - no-new-privileges:true
 
 networks:
   internal:
