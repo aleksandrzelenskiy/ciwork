@@ -28,6 +28,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
 import OrgOverviewPanel from '@/app/org/(protected)/[org]/components/OrgOverviewPanel';
+import OrgPlansDialog from '@/app/org/(protected)/[org]/components/OrgPlansDialog';
+import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
 import ProjectDialog, {
     ProjectDialogValues,
     ProjectManagerOption,
@@ -132,6 +134,7 @@ export default function OrgProjectsPage() {
     const [subscriptionLoading, setSubscriptionLoading] = useState(true);
     const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
     const [startTrialLoading, setStartTrialLoading] = useState(false);
+    const [plansDialogOpen, setPlansDialogOpen] = useState(false);
 
     // ---- Доступ (только owner/org_admin/manager) ----
     const allowedRoles: OrgRole[] = ['owner', 'org_admin', 'manager'];
@@ -240,7 +243,7 @@ export default function OrgProjectsPage() {
     const createButtonTooltip = disableCreateButton
         ? subscriptionLoading
             ? 'Проверяем статус подписки…'
-            : 'Кнопка доступна после активации подписки или триала'
+            : 'Доступно после активации подписки или пробного периода'
         : '';
     const activeProjectsCount = projects.length;
     const projectsLimitLabel = subscription?.projectsLimit ? String(subscription.projectsLimit) : 'XX';
@@ -251,21 +254,26 @@ export default function OrgProjectsPage() {
         : 'Недостаточно прав для изменения настроек';
 
     const theme = useTheme();
-    const isDarkMode = theme.palette.mode === 'dark';
-    const headerBg = isDarkMode ? 'rgba(11,16,26,0.82)' : 'rgba(255,255,255,0.88)';
-    const headerBorder = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.12)';
-    const headerShadow = isDarkMode ? '0 35px 90px rgba(0,0,0,0.65)' : '0 35px 90px rgba(15,23,42,0.2)';
-    const cardBg = isDarkMode ? 'rgba(13,18,30,0.85)' : 'rgba(255,255,255,0.92)';
-    const cardBorder = isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.08)';
-    const cardShadow = isDarkMode ? '0 35px 80px rgba(0,0,0,0.55)' : '0 35px 80px rgba(15,23,42,0.15)';
-    const textPrimary = isDarkMode ? '#f8fafc' : '#0f172a';
-    const textSecondary = isDarkMode ? 'rgba(226,232,240,0.78)' : 'rgba(15,23,42,0.65)';
-    const iconBorderColor = isDarkMode ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.12)';
-    const iconBg = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.85)';
-    const iconHoverBg = isDarkMode ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.95)';
-    const iconShadow = isDarkMode ? '0 6px 20px rgba(0,0,0,0.45)' : '0 6px 20px rgba(15,23,42,0.12)';
-    const disabledIconColor = isDarkMode ? 'rgba(148,163,184,0.6)' : 'rgba(148,163,184,0.45)';
-    const buttonShadow = isDarkMode ? '0 25px 45px rgba(0,0,0,0.55)' : '0 25px 45px rgba(15,23,42,0.15)';
+    const {
+        isDarkMode,
+        headerBorder,
+        cardBg,
+        cardBorder,
+        cardShadow,
+        textPrimary,
+        textSecondary,
+        iconBorderColor,
+        iconBg,
+        iconHoverBg,
+        iconShadow,
+        disabledIconColor,
+        panelPadding,
+        panelBaseSx,
+        statCardSx,
+        actionButtonBaseSx,
+        getAlertSx,
+        iconRadius,
+    } = getOrgPageStyles(theme);
     const pillBg = isDarkMode ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.12)';
     const pillBorder = isDarkMode ? 'rgba(59,130,246,0.3)' : 'rgba(59,130,246,0.2)';
 
@@ -277,30 +285,6 @@ export default function OrgProjectsPage() {
         overflow: 'hidden',
     };
 
-    const panelBaseSx = {
-        borderRadius: UI_RADIUS.surface,
-        p: { xs: 2, md: 3 },
-        backgroundColor: headerBg,
-        border: `1px solid ${headerBorder}`,
-        boxShadow: headerShadow,
-        color: textPrimary,
-        backdropFilter: 'blur(26px)',
-        position: 'relative' as const,
-        overflow: 'hidden',
-    };
-    const overviewPanelBaseSx = {
-        ...panelBaseSx,
-        p: 0,
-    };
-    const statCardSx = {
-        borderRadius: UI_RADIUS.tooltip,
-        px: { xs: 2, md: 2.5 },
-        py: { xs: 1.25, md: 1.5 },
-        border: `1px solid ${cardBorder}`,
-        backgroundColor: cardBg,
-        boxShadow: cardShadow,
-        backdropFilter: 'blur(20px)',
-    };
     const pillSx = {
         borderRadius: UI_RADIUS.pill,
         px: 1.5,
@@ -311,50 +295,6 @@ export default function OrgProjectsPage() {
         backgroundColor: pillBg,
         color: textPrimary,
         letterSpacing: 0.3,
-    };
-    const actionButtonBaseSx = {
-        borderRadius: UI_RADIUS.pill,
-        textTransform: 'none',
-        fontWeight: 600,
-        px: { xs: 2.5, md: 3 },
-        py: 1,
-        boxShadow: buttonShadow,
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-        '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: buttonShadow,
-        },
-        '&:disabled': {
-            opacity: 0.55,
-            boxShadow: 'none',
-        },
-    };
-    const getAlertSx = (tone: 'error' | 'warning' | 'info') => {
-        const palette = {
-            error: {
-                bg: isDarkMode ? 'rgba(239,68,68,0.12)' : 'rgba(254,242,242,0.95)',
-                border: isDarkMode ? 'rgba(248,113,113,0.35)' : 'rgba(239,68,68,0.25)',
-            },
-            warning: {
-                bg: isDarkMode ? 'rgba(251,191,36,0.14)' : 'rgba(255,251,235,0.95)',
-                border: isDarkMode ? 'rgba(251,191,36,0.35)' : 'rgba(251,191,36,0.25)',
-            },
-            info: {
-                bg: isDarkMode ? 'rgba(59,130,246,0.12)' : 'rgba(219,234,254,0.9)',
-                border: isDarkMode ? 'rgba(59,130,246,0.35)' : 'rgba(59,130,246,0.2)',
-            },
-        };
-        const paletteEntry = palette[tone];
-        return {
-            borderRadius: UI_RADIUS.tooltip,
-            border: `1px solid ${paletteEntry.border}`,
-            backgroundColor: paletteEntry.bg,
-            backdropFilter: 'blur(18px)',
-            color: textPrimary,
-            '& .MuiAlert-icon': {
-                color: paletteEntry.border,
-            },
-        };
     };
     const getCardIconButtonSx = (variant: 'default' | 'danger' = 'default') => ({
         borderRadius: UI_RADIUS.sheet,
@@ -380,7 +320,6 @@ export default function OrgProjectsPage() {
             color: disabledIconColor,
         },
     });
-    const panelPadding = { xs: 2, md: 2.5 };
     const renderBackdrop = (content: ReactNode) => (
         <Box sx={pageWrapperSx}>
             {content}
@@ -657,7 +596,9 @@ export default function OrgProjectsPage() {
     const renderStatusPanel = (content: ReactNode) =>
         renderBackdrop(
             <Box sx={{ maxWidth: 720, mx: 'auto', width: '100%' }}>
-                <Box sx={panelBaseSx}>{content}</Box>
+                <Box sx={panelBaseSx}>
+                    <Box sx={{ px: panelPadding }}>{content}</Box>
+                </Box>
             </Box>
         );
 
@@ -698,7 +639,7 @@ export default function OrgProjectsPage() {
         <>
             <Box sx={{ maxWidth: 1200, mx: 'auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <OrgOverviewPanel
-                    orgName={`${orgName} - Проекты`}
+                    orgName={orgName}
                     orgSlug={orgSlug}
                     settingsTooltip={settingsTooltip}
                     settingsButtonDisabled={!canEditOrgSettings}
@@ -719,7 +660,7 @@ export default function OrgProjectsPage() {
                     secondaryActionLabel="Новый проект"
                     secondaryActionIcon={<AddIcon />}
                     actionButtonBaseSx={actionButtonBaseSx}
-                    panelBaseSx={overviewPanelBaseSx}
+                    panelBaseSx={panelBaseSx}
                     panelPadding={panelPadding}
                     statCardSx={statCardSx}
                     textPrimary={textPrimary}
@@ -730,7 +671,7 @@ export default function OrgProjectsPage() {
                     iconHoverBg={iconHoverBg}
                     iconShadow={iconShadow}
                     disabledIconColor={disabledIconColor}
-                    iconRadius={UI_RADIUS.sheet}
+                    iconRadius={iconRadius}
                     isDarkMode={isDarkMode}
                     activeProjectsCount={activeProjectsCount}
                     projectsLimitLabel={projectsLimitLabel}
@@ -740,10 +681,7 @@ export default function OrgProjectsPage() {
                     subscriptionStatusColor={subscriptionStatusColor}
                     subscriptionStatusDescription={subscriptionStatusDescription}
                     roleLabelRu={roleLabel}
-                    onOpenPlansDialog={() => {
-                        if (!orgSlug) return;
-                        router.push(`/org/${encodeURIComponent(orgSlug)}/plans`);
-                    }}
+                    onOpenPlansDialog={() => setPlansDialogOpen(true)}
                     subscriptionError={subscriptionError}
                     subscriptionLoading={subscriptionLoading}
                     billingReadOnly={Boolean(billing?.readOnly)}
@@ -913,6 +851,12 @@ export default function OrgProjectsPage() {
                     </Grid>
                 )}
             </Box>
+
+            <OrgPlansDialog
+                open={plansDialogOpen}
+                orgSlug={orgSlug}
+                onClose={() => setPlansDialogOpen(false)}
+            />
 
             <ProjectDialog
                 open={projectDialogOpen}
