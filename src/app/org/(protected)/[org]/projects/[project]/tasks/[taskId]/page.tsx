@@ -227,6 +227,44 @@ export default function TaskDetailsPage() {
     const router = useRouter();
     const theme = useTheme();
     const { masonryCardSx, cardBaseSx, cardBorder } = getOrgPageStyles(theme);
+    const isDarkMode = theme.palette.mode === 'dark';
+    const iconBorderColor = isDarkMode ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.12)';
+    const iconBg = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)';
+    const iconHoverBg = isDarkMode ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.9)';
+    const iconShadow = isDarkMode ? '0 6px 18px rgba(0,0,0,0.4)' : '0 6px 18px rgba(15,23,42,0.08)';
+    const iconText = isDarkMode ? '#f8fafc' : '#0f172a';
+    const iconActiveBg = isDarkMode ? 'rgba(59,130,246,0.4)' : 'rgba(15,23,42,0.9)';
+    const iconActiveText = '#ffffff';
+    const disabledIconColor = isDarkMode ? 'rgba(148,163,184,0.7)' : 'rgba(15,23,42,0.35)';
+    const getIconButtonSx = (
+        options?: { active?: boolean; disabled?: boolean; activeColor?: string }
+    ) => {
+        const active = options?.active ?? false;
+        const disabled = options?.disabled ?? false;
+        return {
+            borderRadius: UI_RADIUS.overlay,
+            border: `1px solid ${disabled ? 'transparent' : iconBorderColor}`,
+            backgroundColor: disabled
+                ? 'transparent'
+                : iconBg,
+            color: disabled
+                ? disabledIconColor
+                : active
+                    ? options?.activeColor ?? iconActiveText
+                    : iconText,
+            boxShadow: disabled ? 'none' : iconShadow,
+            backdropFilter: 'blur(14px)',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+                transform: disabled ? 'none' : 'translateY(-2px)',
+                backgroundColor: disabled
+                    ? 'transparent'
+                    : active
+                        ? iconActiveBg
+                        : iconHoverBg,
+            },
+        };
+    };
     const cardPadding = React.useMemo(() => ({ xs: 2, md: 2.5 }), []);
     const accordionSx = {
         backgroundColor: 'transparent',
@@ -1549,7 +1587,7 @@ export default function TaskDetailsPage() {
                 >
                     <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0, width: '100%' }}>
                         <Tooltip title="Назад">
-                            <IconButton onClick={() => router.back()}>
+                            <IconButton onClick={() => router.back()} sx={getIconButtonSx()}>
                                 <ArrowBackIcon />
                             </IconButton>
                         </Tooltip>
@@ -1612,9 +1650,9 @@ export default function TaskDetailsPage() {
                         </Box>
                     </Stack>
                     <Stack
-                        direction="row"
+                        direction={{ xs: 'column', sm: 'row' }}
                         spacing={1}
-                        flexWrap="wrap"
+                        alignItems={{ xs: 'stretch', sm: 'center' }}
                         useFlexGap
                         sx={{ width: { xs: '100%', md: 'auto' } }}
                     >
@@ -1639,41 +1677,63 @@ export default function TaskDetailsPage() {
                                         : 'Опубликовать'}
                             </Button>
                         )}
-                        <Tooltip title="Настроить">
-                            <IconButton
-                                onClick={() => setSectionDialogOpen(true)}
-                                color={hasCustomVisibility ? 'primary' : 'default'}
-                            >
-                                <GridViewOutlinedIcon />
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Обновить">
-                            <span>
-                                <IconButton onClick={() => void load()} disabled={loading}>
-                                    <RefreshIcon />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Редактировать">
-                            <span>
+                        <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{
+                                flexWrap: 'nowrap',
+                                overflowX: { xs: 'auto', sm: 'visible' },
+                                pb: { xs: 0.25, sm: 0 },
+                                scrollbarWidth: 'none',
+                                '&::-webkit-scrollbar': { display: 'none' },
+                            }}
+                        >
+                            <Tooltip title="Настроить">
                                 <IconButton
-                                    onClick={() => task && setEditOpen(true)}
-                                    disabled={loading || !task}
+                                    onClick={() => setSectionDialogOpen(true)}
+                                    sx={getIconButtonSx({
+                                        active: hasCustomVisibility,
+                                        activeColor: theme.palette.primary.main,
+                                    })}
                                 >
-                                    <EditNoteIcon />
+                                    <GridViewOutlinedIcon />
                                 </IconButton>
-                            </span>
-                        </Tooltip>
-                        <Tooltip title="Удалить">
-                            <span>
-                                <IconButton
-                                    onClick={() => task && setDeleteOpen(true)}
-                                    disabled={loading || !task}
-                                >
-                                    <DeleteOutlineIcon />
-                                </IconButton>
-                            </span>
-                        </Tooltip>
+                            </Tooltip>
+                            <Tooltip title="Обновить">
+                                <span>
+                                    <IconButton
+                                        onClick={() => void load()}
+                                        disabled={loading}
+                                        sx={getIconButtonSx({ disabled: loading })}
+                                    >
+                                        <RefreshIcon />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                            <Tooltip title="Редактировать">
+                                <span>
+                                    <IconButton
+                                        onClick={() => task && setEditOpen(true)}
+                                        disabled={loading || !task}
+                                        sx={getIconButtonSx({ disabled: loading || !task })}
+                                    >
+                                        <EditNoteIcon />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                            <Tooltip title="Удалить">
+                                <span>
+                                    <IconButton
+                                        onClick={() => task && setDeleteOpen(true)}
+                                        disabled={loading || !task}
+                                        sx={getIconButtonSx({ disabled: loading || !task })}
+                                    >
+                                        <DeleteOutlineIcon />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                        </Stack>
                     </Stack>
                 </Stack>
             </Box>
