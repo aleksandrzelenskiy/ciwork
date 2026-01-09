@@ -6,8 +6,6 @@ import UserModel, { type IUser, type ProfileType } from '@/server/models/UserMod
 import dbConnect from '@/server/db/mongoose';
 import { currentUser } from '@clerk/nextjs/server';
 
-dbConnect();
-
 type UserSuccessResponse = {
   success: true;
   data: IUser;
@@ -38,6 +36,7 @@ const normalizeProfileType = (
 export const GetCurrentUserFromMongoDB =
   async (): Promise<GetCurrentUserResponse> => {
   try {
+    await dbConnect();
     const clerkUser = await currentUser();
     if (!clerkUser) {
       return {
