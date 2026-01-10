@@ -4,7 +4,7 @@ export const authAppearance = {
     variables: {
         colorPrimary: '#2563eb',
         colorText: '#111827',
-        colorBackground: '#ffffff',
+        colorBackground: 'transparent',
         colorInputBackground: '#f8fafc',
         colorInputText: '#111827',
         colorTextOnPrimaryBackground: '#ffffff',
