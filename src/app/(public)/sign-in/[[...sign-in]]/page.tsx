@@ -31,7 +31,7 @@ export default function Page() {
                         </span>
                     </div>
                 </section>
-                <div className="flex h-full w-full max-w-full flex-col lg:max-w-md lg:self-stretch">
+                <div className="mx-auto flex h-full w-full max-w-md flex-col lg:mx-0 lg:self-stretch">
                     <SignIn appearance={authAppearance} />
                 </div>
             </div>
