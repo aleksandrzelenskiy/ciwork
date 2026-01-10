@@ -1,7 +1,6 @@
 'use client';
 
 import { SignIn } from '@clerk/nextjs';
-import { ruRU } from '@clerk/localizations';
 import { authAppearance } from '../../auth-appearance';
 
 export default function Page() {
@@ -33,7 +32,7 @@ export default function Page() {
                     </div>
                 </section>
                 <div className="flex h-full w-full max-w-full flex-col lg:max-w-md lg:self-stretch">
-                    <SignIn appearance={authAppearance} localization={ruRU} />
+                    <SignIn appearance={authAppearance} />
                 </div>
             </div>
         </div>

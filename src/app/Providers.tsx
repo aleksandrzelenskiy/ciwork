@@ -2,6 +2,7 @@
 'use client';
 
 import { ClerkProvider } from '@clerk/nextjs';
+import { ruRU } from '@clerk/localizations';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import ClientApp from './ClientApp';
 
@@ -17,7 +18,7 @@ export default function Providers({ publishableKey, fontFamily, children }: Prov
     });
 
     return (
-        <ClerkProvider publishableKey={publishableKey} dynamic>
+        <ClerkProvider localization={ruRU} publishableKey={publishableKey} dynamic>
             <ThemeProvider theme={theme}>
                 <CssBaseline />
                 <ClientApp>{children}</ClientApp>
