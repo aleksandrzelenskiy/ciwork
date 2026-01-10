@@ -55,7 +55,7 @@ export default function Page() {
 
             if (result.status === 'complete') {
                 await setActive({ session: result.createdSessionId });
-                const redirectUrl = searchParams.get('redirect_url') ?? '/';
+                const redirectUrl = searchParams?.get('redirect_url') ?? '/';
                 router.push(redirectUrl);
                 return;
             }
