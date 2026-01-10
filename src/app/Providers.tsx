@@ -4,12 +4,13 @@
 import { ClerkProvider } from '@clerk/nextjs';
 import { ruRU } from '@clerk/localizations';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
+import type { ReactNode } from 'react';
 import ClientApp from './ClientApp';
 
 type ProvidersProps = {
     publishableKey: string;
     fontFamily: string;
-    children: React.ReactNode;
+    children: ReactNode;
 };
 
 export default function Providers({ publishableKey, fontFamily, children }: ProvidersProps) {
