@@ -28,7 +28,13 @@ export default function Providers({ publishableKey, fontFamily, children }: Prov
     };
 
     return (
-        <ClerkProvider localization={localization} publishableKey={publishableKey} dynamic>
+        <ClerkProvider
+            localization={localization}
+            publishableKey={publishableKey}
+            dynamic
+            signInUrl="/sign-in"
+            signUpUrl="/sign-up"
+        >
             <ThemeProvider theme={theme}>
                 <CssBaseline />
                 <ClientApp>{children}</ClientApp>
