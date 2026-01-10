@@ -19,9 +19,9 @@ export default function Providers({ publishableKey, fontFamily, children }: Prov
     const localization = {
         ...ruRU,
         signIn: {
-            ...ruRU.signIn,
+            ...(ruRU.signIn ?? {}),
             start: {
-                ...ruRU.signIn.start,
+                ...((ruRU.signIn && ruRU.signIn.start) ?? {}),
                 subtitle: 'чтобы продолжить работу в системе',
             },
         },
