@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type CSSProperties, type FormEvent } from 'react';
 import { useSignIn } from '@clerk/nextjs';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -37,6 +37,7 @@ export default function Page() {
     const [showPassword, setShowPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const backgroundStyle = { '--signin-bg': "url('/bg/sign-in-bg.jpg')" } as CSSProperties;
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -69,12 +70,15 @@ export default function Page() {
     };
 
     return (
-        <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-signin bg-cover bg-center bg-no-repeat">
+        <div
+            className="auth-shell relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-signin bg-cover bg-center bg-no-repeat"
+            style={backgroundStyle}
+        >
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-950/50 via-slate-900/40 to-slate-900/70" />
             <div className="pointer-events-none absolute -top-32 left-10 h-64 w-64 rounded-full bg-white/30 blur-3xl" />
             <div className="pointer-events-none absolute bottom-[-6rem] right-[-3rem] h-72 w-72 rounded-full bg-sky-200/30 blur-[90px]" />
             <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col items-center justify-center gap-10 px-4 py-0 lg:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-stretch lg:px-6 lg:py-12">
-                <section className="hidden flex-1 flex-col justify-center rounded-3xl border border-white/15 bg-white/5 p-8 text-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.85)] backdrop-blur-xl lg:flex lg:self-stretch">
+                <section className="auth-panel hidden flex-1 flex-col justify-center rounded-3xl border border-white/15 bg-white/5 p-8 text-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.85)] backdrop-blur-xl lg:flex lg:self-stretch">
                     <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/80">
                         CI Work
                     </span>
@@ -87,19 +91,19 @@ export default function Page() {
                         командой.
                     </p>
                     <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/90">
-                        <span className="rounded-full border border-white/30 bg-white/5 px-3 py-1 shadow-sm">
+                        <span className="auth-chip rounded-full border border-white/30 bg-white/5 px-3 py-1 shadow-sm">
                             Контроль задач
                         </span>
-                        <span className="rounded-full border border-white/30 bg-white/5 px-3 py-1 shadow-sm">
+                        <span className="auth-chip rounded-full border border-white/30 bg-white/5 px-3 py-1 shadow-sm">
                             Статусы в реальном времени
                         </span>
-                        <span className="rounded-full border border-white/30 bg-white/5 px-3 py-1 shadow-sm">
+                        <span className="auth-chip rounded-full border border-white/30 bg-white/5 px-3 py-1 shadow-sm">
                             Безопасный доступ
                         </span>
                     </div>
                 </section>
                 <div className="mx-auto flex h-full w-full max-w-lg flex-col lg:mx-0 lg:self-stretch">
-                    <div className="flex h-full flex-col justify-center rounded-3xl border border-white/60 bg-white/70 px-8 py-10 shadow-[0_25px_60px_-35px_rgba(15,23,42,0.7)] backdrop-blur-3xl ring-1 ring-white/70">
+                    <div className="auth-card flex h-full flex-col justify-center rounded-3xl border border-white/60 bg-white/70 px-8 py-10 shadow-[0_25px_60px_-35px_rgba(15,23,42,0.7)] backdrop-blur-3xl ring-1 ring-white/70">
                         <Typography className="text-sm font-semibold uppercase tracking-[0.4em] text-slate-500">
                             Вход
                         </Typography>

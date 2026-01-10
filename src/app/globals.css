@@ -1,13 +1,14 @@
 /* src/app/globals.css */
 
+@import 'react-big-calendar/lib/css/react-big-calendar.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --signin-bg: none;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -33,8 +34,10 @@ body {
 }
 
 .bg-signin {
-  background: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.4)),
-    url('/bg/sign-in-bg.jpg');
+  background-image:
+    radial-gradient(1200px circle at 50% 0%, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.35) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.25)),
+    var(--signin-bg, none);
   background-size: cover;
   background-position: center;
 }
@@ -46,4 +49,87 @@ body {
 .cl-headerTitle {
   text-transform: uppercase;
   color: #383838;
+}
+
+.auth-shell {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+    "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.auth-panel,
+.auth-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+.auth-chip {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+}
+
+.auth-shell h1 {
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.auth-shell .MuiTypography-root {
+  letter-spacing: -0.01em;
+}
+
+.auth-shell .MuiOutlinedInput-root {
+  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+.auth-shell .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.auth-shell .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.38);
+}
+
+.auth-shell .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+.auth-shell .MuiInputLabel-root {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+.auth-shell .MuiOutlinedInput-input {
+  color: rgba(15, 23, 42, 0.88);
+}
+
+.auth-shell .MuiButton-contained {
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.auth-shell .MuiButton-contained:hover {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.auth-shell a {
+  color: #2563eb;
+  text-decoration: none;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.auth-shell a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
