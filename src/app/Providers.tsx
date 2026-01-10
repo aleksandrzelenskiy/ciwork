@@ -16,12 +16,17 @@ export default function Providers({ publishableKey, fontFamily, children }: Prov
     const theme = createTheme({
         typography: { fontFamily: `${fontFamily}, 'Open Sans', sans-serif` },
     });
+    const ruLocalization = ruRU as {
+        signIn?: {
+            start?: Record<string, unknown>;
+        };
+    };
     const localization = {
-        ...ruRU,
+        ...ruLocalization,
         signIn: {
-            ...(ruRU.signIn ?? {}),
+            ...(ruLocalization.signIn ?? {}),
             start: {
-                ...((ruRU.signIn && ruRU.signIn.start) ?? {}),
+                ...(ruLocalization.signIn?.start ?? {}),
                 subtitle: 'чтобы продолжить работу в системе',
             },
         },
