@@ -13,7 +13,7 @@ export const authAppearance = {
     },
     elements: {
         rootBox: 'w-full flex justify-center',
-        card: 'mx-auto w-full max-w-md rounded-t-3xl rounded-b-none border border-white/30 bg-gradient-to-br from-blue-50/70 via-indigo-50/55 to-violet-100/45 px-8 py-8 shadow-2xl backdrop-blur-xl',
+        card: 'mx-auto w-full max-w-md rounded-t-3xl rounded-b-none border border-white/40 bg-gradient-to-br from-blue-50/55 via-indigo-50/40 to-violet-100/30 px-8 py-8 shadow-2xl backdrop-blur-2xl',
         headerTitle: 'text-2xl font-semibold text-slate-900',
         headerSubtitle: 'text-sm text-slate-500',
         formFieldLabel: 'text-sm font-medium text-slate-700',
@@ -24,7 +24,7 @@ export const authAppearance = {
         socialButtonsBlockButton:
             'w-full rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50',
         dividerText: 'text-xs uppercase tracking-[0.2em] text-slate-400',
-        footer: 'rounded-b-3xl bg-gradient-to-br from-blue-50/65 via-indigo-50/50 to-violet-100/40 backdrop-blur-xl',
+        footer: 'rounded-b-3xl bg-gradient-to-br from-blue-50/55 via-indigo-50/40 to-violet-100/30 backdrop-blur-2xl',
         footerActionText: 'text-sm text-slate-600',
         footerActionLink: 'text-blue-600 hover:text-blue-700',
         formFieldErrorText: 'text-xs text-rose-600',

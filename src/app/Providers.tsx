@@ -16,9 +16,19 @@ export default function Providers({ publishableKey, fontFamily, children }: Prov
     const theme = createTheme({
         typography: { fontFamily: `${fontFamily}, 'Open Sans', sans-serif` },
     });
+    const localization = {
+        ...ruRU,
+        signIn: {
+            ...ruRU.signIn,
+            start: {
+                ...ruRU.signIn.start,
+                subtitle: 'чтобы продолжить работу в системе',
+            },
+        },
+    };
 
     return (
-        <ClerkProvider localization={ruRU} publishableKey={publishableKey} dynamic>
+        <ClerkProvider localization={localization} publishableKey={publishableKey} dynamic>
             <ThemeProvider theme={theme}>
                 <CssBaseline />
                 <ClientApp>{children}</ClientApp>
