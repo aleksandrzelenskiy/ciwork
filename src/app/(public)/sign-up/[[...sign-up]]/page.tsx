@@ -148,9 +148,8 @@ export default function Page() {
                         РЕГИСТРАЦИЯ
                     </h1>
                     <p className="mt-5 max-w-md border-l-2 border-white/30 pl-4 text-base font-medium text-white/85">
-                        Создайте аккаунт, чтобы принимать задачи, отправлять
-                        отчёты и видеть прогресс команды в едином рабочем
-                        пространстве.
+                        Все проекты, задачи и статусы в одном пространстве —
+                        удобно и для команд, и для исполнителей.
                     </p>
                     <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/80">
                         <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
@@ -170,7 +169,7 @@ export default function Page() {
                         style={cardGlassStyle}
                     >
                         <h2 className="text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] text-slate-900 md:text-[36px]">
-                            Создайте учетную запись
+                        Зарегистрироваться
                         </h2>
                         <p className="mt-2 text-sm text-slate-600">
                             Заполните почту и пароль, чтобы начать работу.

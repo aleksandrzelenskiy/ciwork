@@ -102,9 +102,8 @@ export default function Page() {
                         АВТОРИЗАЦИЯ
                     </h1>
                     <p className="mt-5 max-w-md border-l-2 border-white/30 pl-4 text-base font-medium text-white/85">
-                        Управляйте задачами, отчётами и коммуникацией в одном
-                        месте. Войдите, чтобы продолжить работу с проектами и
-                        командой.
+                        Все проекты, задачи и статусы в одном пространстве —
+                        удобно и для команд, и для исполнителей.
                     </p>
                     <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/80">
                         <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
