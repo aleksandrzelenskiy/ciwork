@@ -74,43 +74,37 @@ export default function Page() {
             className="auth-shell relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-signin bg-cover bg-center bg-no-repeat"
             style={backgroundStyle}
         >
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-950/50 via-slate-900/40 to-slate-900/70" />
-            <div className="pointer-events-none absolute -top-32 left-10 h-64 w-64 rounded-full bg-white/30 blur-3xl" />
-            <div className="pointer-events-none absolute bottom-[-6rem] right-[-3rem] h-72 w-72 rounded-full bg-sky-200/30 blur-[90px]" />
             <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col items-center justify-center gap-10 px-4 py-0 lg:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-stretch lg:px-6 lg:py-12">
-                <section className="auth-panel hidden flex-1 flex-col justify-center rounded-3xl border border-white/15 bg-white/5 p-8 text-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.85)] backdrop-blur-xl lg:flex lg:self-stretch">
-                    <span className="text-xs font-semibold uppercase tracking-[0.4em] text-white/80">
+                <section className="auth-panel hidden flex-1 flex-col justify-center rounded-[32px] border border-white/15 bg-slate-950/55 p-9 text-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.9)] backdrop-blur-2xl lg:flex lg:self-stretch">
+                    <span className="text-xs font-semibold uppercase tracking-[0.45em] text-white/75">
                         CI Work
                     </span>
-                    <h1 className="mt-4 inline-flex w-fit rounded-2xl bg-white/5 px-4 py-2 text-4xl font-semibold leading-tight text-white drop-shadow-md md:text-5xl">
+                    <h1 className="mt-5 inline-flex w-fit rounded-2xl bg-white/10 px-5 py-3 text-4xl font-semibold leading-[1.1] text-white drop-shadow-md md:text-5xl">
                         АВТОРИЗАЦИЯ
                     </h1>
-                    <p className="mt-4 max-w-md border-l-2 border-white/40 pl-4 text-base font-medium text-white/90">
+                    <p className="mt-5 max-w-md border-l-2 border-white/30 pl-4 text-base font-medium text-white/85">
                         Управляйте задачами, отчётами и коммуникацией в одном
                         месте. Войдите, чтобы продолжить работу с проектами и
                         командой.
                     </p>
-                    <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/90">
-                        <span className="auth-chip rounded-full border border-white/30 bg-white/5 px-3 py-1 shadow-sm">
+                    <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/80">
+                        <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
                             Контроль задач
                         </span>
-                        <span className="auth-chip rounded-full border border-white/30 bg-white/5 px-3 py-1 shadow-sm">
+                        <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
                             Статусы в реальном времени
                         </span>
-                        <span className="auth-chip rounded-full border border-white/30 bg-white/5 px-3 py-1 shadow-sm">
+                        <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
                             Безопасный доступ
                         </span>
                     </div>
                 </section>
                 <div className="mx-auto flex h-full w-full max-w-lg flex-col lg:mx-0 lg:self-stretch">
-                    <div className="auth-card flex h-full flex-col justify-center rounded-3xl border border-white/60 bg-white/70 px-8 py-10 shadow-[0_25px_60px_-35px_rgba(15,23,42,0.7)] backdrop-blur-3xl ring-1 ring-white/70">
-                        <Typography className="text-sm font-semibold uppercase tracking-[0.4em] text-slate-500">
-                            Вход
-                        </Typography>
-                        <Typography className="mt-2 text-2xl font-semibold text-slate-900">
+                    <div className="auth-card flex h-full flex-col justify-center rounded-[32px] border border-white/70 bg-white/85 px-8 py-10 shadow-[0_25px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur-3xl ring-1 ring-white/80">
+                        <Typography className="text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] text-slate-900 md:text-[36px]">
                             Добро пожаловать
                         </Typography>
-                        <Typography className="mt-1 text-sm text-slate-600">
+                        <Typography className="mt-2 text-sm text-slate-600">
                             Введите почту и пароль, чтобы продолжить работу.
                         </Typography>
                         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
@@ -162,7 +156,7 @@ export default function Page() {
                                 {isSubmitting ? 'Входим...' : 'Войти'}
                             </Button>
                         </form>
-                        <Typography className="mt-6 text-sm text-slate-600">
+                        <Typography className="mt-8 text-sm text-slate-600">
                             Нет аккаунта?{' '}
                             <Link href="/sign-up" className="font-semibold text-blue-600">
                                 Зарегистрироваться
