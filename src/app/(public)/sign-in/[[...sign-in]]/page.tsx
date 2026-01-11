@@ -37,7 +37,23 @@ export default function Page() {
     const [showPassword, setShowPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const backgroundStyle = { '--signin-bg': "url('/bg/sign-in-bg.jpg')" } as CSSProperties;
+    const backgroundStyle = {
+        '--signin-bg': "url('/bg/sign-in-bg.jpg')",
+    } as CSSProperties;
+    const panelGlassStyle = {
+        '--auth-panel-bg': 'linear-gradient(135deg, rgba(12, 18, 32, 0.72), rgba(12, 18, 32, 0.38))',
+        '--auth-panel-border': 'rgba(255, 255, 255, 0.16)',
+        '--auth-panel-shadow':
+            '0 34px 72px -40px rgba(10, 16, 28, 0.95), 0 1px 0 rgba(255, 255, 255, 0.08) inset',
+        '--auth-panel-blur': 'blur(26px) saturate(135%)',
+    } as CSSProperties;
+    const cardGlassStyle = {
+        '--auth-card-bg': 'linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.7))',
+        '--auth-card-border': 'rgba(255, 255, 255, 0.78)',
+        '--auth-card-shadow':
+            '0 24px 55px -35px rgba(15, 23, 42, 0.4), 0 1px 0 rgba(255, 255, 255, 0.7) inset',
+        '--auth-card-blur': 'blur(28px) saturate(165%)',
+    } as CSSProperties;
 
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -75,7 +91,10 @@ export default function Page() {
             style={backgroundStyle}
         >
             <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-6xl flex-col items-center justify-center gap-10 px-4 py-0 lg:min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:items-stretch lg:px-6 lg:py-12">
-                <section className="auth-panel hidden flex-1 flex-col justify-center rounded-[32px] border border-white/15 bg-slate-950/55 p-9 text-white shadow-[0_30px_70px_-40px_rgba(15,23,42,0.9)] backdrop-blur-2xl lg:flex lg:self-stretch">
+                <section
+                    className="auth-panel hidden flex-1 flex-col justify-center rounded-[32px] p-9 text-white lg:flex lg:self-stretch"
+                    style={panelGlassStyle}
+                >
                     <span className="text-xs font-semibold uppercase tracking-[0.45em] text-white/75">
                         CI Work
                     </span>
@@ -100,13 +119,16 @@ export default function Page() {
                     </div>
                 </section>
                 <div className="mx-auto flex h-full w-full max-w-lg flex-col lg:mx-0 lg:self-stretch">
-                    <div className="auth-card flex h-full flex-col justify-center rounded-[32px] border border-white/70 bg-white/85 px-8 py-10 shadow-[0_25px_60px_-35px_rgba(15,23,42,0.45)] backdrop-blur-3xl ring-1 ring-white/80">
-                        <Typography className="text-[32px] font-semibold leading-[1.1] tracking-[-0.02em] text-slate-900 md:text-[36px]">
+                    <div
+                        className="auth-card flex h-full flex-col justify-center rounded-[32px] px-8 py-10"
+                        style={cardGlassStyle}
+                    >
+                        <h2 className="text-[34px] font-semibold leading-[1.05] tracking-[-0.02em] text-slate-900 md:text-[38px]">
                             Добро пожаловать
-                        </Typography>
-                        <Typography className="mt-2 text-sm text-slate-600">
+                        </h2>
+                        <p className="mt-2 text-sm text-slate-600">
                             Введите почту и пароль, чтобы продолжить работу.
-                        </Typography>
+                        </p>
                         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
                             <TextField
                                 id="email"
@@ -156,12 +178,12 @@ export default function Page() {
                                 {isSubmitting ? 'Входим...' : 'Войти'}
                             </Button>
                         </form>
-                        <Typography className="mt-8 text-sm text-slate-600">
+                        <p className="mt-8 text-sm text-slate-600">
                             Нет аккаунта?{' '}
                             <Link href="/sign-up" className="font-semibold text-blue-600">
                                 Зарегистрироваться
                             </Link>
-                        </Typography>
+                        </p>
                     </div>
                 </div>
             </div>
