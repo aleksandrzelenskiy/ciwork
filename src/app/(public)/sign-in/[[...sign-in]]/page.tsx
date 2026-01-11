@@ -16,17 +16,7 @@ import {
 } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-
-const getClerkErrorMessage = (error: unknown) => {
-    if (typeof error === 'object' && error && 'errors' in error) {
-        const clerkErrors = (error as { errors?: Array<{ message?: string }> }).errors;
-        if (clerkErrors?.length) {
-            return clerkErrors[0]?.message ?? 'Не удалось выполнить вход.';
-        }
-    }
-
-    return 'Не удалось выполнить вход.';
-};
+import { getClerkErrorMessage } from '@/utils/clerkErrorMessages';
 
 export default function Page() {
     const { isLoaded, signIn, setActive } = useSignIn();
@@ -79,7 +69,7 @@ export default function Page() {
 
             setError('Требуется дополнительная проверка. Завершите вход в следующем шаге.');
         } catch (signInError) {
-            setError(getClerkErrorMessage(signInError));
+            setError(getClerkErrorMessage(signInError, 'Не удалось выполнить вход.'));
         } finally {
             setIsSubmitting(false);
         }

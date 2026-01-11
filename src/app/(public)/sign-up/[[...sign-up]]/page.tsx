@@ -16,17 +16,7 @@ import {
 } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-
-const getClerkErrorMessage = (error: unknown) => {
-    if (typeof error === 'object' && error && 'errors' in error) {
-        const clerkErrors = (error as { errors?: Array<{ message?: string }> }).errors;
-        if (clerkErrors?.length) {
-            return clerkErrors[0]?.message ?? 'Не удалось создать учетную запись.';
-        }
-    }
-
-    return 'Не удалось создать учетную запись.';
-};
+import { getClerkErrorMessage } from '@/utils/clerkErrorMessages';
 
 export default function Page() {
     const { isLoaded, signUp, setActive } = useSignUp();
@@ -97,7 +87,7 @@ export default function Page() {
             });
             setPendingVerification(true);
         } catch (signUpError) {
-            setError(getClerkErrorMessage(signUpError));
+            setError(getClerkErrorMessage(signUpError, 'Не удалось создать учетную запись.'));
         } finally {
             setIsSubmitting(false);
         }
@@ -125,7 +115,7 @@ export default function Page() {
 
             setError('Не удалось подтвердить код. Попробуйте еще раз.');
         } catch (verifyError) {
-            setError(getClerkErrorMessage(verifyError));
+            setError(getClerkErrorMessage(verifyError, 'Не удалось подтвердить код.'));
         } finally {
             setIsSubmitting(false);
         }
