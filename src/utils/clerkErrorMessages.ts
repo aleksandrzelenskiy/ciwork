@@ -89,7 +89,7 @@ const resolveClerkMessage = (detail: ClerkErrorDetail): string | null => {
     }
 
     for (const entry of clerkMessagePatterns) {
-        const match = detail.message.match(entry.pattern);
+        const match = entry.pattern.exec(detail.message);
         if (match) {
             return typeof entry.message === 'string' ? entry.message : entry.message(match);
         }
