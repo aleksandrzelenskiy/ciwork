@@ -1,5 +1,6 @@
 // src/app/api/org/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { Types } from 'mongoose';
 import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import Organization from '@/server/models/OrganizationModel';
@@ -129,9 +130,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateOrg
             note: 'Создано автоматически',
         });
 
+        const createdOrgId = created._id as Types.ObjectId;
         const welcomeBonus = 30000;
         await creditOrgWallet({
-            orgId: created._id,
+            orgId: createdOrgId,
             amount: welcomeBonus,
             source: 'manual',
             meta: { reason: 'org_welcome_bonus' },
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateOrg
                 title: 'Организация создана',
                 message: `Добро пожаловать в CI Work! Мы начислили ${rublesText} на баланс организации «${orgName}».`,
                 link: `/org/${encodeURIComponent(orgSlug)}`,
-                orgId: created._id,
+                orgId: createdOrgId,
                 orgSlug: created.orgSlug,
                 orgName: created.name,
                 metadata: { balanceAdded: welcomeBonus },
