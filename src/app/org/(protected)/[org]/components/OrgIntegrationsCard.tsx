@@ -86,7 +86,7 @@ export default function OrgIntegrationsCard({
                     </Tooltip>
                 </Stack>
                 <Typography variant="body2" color={textSecondary}>
-                    Подключайте Google Sheets, Telegram, 1C ERP и другие сервисы через n8n.
+                    Подключайте Google Sheets, Telegram и 1C ERP.
                 </Typography>
                 {integrationsError && (
                     <Alert severity="warning" sx={getAlertSx('warning')}>
@@ -212,28 +212,6 @@ export default function OrgIntegrationsCard({
                             </Button>
                         </span>
                     </Tooltip>
-                </Stack>
-                <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
-                    <Button
-                        variant="text"
-                        component="a"
-                        href="/templates/n8n/google-sheets.json"
-                        target="_blank"
-                        rel="noreferrer"
-                        sx={{ textTransform: 'none' }}
-                    >
-                        Шаблон Google Sheets (n8n)
-                    </Button>
-                    <Button
-                        variant="text"
-                        component="a"
-                        href="/templates/n8n/telegram.json"
-                        target="_blank"
-                        rel="noreferrer"
-                        sx={{ textTransform: 'none' }}
-                    >
-                        Шаблон Telegram (n8n)
-                    </Button>
                 </Stack>
             </Stack>
         </Box>

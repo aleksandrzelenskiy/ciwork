@@ -28,8 +28,6 @@ export function integrationTypeLabel(value: string) {
             return 'Telegram';
         case 'erp_1c':
             return '1C ERP';
-        case 'n8n_webhook':
-            return 'Webhook';
         default:
             return value;
     }

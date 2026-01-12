@@ -22,7 +22,6 @@ const ALLOWED_TYPES = new Set<IntegrationType>([
     'google_sheets',
     'telegram',
     'erp_1c',
-    'n8n_webhook',
 ]);
 
 function normalizeString(value: unknown): string | undefined {

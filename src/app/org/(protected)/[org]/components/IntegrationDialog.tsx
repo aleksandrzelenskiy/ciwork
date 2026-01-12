@@ -88,7 +88,6 @@ export default function IntegrationDialog({
                         <MenuItem value="google_sheets">Google Sheets</MenuItem>
                         <MenuItem value="telegram">Telegram</MenuItem>
                         <MenuItem value="erp_1c">1C ERP</MenuItem>
-                        <MenuItem value="n8n_webhook">Webhook</MenuItem>
                     </TextField>
                     <TextField
                         label="Название (опционально)"

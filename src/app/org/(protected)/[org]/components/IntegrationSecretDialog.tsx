@@ -48,7 +48,7 @@ export default function IntegrationSecretDialog({
             <DialogContent dividers sx={cardContentSx}>
                 <Stack spacing={2}>
                     <Alert severity="warning" sx={alertSx}>
-                        Секрет показывается один раз. Сохраните его в настройках n8n.
+                        Секрет показывается один раз. Сохраните его в безопасном месте.
                     </Alert>
                     <TextField
                         label="Webhook Secret"

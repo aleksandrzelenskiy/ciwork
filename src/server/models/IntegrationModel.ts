@@ -2,7 +2,7 @@ import 'server-only';
 
 import mongoose, { Schema, Document, model, models, Types } from 'mongoose';
 
-export type IntegrationType = 'google_sheets' | 'telegram' | 'erp_1c' | 'n8n_webhook';
+export type IntegrationType = 'google_sheets' | 'telegram' | 'erp_1c';
 export type IntegrationStatus = 'active' | 'paused';
 
 export interface Integration extends Document {
@@ -25,7 +25,7 @@ const IntegrationSchema = new Schema<Integration>(
         projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: false, index: true },
         type: {
             type: String,
-            enum: ['google_sheets', 'telegram', 'erp_1c', 'n8n_webhook'],
+            enum: ['google_sheets', 'telegram', 'erp_1c'],
             required: true,
             index: true,
         },
