@@ -25,7 +25,10 @@ import {
     Divider,
     Chip,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
+import { formatRubleValue } from '@/features/shared/RubleAmount';
+import type { PlatformRole } from '@/app/types/roles';
 
 type ProfileResponse = {
     id?: string;
@@ -35,7 +38,10 @@ type ProfileResponse = {
     profilePic: string;
     regionCode: string;
     profileType?: 'employer' | 'contractor';
+    platformRole?: PlatformRole;
+    desiredRate?: number | null;
     bio?: string;
+    portfolioLinks?: string[];
     moderationStatus?: 'pending' | 'approved' | 'rejected';
     moderationComment?: string;
     clerkUserId?: string;
@@ -249,258 +255,461 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         );
     }
 
-    const title = isPublicView ? 'Публичный профиль' : 'Профиль пользователя';
+    const isContractor = profile.profileType === 'contractor';
+    const isEmployer = profile.profileType === 'employer';
+    const isSuperAdmin = profile.platformRole === 'super_admin';
+    const regionName = profile.regionCode
+        ? RUSSIAN_REGIONS.find((region) => region.code === profile.regionCode)?.name
+        : '';
+    const roleLabel = isContractor
+        ? 'Подрядчик'
+        : isEmployer
+            ? 'Работодатель'
+            : 'Профиль';
+    const moderationLabel =
+        profile.moderationStatus === 'approved'
+            ? 'Подтвержден'
+            : profile.moderationStatus === 'rejected'
+                ? 'Отклонен'
+                : 'На модерации';
+    const moderationColor =
+        profile.moderationStatus === 'approved'
+            ? 'success'
+            : profile.moderationStatus === 'rejected'
+                ? 'error'
+                : 'primary';
+    const desiredRateLabel =
+        typeof profile.desiredRate === 'number' && profile.desiredRate > 0
+            ? `${formatRubleValue(profile.desiredRate)} ₽`
+            : '—';
+    const highlightItems = isContractor
+        ? [
+            {
+                label: 'Выполненные задачи',
+                value: String(
+                    typeof profile.completedCount === 'number'
+                        ? profile.completedCount
+                        : 0
+                ),
+            },
+            {
+                label: 'Рейтинг',
+                value:
+                    typeof profile.rating === 'number'
+                        ? profile.rating.toFixed(1)
+                        : '—',
+            },
+            {
+                label: 'Ставка',
+                value: desiredRateLabel,
+            },
+        ]
+        : [
+            {
+                label: 'Профиль',
+                value: roleLabel,
+            },
+            {
+                label: 'Регион',
+                value: regionName ? `${profile.regionCode} — ${regionName}` : '—',
+            },
+            {
+                label: 'Контакт',
+                value: profile.email || '—',
+            },
+        ];
 
     return (
-        <Box sx={{ p: 3, maxWidth: 900, mx: 'auto' }}>
-            <Typography variant="h4" fontWeight={600} gutterBottom>
-                {title}
-            </Typography>
-            <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1.5}
-                alignItems={{ xs: 'flex-start', sm: 'center' }}
-                sx={{ mb: 1 }}
-            >
-                <Typography variant="body1" color="text.secondary">
-                    {profile.name || 'Пользователь'}
-                </Typography>
-                <Chip
-                    label={
-                        profile.moderationStatus === 'approved'
-                            ? 'Подтвержден'
-                            : profile.moderationStatus === 'rejected'
-                                ? 'Отклонен'
-                                : 'На модерации'
-                    }
-                    color={
-                        profile.moderationStatus === 'approved'
-                            ? 'success'
-                            : profile.moderationStatus === 'rejected'
-                                ? 'error'
-                                : 'primary'
-                    }
-                    variant={
-                        profile.moderationStatus === 'pending' ? 'outlined' : 'filled'
-                    }
-                    size="small"
-                />
-            </Stack>
-            {profile.clerkUserId && (
-                <Typography variant="caption" color="text.secondary" gutterBottom>
-                    ID: {profile.clerkUserId}
-                </Typography>
-            )}
-            {profile.moderationStatus === 'rejected' && profile.moderationComment && (
-                <Alert severity="warning" sx={{ mb: 2 }}>
-                    {profile.moderationComment}
-                </Alert>
-            )}
-
-            {!canEdit && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                    Это публичный профиль. Редактировать может только владелец.
-                </Alert>
-            )}
-
-            {profile.profileType === 'contractor' && (
-                <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={2}
-                    sx={{ mb: 2 }}
-                >
-                    <Paper
-                        sx={{
-                            flex: 1,
-                            p: 2,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 0.5,
-                        }}
-                    >
-                        <Typography variant="subtitle2" color="text.secondary">
-                            Выполненные задачи
-                        </Typography>
-                        <Typography variant="h5" fontWeight={700}>
-                            {typeof profile.completedCount === 'number'
-                                ? profile.completedCount
-                                : 0}
-                        </Typography>
-                    </Paper>
-                    <Paper
-                        sx={{
-                            flex: 1,
-                            p: 2,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 0.5,
-                        }}
-                    >
-                        <Typography variant="subtitle2" color="text.secondary">
-                            Рейтинг
-                        </Typography>
-                        <Typography variant="h5" fontWeight={700}>
-                            {typeof profile.rating === 'number'
-                                ? profile.rating.toFixed(1)
-                                : '—'}
-                        </Typography>
-                    </Paper>
-                </Stack>
-            )}
-
+        <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 960, mx: 'auto' }}>
             <Paper
                 component="form"
                 onSubmit={handleSubmit}
-                sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}
+                sx={(theme) => ({
+                    borderRadius: 4,
+                    border: '1px solid',
+                    borderColor: alpha(theme.palette.common.black, 0.08),
+                    boxShadow: '0 24px 80px rgba(15, 23, 42, 0.12)',
+                    overflow: 'hidden',
+                    background: `linear-gradient(180deg, ${alpha(
+                        theme.palette.background.paper,
+                        0.98
+                    )} 0%, ${alpha(theme.palette.grey[50], 0.92)} 100%)`,
+                })}
             >
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems="center">
+                <Box
+                    sx={(theme) => ({
+                        position: 'relative',
+                        p: { xs: 3, sm: 4 },
+                        display: 'flex',
+                        gap: { xs: 2.5, sm: 3.5 },
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        alignItems: { xs: 'flex-start', sm: 'center' },
+                        background: `linear-gradient(135deg, ${alpha(
+                            theme.palette.primary.light,
+                            0.16
+                        )}, ${alpha(theme.palette.background.paper, 0.95)})`,
+                    })}
+                >
+                    <Box
+                        sx={(theme) => ({
+                            position: 'absolute',
+                            top: -90,
+                            right: -70,
+                            width: 200,
+                            height: 200,
+                            borderRadius: '50%',
+                            background: alpha(theme.palette.primary.light, 0.25),
+                            filter: 'blur(2px)',
+                        })}
+                    />
                     <Avatar
                         src={profile.profilePic}
                         alt={profile.name}
-                        sx={{ width: 120, height: 120 }}
+                        sx={(theme) => ({
+                            width: 128,
+                            height: 128,
+                            border: '4px solid',
+                            borderColor: theme.palette.background.paper,
+                            boxShadow: '0 16px 40px rgba(15, 23, 42, 0.18)',
+                            zIndex: 1,
+                        })}
                     />
-                    <Box>
+                    <Stack spacing={1} sx={{ zIndex: 1, flex: 1 }}>
+                        <Stack
+                            direction={{ xs: 'column', sm: 'row' }}
+                            spacing={1.5}
+                            alignItems={{ xs: 'flex-start', sm: 'center' }}
+                        >
+                            <Typography variant="h4" fontWeight={700}>
+                                {profile.name || 'Пользователь'}
+                            </Typography>
+                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                <Chip
+                                    label={roleLabel}
+                                    color={
+                                        isContractor
+                                            ? 'info'
+                                            : isEmployer
+                                                ? 'success'
+                                                : 'default'
+                                    }
+                                    size="small"
+                                />
+                                {isSuperAdmin && (
+                                    <Chip
+                                        label="Супер-админ"
+                                        color="warning"
+                                        size="small"
+                                    />
+                                )}
+                                <Chip
+                                    label={moderationLabel}
+                                    color={moderationColor}
+                                    variant={
+                                        profile.moderationStatus === 'pending'
+                                            ? 'outlined'
+                                            : 'filled'
+                                    }
+                                    size="small"
+                                />
+                                {isPublicView && (
+                                    <Chip
+                                        label="Публичный профиль"
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                )}
+                            </Stack>
+                        </Stack>
+                        <Stack direction="row" spacing={2} flexWrap="wrap">
+                            <Typography variant="body2" color="text.secondary">
+                                {profile.email}
+                            </Typography>
+                            {profile.regionCode && (
+                                <Typography variant="body2" color="text.secondary">
+                                    {regionName
+                                        ? `${profile.regionCode} — ${regionName}`
+                                        : profile.regionCode}
+                                </Typography>
+                            )}
+                            {profile.clerkUserId && (
+                                <Typography variant="caption" color="text.secondary">
+                                    ID: {profile.clerkUserId}
+                                </Typography>
+                            )}
+                        </Stack>
                         {canEdit && (
-                            <Button
-                                variant="outlined"
-                                onClick={triggerAvatarSelect}
-                                disabled={uploading}
-                                sx={{ textTransform: 'none' }}
-                            >
-                                {uploading ? 'Загрузка...' : 'Изменить аватар'}
-                            </Button>
+                            <Box>
+                                <Button
+                                    variant="outlined"
+                                    onClick={triggerAvatarSelect}
+                                    disabled={uploading}
+                                    sx={{
+                                        textTransform: 'none',
+                                        borderRadius: 999,
+                                        px: 2.5,
+                                        mt: 1,
+                                    }}
+                                >
+                                    {uploading ? 'Загрузка...' : 'Изменить аватар'}
+                                </Button>
+                                <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    sx={{ display: 'block', mt: 1 }}
+                                >
+                                    JPG или PNG до 5 МБ
+                                </Typography>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/png, image/jpeg"
+                                    hidden
+                                    onChange={handleAvatarUpload}
+                                />
+                            </Box>
                         )}
+                    </Stack>
+                </Box>
+
+                {(profile.moderationStatus === 'rejected' && profile.moderationComment) ||
+                !canEdit ? (
+                    <Box sx={{ px: { xs: 3, sm: 4 }, pt: 2 }}>
+                        {profile.moderationStatus === 'rejected' &&
+                            profile.moderationComment && (
+                                <Alert severity="warning" sx={{ mb: 1.5 }}>
+                                    {profile.moderationComment}
+                                </Alert>
+                            )}
+                        {!canEdit && (
+                            <Alert severity="info">
+                                Это публичный профиль. Редактировать может только
+                                владелец.
+                            </Alert>
+                        )}
+                    </Box>
+                ) : null}
+
+                <Box
+                    sx={{
+                        px: { xs: 3, sm: 4 },
+                        pb: 3,
+                        pt: { xs: 2, sm: 3 },
+                    }}
+                >
+                    <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={2}
+                        sx={{ mb: isContractor ? 2.5 : 2 }}
+                    >
+                        {highlightItems.map((item) => (
+                            <Box
+                                key={item.label}
+                                sx={(theme) => ({
+                                    flex: 1,
+                                    p: 2.5,
+                                    borderRadius: 3,
+                                    backgroundColor: alpha(
+                                        theme.palette.background.paper,
+                                        0.8
+                                    ),
+                                    border: '1px solid',
+                                    borderColor: alpha(
+                                        theme.palette.common.black,
+                                        0.08
+                                    ),
+                                    boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)',
+                                })}
+                            >
+                                <Typography
+                                    variant="subtitle2"
+                                    color="text.secondary"
+                                >
+                                    {item.label}
+                                </Typography>
+                                <Typography variant="h5" fontWeight={700}>
+                                    {item.value}
+                                </Typography>
+                            </Box>
+                        ))}
+                    </Stack>
+                    {isContractor && (
+                        <Stack spacing={1}>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                                О себе
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ whiteSpace: 'pre-line' }}
+                            >
+                                {bio || 'Пока нет описания.'}
+                            </Typography>
+                            {profile.portfolioLinks?.length ? (
+                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                    {profile.portfolioLinks.map((link) => {
+                                        const label = link
+                                            .replace(/^https?:\/\//, '')
+                                            .replace(/\/$/, '')
+                                            .split('/')[0];
+                                        return (
+                                        <Button
+                                            key={link}
+                                            href={link}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{ borderRadius: 999, textTransform: 'none' }}
+                                        >
+                                            {label || 'Портфолио'}
+                                        </Button>
+                                        );
+                                    })}
+                                </Stack>
+                            ) : null}
+                        </Stack>
+                    )}
+                    {isEmployer && (
+                        <Typography variant="body2" color="text.secondary">
+                            Работодатель управляет задачами, проектами и формирует
+                            команды подрядчиков.
+                        </Typography>
+                    )}
+                    {isSuperAdmin && (
                         <Typography
                             variant="body2"
                             color="text.secondary"
                             sx={{ mt: 1 }}
                         >
-                            JPG или PNG до 5 МБ
+                            Администратор платформы имеет доступ к модерации и
+                            управлению данными.
                         </Typography>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/png, image/jpeg"
-                            hidden
-                            onChange={handleAvatarUpload}
-                        />
-                    </Box>
-                </Stack>
+                    )}
+                </Box>
 
                 <Divider />
 
-                <TextField
-                    label="Имя"
-                    value={firstName}
-                    onChange={(e) => {
-                        const value = e.target.value;
-                        setFirstName(value);
-                        setProfile((prev) =>
-                            prev
-                                ? {
-                                    ...prev,
-                                    name: buildFullName(value, lastName),
-                                }
-                                : prev
-                        );
+                <Box
+                    sx={{
+                        p: { xs: 3, sm: 4 },
+                        display: 'grid',
+                        gap: 2.5,
                     }}
-                    required
-                    disabled={readOnly}
-                />
+                >
+                    <Typography variant="h6" fontWeight={700}>
+                        Данные профиля
+                    </Typography>
+                    <TextField
+                        label="Имя"
+                        value={firstName}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            setFirstName(value);
+                            setProfile((prev) =>
+                                prev
+                                    ? {
+                                        ...prev,
+                                        name: buildFullName(value, lastName),
+                                    }
+                                    : prev
+                            );
+                        }}
+                        required
+                        disabled={readOnly}
+                    />
 
-                <TextField
-                    label="Фамилия"
-                    value={lastName}
-                    onChange={(e) => {
-                        const value = e.target.value;
-                        setLastName(value);
-                        setProfile((prev) =>
-                            prev
-                                ? {
-                                    ...prev,
-                                    name: buildFullName(firstName, value),
-                                }
-                                : prev
-                        );
-                    }}
-                    disabled={readOnly}
-                />
+                    <TextField
+                        label="Фамилия"
+                        value={lastName}
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            setLastName(value);
+                            setProfile((prev) =>
+                                prev
+                                    ? {
+                                        ...prev,
+                                        name: buildFullName(firstName, value),
+                                    }
+                                    : prev
+                            );
+                        }}
+                        disabled={readOnly}
+                    />
 
-                <TextField
-                    label="Телефон"
-                    value={profile.phone}
-                    onChange={(e) =>
-                        setProfile((prev) =>
-                            prev ? { ...prev, phone: e.target.value } : prev
-                        )
-                    }
-                    disabled={readOnly}
-                />
-
-                <FormControl fullWidth disabled={readOnly}>
-                    <InputLabel id="profile-region-label">Регион</InputLabel>
-                    <Select
-                        labelId="profile-region-label"
-                        label="Регион"
-                        value={profile.regionCode}
+                    <TextField
+                        label="Телефон"
+                        value={profile.phone}
                         onChange={(e) =>
                             setProfile((prev) =>
-                                prev ? { ...prev, regionCode: e.target.value } : prev
+                                prev ? { ...prev, phone: e.target.value } : prev
                             )
                         }
-                    >
-                        {RUSSIAN_REGIONS.map((region) => (
-                            <MenuItem key={region.code} value={region.code}>
-                                {region.code} — {region.name}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
+                        disabled={readOnly}
+                    />
 
-                <TextField label="Email" value={profile.email} disabled />
-
-                {profile.profileType === 'contractor' && (
-                    <Stack spacing={2}>
-                        <Typography variant="h6" fontWeight={600}>
-                            Профиль подрядчика
-                        </Typography>
-                        <TextField
-                            label="О себе"
-                            multiline
-                            minRows={3}
-                            value={bio}
-                            onChange={(e) => setBio(e.target.value)}
-                            placeholder="Кратко опишите опыт и специализацию"
-                            disabled={readOnly}
-                        />
-                    </Stack>
-                )}
-
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                    {canEdit && (
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={saving || uploading}
+                    <FormControl fullWidth disabled={readOnly}>
+                        <InputLabel id="profile-region-label">Регион</InputLabel>
+                        <Select
+                            labelId="profile-region-label"
+                            label="Регион"
+                            value={profile.regionCode}
+                            onChange={(e) =>
+                                setProfile((prev) =>
+                                    prev
+                                        ? { ...prev, regionCode: e.target.value }
+                                        : prev
+                                )
+                            }
                         >
-                            {saving ? <CircularProgress size={22} /> : 'Сохранить'}
-                        </Button>
-                    )}
-                    <Button
-                        type="button"
-                        variant={canEdit ? 'outlined' : 'contained'}
-                        onClick={loadProfile}
-                        disabled={saving || uploading}
-                    >
-                        Обновить данные
-                    </Button>
-                </Box>
+                            {RUSSIAN_REGIONS.map((region) => (
+                                <MenuItem key={region.code} value={region.code}>
+                                    {region.code} — {region.name}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
 
-                {message && (
-                    <Alert severity={message.type} onClose={() => setMessage(null)}>
-                        {message.text}
-                    </Alert>
-                )}
+                    <TextField label="Email" value={profile.email} disabled />
+
+                    {isContractor && (
+                        <Stack spacing={2}>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                                Профиль подрядчика
+                            </Typography>
+                            <TextField
+                                label="О себе"
+                                multiline
+                                minRows={3}
+                                value={bio}
+                                onChange={(e) => setBio(e.target.value)}
+                                placeholder="Кратко опишите опыт и специализацию"
+                                disabled={readOnly}
+                            />
+                        </Stack>
+                    )}
+
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        {canEdit && (
+                            <Button
+                                type="submit"
+                                variant="contained"
+                                disabled={saving || uploading}
+                            >
+                                {saving ? <CircularProgress size={22} /> : 'Сохранить'}
+                            </Button>
+                        )}
+                    </Box>
+
+                    {message && (
+                        <Alert
+                            severity={message.type}
+                            onClose={() => setMessage(null)}
+                        >
+                            {message.text}
+                        </Alert>
+                    )}
+                </Box>
             </Paper>
         </Box>
     );
