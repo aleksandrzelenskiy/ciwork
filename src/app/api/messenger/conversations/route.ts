@@ -169,8 +169,10 @@ export async function GET() {
     await ensureOrgConversation(activeOrgId, email);
 
     const conversations = await ChatConversationModel.find({
-        orgId: activeOrgId,
-        $or: [{ type: { $ne: 'direct' } }, { participants: email }],
+        $or: [
+            { orgId: activeOrgId, type: { $ne: 'direct' } },
+            { type: 'direct', participants: email },
+        ],
     })
         .sort({ updatedAt: -1 })
         .lean()
@@ -318,16 +320,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Нельзя создать чат с самим собой' }, { status: 400 });
         }
 
-        const targetMembership = await MembershipModel.findOne({
-            orgId: activeOrgId,
-            userEmail: targetEmail,
-            status: 'active',
-        })
+        const targetUser = await UserModel.findOne(
+            { email: targetEmail },
+            { email: 1, name: 1, profilePic: 1 }
+        )
             .lean()
             .exec();
 
-        if (!targetMembership) {
-            return NextResponse.json({ error: 'Пользователь не состоит в организации' }, { status: 404 });
+        if (!targetUser) {
+            return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
         }
 
         const participants = [email, targetEmail].sort();
@@ -349,12 +350,6 @@ export async function POST(request: Request) {
             }));
 
         const unreadCount = await getUnreadCount(String(conversation._id), email);
-        const targetUser = await UserModel.findOne(
-            { email: targetEmail },
-            { email: 1, name: 1, profilePic: 1 }
-        )
-            .lean()
-            .exec();
 
         return NextResponse.json({
             ok: true,
