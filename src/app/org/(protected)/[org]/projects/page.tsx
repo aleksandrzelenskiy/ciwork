@@ -28,6 +28,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
 import OrgOverviewPanel from '@/app/org/(protected)/[org]/components/OrgOverviewPanel';
+import useOrgUsage from '@/app/org/(protected)/[org]/hooks/useOrgUsage';
 import OrgPlansDialog from '@/app/org/(protected)/[org]/components/OrgPlansDialog';
 import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
 import ProjectDialog, {
@@ -252,6 +253,14 @@ export default function OrgProjectsPage() {
     const settingsTooltip = canEditOrgSettings
         ? 'Настройки организации'
         : 'Недостаточно прав для изменения настроек';
+    const formatLimitLabel = (value: number | null | undefined) =>
+        typeof value === 'number' ? String(value) : '∞';
+
+    const { usage, usageLoading } = useOrgUsage(orgSlug);
+    const tasksUsedLabel = usageLoading || !usage ? '—' : String(usage.tasksUsed);
+    const publicTasksUsedLabel = usageLoading || !usage ? '—' : String(usage.publicTasksUsed);
+    const tasksWeeklyLimitLabel = formatLimitLabel(usage?.tasksLimit);
+    const publicTasksLimitLabel = formatLimitLabel(usage?.publicTasksLimit);
 
     const theme = useTheme();
     const {
@@ -344,6 +353,15 @@ export default function OrgProjectsPage() {
             : subscription?.plan
                 ? `Тариф ${subscription.plan.toUpperCase()}`
                 : 'Тариф не выбран';
+    const subscriptionEndDate = React.useMemo(() => {
+        if (!subscription?.periodEnd) return null;
+        const date = new Date(subscription.periodEnd);
+        return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString('ru-RU');
+    }, [subscription?.periodEnd]);
+    const subscriptionEndLabel =
+        subscription?.status && subscription.status !== 'inactive' && subscriptionEndDate
+            ? `Действует до ${subscriptionEndDate}`
+            : null;
     const roleLabel = myRole ? ROLE_LABELS[myRole] ?? myRole : '—';
 
 
@@ -684,9 +702,14 @@ export default function OrgProjectsPage() {
                     projectsLimitLabel={projectsLimitLabel}
                     activeMembersCount={activeMembersCount}
                     seatsLabel={seatsLabel}
+                    tasksUsedLabel={tasksUsedLabel}
+                    publicTasksUsedLabel={publicTasksUsedLabel}
+                    tasksWeeklyLimitLabel={tasksWeeklyLimitLabel}
+                    publicTasksLimitLabel={publicTasksLimitLabel}
                     subscriptionStatusLabel={subscriptionStatusLabel}
                     subscriptionStatusColor={subscriptionStatusColor}
                     subscriptionStatusDescription={subscriptionStatusDescription}
+                    subscriptionEndLabel={subscriptionEndLabel}
                     roleLabelRu={roleLabel}
                     onOpenPlansDialog={() => setPlansDialogOpen(true)}
                     subscriptionError={subscriptionError}
