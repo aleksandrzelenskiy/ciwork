@@ -90,7 +90,7 @@ import { extractFileNameFromUrl, isDocumentUrl } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import type { RelatedTaskRef } from '@/app/types/taskTypes';
 import { buildBsAddressFromLocations } from '@/utils/bsLocation';
-import ProfilePageContent from '@/app/profile/ProfilePageContent';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 import type { PhotoReport } from '@/app/types/taskTypes';
 
 type TaskFile = {
@@ -315,7 +315,9 @@ export default function TaskDetailsPage() {
         sev: 'success' | 'error';
     }>({ open: false, message: '', sev: 'success' });
     const [profileDialogOpen, setProfileDialogOpen] = React.useState(false);
-    const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+    const [profileClerkUserId, setProfileClerkUserId] = React.useState<string | null>(
+        null
+    );
 
     const [orgName, setOrgName] = React.useState<string | null>(null);
     const [projectOperator, setProjectOperator] = React.useState<string | null>(null);
@@ -555,15 +557,15 @@ export default function TaskDetailsPage() {
         [taskId, load]
     );
 
-    const openProfileDialog = (userId?: string | null) => {
-        if (!userId) return;
-        setProfileUserId(String(userId));
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileClerkUserId(String(clerkUserId));
         setProfileDialogOpen(true);
     };
 
     const closeProfileDialog = () => {
         setProfileDialogOpen(false);
-        setProfileUserId(null);
+        setProfileClerkUserId(null);
     };
 
     React.useEffect(() => {
@@ -2020,18 +2022,27 @@ export default function TaskDetailsPage() {
                                                                 <Link
                                                                     variant="subtitle2"
                                                                     underline={
-                                                                        app.contractorId ? 'hover' : 'none'
+                                                                        app.contractorClerkUserId
+                                                                            ? 'hover'
+                                                                            : 'none'
                                                                     }
                                                                     color="inherit"
                                                                     component={
-                                                                        app.contractorId ? 'button' : 'span'
+                                                                        app.contractorClerkUserId
+                                                                            ? 'button'
+                                                                            : 'span'
                                                                     }
                                                                     type={
-                                                                        app.contractorId ? 'button' : undefined
+                                                                        app.contractorClerkUserId
+                                                                            ? 'button'
+                                                                            : undefined
                                                                     }
                                                                     onClick={
-                                                                        app.contractorId
-                                                                            ? () => openProfileDialog(app.contractorId)
+                                                                        app.contractorClerkUserId
+                                                                            ? () =>
+                                                                                openProfileDialog(
+                                                                                    app.contractorClerkUserId
+                                                                                )
                                                                             : undefined
                                                                     }
                                                                     sx={{
@@ -2041,8 +2052,12 @@ export default function TaskDetailsPage() {
                                                                         m: 0,
                                                                         border: 'none',
                                                                         background: 'none',
-                                                                        cursor: app.contractorId ? 'pointer' : 'default',
-                                                                        color: app.contractorId ? 'primary.main' : 'inherit',
+                                                                        cursor: app.contractorClerkUserId
+                                                                            ? 'pointer'
+                                                                            : 'default',
+                                                                        color: app.contractorClerkUserId
+                                                                            ? 'primary.main'
+                                                                            : 'inherit',
                                                                         fontWeight: 600,
                                                                     }}
                                                                 >
@@ -2726,26 +2741,12 @@ export default function TaskDetailsPage() {
                 />
             )}
 
-            <Dialog
+            <ProfileDialog
                 open={profileDialogOpen}
                 onClose={closeProfileDialog}
-                fullWidth
-                maxWidth="md"
-            >
-                <DialogTitle>Профиль исполнителя</DialogTitle>
-                <DialogContent dividers>
-                    {profileUserId ? (
-                        <ProfilePageContent mode="public" userId={profileUserId} />
-                    ) : (
-                        <Typography>Пользователь не указан</Typography>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={closeProfileDialog} sx={{ borderRadius: UI_RADIUS.button }}>
-                        Закрыть
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                clerkUserId={profileClerkUserId}
+                title="Профиль исполнителя"
+            />
 
             <Dialog
                 open={sectionDialogOpen}

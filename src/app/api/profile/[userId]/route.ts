@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import mongoose from 'mongoose';
 import dbConnect from '@/server/db/mongoose';
 import UserModel from '@/server/models/UserModel';
 import { GetCurrentUserFromMongoDB } from '@/server-actions/users';
@@ -13,7 +12,8 @@ export async function GET(
 ) {
     const { userId } = await params;
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    const lookupKey = userId?.trim();
+    if (!lookupKey) {
         return NextResponse.json(
             { error: 'Некорректный идентификатор пользователя' },
             { status: 400 }
@@ -38,7 +38,7 @@ export async function GET(
         );
     }
 
-    const user = await UserModel.findById(userId).lean();
+    const user = await UserModel.findOne({ clerkUserId: lookupKey }).lean();
     if (!user) {
         return NextResponse.json(
             { error: 'Пользователь не найден' },

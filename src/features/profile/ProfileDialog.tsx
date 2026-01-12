@@ -14,7 +14,7 @@ import ProfilePageContent from '@/app/profile/ProfilePageContent';
 type ProfileDialogProps = {
     open: boolean;
     onClose: () => void;
-    userId?: string | null;
+    clerkUserId?: string | null;
     mode?: 'self' | 'public';
     title?: string;
 };
@@ -22,7 +22,7 @@ type ProfileDialogProps = {
 export default function ProfileDialog({
     open,
     onClose,
-    userId,
+    clerkUserId,
     mode = 'public',
     title,
 }: ProfileDialogProps) {
@@ -46,8 +46,8 @@ export default function ProfileDialog({
             <DialogContent dividers sx={{ p: 0 }}>
                 {mode === 'self' ? (
                     <ProfilePageContent mode="self" />
-                ) : userId ? (
-                    <ProfilePageContent mode="public" userId={userId} />
+                ) : clerkUserId ? (
+                    <ProfilePageContent mode="public" userId={clerkUserId} />
                 ) : (
                     <Stack sx={{ p: 3 }}>
                         <Typography>Пользователь не выбран.</Typography>

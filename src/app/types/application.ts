@@ -12,6 +12,7 @@ export interface TaskApplication {
   taskId: string;
   orgId: string;
   contractorId: string;
+  contractorClerkUserId?: string;
   contractorEmail?: string;
   contractorName?: string;
   coverMessage: string;

@@ -131,7 +131,32 @@ export async function GET(
     }
 
     const applications = await ApplicationModel.find(query).sort({ createdAt: -1 }).lean();
-    return NextResponse.json({ applications });
+    const contractorIds = Array.from(
+        new Set(
+            applications
+                .map((app) => app.contractorId)
+                .filter(Boolean)
+                .map((id) => String(id))
+        )
+    );
+
+    const contractors = contractorIds.length
+        ? await UserModel.find(
+            { _id: { $in: contractorIds } },
+            { clerkUserId: 1 }
+        ).lean()
+        : [];
+
+    const contractorClerkMap = new Map(
+        contractors.map((contractor) => [String(contractor._id), contractor.clerkUserId])
+    );
+
+    const enrichedApplications = applications.map((app) => ({
+        ...app,
+        contractorClerkUserId: contractorClerkMap.get(String(app.contractorId)),
+    }));
+
+    return NextResponse.json({ applications: enrichedApplications });
 }
 
 export async function POST(

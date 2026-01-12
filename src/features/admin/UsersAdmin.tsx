@@ -114,6 +114,10 @@ export default function UsersAdmin() {
     };
 
     const handleOpenProfile = (user: UserRow) => {
+        if (!user.clerkUserId) {
+            setError('Не удалось открыть профиль пользователя');
+            return;
+        }
         setProfileTarget(user);
     };
 
@@ -446,7 +450,7 @@ export default function UsersAdmin() {
             <ProfileDialog
                 open={Boolean(profileTarget)}
                 onClose={handleCloseProfile}
-                userId={profileTarget?.clerkUserId}
+                clerkUserId={profileTarget?.clerkUserId}
                 title={
                     normalizeValue(profileTarget?.name)
                         ? `Профиль: ${normalizeValue(profileTarget?.name)}`
