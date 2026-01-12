@@ -3,7 +3,7 @@ import type { ClientSession } from 'mongoose';
 import { Types } from 'mongoose';
 import Subscription, { type SubscriptionPlan } from '@/server/models/SubscriptionModel';
 import BillingUsageModel, { type BillingPeriod, type BillingUsage } from '@/server/models/BillingUsageModel';
-import { getPlanConfig } from '@/utils/planConfig';
+import { getPlanConfig, type PlanConfigDTO } from '@/utils/planConfig';
 
 export type OrgId = Types.ObjectId | string;
 
@@ -12,6 +12,13 @@ export type PlanLimits = {
     seats: number | null;
     publications: number | null;
     tasksWeekly: number | null;
+};
+
+type SubscriptionLimitOverrides = {
+    seats?: number | null;
+    projectsLimit?: number | null;
+    publicTasksLimit?: number | null;
+    tasksWeeklyLimit?: number | null;
 };
 
 type UsageKind = 'projects' | 'publications' | 'tasks';
@@ -43,6 +50,42 @@ const normalizeLimit = (value?: number | null): number | null => {
     if (typeof value !== 'number') return null;
     if (!Number.isFinite(value) || value < 0) return null;
     return value;
+};
+
+export const resolveEffectivePlanLimits = (
+    plan: SubscriptionPlan,
+    planConfig: PlanConfigDTO,
+    overrides?: SubscriptionLimitOverrides
+): PlanLimits => {
+    const base: PlanLimits = {
+        projects: normalizeLimit(planConfig.projectsLimit),
+        seats: normalizeLimit(planConfig.seatsLimit),
+        publications: normalizeLimit(planConfig.publicTasksMonthlyLimit),
+        tasksWeekly: normalizeLimit(planConfig.tasksWeeklyLimit),
+    };
+
+    if (plan !== 'enterprise') {
+        return base;
+    }
+
+    return {
+        projects: normalizeLimit(overrides?.projectsLimit) ?? base.projects,
+        seats: normalizeLimit(overrides?.seats) ?? base.seats,
+        publications: normalizeLimit(overrides?.publicTasksLimit) ?? base.publications,
+        tasksWeekly: normalizeLimit(overrides?.tasksWeeklyLimit) ?? base.tasksWeekly,
+    };
+};
+
+export const resolveEffectiveStorageLimit = (
+    plan: SubscriptionPlan,
+    planConfig: PlanConfigDTO,
+    storageLimitGb?: number | null
+): number | null => {
+    const base = normalizeLimit(planConfig.storageIncludedGb);
+    if (plan !== 'enterprise') {
+        return base;
+    }
+    return normalizeLimit(storageLimitGb) ?? base;
 };
 
 export const getBillingPeriod = (date: Date = new Date()): BillingPeriod => {
@@ -98,21 +141,14 @@ export const loadPlanForOrg = async (
     const sub = await Subscription.findOne({ orgId }).lean();
     const plan = (sub?.plan as SubscriptionPlan | undefined) ?? 'basic';
     const planConfig = await getPlanConfig(plan);
-    const limits = resolvePlanLimits(plan, {
-        seats: sub?.seats ?? planConfig.seatsLimit ?? undefined,
-        projectsLimit: sub?.projectsLimit ?? planConfig.projectsLimit ?? undefined,
-        publicTasksLimit: sub?.publicTasksLimit ?? planConfig.publicTasksMonthlyLimit ?? undefined,
-        tasksWeeklyLimit: sub?.tasksWeeklyLimit ?? planConfig.tasksWeeklyLimit ?? undefined,
+    const limits = resolveEffectivePlanLimits(plan, planConfig, {
+        seats: sub?.seats,
+        projectsLimit: sub?.projectsLimit,
+        publicTasksLimit: sub?.publicTasksLimit,
+        tasksWeeklyLimit: sub?.tasksWeeklyLimit,
     });
 
-    const resolvedLimits: PlanLimits = {
-        projects: limits.projects ?? planConfig.projectsLimit ?? null,
-        seats: limits.seats ?? planConfig.seatsLimit ?? null,
-        publications: limits.publications ?? planConfig.publicTasksMonthlyLimit ?? null,
-        tasksWeekly: limits.tasksWeekly ?? planConfig.tasksWeeklyLimit ?? null,
-    };
-
-    return { plan, limits: resolvedLimits };
+    return { plan, limits };
 };
 
 const buildExceeded = (limit: number | null, used: number, plan: SubscriptionPlan, reason: string): LimitCheckResult => ({

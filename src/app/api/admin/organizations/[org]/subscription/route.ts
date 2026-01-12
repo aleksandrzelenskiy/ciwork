@@ -4,7 +4,7 @@ import { GetUserContext } from '@/server-actions/user-context';
 import dbConnect from '@/server/db/mongoose';
 import Organization from '@/server/models/OrganizationModel';
 import Subscription from '@/server/models/SubscriptionModel';
-import { resolvePlanLimits } from '@/utils/billingLimits';
+import { resolveEffectivePlanLimits, resolveEffectiveStorageLimit, resolvePlanLimits } from '@/utils/billingLimits';
 import { getPlanConfig } from '@/utils/planConfig';
 
 export const runtime = 'nodejs';
@@ -192,16 +192,28 @@ export async function PATCH(
         return NextResponse.json({ error: 'Не удалось обновить подписку' }, { status: 500 });
     }
 
-    const subscription: AdminSubscriptionDTO = {
-        orgSlug: organization.orgSlug,
-        plan: saved.plan as Plan,
-        status: saved.status as SubStatus,
+    const resolvedPlanConfig = await getPlanConfig(saved.plan as Plan);
+    const limits = resolveEffectivePlanLimits(saved.plan as Plan, resolvedPlanConfig, {
         seats: saved.seats,
         projectsLimit: saved.projectsLimit,
         publicTasksLimit: saved.publicTasksLimit,
         tasksWeeklyLimit: saved.tasksWeeklyLimit,
+    });
+    const storageLimitGb = resolveEffectiveStorageLimit(
+        saved.plan as Plan,
+        resolvedPlanConfig,
+        saved.storageLimitGb
+    );
+    const subscription: AdminSubscriptionDTO = {
+        orgSlug: organization.orgSlug,
+        plan: saved.plan as Plan,
+        status: saved.status as SubStatus,
+        seats: limits.seats ?? undefined,
+        projectsLimit: limits.projects ?? undefined,
+        publicTasksLimit: limits.publications ?? undefined,
+        tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
         boostCredits: saved.boostCredits,
-        storageLimitGb: saved.storageLimitGb,
+        storageLimitGb: storageLimitGb ?? undefined,
         periodStart: toISO(saved.periodStart),
         periodEnd: toISO(saved.periodEnd),
         note: saved.note,

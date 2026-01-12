@@ -5,7 +5,8 @@ import dbConnect from '@/server/db/mongoose';
 import Subscription from '@/server/models/SubscriptionModel';
 import { requireOrgRole } from '@/server/org/permissions';
 import { changeSubscriptionPlan, ensureSubscriptionAccess, getPlanChangePreview, type PlanChangeTiming } from '@/utils/subscriptionBilling';
-import { getPlanConfig } from '@/utils/planConfig';
+import { resolveEffectivePlanLimits, resolveEffectiveStorageLimit } from '@/utils/billingLimits';
+import { getPlanConfig, type PlanConfigDTO } from '@/utils/planConfig';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -154,19 +155,21 @@ function toSubscriptionDTO(doc: SubscriptionLean, orgSlug: string): Subscription
 }
 
 /** Фоллбек DTO, когда записи ещё нет */
-function fallbackDTO(orgSlug: string): SubscriptionDTO {
+function fallbackDTO(orgSlug: string, planConfig: PlanConfigDTO): SubscriptionDTO {
+    const limits = resolveEffectivePlanLimits('basic', planConfig);
+    const storageLimitGb = resolveEffectiveStorageLimit('basic', planConfig, undefined);
     return {
         orgSlug,
         plan: 'basic',
         pendingPlan: null,
         pendingPlanEffectiveAt: null,
         status: 'inactive',
-        seats: 5,
-        projectsLimit: 1,
-        publicTasksLimit: 5,
-        tasksWeeklyLimit: 10,
+        seats: limits.seats ?? undefined,
+        projectsLimit: limits.projects ?? undefined,
+        publicTasksLimit: limits.publications ?? undefined,
+        tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
         boostCredits: 0,
-        storageLimitGb: 5,
+        storageLimitGb: storageLimitGb ?? undefined,
         periodStart: null,
         periodEnd: null,
         graceUntil: null,
@@ -240,8 +243,9 @@ export async function GET(
             };
         }
         if (!sub) {
+            const planConfig = await getPlanConfig('basic');
             return NextResponse.json({
-                subscription: fallbackDTO(org.orgSlug),
+                subscription: fallbackDTO(org.orgSlug, planConfig),
                 billing: {
                     isActive: access.ok,
                     readOnly: access.readOnly,
@@ -255,13 +259,20 @@ export async function GET(
         }
 
         const planConfig = await getPlanConfig(sub.plan);
+        const limits = resolveEffectivePlanLimits(sub.plan, planConfig, {
+            seats: sub.seats,
+            projectsLimit: sub.projectsLimit,
+            publicTasksLimit: sub.publicTasksLimit,
+            tasksWeeklyLimit: sub.tasksWeeklyLimit,
+        });
+        const storageLimitGb = resolveEffectiveStorageLimit(sub.plan, planConfig, sub.storageLimitGb);
         const merged: SubscriptionLean = {
             ...sub,
-            seats: sub.seats ?? planConfig.seatsLimit ?? undefined,
-            projectsLimit: sub.projectsLimit ?? planConfig.projectsLimit ?? undefined,
-            publicTasksLimit: sub.publicTasksLimit ?? planConfig.publicTasksMonthlyLimit ?? undefined,
-            tasksWeeklyLimit: sub.tasksWeeklyLimit ?? planConfig.tasksWeeklyLimit ?? undefined,
-            storageLimitGb: sub.storageLimitGb ?? planConfig.storageIncludedGb ?? undefined,
+            seats: limits.seats ?? undefined,
+            projectsLimit: limits.projects ?? undefined,
+            publicTasksLimit: limits.publications ?? undefined,
+            tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
+            storageLimitGb: storageLimitGb ?? undefined,
         };
 
         return NextResponse.json({
@@ -413,10 +424,31 @@ export async function PATCH(
             }
         }
 
+        const planConfig = await getPlanConfig(resolvedSubscription.plan);
+        const limits = resolveEffectivePlanLimits(resolvedSubscription.plan, planConfig, {
+            seats: resolvedSubscription.seats,
+            projectsLimit: resolvedSubscription.projectsLimit,
+            publicTasksLimit: resolvedSubscription.publicTasksLimit,
+            tasksWeeklyLimit: resolvedSubscription.tasksWeeklyLimit,
+        });
+        const storageLimitGb = resolveEffectiveStorageLimit(
+            resolvedSubscription.plan,
+            planConfig,
+            resolvedSubscription.storageLimitGb
+        );
+        const merged: SubscriptionLean = {
+            ...resolvedSubscription,
+            seats: limits.seats ?? undefined,
+            projectsLimit: limits.projects ?? undefined,
+            publicTasksLimit: limits.publications ?? undefined,
+            tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
+            storageLimitGb: storageLimitGb ?? undefined,
+        };
+
         const access = await ensureSubscriptionAccess(org._id);
         return NextResponse.json({
             ok: true,
-            subscription: toSubscriptionDTO(resolvedSubscription, org.orgSlug),
+            subscription: toSubscriptionDTO(merged, org.orgSlug),
             billing: {
                 isActive: access.ok,
                 readOnly: access.readOnly,

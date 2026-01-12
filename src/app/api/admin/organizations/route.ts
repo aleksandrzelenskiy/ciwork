@@ -5,6 +5,8 @@ import Organization from '@/server/models/OrganizationModel';
 import Subscription from '@/server/models/SubscriptionModel';
 import OrgWalletModel from '@/server/models/OrgWalletModel';
 import { GetUserContext } from '@/server-actions/user-context';
+import { resolveEffectivePlanLimits, resolveEffectiveStorageLimit } from '@/utils/billingLimits';
+import { getAllPlanConfigs } from '@/utils/planConfig';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,7 +61,10 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
         createdAt: 1,
     }).lean();
     const orgIds = organizations.map((org) => org._id);
-    const subscriptions = await Subscription.find({ orgId: { $in: orgIds } }).lean();
+    const [subscriptions, planConfigs] = await Promise.all([
+        Subscription.find({ orgId: { $in: orgIds } }).lean(),
+        getAllPlanConfigs(),
+    ]);
     const wallets = await OrgWalletModel.find({ orgId: { $in: orgIds } }).lean();
     const subscriptionMap = new Map<string, typeof subscriptions[number]>();
     subscriptions.forEach((subscription) => {
@@ -67,6 +72,8 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             subscriptionMap.set(String(subscription.orgId), subscription);
         }
     });
+    const planConfigMap = new Map(planConfigs.map((config) => [config.plan, config]));
+    const fallbackPlanConfig = planConfigMap.get('basic') ?? planConfigs[0];
     const walletMap = new Map<string, typeof wallets[number]>();
     wallets.forEach((wallet) => {
         if (wallet.orgId) {
@@ -77,19 +84,37 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
     const result: AdminOrganizationDTO[] = organizations.map((org) => {
         const subscription = subscriptionMap.get(String(org._id));
         const wallet = walletMap.get(String(org._id));
+        const plan = (subscription?.plan as Plan) ?? 'basic';
+        const planConfig = planConfigMap.get(plan) ?? fallbackPlanConfig;
+        const limits = planConfig
+            ? resolveEffectivePlanLimits(plan, planConfig, {
+                  seats: subscription?.seats,
+                  projectsLimit: subscription?.projectsLimit,
+                  publicTasksLimit: subscription?.publicTasksLimit,
+                  tasksWeeklyLimit: subscription?.tasksWeeklyLimit,
+              })
+            : {
+                  seats: subscription?.seats ?? null,
+                  projects: subscription?.projectsLimit ?? null,
+                  publications: subscription?.publicTasksLimit ?? null,
+                  tasksWeekly: subscription?.tasksWeeklyLimit ?? null,
+              };
+        const storageLimitGb = planConfig
+            ? resolveEffectiveStorageLimit(plan, planConfig, subscription?.storageLimitGb)
+            : subscription?.storageLimitGb ?? null;
         return {
             orgId: String(org._id),
             name: org.name,
             orgSlug: org.orgSlug,
             ownerEmail: org.ownerEmail,
-            plan: (subscription?.plan as Plan) ?? 'basic',
+            plan,
             status: (subscription?.status as SubStatus) ?? 'inactive',
-            seats: subscription?.seats,
-            projectsLimit: subscription?.projectsLimit,
-            publicTasksLimit: subscription?.publicTasksLimit,
-            tasksWeeklyLimit: subscription?.tasksWeeklyLimit,
+            seats: limits.seats ?? undefined,
+            projectsLimit: limits.projects ?? undefined,
+            publicTasksLimit: limits.publications ?? undefined,
+            tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
             boostCredits: subscription?.boostCredits,
-            storageLimitGb: subscription?.storageLimitGb,
+            storageLimitGb: storageLimitGb ?? undefined,
             walletBalance: wallet?.balance ?? 0,
             walletCurrency: wallet?.currency ?? 'RUB',
             periodStart: toISOStringOrNull(subscription?.periodStart ?? null),
