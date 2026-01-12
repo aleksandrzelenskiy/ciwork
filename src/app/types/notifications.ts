@@ -2,6 +2,7 @@
 
 export type NotificationKind =
     | 'org_invite'
+    | 'org_welcome'
     | 'invite_accepted'
     | 'invite_declined'
     | 'task_assigned'

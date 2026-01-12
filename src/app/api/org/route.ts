@@ -6,6 +6,9 @@ import Organization from '@/server/models/OrganizationModel';
 import Membership from '@/server/models/MembershipModel';
 import Subscription from '@/server/models/SubscriptionModel';
 import { slugify } from '@/app/utils/slugify';
+import UserModel from '@/server/models/UserModel';
+import { creditOrgWallet } from '@/utils/orgWallet';
+import { createNotification } from '@/server/notifications/service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -125,6 +128,35 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateOrg
             projectsLimit: 10,
             note: 'Создано автоматически',
         });
+
+        const welcomeBonus = 30000;
+        await creditOrgWallet({
+            orgId: created._id,
+            amount: welcomeBonus,
+            source: 'manual',
+            meta: { reason: 'org_welcome_bonus' },
+        });
+
+        const owner = await UserModel.findOne({ clerkUserId: user.id })
+            .select('_id')
+            .lean();
+
+        if (owner?._id) {
+            const rublesText = '30 000 ₽';
+            await createNotification({
+                recipientUserId: owner._id,
+                type: 'org_welcome',
+                title: 'Организация создана',
+                message: `Добро пожаловать в CI Work! Мы начислили ${rublesText} на баланс организации «${orgName}».`,
+                link: `/org/${encodeURIComponent(orgSlug)}`,
+                orgId: created._id,
+                orgSlug: created.orgSlug,
+                orgName: created.name,
+                metadata: { balanceAdded: welcomeBonus },
+            });
+        } else {
+            console.warn('Org welcome notification skipped: owner user not found', user.id);
+        }
 
         const org: OrganizationDTO = {
             _id: String(created._id),

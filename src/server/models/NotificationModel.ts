@@ -30,6 +30,7 @@ const NotificationSchema = new Schema<NotificationDoc>(
             type: String,
             enum: [
                 'org_invite',
+                'org_welcome',
                 'invite_accepted',
                 'invite_declined',
                 'task_assigned',
