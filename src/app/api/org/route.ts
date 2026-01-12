@@ -64,7 +64,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<CreateOrg
         const rawEmail = user?.emailAddresses?.[0]?.emailAddress;
         const email = rawEmail?.trim().toLowerCase();
         const ownerName = user?.fullName || user?.username || 'Owner';
-        if (!email) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+        if (!email || !user?.id) {
+            return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+        }
 
         const body = (await request.json()) as CreateOrgBody;
         const orgName = body?.name?.trim();
