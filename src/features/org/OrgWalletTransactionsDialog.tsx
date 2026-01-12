@@ -31,6 +31,25 @@ const formatAmount = (tx: WalletTx) => {
     return `${sign}${tx.amount.toFixed(2)} ₽`;
 };
 
+const planLabels: Record<string, string> = {
+    basic: 'Basic',
+    pro: 'Pro',
+    business: 'Business',
+    enterprise: 'Enterprise',
+};
+
+const formatPlanLabel = (plan?: string) => {
+    if (!plan) return '—';
+    return planLabels[plan] ?? `${plan.slice(0, 1).toUpperCase()}${plan.slice(1)}`;
+};
+
+const formatDate = (value?: string) => {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '—';
+    return parsed.toLocaleDateString('ru-RU');
+};
+
 const formatTitle = (tx: WalletTx) => {
     if (tx.source === 'storage_overage') {
         return 'Списание за хранение';
@@ -58,7 +77,10 @@ const formatDetails = (tx: WalletTx) => {
         const plan = tx.meta.plan as string | undefined;
         const periodStart = tx.meta.periodStart as string | undefined;
         const periodEnd = tx.meta.periodEnd as string | undefined;
-        return `Тариф ${plan ?? '—'} · период ${periodStart ?? '—'} → ${periodEnd ?? '—'}${debitAction ? ` · ${debitAction}` : ''}`;
+        const planLabel = formatPlanLabel(plan);
+        const startLabel = formatDate(periodStart);
+        const endLabel = formatDate(periodEnd);
+        return `Тариф - ${planLabel} период с ${startLabel} по ${endLabel}${debitAction ? ` · ${debitAction}` : ''}`;
     }
     if (tx.source === 'storage_package' && tx.meta) {
         const packageGb = tx.meta.packageGb as number | undefined;
@@ -66,6 +88,9 @@ const formatDetails = (tx: WalletTx) => {
         return `Пакет: ${packageGb ?? '—'} GB · шт: ${quantity ?? 1}${debitAction ? ` · ${debitAction}` : ''}`;
     }
     if (tx.source === 'manual') {
+        if (tx.meta?.reason === 'org_welcome_bonus') {
+            return `Приветственный бонус за регистрацию${debitAction ? ` · ${debitAction}` : ''}`;
+        }
         return `Изменено вручную администратором${debitAction ? ` · ${debitAction}` : ''}`;
     }
     return debitAction;

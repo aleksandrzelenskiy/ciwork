@@ -25,9 +25,27 @@ const parseDate = (value?: Date | string | null): Date | null => {
     return date;
 };
 
+const addMonthsClampedUtc = (date: Date, months: number): Date => {
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+    const hours = date.getUTCHours();
+    const minutes = date.getUTCMinutes();
+    const seconds = date.getUTCSeconds();
+    const ms = date.getUTCMilliseconds();
+
+    const targetMonth = month + months;
+    const targetYear = year + Math.floor(targetMonth / 12);
+    const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+    const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate();
+    const clampedDay = Math.min(day, lastDay);
+
+    return new Date(Date.UTC(targetYear, normalizedMonth, clampedDay, hours, minutes, seconds, ms));
+};
+
 const getPeriodBounds = (date: Date): { start: Date; end: Date } => {
-    const start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1, 0, 0, 0));
-    const end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1, 0, 0, 0));
+    const start = new Date(date);
+    const end = addMonthsClampedUtc(start, 1);
     return { start, end };
 };
 
