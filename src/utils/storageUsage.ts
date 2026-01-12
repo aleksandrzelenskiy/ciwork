@@ -89,9 +89,11 @@ const loadStorageAllowance = async (orgId: Types.ObjectId, at: Date) => {
 export const ensureStorageUsage = async (orgId: OrgId) => {
     const orgObjectId = toObjectId(orgId);
     if (!orgObjectId) throw new Error('INVALID_ORG_ID');
-    const existing = await StorageUsageModel.findOne({ orgId: orgObjectId });
-    if (existing) return existing;
-    return StorageUsageModel.create({ orgId: orgObjectId, bytesUsed: 0 });
+    return StorageUsageModel.findOneAndUpdate(
+        { orgId: orgObjectId },
+        { $setOnInsert: { bytesUsed: 0 } },
+        { new: true, upsert: true }
+    );
 };
 
 export const recordStorageBytes = async (orgId: OrgId, bytesDelta: number) => {
