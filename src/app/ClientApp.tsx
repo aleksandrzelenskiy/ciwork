@@ -44,6 +44,19 @@ import RubleAmount from '@/features/shared/RubleAmount';
 import dayjs from 'dayjs';
 import { UI_RADIUS } from '@/config/uiTokens';
 
+const getTransactionDescription = (source: string) => {
+  switch (source) {
+    case 'signup_bonus':
+      return 'Приветственный бонус за регистрацию';
+    case 'bid':
+      return 'Списание за отклик';
+    case 'manual_adjustment':
+      return 'Ручная корректировка';
+    default:
+      return source;
+  }
+};
+
 export default function ClientApp({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   const [profileSetupCompleted, setProfileSetupCompleted] = useState<boolean | null>(null);
@@ -696,7 +709,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                                     }
                                     secondary={
                                       <Typography variant='body2' color='text.secondary'>
-                                        {tx.source}
+                                        {getTransactionDescription(tx.source)}
                                       </Typography>
                                     }
                                   />

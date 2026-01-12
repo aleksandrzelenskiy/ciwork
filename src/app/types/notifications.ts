@@ -3,6 +3,7 @@
 export type NotificationKind =
     | 'org_invite'
     | 'org_welcome'
+    | 'signup_bonus'
     | 'invite_accepted'
     | 'invite_declined'
     | 'task_assigned'

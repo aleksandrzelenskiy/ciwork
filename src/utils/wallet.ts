@@ -2,9 +2,10 @@
 import mongoose, { type ClientSession, Types } from 'mongoose';
 import WalletModel, { type Wallet } from '@/server/models/WalletModel';
 import WalletTransactionModel from '@/server/models/WalletTransactionModel';
+import { createNotification } from '@/server/notifications/service';
 import { getBillingConfig } from '@/utils/billingConfig';
 
-export const SIGNUP_BONUS_RUB = 1000;
+export const SIGNUP_BONUS_RUB = 5000;
 const DEFAULT_BID_COST_RUB = 50;
 
 type EnsureWalletResult = {
@@ -70,6 +71,18 @@ export const ensureWalletWithBonus = async (
             ],
             withSession({}, session)
         );
+
+        try {
+            await createNotification({
+                recipientUserId: contractorId,
+                type: 'signup_bonus',
+                title: 'Добро пожаловать в CI Work!',
+                message: `Мы начислили приветственный бонус за регистрацию: ${SIGNUP_BONUS_RUB} ₽.`,
+                metadata: { bonusAmount: SIGNUP_BONUS_RUB },
+            });
+        } catch (error) {
+            console.error('Failed to send signup bonus notification', error);
+        }
 
         return { wallet: created, created: true };
     } catch (error) {
