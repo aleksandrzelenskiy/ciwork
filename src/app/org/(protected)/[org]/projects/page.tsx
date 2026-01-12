@@ -353,7 +353,7 @@ export default function OrgProjectsPage() {
             : subscription?.plan
                 ? `Тариф ${subscription.plan.toUpperCase()}`
                 : 'Тариф не выбран';
-    const subscriptionEndDate = React.useMemo(() => {
+    const subscriptionEndDate = useMemo(() => {
         if (!subscription?.periodEnd) return null;
         const date = new Date(subscription.periodEnd);
         return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString('ru-RU');
