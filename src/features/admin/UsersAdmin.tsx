@@ -6,6 +6,7 @@ import {
     Avatar,
     Box,
     Button,
+    ButtonBase,
     CircularProgress,
     Dialog,
     DialogActions,
@@ -27,6 +28,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { useTheme } from '@mui/material/styles';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import EditOutlined from '@mui/icons-material/EditOutlined';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 type UserRow = {
     clerkUserId: string;
@@ -58,6 +60,7 @@ export default function UsersAdmin() {
     const [userToDelete, setUserToDelete] = React.useState<UserRow | null>(null);
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [deleting, setDeleting] = React.useState(false);
+    const [profileTarget, setProfileTarget] = React.useState<UserRow | null>(null);
 
     const fetchUsers = React.useCallback(async () => {
         setLoading(true);
@@ -108,6 +111,14 @@ export default function UsersAdmin() {
         if (deleting) return;
         setUserToDelete(null);
         setDeleteError(null);
+    };
+
+    const handleOpenProfile = (user: UserRow) => {
+        setProfileTarget(user);
+    };
+
+    const handleCloseProfile = () => {
+        setProfileTarget(null);
     };
 
     const handleDelete = async () => {
@@ -272,17 +283,35 @@ export default function UsersAdmin() {
                                 users.map((user) => (
                                     <TableRow key={user.clerkUserId} hover>
                                         <TableCell>
-                                            <Stack direction="row" spacing={1.5} alignItems="center">
-                                                <Avatar
-                                                    src={user.profilePic || undefined}
-                                                    alt={normalizeValue(user.name) || 'User'}
-                                                >
-                                                    {normalizeValue(user.name).slice(0, 1).toUpperCase()}
-                                                </Avatar>
-                                                <Typography fontWeight={600}>
-                                                    {normalizeValue(user.name) || '—'}
-                                                </Typography>
-                                            </Stack>
+                                            <ButtonBase
+                                                onClick={() => handleOpenProfile(user)}
+                                                aria-label={`Открыть профиль ${normalizeValue(user.name) || user.clerkUserId}`}
+                                                sx={{
+                                                    width: '100%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'flex-start',
+                                                    textAlign: 'left',
+                                                    borderRadius: 1,
+                                                    py: 0.5,
+                                                    px: 0.5,
+                                                    '&:hover': {
+                                                        backgroundColor: 'action.hover',
+                                                    },
+                                                }}
+                                            >
+                                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                                    <Avatar
+                                                        src={user.profilePic || undefined}
+                                                        alt={normalizeValue(user.name) || 'User'}
+                                                    >
+                                                        {normalizeValue(user.name).slice(0, 1).toUpperCase()}
+                                                    </Avatar>
+                                                    <Typography fontWeight={600}>
+                                                        {normalizeValue(user.name) || '—'}
+                                                    </Typography>
+                                                </Stack>
+                                            </ButtonBase>
                                         </TableCell>
                                         <TableCell>{normalizeValue(user.email) || '—'}</TableCell>
                                         <TableCell>
@@ -414,6 +443,16 @@ export default function UsersAdmin() {
                     </Button>
                 </DialogActions>
             </Dialog>
+            <ProfileDialog
+                open={Boolean(profileTarget)}
+                onClose={handleCloseProfile}
+                userId={profileTarget?.clerkUserId}
+                title={
+                    normalizeValue(profileTarget?.name)
+                        ? `Профиль: ${normalizeValue(profileTarget?.name)}`
+                        : 'Профиль пользователя'
+                }
+            />
         </Box>
     );
 }
