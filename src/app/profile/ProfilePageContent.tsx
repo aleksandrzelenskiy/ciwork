@@ -13,9 +13,11 @@ import {
     Avatar,
     Box,
     Button,
+    Collapse,
     CircularProgress,
     IconButton,
     Paper,
+    Snackbar,
     Stack,
     Tooltip,
     Typography,
@@ -27,6 +29,7 @@ import type { PlatformRole } from '@/app/types/roles';
 import SendIcon from '@mui/icons-material/Send';
 import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
 import ProfileEditForm from '@/features/profile/ProfileEditForm';
+import ReviewDialog from '@/features/profile/ReviewDialog';
 
 type ProfileResponse = {
     id?: string;
@@ -68,6 +71,13 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [bio, setBio] = useState('');
+    const [reviewOpen, setReviewOpen] = useState(false);
+    const [chatToast, setChatToast] = useState<{
+        open: boolean;
+        message: string;
+        severity: 'success' | 'error' | 'info';
+        targetEmail?: string;
+    }>({ open: false, message: '', severity: 'info' });
 
     const isPublicView = mode === 'public';
     const readOnly = !canEdit;
@@ -139,6 +149,39 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     useEffect(() => {
         void loadProfile();
     }, [loadProfile]);
+
+    useEffect(() => {
+        const handleChatResult = (event: Event) => {
+            const customEvent = event as CustomEvent<{
+                targetEmail?: string;
+                ok?: boolean;
+                error?: string;
+            }>;
+            const targetEmail = customEvent.detail?.targetEmail;
+            if (!targetEmail || targetEmail !== chatToast.targetEmail) return;
+            if (customEvent.detail?.ok) {
+                setChatToast({
+                    open: true,
+                    message: 'Чат открыт',
+                    severity: 'success',
+                    targetEmail,
+                });
+            } else {
+                setChatToast({
+                    open: true,
+                    message:
+                        customEvent.detail?.error ||
+                        'Не удалось открыть чат. Попробуйте еще раз.',
+                    severity: 'error',
+                    targetEmail,
+                });
+            }
+        };
+        window.addEventListener('messenger:direct:result', handleChatResult);
+        return () => {
+            window.removeEventListener('messenger:direct:result', handleChatResult);
+        };
+    }, [chatToast.targetEmail]);
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
@@ -310,9 +353,16 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             },
         ];
     const canMessage = Boolean(profile.email) && !canEdit;
-    const canReview = !canEdit;
+    const canReview = Boolean(profile.clerkUserId) && !canEdit;
+
     const handleOpenMessage = () => {
         if (!profile.email || typeof window === 'undefined') return;
+        setChatToast({
+            open: true,
+            message: 'Открываем чат...',
+            severity: 'info',
+            targetEmail: profile.email,
+        });
         window.dispatchEvent(
             new CustomEvent('messenger:open', {
                 detail: { targetEmail: profile.email },
@@ -451,12 +501,12 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                 </Button>
                             )}
                             {canReview && (
-                                <Tooltip title="Оставить отзыв (скоро)">
+                                <Tooltip title="Оставить отзыв">
                                     <span>
                                         <IconButton
-                                            disabled
                                             sx={{ borderRadius: 999 }}
                                             aria-label="Оставить отзыв"
+                                            onClick={() => setReviewOpen(true)}
                                         >
                                             <RateReviewOutlinedIcon />
                                         </IconButton>
@@ -619,57 +669,89 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     )}
                 </Box>
             </Paper>
-            {canEdit && showEditForm && (
-                <ProfileEditForm
-                    firstName={firstName}
-                    lastName={lastName}
-                    phone={profile.phone}
-                    regionCode={profile.regionCode}
-                    email={profile.email}
-                    bio={bio}
-                    isContractor={isContractor}
-                    readOnly={readOnly}
-                    saving={saving}
-                    uploading={uploading}
-                    canEdit={canEdit}
-                    message={message}
-                    onSubmit={handleSubmit}
-                    onFirstNameChange={(value) => {
-                        setFirstName(value);
-                        setProfile((prev) =>
-                            prev
-                                ? {
-                                    ...prev,
-                                    name: buildFullName(value, lastName),
-                                }
-                                : prev
-                        );
-                    }}
-                    onLastNameChange={(value) => {
-                        setLastName(value);
-                        setProfile((prev) =>
-                            prev
-                                ? {
-                                    ...prev,
-                                    name: buildFullName(firstName, value),
-                                }
-                                : prev
-                        );
-                    }}
-                    onPhoneChange={(value) =>
-                        setProfile((prev) =>
-                            prev ? { ...prev, phone: value } : prev
-                        )
-                    }
-                    onRegionChange={(value) =>
-                        setProfile((prev) =>
-                            prev ? { ...prev, regionCode: value } : prev
-                        )
-                    }
-                    onBioChange={(value) => setBio(value)}
-                    onMessageClose={() => setMessage(null)}
-                />
+            {canEdit && (
+                <Collapse in={showEditForm} timeout={300} unmountOnExit>
+                    <ProfileEditForm
+                        firstName={firstName}
+                        lastName={lastName}
+                        phone={profile.phone}
+                        regionCode={profile.regionCode}
+                        email={profile.email}
+                        bio={bio}
+                        isContractor={isContractor}
+                        readOnly={readOnly}
+                        saving={saving}
+                        uploading={uploading}
+                        canEdit={canEdit}
+                        message={message}
+                        onSubmit={handleSubmit}
+                        onFirstNameChange={(value) => {
+                            setFirstName(value);
+                            setProfile((prev) =>
+                                prev
+                                    ? {
+                                        ...prev,
+                                        name: buildFullName(value, lastName),
+                                    }
+                                    : prev
+                            );
+                        }}
+                        onLastNameChange={(value) => {
+                            setLastName(value);
+                            setProfile((prev) =>
+                                prev
+                                    ? {
+                                        ...prev,
+                                        name: buildFullName(firstName, value),
+                                    }
+                                    : prev
+                            );
+                        }}
+                        onPhoneChange={(value) =>
+                            setProfile((prev) =>
+                                prev ? { ...prev, phone: value } : prev
+                            )
+                        }
+                        onRegionChange={(value) =>
+                            setProfile((prev) =>
+                                prev ? { ...prev, regionCode: value } : prev
+                            )
+                        }
+                        onBioChange={(value) => setBio(value)}
+                        onMessageClose={() => setMessage(null)}
+                    />
+                </Collapse>
             )}
+            <ReviewDialog
+                open={reviewOpen}
+                onClose={() => setReviewOpen(false)}
+                targetClerkUserId={profile.clerkUserId}
+                targetName={profile.name}
+                onSubmitted={loadProfile}
+            />
+            <Snackbar
+                open={chatToast.open}
+                autoHideDuration={4000}
+                onClose={() =>
+                    setChatToast((prev) => ({
+                        ...prev,
+                        open: false,
+                    }))
+                }
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert
+                    severity={chatToast.severity}
+                    onClose={() =>
+                        setChatToast((prev) => ({
+                            ...prev,
+                            open: false,
+                        }))
+                    }
+                >
+                    {chatToast.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }

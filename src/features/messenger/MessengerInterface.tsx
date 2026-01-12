@@ -1312,12 +1312,40 @@ export default function MessengerInterface({
                     upsertConversation(payload.conversation);
                     setActiveConversationId(payload.conversation.id);
                     setContactPickerOpen(false);
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(
+                            new CustomEvent('messenger:direct:result', {
+                                detail: { targetEmail, ok: true },
+                            })
+                        );
+                    }
                 } else {
                     setParticipantsError('Не удалось создать чат');
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(
+                            new CustomEvent('messenger:direct:result', {
+                                detail: { targetEmail, ok: false, error: 'Не удалось создать чат' },
+                            })
+                        );
+                    }
                 }
             } catch (error) {
                 console.error('messenger: create direct chat failed', error);
                 setParticipantsError('Не удалось создать чат');
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(
+                        new CustomEvent('messenger:direct:result', {
+                            detail: {
+                                targetEmail,
+                                ok: false,
+                                error:
+                                    error instanceof Error
+                                        ? error.message
+                                        : 'Не удалось создать чат',
+                            },
+                        })
+                    );
+                }
             } finally {
                 setCreatingChatWith(null);
             }

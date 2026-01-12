@@ -33,10 +33,21 @@ export default function ProfileDialog({
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [forceFullScreen, setForceFullScreen] = React.useState(false);
     const fullScreen = isMobile || forceFullScreen;
-    const handleClose = () => {
+    const handleClose = React.useCallback(() => {
         setForceFullScreen(false);
         onClose();
-    };
+    }, [onClose]);
+
+    React.useEffect(() => {
+        if (!open) return;
+        const handleMessengerOpen = () => {
+            handleClose();
+        };
+        window.addEventListener('messenger:open', handleMessengerOpen);
+        return () => {
+            window.removeEventListener('messenger:open', handleMessengerOpen);
+        };
+    }, [open, handleClose]);
 
     return (
         <Dialog
