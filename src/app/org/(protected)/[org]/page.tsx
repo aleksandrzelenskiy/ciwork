@@ -58,6 +58,7 @@ import useInviteListener from '@/app/org/(protected)/[org]/hooks/useInviteListen
 import useInviteActions from '@/app/org/(protected)/[org]/hooks/useInviteActions';
 import useOrgDialogActions from '@/app/org/(protected)/[org]/hooks/useOrgDialogActions';
 import useMemberRoleDialog from '@/app/org/(protected)/[org]/hooks/useMemberRoleDialog';
+import useOrgUsage from '@/app/org/(protected)/[org]/hooks/useOrgUsage';
 import type {
     OrgRole,
 } from '@/types/org';
@@ -189,6 +190,12 @@ export default function OrgSettingsPage() {
         integrationsError,
         fetchIntegrations,
     } = useIntegrations(org, canManage);
+
+    const {
+        usage,
+        usageLoading,
+        fetchUsage,
+    } = useOrgUsage(org);
 
     const { isSuperAdmin } = useCurrentUser();
 
@@ -381,9 +388,12 @@ export default function OrgSettingsPage() {
         inviteTooltip,
         projectsLimitLabel,
         seatsLabel,
+        tasksWeeklyLimitLabel,
+        publicTasksLimitLabel,
         subscriptionStatusLabel,
         subscriptionStatusColor,
         subscriptionStatusDescription,
+        subscriptionEndLabel,
         roleLabelRu,
         formatExpire,
         canEditOrgSettings,
@@ -402,6 +412,8 @@ export default function OrgSettingsPage() {
     const showNotificationsCard = Boolean(walletError || orgSettingsError);
     const settingsButtonDisabled = orgSettingsLoading || !canEditOrgSettings;
     const integrationKeyTooltipLabel = integrationKeyTooltip(isSuperAdmin);
+    const tasksUsedLabel = usageLoading || !usage ? '—' : String(usage.tasksUsed);
+    const publicTasksUsedLabel = usageLoading || !usage ? '—' : String(usage.publicTasksUsed);
 
     // первичная загрузка
     const { refreshAll } = useOrgRefresh({
@@ -410,6 +422,7 @@ export default function OrgSettingsPage() {
         fetchProjects,
         fetchOrgSettings,
         loadSubscription,
+        fetchUsage,
         fetchApplications,
         fetchWalletInfo,
         fetchWalletTransactions,
@@ -529,9 +542,14 @@ export default function OrgSettingsPage() {
                     projectsLimitLabel={projectsLimitLabel}
                     activeMembersCount={activeMembersCount}
                     seatsLabel={seatsLabel}
+                    tasksUsedLabel={tasksUsedLabel}
+                    publicTasksUsedLabel={publicTasksUsedLabel}
+                    tasksWeeklyLimitLabel={tasksWeeklyLimitLabel}
+                    publicTasksLimitLabel={publicTasksLimitLabel}
                     subscriptionStatusLabel={subscriptionStatusLabel}
                     subscriptionStatusColor={subscriptionStatusColor}
                     subscriptionStatusDescription={subscriptionStatusDescription}
+                    subscriptionEndLabel={subscriptionEndLabel}
                     roleLabelRu={roleLabelRu}
                     onOpenPlansDialog={() => setPlansDialogOpen(true)}
                     subscriptionError={subscriptionError}

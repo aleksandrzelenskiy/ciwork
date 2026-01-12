@@ -6,6 +6,7 @@ type UseOrgRefreshArgs = {
     fetchProjects: () => Promise<void>;
     fetchOrgSettings: () => Promise<void>;
     loadSubscription: () => Promise<void>;
+    fetchUsage: () => Promise<void>;
     fetchApplications: () => Promise<void>;
     fetchWalletInfo: () => Promise<void>;
     fetchWalletTransactions: () => Promise<void>;
@@ -23,6 +24,7 @@ export default function useOrgRefresh({
     fetchProjects,
     fetchOrgSettings,
     loadSubscription,
+    fetchUsage,
     fetchApplications,
     fetchWalletInfo,
     fetchWalletTransactions,
@@ -35,6 +37,7 @@ export default function useOrgRefresh({
         void fetchProjects();
         void fetchOrgSettings();
         void loadSubscription();
+        void fetchUsage();
         void fetchApplications();
         void fetchWalletInfo();
         void fetchWalletTransactions();
@@ -46,6 +49,7 @@ export default function useOrgRefresh({
         fetchProjects,
         fetchOrgSettings,
         loadSubscription,
+        fetchUsage,
         fetchApplications,
         fetchWalletInfo,
         fetchWalletTransactions,
@@ -57,6 +61,7 @@ export default function useOrgRefresh({
         void fetchMembers();
         void fetchProjects();
         void loadSubscription();
+        void fetchUsage();
         void fetchApplications();
         void fetchWalletInfo();
         void fetchWalletTransactions();
@@ -65,6 +70,7 @@ export default function useOrgRefresh({
         fetchMembers,
         fetchProjects,
         loadSubscription,
+        fetchUsage,
         fetchApplications,
         fetchWalletInfo,
         fetchWalletTransactions,

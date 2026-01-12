@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/server/db/mongoose';
 import Subscription from '@/server/models/SubscriptionModel';
 import { chargeSubscriptionPeriod } from '@/utils/subscriptionBilling';
+import { notifyExpiringSubscriptions } from '@/server/subscription/expiringNotifications';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,12 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
     const now = new Date();
+    let notifySummary = { scanned: 0, notified: 0 };
+    try {
+        notifySummary = await notifyExpiringSubscriptions(now);
+    } catch (error) {
+        console.error('Failed to notify expiring subscriptions', error);
+    }
     const subscriptions = await Subscription.find({
         $or: [
             {
@@ -36,5 +43,10 @@ export async function POST(request: NextRequest) {
         results.push({ orgId: String(sub.orgId), ok: result.ok, charged: result.charged });
     }
 
-    return NextResponse.json({ ok: true, processed: results.length, results });
+    return NextResponse.json({
+        ok: true,
+        processed: results.length,
+        results,
+        notifications: notifySummary,
+    });
 }

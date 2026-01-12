@@ -33,7 +33,10 @@ type UseOrgDerivedState = {
     subscriptionStatusLabel: string;
     subscriptionStatusColor: string;
     subscriptionStatusDescription: string;
+    subscriptionEndLabel: string | null;
     roleLabelRu: string;
+    tasksWeeklyLimitLabel: string;
+    publicTasksLimitLabel: string;
     canEditOrgSettings: boolean;
     canRequestIntegrations: boolean;
     settingsTooltip: string;
@@ -99,9 +102,23 @@ export default function useOrgDerivedState({
             : typeof subscription?.seats === 'number'
                 ? subscription.seats
                 : null;
+    const resolvedTasksWeeklyLimit =
+        typeof currentPlanConfig?.tasksWeeklyLimit === 'number'
+            ? currentPlanConfig.tasksWeeklyLimit
+            : typeof subscription?.tasksWeeklyLimit === 'number'
+                ? subscription.tasksWeeklyLimit
+                : null;
+    const resolvedPublicTasksLimit =
+        typeof currentPlanConfig?.publicTasksMonthlyLimit === 'number'
+            ? currentPlanConfig.publicTasksMonthlyLimit
+            : typeof subscription?.publicTasksLimit === 'number'
+                ? subscription.publicTasksLimit
+                : null;
     const formatLimitLabel = (value: number | null) => (typeof value === 'number' ? String(value) : '∞');
     const projectsLimitLabel = formatLimitLabel(resolvedProjectsLimit);
     const seatsLabel = formatLimitLabel(resolvedSeatsLimit);
+    const tasksWeeklyLimitLabel = formatLimitLabel(resolvedTasksWeeklyLimit);
+    const publicTasksLimitLabel = formatLimitLabel(resolvedPublicTasksLimit);
     const subscriptionStatusLabel = subscriptionLoading
         ? 'Проверяем…'
         : isSubscriptionActive
@@ -111,9 +128,19 @@ export default function useOrgDerivedState({
             : 'Подписка не активна';
     const subscriptionStatusColor = subscriptionLoading
         ? textSecondary
-        : isSubscriptionActive
+            : isSubscriptionActive
             ? '#34d399'
             : '#fbbf24';
+    const subscriptionEndDate = React.useMemo(() => {
+        const iso = subscription?.periodEnd;
+        if (!iso) return null;
+        const date = new Date(iso);
+        return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString('ru-RU');
+    }, [subscription?.periodEnd]);
+    const subscriptionEndLabel =
+        subscription?.status && subscription.status !== 'inactive' && subscriptionEndDate
+            ? `Действует до ${subscriptionEndDate}`
+            : null;
     const subscriptionStatusDescription = subscriptionLoading
         ? 'Получаем данные'
         : isTrialActive && formattedTrialEnd
@@ -162,7 +189,10 @@ export default function useOrgDerivedState({
         subscriptionStatusLabel,
         subscriptionStatusColor,
         subscriptionStatusDescription,
+        subscriptionEndLabel,
         roleLabelRu,
+        tasksWeeklyLimitLabel,
+        publicTasksLimitLabel,
         canEditOrgSettings,
         canRequestIntegrations,
         settingsTooltip,

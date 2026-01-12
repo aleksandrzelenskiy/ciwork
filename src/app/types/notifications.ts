@@ -13,7 +13,8 @@ export type NotificationKind =
     | 'task_published'
     | 'task_application_submitted'
     | 'task_application_status'
-    | 'profile_moderation';
+    | 'profile_moderation'
+    | 'subscription_expiring';
 
 export type NotificationStatus = 'unread' | 'read';
 

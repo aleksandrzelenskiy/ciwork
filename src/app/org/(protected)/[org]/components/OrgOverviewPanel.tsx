@@ -52,7 +52,12 @@ type OrgOverviewPanelProps = {
     subscriptionStatusLabel: string;
     subscriptionStatusColor: string;
     subscriptionStatusDescription: string;
+    subscriptionEndLabel: string | null;
     roleLabelRu: string;
+    tasksUsedLabel: string;
+    publicTasksUsedLabel: string;
+    tasksWeeklyLimitLabel: string;
+    publicTasksLimitLabel: string;
     onOpenPlansDialog: () => void;
     subscriptionError: string | null;
     subscriptionLoading: boolean;
@@ -108,7 +113,12 @@ export default function OrgOverviewPanel({
     subscriptionStatusLabel,
     subscriptionStatusColor,
     subscriptionStatusDescription,
+    subscriptionEndLabel,
     roleLabelRu,
+    tasksUsedLabel,
+    publicTasksUsedLabel,
+    tasksWeeklyLimitLabel,
+    publicTasksLimitLabel,
     onOpenPlansDialog,
     subscriptionError,
     subscriptionLoading,
@@ -286,6 +296,28 @@ export default function OrgOverviewPanel({
                 </Box>
                 <Box sx={statCardSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                        Задач за неделю
+                    </Typography>
+                    <Typography variant="h4" fontWeight={700} color={textPrimary}>
+                        {tasksUsedLabel}
+                    </Typography>
+                    <Typography variant="body2" color={textSecondary}>
+                        из {tasksWeeklyLimitLabel} доступных
+                    </Typography>
+                </Box>
+                <Box sx={statCardSx}>
+                    <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
+                        Публичных задач
+                    </Typography>
+                    <Typography variant="h4" fontWeight={700} color={textPrimary}>
+                        {publicTasksUsedLabel}
+                    </Typography>
+                    <Typography variant="body2" color={textSecondary}>
+                        из {publicTasksLimitLabel} в месяц
+                    </Typography>
+                </Box>
+                <Box sx={statCardSx}>
+                    <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
                         Статус подписки
                     </Typography>
                     <Typography variant="h6" fontWeight={600} sx={{ color: subscriptionStatusColor }}>
@@ -294,6 +326,11 @@ export default function OrgOverviewPanel({
                     <Typography variant="body2" color={textSecondary}>
                         {subscriptionStatusDescription}
                     </Typography>
+                    {subscriptionEndLabel && (
+                        <Typography variant="body2" color={textSecondary}>
+                            {subscriptionEndLabel}
+                        </Typography>
+                    )}
                     <Button
                         variant="text"
                         size="small"
