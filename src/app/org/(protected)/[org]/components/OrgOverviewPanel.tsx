@@ -346,7 +346,7 @@ export default function OrgOverviewPanel({
                                             color: '#2f1000',
                                         }}
                                     >
-                                        Grace 3 дня
+                                        Льготный период 3 дня
                                     </Button>
                                 ) : undefined
                             }
@@ -354,7 +354,7 @@ export default function OrgOverviewPanel({
                             {billingReason ?? 'Доступ ограничен: недостаточно средств'}
                         </Alert>
                     )}
-                    {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && (
+                    {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && !billingReadOnly && (
                         <Alert severity="warning" sx={getAlertSx('warning')}>
                             <Stack
                                 direction={{ xs: 'column', sm: 'row' }}

@@ -136,6 +136,34 @@ export const ensureSubscriptionAccess = async (orgId: Types.ObjectId): Promise<S
                 periodEnd: subscription.periodEnd ?? null,
             });
         }
+        if (periodEnd && periodEnd.getTime() <= Date.now()) {
+            const charge = await chargeSubscriptionPeriod(orgId);
+            if (charge.ok) {
+                return buildAccess({
+                    ok: true,
+                    plan,
+                    priceRubMonthly,
+                    status: 'active',
+                    graceUntil,
+                    graceAvailable,
+                    readOnly: false,
+                    periodStart: charge.subscription.periodStart ?? null,
+                    periodEnd: charge.subscription.periodEnd ?? null,
+                });
+            }
+            return buildAccess({
+                ok: false,
+                plan,
+                priceRubMonthly,
+                status: 'past_due',
+                graceUntil,
+                graceAvailable,
+                readOnly: true,
+                reason: 'Недостаточно средств. Пополните баланс, чтобы продлить подписку. Доступ можно сохранить на 3 дня.',
+                periodStart: charge.subscription.periodStart ?? null,
+                periodEnd: charge.subscription.periodEnd ?? null,
+            });
+        }
     }
     if (status === 'active' && !subscription?.periodEnd) {
         return buildAccess({
@@ -160,7 +188,7 @@ export const ensureSubscriptionAccess = async (orgId: Types.ObjectId): Promise<S
             graceUntil,
             graceAvailable,
             readOnly: false,
-            reason: 'Используется grace-период',
+            reason: 'Льготный период активен',
             periodStart: subscription?.periodStart ?? null,
             periodEnd: subscription?.periodEnd ?? null,
         });
@@ -174,7 +202,7 @@ export const ensureSubscriptionAccess = async (orgId: Types.ObjectId): Promise<S
         graceUntil,
         graceAvailable,
         readOnly: true,
-        reason: 'Недостаточно средств для оплаты подписки',
+        reason: 'Недостаточно средств. Пополните баланс, чтобы продлить подписку. Доступ можно сохранить на 3 дня.',
         periodStart: subscription?.periodStart ?? null,
         periodEnd: subscription?.periodEnd ?? null,
     });
@@ -256,7 +284,7 @@ export const ensureSubscriptionWriteAccess = async (orgId: Types.ObjectId): Prom
                 graceUntil,
                 graceAvailable,
                 readOnly: true,
-                reason: 'Недостаточно средств для оплаты подписки',
+                reason: 'Недостаточно средств. Пополните баланс, чтобы продлить подписку. Доступ можно сохранить на 3 дня.',
                 periodStart: charge.subscription.periodStart ?? null,
                 periodEnd: charge.subscription.periodEnd ?? null,
             });
@@ -296,7 +324,7 @@ export const ensureSubscriptionWriteAccess = async (orgId: Types.ObjectId): Prom
             graceUntil,
             graceAvailable,
             readOnly: false,
-            reason: 'Используется grace-период',
+            reason: 'Льготный период активен',
             periodStart: subscription.periodStart ?? null,
             periodEnd: subscription.periodEnd ?? null,
         });
@@ -310,7 +338,7 @@ export const ensureSubscriptionWriteAccess = async (orgId: Types.ObjectId): Prom
         graceUntil,
         graceAvailable,
         readOnly: true,
-        reason: 'Недостаточно средств для оплаты подписки',
+        reason: 'Недостаточно средств. Пополните баланс, чтобы продлить подписку. Доступ можно сохранить на 3 дня.',
         periodStart: subscription.periodStart ?? null,
         periodEnd: subscription.periodEnd ?? null,
     });

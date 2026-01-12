@@ -330,7 +330,7 @@ export default function OrgPlansPanel({ orgSlug, showClose = false, onClose }: O
                 return;
             }
             setBilling(payload.billing);
-            setNotice('Grace активирован на 3 дня');
+            setNotice('Льготный период активирован на 3 дня');
         } catch (err) {
             setNotice(err instanceof Error ? err.message : 'Не удалось активировать grace');
         } finally {
@@ -398,7 +398,7 @@ export default function OrgPlansPanel({ orgSlug, showClose = false, onClose }: O
                         action={
                             billing.graceAvailable && canChangePlan ? (
                                 <Button color="inherit" size="small" onClick={handleActivateGrace} sx={pillButtonSx}>
-                                    Grace на 3 дня
+                                    Льготный период 3 дня
                                 </Button>
                             ) : undefined
                         }

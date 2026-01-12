@@ -36,7 +36,7 @@ export async function POST(
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Server error';
         if (message === 'GRACE_ALREADY_USED') {
-            return NextResponse.json({ error: 'Grace уже использован в этом месяце' }, { status: 400 });
+            return NextResponse.json({ error: 'Льготный период уже использован в этом месяце' }, { status: 400 });
         }
         if (message === 'SUBSCRIPTION_NOT_FOUND') {
             return NextResponse.json({ error: 'Подписка не найдена' }, { status: 404 });

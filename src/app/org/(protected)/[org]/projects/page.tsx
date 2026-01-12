@@ -592,7 +592,7 @@ export default function OrgProjectsPage() {
                 return;
             }
             setBilling(data.billing);
-            showSnack('Grace-период активирован на 3 дня', 'success');
+            showSnack('Льготный период активирован на 3 дня', 'success');
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Ошибка активации grace';
             showSnack(msg, 'error');

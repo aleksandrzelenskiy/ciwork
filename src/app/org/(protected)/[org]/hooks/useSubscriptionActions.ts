@@ -85,7 +85,7 @@ export default function useSubscriptionActions({
                     return;
                 }
                 setBilling(data.billing);
-                setSnack({ open: true, msg: 'Grace-период активирован на 3 дня', sev: 'success' });
+                setSnack({ open: true, msg: 'Льготный период активирован на 3 дня', sev: 'success' });
             } catch (error: unknown) {
                 const msg = error instanceof Error ? error.message : 'Ошибка активации grace';
                 setSnack({ open: true, msg, sev: 'error' });
