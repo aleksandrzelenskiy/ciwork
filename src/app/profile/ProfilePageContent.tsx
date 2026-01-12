@@ -14,21 +14,19 @@ import {
     Box,
     Button,
     CircularProgress,
-    FormControl,
-    InputLabel,
-    MenuItem,
+    IconButton,
     Paper,
-    Select,
     Stack,
-    TextField,
+    Tooltip,
     Typography,
-    Divider,
     Chip,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
-import { formatRubleValue } from '@/features/shared/RubleAmount';
 import type { PlatformRole } from '@/app/types/roles';
+import SendIcon from '@mui/icons-material/Send';
+import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
+import ProfileEditForm from '@/features/profile/ProfileEditForm';
 
 type ProfileResponse = {
     id?: string;
@@ -39,7 +37,7 @@ type ProfileResponse = {
     regionCode: string;
     profileType?: 'employer' | 'contractor';
     platformRole?: PlatformRole;
-    desiredRate?: number | null;
+    viewerPlatformRole?: PlatformRole;
     bio?: string;
     portfolioLinks?: string[];
     moderationStatus?: 'pending' | 'approved' | 'rejected';
@@ -65,6 +63,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     const [message, setMessage] = useState<MessageState>(null);
     const [error, setError] = useState<string | null>(null);
     const [canEdit, setCanEdit] = useState(mode === 'self');
+    const [showEditForm, setShowEditForm] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -257,7 +256,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
 
     const isContractor = profile.profileType === 'contractor';
     const isEmployer = profile.profileType === 'employer';
-    const isSuperAdmin = profile.platformRole === 'super_admin';
+    const isSuperAdminViewer = profile.viewerPlatformRole === 'super_admin';
     const regionName = profile.regionCode
         ? RUSSIAN_REGIONS.find((region) => region.code === profile.regionCode)?.name
         : '';
@@ -278,10 +277,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             : profile.moderationStatus === 'rejected'
                 ? 'error'
                 : 'primary';
-    const desiredRateLabel =
-        typeof profile.desiredRate === 'number' && profile.desiredRate > 0
-            ? `${formatRubleValue(profile.desiredRate)} ₽`
-            : '—';
     const highlightItems = isContractor
         ? [
             {
@@ -299,10 +294,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                         ? profile.rating.toFixed(1)
                         : '—',
             },
-            {
-                label: 'Ставка',
-                value: desiredRateLabel,
-            },
         ]
         : [
             {
@@ -318,12 +309,20 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 value: profile.email || '—',
             },
         ];
+    const canMessage = Boolean(profile.email) && !canEdit;
+    const canReview = !canEdit;
+    const handleOpenMessage = () => {
+        if (!profile.email || typeof window === 'undefined') return;
+        window.dispatchEvent(
+            new CustomEvent('messenger:open', {
+                detail: { targetEmail: profile.email },
+            })
+        );
+    };
 
     return (
         <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 960, mx: 'auto' }}>
             <Paper
-                component="form"
-                onSubmit={handleSubmit}
                 sx={(theme) => ({
                     borderRadius: 4,
                     border: '1px solid',
@@ -395,7 +394,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                     }
                                     size="small"
                                 />
-                                {isSuperAdmin && (
+                                {profile.platformRole === 'super_admin' && (
                                     <Chip
                                         label="Супер-админ"
                                         color="warning"
@@ -412,13 +411,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                     }
                                     size="small"
                                 />
-                                {isPublicView && (
-                                    <Chip
-                                        label="Публичный профиль"
-                                        size="small"
-                                        variant="outlined"
-                                    />
-                                )}
                             </Stack>
                         </Stack>
                         <Stack direction="row" spacing={2} flexWrap="wrap">
@@ -432,10 +424,44 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                         : profile.regionCode}
                                 </Typography>
                             )}
-                            {profile.clerkUserId && (
+                            {profile.clerkUserId && isSuperAdminViewer && (
                                 <Typography variant="caption" color="text.secondary">
                                     ID: {profile.clerkUserId}
                                 </Typography>
+                            )}
+                        </Stack>
+                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                            {canMessage && (
+                                <Button
+                                    variant="contained"
+                                    startIcon={<SendIcon />}
+                                    onClick={handleOpenMessage}
+                                    sx={{ textTransform: 'none', borderRadius: 999 }}
+                                >
+                                    Отправить сообщение
+                                </Button>
+                            )}
+                            {canEdit && (
+                                <Button
+                                    variant="outlined"
+                                    onClick={() => setShowEditForm((prev) => !prev)}
+                                    sx={{ textTransform: 'none', borderRadius: 999 }}
+                                >
+                                    {showEditForm ? 'Скрыть редактирование' : 'Редактировать'}
+                                </Button>
+                            )}
+                            {canReview && (
+                                <Tooltip title="Оставить отзыв (скоро)">
+                                    <span>
+                                        <IconButton
+                                            disabled
+                                            sx={{ borderRadius: 999 }}
+                                            aria-label="Оставить отзыв"
+                                        >
+                                            <RateReviewOutlinedIcon />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
                             )}
                         </Stack>
                         {canEdit && (
@@ -545,6 +571,11 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             >
                                 {bio || 'Пока нет описания.'}
                             </Typography>
+                            {isSuperAdminViewer && profile.phone && (
+                                <Typography variant="body2" color="text.secondary">
+                                    Телефон: {profile.phone}
+                                </Typography>
+                            )}
                             {profile.portfolioLinks?.length ? (
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
                                     {profile.portfolioLinks.map((link) => {
@@ -576,7 +607,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             команды подрядчиков.
                         </Typography>
                     )}
-                    {isSuperAdmin && (
+                    {profile.platformRole === 'super_admin' && (
                         <Typography
                             variant="body2"
                             color="text.secondary"
@@ -587,130 +618,58 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                         </Typography>
                     )}
                 </Box>
-
-                <Divider />
-
-                <Box
-                    sx={{
-                        p: { xs: 3, sm: 4 },
-                        display: 'grid',
-                        gap: 2.5,
-                    }}
-                >
-                    <Typography variant="h6" fontWeight={700}>
-                        Данные профиля
-                    </Typography>
-                    <TextField
-                        label="Имя"
-                        value={firstName}
-                        onChange={(e) => {
-                            const value = e.target.value;
-                            setFirstName(value);
-                            setProfile((prev) =>
-                                prev
-                                    ? {
-                                        ...prev,
-                                        name: buildFullName(value, lastName),
-                                    }
-                                    : prev
-                            );
-                        }}
-                        required
-                        disabled={readOnly}
-                    />
-
-                    <TextField
-                        label="Фамилия"
-                        value={lastName}
-                        onChange={(e) => {
-                            const value = e.target.value;
-                            setLastName(value);
-                            setProfile((prev) =>
-                                prev
-                                    ? {
-                                        ...prev,
-                                        name: buildFullName(firstName, value),
-                                    }
-                                    : prev
-                            );
-                        }}
-                        disabled={readOnly}
-                    />
-
-                    <TextField
-                        label="Телефон"
-                        value={profile.phone}
-                        onChange={(e) =>
-                            setProfile((prev) =>
-                                prev ? { ...prev, phone: e.target.value } : prev
-                            )
-                        }
-                        disabled={readOnly}
-                    />
-
-                    <FormControl fullWidth disabled={readOnly}>
-                        <InputLabel id="profile-region-label">Регион</InputLabel>
-                        <Select
-                            labelId="profile-region-label"
-                            label="Регион"
-                            value={profile.regionCode}
-                            onChange={(e) =>
-                                setProfile((prev) =>
-                                    prev
-                                        ? { ...prev, regionCode: e.target.value }
-                                        : prev
-                                )
-                            }
-                        >
-                            {RUSSIAN_REGIONS.map((region) => (
-                                <MenuItem key={region.code} value={region.code}>
-                                    {region.code} — {region.name}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-
-                    <TextField label="Email" value={profile.email} disabled />
-
-                    {isContractor && (
-                        <Stack spacing={2}>
-                            <Typography variant="subtitle1" fontWeight={600}>
-                                Профиль подрядчика
-                            </Typography>
-                            <TextField
-                                label="О себе"
-                                multiline
-                                minRows={3}
-                                value={bio}
-                                onChange={(e) => setBio(e.target.value)}
-                                placeholder="Кратко опишите опыт и специализацию"
-                                disabled={readOnly}
-                            />
-                        </Stack>
-                    )}
-
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                        {canEdit && (
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                disabled={saving || uploading}
-                            >
-                                {saving ? <CircularProgress size={22} /> : 'Сохранить'}
-                            </Button>
-                        )}
-                    </Box>
-
-                    {message && (
-                        <Alert
-                            severity={message.type}
-                            onClose={() => setMessage(null)}
-                        >
-                            {message.text}
-                        </Alert>
-                    )}
-                </Box>
             </Paper>
+            {canEdit && showEditForm && (
+                <ProfileEditForm
+                    firstName={firstName}
+                    lastName={lastName}
+                    phone={profile.phone}
+                    regionCode={profile.regionCode}
+                    email={profile.email}
+                    bio={bio}
+                    isContractor={isContractor}
+                    readOnly={readOnly}
+                    saving={saving}
+                    uploading={uploading}
+                    canEdit={canEdit}
+                    message={message}
+                    onSubmit={handleSubmit}
+                    onFirstNameChange={(value) => {
+                        setFirstName(value);
+                        setProfile((prev) =>
+                            prev
+                                ? {
+                                    ...prev,
+                                    name: buildFullName(value, lastName),
+                                }
+                                : prev
+                        );
+                    }}
+                    onLastNameChange={(value) => {
+                        setLastName(value);
+                        setProfile((prev) =>
+                            prev
+                                ? {
+                                    ...prev,
+                                    name: buildFullName(firstName, value),
+                                }
+                                : prev
+                        );
+                    }}
+                    onPhoneChange={(value) =>
+                        setProfile((prev) =>
+                            prev ? { ...prev, phone: value } : prev
+                        )
+                    }
+                    onRegionChange={(value) =>
+                        setProfile((prev) =>
+                            prev ? { ...prev, regionCode: value } : prev
+                        )
+                    }
+                    onBioChange={(value) => setBio(value)}
+                    onMessageClose={() => setMessage(null)}
+                />
+            )}
         </Box>
     );
 }

@@ -62,6 +62,7 @@ type MessengerInterfaceProps = {
     onCloseAction?: () => void;
     onToggleFullScreenAction?: () => void;
     isFullScreen?: boolean;
+    directTargetRequest?: { email: string; nonce: number } | null;
 };
 
 const scopeIconMap: Record<'org' | 'project' | 'direct', React.ReactNode> = {
@@ -119,6 +120,7 @@ export default function MessengerInterface({
     onCloseAction,
     onToggleFullScreenAction,
     isFullScreen,
+    directTargetRequest,
 }: MessengerInterfaceProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -1322,6 +1324,11 @@ export default function MessengerInterface({
         },
         [upsertConversation]
     );
+
+    React.useEffect(() => {
+        if (!isOpen || !directTargetRequest?.email) return;
+        void createDirectChat(directTargetRequest.email);
+    }, [createDirectChat, directTargetRequest, isOpen]);
 
     const handleOpenContactPicker = () => {
         setContactPickerOpen(true);

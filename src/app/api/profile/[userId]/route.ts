@@ -59,6 +59,7 @@ export async function GET(
             profilePic: user.profilePic || '',
             profileType: user.profileType,
             platformRole: user.platformRole,
+            viewerPlatformRole: viewer.data.platformRole,
             clerkUserId: user.clerkUserId,
             desiredRate: user.desiredRate ?? null,
             bio: user.bio ?? '',

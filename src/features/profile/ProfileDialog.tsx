@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import {
     Dialog,
     DialogContent,
@@ -7,8 +8,12 @@ import {
     IconButton,
     Stack,
     Typography,
+    useMediaQuery,
+    useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import ProfilePageContent from '@/app/profile/ProfilePageContent';
 
 type ProfileDialogProps = {
@@ -16,7 +21,6 @@ type ProfileDialogProps = {
     onClose: () => void;
     clerkUserId?: string | null;
     mode?: 'self' | 'public';
-    title?: string;
 };
 
 export default function ProfileDialog({
@@ -24,12 +28,24 @@ export default function ProfileDialog({
     onClose,
     clerkUserId,
     mode = 'public',
-    title,
 }: ProfileDialogProps) {
-    const resolvedTitle = title || 'Профиль пользователя';
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const [forceFullScreen, setForceFullScreen] = React.useState(false);
+    const fullScreen = isMobile || forceFullScreen;
+    const handleClose = () => {
+        setForceFullScreen(false);
+        onClose();
+    };
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+        <Dialog
+            open={open}
+            onClose={handleClose}
+            fullWidth
+            maxWidth="md"
+            fullScreen={fullScreen}
+        >
             <DialogTitle
                 sx={{
                     display: 'flex',
@@ -38,10 +54,22 @@ export default function ProfileDialog({
                     pr: 1,
                 }}
             >
-                <Typography variant="h6">{resolvedTitle}</Typography>
-                <IconButton aria-label="Закрыть" onClick={onClose} size="small">
-                    <CloseIcon fontSize="small" />
-                </IconButton>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 'auto' }}>
+                    <IconButton
+                        aria-label={fullScreen ? 'Свернуть' : 'Развернуть'}
+                        onClick={() => setForceFullScreen((prev) => !prev)}
+                        size="small"
+                    >
+                        {fullScreen ? (
+                            <CloseFullscreenIcon fontSize="small" />
+                        ) : (
+                            <OpenInFullIcon fontSize="small" />
+                        )}
+                    </IconButton>
+                    <IconButton aria-label="Закрыть" onClick={handleClose} size="small">
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </Stack>
             </DialogTitle>
             <DialogContent dividers sx={{ p: 0 }}>
                 {mode === 'self' ? (

@@ -2745,7 +2745,6 @@ export default function TaskDetailsPage() {
                 open={profileDialogOpen}
                 onClose={closeProfileDialog}
                 clerkUserId={profileClerkUserId}
-                title="Профиль исполнителя"
             />
 
             <Dialog

@@ -659,11 +659,6 @@ export default function UsersAdmin() {
                 open={Boolean(profileTarget)}
                 onClose={handleCloseProfile}
                 clerkUserId={profileTarget?.clerkUserId}
-                title={
-                    normalizeValue(profileTarget?.name)
-                        ? `Профиль: ${normalizeValue(profileTarget?.name)}`
-                        : 'Профиль пользователя'
-                }
             />
         </Box>
     );

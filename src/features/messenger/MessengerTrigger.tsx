@@ -40,6 +40,10 @@ export default function MessengerTrigger({ buttonSx }: MessengerTriggerProps) {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [open, setOpen] = React.useState(false);
     const [unreadCount, setUnreadCount] = React.useState(0);
+    const [directTargetRequest, setDirectTargetRequest] = React.useState<{
+        email: string;
+        nonce: number;
+    } | null>(null);
     const unreadByConversationRef = React.useRef<Record<string, number>>({});
     const [forceFullScreen, setForceFullScreen] = React.useState(false);
     const userEmailRef = React.useRef('');
@@ -93,6 +97,20 @@ export default function MessengerTrigger({ buttonSx }: MessengerTriggerProps) {
     React.useEffect(() => {
         void syncUnread();
     }, [syncUnread]);
+
+    React.useEffect(() => {
+        const handleOpenMessenger = (event: Event) => {
+            const customEvent = event as CustomEvent<{ targetEmail?: string }>;
+            const targetEmail = customEvent.detail?.targetEmail?.trim();
+            if (!targetEmail) return;
+            setDirectTargetRequest({ email: targetEmail, nonce: Date.now() });
+            setOpen(true);
+        };
+        window.addEventListener('messenger:open', handleOpenMessenger);
+        return () => {
+            window.removeEventListener('messenger:open', handleOpenMessenger);
+        };
+    }, []);
 
     React.useEffect(() => {
         let cleanup: (() => void) | undefined;
@@ -298,6 +316,7 @@ export default function MessengerTrigger({ buttonSx }: MessengerTriggerProps) {
                             onCloseAction={handleClose}
                             onToggleFullScreenAction={toggleFullScreen}
                             isFullScreen={fullScreen}
+                            directTargetRequest={directTargetRequest}
                         />
                     </Box>
                 </DialogContent>
