@@ -26,7 +26,7 @@ export interface IUser extends Document {
     portfolioLinks?: string[];
     completedCount?: number;
     rating?: number;
-    portfolioStatus?: 'pending' | 'approved' | 'rejected';
+    profileStatus?: 'pending' | 'approved' | 'rejected';
     moderationComment?: string;
 }
 
@@ -84,7 +84,7 @@ const UserSchema = new Schema<IUser>(
         portfolioLinks: { type: [String], default: [] },
         completedCount: { type: Number, default: 0 },
         rating: { type: Number, min: 0, max: 5 },
-        portfolioStatus: {
+        profileStatus: {
             type: String,
             enum: ['pending', 'approved', 'rejected'],
             default: 'pending',

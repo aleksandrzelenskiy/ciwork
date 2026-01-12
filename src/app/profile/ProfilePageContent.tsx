@@ -38,6 +38,7 @@ type ProfileResponse = {
     bio?: string;
     moderationStatus?: 'pending' | 'approved' | 'rejected';
     moderationComment?: string;
+    clerkUserId?: string;
     completedCount?: number;
     rating?: number | null;
     error?: string;
@@ -267,7 +268,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 <Chip
                     label={
                         profile.moderationStatus === 'approved'
-                            ? 'Одобрен'
+                            ? 'Подтвержден'
                             : profile.moderationStatus === 'rejected'
                                 ? 'Отклонен'
                                 : 'На модерации'
@@ -285,6 +286,11 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     size="small"
                 />
             </Stack>
+            {profile.clerkUserId && (
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                    ID: {profile.clerkUserId}
+                </Typography>
+            )}
             {profile.moderationStatus === 'rejected' && profile.moderationComment && (
                 <Alert severity="warning" sx={{ mb: 2 }}>
                     {profile.moderationComment}

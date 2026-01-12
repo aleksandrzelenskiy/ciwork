@@ -39,7 +39,7 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             profilePic: 1,
             clerkUserId: 1,
             platformRole: 1,
-            portfolioStatus: 1,
+            profileStatus: 1,
             moderationComment: 1,
             profileType: 1,
         }
@@ -63,7 +63,7 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             profilePic: user.profilePic,
             walletBalance: wallet?.balance ?? 0,
             walletCurrency: wallet?.currency ?? 'RUB',
-            moderationStatus: user.portfolioStatus ?? 'pending',
+            moderationStatus: user.profileStatus ?? 'pending',
             moderationComment: user.moderationComment ?? '',
             profileType: user.profileType ?? undefined,
         };

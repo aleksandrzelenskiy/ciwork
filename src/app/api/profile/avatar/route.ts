@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     await dbConnect();
     await UserModel.findOneAndUpdate(
       { clerkUserId: clerkUser.id },
-      { profilePic: imageUrl, portfolioStatus: 'pending', moderationComment: '' },
+      { profilePic: imageUrl, profileStatus: 'pending', moderationComment: '' },
       { new: true }
     );
 

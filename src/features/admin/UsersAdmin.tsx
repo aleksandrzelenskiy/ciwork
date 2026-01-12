@@ -16,6 +16,9 @@ import {
     IconButton,
     MenuItem,
     Paper,
+    FormControl,
+    InputLabel,
+    Select,
     Stack,
     Table,
     TableBody,
@@ -76,6 +79,9 @@ export default function UsersAdmin() {
     const [moderationComment, setModerationComment] = React.useState('');
     const [moderationError, setModerationError] = React.useState<string | null>(null);
     const [moderating, setModerating] = React.useState(false);
+    const [filterStatus, setFilterStatus] = React.useState<
+        'all' | 'pending' | 'approved' | 'rejected'
+    >('all');
 
     const fetchUsers = React.useCallback(async () => {
         setLoading(true);
@@ -104,6 +110,11 @@ export default function UsersAdmin() {
     React.useEffect(() => {
         void fetchUsers();
     }, [fetchUsers]);
+
+    const filteredUsers = React.useMemo(() => {
+        if (filterStatus === 'all') return users;
+        return users.filter((user) => user.moderationStatus === filterStatus);
+    }, [filterStatus, users]);
 
     const handleOpenDialog = (user: UserRow) => {
         setSelectedUser(user);
@@ -316,13 +327,39 @@ export default function UsersAdmin() {
                         Список пользователей платформы и их текущие роли.
                     </Typography>
                 </Stack>
-                <Button
-                    variant="outlined"
-                    onClick={() => void fetchUsers()}
-                    disabled={loading}
-                >
-                    {loading ? 'Обновляем…' : 'Обновить список'}
-                </Button>
+                <Stack direction="row" spacing={1} alignItems="center">
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel id="user-moderation-filter-label">
+                            Модерация
+                        </InputLabel>
+                        <Select
+                            labelId="user-moderation-filter-label"
+                            label="Модерация"
+                            value={filterStatus}
+                            onChange={(event) =>
+                                setFilterStatus(
+                                    event.target.value as
+                                        | 'all'
+                                        | 'pending'
+                                        | 'approved'
+                                        | 'rejected'
+                                )
+                            }
+                        >
+                            <MenuItem value="all">Все</MenuItem>
+                            <MenuItem value="pending">На модерации</MenuItem>
+                            <MenuItem value="approved">Подтвержден</MenuItem>
+                            <MenuItem value="rejected">Отклонен</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <Button
+                        variant="outlined"
+                        onClick={() => void fetchUsers()}
+                        disabled={loading}
+                    >
+                        {loading ? 'Обновляем…' : 'Обновить список'}
+                    </Button>
+                </Stack>
             </Stack>
 
             {error && (
@@ -341,14 +378,13 @@ export default function UsersAdmin() {
                                 <TableCell>Роль</TableCell>
                                 <TableCell>Модерация</TableCell>
                                 <TableCell>Баланс</TableCell>
-                                <TableCell>ID</TableCell>
                                 <TableCell align="right">Действия</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center">
+                                    <TableCell colSpan={6} align="center">
                                         <Stack
                                             direction="row"
                                             spacing={1}
@@ -360,14 +396,14 @@ export default function UsersAdmin() {
                                         </Stack>
                                     </TableCell>
                                 </TableRow>
-                            ) : users.length === 0 ? (
+                            ) : filteredUsers.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} align="center">
+                                    <TableCell colSpan={6} align="center">
                                         Нет пользователей
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                users.map((user) => (
+                                filteredUsers.map((user) => (
                                     <TableRow key={user.clerkUserId} hover>
                                         <TableCell>
                                             <ButtonBase
@@ -415,7 +451,7 @@ export default function UsersAdmin() {
                                                 size="small"
                                                 label={
                                                     user.moderationStatus === 'approved'
-                                                        ? 'Одобрен'
+                                                        ? 'Подтвержден'
                                                         : user.moderationStatus === 'rejected'
                                                             ? 'Отклонен'
                                                             : 'На модерации'
@@ -438,11 +474,6 @@ export default function UsersAdmin() {
                                             {Number.isFinite(user.walletBalance)
                                                 ? `${user.walletBalance} ${user.walletCurrency || 'RUB'}`
                                                 : '—'}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {user.clerkUserId}
-                                            </Typography>
                                         </TableCell>
                                         <TableCell align="right">
                                             <Stack direction="row" spacing={1} justifyContent="flex-end">
@@ -589,7 +620,7 @@ export default function UsersAdmin() {
                                 size="small"
                             >
                                 <MenuItem value="pending">На модерации</MenuItem>
-                                <MenuItem value="approved">Одобрен</MenuItem>
+                                <MenuItem value="approved">Подтвержден</MenuItem>
                                 <MenuItem value="rejected">Отклонен</MenuItem>
                             </TextField>
                             <TextField

@@ -55,7 +55,7 @@ export async function PATCH(
     await dbConnect();
     const user = await UserModel.findOneAndUpdate(
         { clerkUserId },
-        { portfolioStatus: status, moderationComment: comment },
+        { profileStatus: status, moderationComment: comment },
         { new: true }
     ).lean();
 

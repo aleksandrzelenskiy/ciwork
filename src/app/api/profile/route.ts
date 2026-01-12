@@ -32,10 +32,11 @@ export async function GET() {
       regionCode: user.regionCode ?? '',
       profilePic: user.profilePic || clerkUser.imageUrl || '',
       profileType: user.profileType,
+      clerkUserId: user.clerkUserId,
       desiredRate: user.desiredRate ?? null,
       bio: user.bio ?? '',
       portfolioLinks: user.portfolioLinks ?? [],
-      moderationStatus: user.portfolioStatus ?? 'pending',
+      moderationStatus: user.profileStatus ?? 'pending',
       moderationComment: user.moderationComment ?? '',
     });
   } catch (error) {
@@ -131,7 +132,7 @@ export async function PATCH(request: Request) {
       shouldMarkPending = true;
     }
     if (shouldMarkPending) {
-      updatePayload.portfolioStatus = 'pending';
+      updatePayload.profileStatus = 'pending';
       updatePayload.moderationComment = '';
     }
     if (!Object.keys(updatePayload).length) {
@@ -163,10 +164,11 @@ export async function PATCH(request: Request) {
         regionCode: updatedUser.regionCode ?? '',
         profilePic: updatedUser.profilePic || clerkUser.imageUrl || '',
         profileType: updatedUser.profileType,
+        clerkUserId: updatedUser.clerkUserId,
         desiredRate: updatedUser.desiredRate ?? null,
         bio: updatedUser.bio ?? '',
         portfolioLinks: updatedUser.portfolioLinks ?? [],
-        moderationStatus: updatedUser.portfolioStatus ?? 'pending',
+        moderationStatus: updatedUser.profileStatus ?? 'pending',
         moderationComment: updatedUser.moderationComment ?? '',
       },
     });
