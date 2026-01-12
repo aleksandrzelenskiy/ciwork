@@ -15,6 +15,9 @@ type AdminUserDTO = {
     profilePic?: string;
     walletBalance?: number;
     walletCurrency?: string;
+    moderationStatus?: 'pending' | 'approved' | 'rejected';
+    moderationComment?: string;
+    profileType?: string;
 };
 
 type ResponsePayload = {
@@ -36,6 +39,9 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             profilePic: 1,
             clerkUserId: 1,
             platformRole: 1,
+            portfolioStatus: 1,
+            moderationComment: 1,
+            profileType: 1,
         }
     ).lean();
     const userIds = users.map((user) => user._id);
@@ -57,6 +63,9 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             profilePic: user.profilePic,
             walletBalance: wallet?.balance ?? 0,
             walletCurrency: wallet?.currency ?? 'RUB',
+            moderationStatus: user.portfolioStatus ?? 'pending',
+            moderationComment: user.moderationComment ?? '',
+            profileType: user.profileType ?? undefined,
         };
     });
 

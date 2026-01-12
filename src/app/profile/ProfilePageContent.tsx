@@ -23,6 +23,7 @@ import {
     TextField,
     Typography,
     Divider,
+    Chip,
 } from '@mui/material';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 
@@ -34,10 +35,8 @@ type ProfileResponse = {
     profilePic: string;
     regionCode: string;
     profileType?: 'employer' | 'contractor';
-    desiredRate?: number | null;
     bio?: string;
-    portfolioLinks?: string[];
-    portfolioStatus?: 'pending' | 'approved' | 'rejected';
+    moderationStatus?: 'pending' | 'approved' | 'rejected';
     moderationComment?: string;
     completedCount?: number;
     rating?: number | null;
@@ -62,9 +61,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-    const [desiredRate, setDesiredRate] = useState<string>('');
     const [bio, setBio] = useState('');
-    const [portfolioLinks, setPortfolioLinks] = useState<string>('');
 
     const isPublicView = mode === 'public';
     const readOnly = !canEdit;
@@ -125,17 +122,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             setProfile(payload);
             setCanEdit(mode === 'self' ? true : Boolean(data.canEdit));
             deriveNames(payload.name);
-            setDesiredRate(
-                typeof payload.desiredRate === 'number'
-                    ? String(payload.desiredRate)
-                    : ''
-            );
             setBio(payload.bio || '');
-            setPortfolioLinks(
-                Array.isArray(payload.portfolioLinks)
-                    ? payload.portfolioLinks.join('\n')
-                    : ''
-            );
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
         } finally {
@@ -162,12 +149,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     name: buildFullName(firstName, lastName),
                     phone: profile.phone,
                     regionCode: profile.regionCode,
-                    desiredRate: desiredRate.trim() ? Number(desiredRate.trim()) : null,
                     bio,
-                    portfolioLinks: portfolioLinks
-                        .split('\n')
-                        .map((s) => s.trim())
-                        .filter(Boolean),
                 }),
             });
             const data = await res.json();
@@ -183,17 +165,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     prev ? { ...prev, ...data.profile } : data.profile
                 );
                 deriveNames(data.profile.name);
-                setDesiredRate(
-                    typeof data.profile.desiredRate === 'number'
-                        ? String(data.profile.desiredRate)
-                        : ''
-                );
                 setBio(data.profile.bio || '');
-                setPortfolioLinks(
-                    Array.isArray(data.profile.portfolioLinks)
-                        ? data.profile.portfolioLinks.join('\n')
-                        : ''
-                );
             }
             setMessage({ type: 'success', text: 'Профиль обновлён' });
         } catch (err) {
@@ -283,9 +255,41 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             <Typography variant="h4" fontWeight={600} gutterBottom>
                 {title}
             </Typography>
-            <Typography variant="body1" color="text.secondary" gutterBottom>
-                {profile.name || 'Пользователь'}
-            </Typography>
+            <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1.5}
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                sx={{ mb: 1 }}
+            >
+                <Typography variant="body1" color="text.secondary">
+                    {profile.name || 'Пользователь'}
+                </Typography>
+                <Chip
+                    label={
+                        profile.moderationStatus === 'approved'
+                            ? 'Одобрен'
+                            : profile.moderationStatus === 'rejected'
+                                ? 'Отклонен'
+                                : 'На модерации'
+                    }
+                    color={
+                        profile.moderationStatus === 'approved'
+                            ? 'success'
+                            : profile.moderationStatus === 'rejected'
+                                ? 'error'
+                                : 'primary'
+                    }
+                    variant={
+                        profile.moderationStatus === 'pending' ? 'outlined' : 'filled'
+                    }
+                    size="small"
+                />
+            </Stack>
+            {profile.moderationStatus === 'rejected' && profile.moderationComment && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                    {profile.moderationComment}
+                </Alert>
+            )}
 
             {!canEdit && (
                 <Alert severity="info" sx={{ mb: 2 }}>
@@ -293,48 +297,50 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 </Alert>
             )}
 
-            <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={2}
-                sx={{ mb: 2 }}
-            >
-                <Paper
-                    sx={{
-                        flex: 1,
-                        p: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 0.5,
-                    }}
+            {profile.profileType === 'contractor' && (
+                <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={2}
+                    sx={{ mb: 2 }}
                 >
-                    <Typography variant="subtitle2" color="text.secondary">
-                        Выполненные задачи
-                    </Typography>
-                    <Typography variant="h5" fontWeight={700}>
-                        {typeof profile.completedCount === 'number'
-                            ? profile.completedCount
-                            : 0}
-                    </Typography>
-                </Paper>
-                <Paper
-                    sx={{
-                        flex: 1,
-                        p: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 0.5,
-                    }}
-                >
-                    <Typography variant="subtitle2" color="text.secondary">
-                        Рейтинг
-                    </Typography>
-                    <Typography variant="h5" fontWeight={700}>
-                        {typeof profile.rating === 'number'
-                            ? profile.rating.toFixed(1)
-                            : '—'}
-                    </Typography>
-                </Paper>
-            </Stack>
+                    <Paper
+                        sx={{
+                            flex: 1,
+                            p: 2,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.5,
+                        }}
+                    >
+                        <Typography variant="subtitle2" color="text.secondary">
+                            Выполненные задачи
+                        </Typography>
+                        <Typography variant="h5" fontWeight={700}>
+                            {typeof profile.completedCount === 'number'
+                                ? profile.completedCount
+                                : 0}
+                        </Typography>
+                    </Paper>
+                    <Paper
+                        sx={{
+                            flex: 1,
+                            p: 2,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 0.5,
+                        }}
+                    >
+                        <Typography variant="subtitle2" color="text.secondary">
+                            Рейтинг
+                        </Typography>
+                        <Typography variant="h5" fontWeight={700}>
+                            {typeof profile.rating === 'number'
+                                ? profile.rating.toFixed(1)
+                                : '—'}
+                        </Typography>
+                    </Paper>
+                </Stack>
+            )}
 
             <Paper
                 component="form"
@@ -453,16 +459,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             Профиль подрядчика
                         </Typography>
                         <TextField
-                            label="Ставка за задачу, ₽"
-                            type="number"
-                            value={desiredRate}
-                            onChange={(e) => setDesiredRate(e.target.value)}
-                            inputProps={{ min: 0 }}
-                            helperText="Фиксированная ставка для типовых задач"
-                            disabled={readOnly}
-                        />
-
-                        <TextField
                             label="О себе"
                             multiline
                             minRows={3}
@@ -471,29 +467,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             placeholder="Кратко опишите опыт и специализацию"
                             disabled={readOnly}
                         />
-
-                        <TextField
-                            label="Портфолио/ссылки (по строке на ссылку)"
-                            multiline
-                            minRows={3}
-                            value={portfolioLinks}
-                            onChange={(e) => setPortfolioLinks(e.target.value)}
-                            placeholder="https://site.com/example"
-                            disabled={readOnly}
-                        />
-
-                        <Alert
-                            severity={
-                                profile.portfolioStatus === 'approved'
-                                    ? 'success'
-                                    : profile.portfolioStatus === 'rejected'
-                                        ? 'error'
-                                        : 'info'
-                            }
-                        >
-                            Статус модерации: {profile.portfolioStatus || 'pending'}
-                            {profile.moderationComment ? ` — ${profile.moderationComment}` : ''}
-                        </Alert>
                     </Stack>
                 )}
 

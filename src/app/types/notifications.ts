@@ -12,7 +12,8 @@ export type NotificationKind =
     | 'task_status_change'
     | 'task_published'
     | 'task_application_submitted'
-    | 'task_application_status';
+    | 'task_application_status'
+    | 'profile_moderation';
 
 export type NotificationStatus = 'unread' | 'read';
 

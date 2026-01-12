@@ -35,7 +35,7 @@ export async function GET() {
       desiredRate: user.desiredRate ?? null,
       bio: user.bio ?? '',
       portfolioLinks: user.portfolioLinks ?? [],
-      portfolioStatus: user.portfolioStatus ?? 'pending',
+      moderationStatus: user.portfolioStatus ?? 'pending',
       moderationComment: user.moderationComment ?? '',
     });
   } catch (error) {
@@ -105,27 +105,32 @@ export async function PATCH(request: Request) {
     await dbConnect();
 
     const updatePayload: Record<string, unknown> = {};
+    let shouldMarkPending = false;
     if (typeof nextName !== 'undefined') {
       updatePayload.name = nextName;
+      shouldMarkPending = true;
     }
     if (typeof nextPhone !== 'undefined') {
       updatePayload.phone = nextPhone;
+      shouldMarkPending = true;
     }
     if (typeof nextRegion !== 'undefined') {
       updatePayload.regionCode = nextRegion;
+      shouldMarkPending = true;
     }
     if (typeof desiredRate !== 'undefined') {
       updatePayload.desiredRate = desiredRate === null ? undefined : desiredRate;
-      updatePayload.portfolioStatus = 'pending';
-      updatePayload.moderationComment = '';
+      shouldMarkPending = true;
     }
     if (typeof bio !== 'undefined') {
       updatePayload.bio = bio;
-      updatePayload.portfolioStatus = 'pending';
-      updatePayload.moderationComment = '';
+      shouldMarkPending = true;
     }
     if (typeof portfolioLinks !== 'undefined') {
       updatePayload.portfolioLinks = portfolioLinks;
+      shouldMarkPending = true;
+    }
+    if (shouldMarkPending) {
       updatePayload.portfolioStatus = 'pending';
       updatePayload.moderationComment = '';
     }
@@ -161,7 +166,7 @@ export async function PATCH(request: Request) {
         desiredRate: updatedUser.desiredRate ?? null,
         bio: updatedUser.bio ?? '',
         portfolioLinks: updatedUser.portfolioLinks ?? [],
-        portfolioStatus: updatedUser.portfolioStatus ?? 'pending',
+        moderationStatus: updatedUser.portfolioStatus ?? 'pending',
         moderationComment: updatedUser.moderationComment ?? '',
       },
     });

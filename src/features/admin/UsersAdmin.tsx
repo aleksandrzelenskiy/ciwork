@@ -8,11 +8,13 @@ import {
     Button,
     ButtonBase,
     CircularProgress,
+    Chip,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
     IconButton,
+    MenuItem,
     Paper,
     Stack,
     Table,
@@ -28,6 +30,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { useTheme } from '@mui/material/styles';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import EditOutlined from '@mui/icons-material/EditOutlined';
+import GavelOutlined from '@mui/icons-material/GavelOutlined';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 
 type UserRow = {
@@ -38,6 +41,9 @@ type UserRow = {
     profilePic?: string;
     walletBalance?: number;
     walletCurrency?: string;
+    moderationStatus?: 'pending' | 'approved' | 'rejected';
+    moderationComment?: string;
+    profileType?: string;
 };
 
 type UsersResponse = { users?: UserRow[]; error?: string };
@@ -61,6 +67,15 @@ export default function UsersAdmin() {
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [deleting, setDeleting] = React.useState(false);
     const [profileTarget, setProfileTarget] = React.useState<UserRow | null>(null);
+    const [moderationTarget, setModerationTarget] = React.useState<UserRow | null>(
+        null
+    );
+    const [moderationStatus, setModerationStatus] = React.useState<
+        'pending' | 'approved' | 'rejected'
+    >('pending');
+    const [moderationComment, setModerationComment] = React.useState('');
+    const [moderationError, setModerationError] = React.useState<string | null>(null);
+    const [moderating, setModerating] = React.useState(false);
 
     const fetchUsers = React.useCallback(async () => {
         setLoading(true);
@@ -125,6 +140,19 @@ export default function UsersAdmin() {
         setProfileTarget(null);
     };
 
+    const handleOpenModeration = (user: UserRow) => {
+        setModerationTarget(user);
+        setModerationStatus(user.moderationStatus ?? 'pending');
+        setModerationComment(user.moderationComment ?? '');
+        setModerationError(null);
+    };
+
+    const handleCloseModeration = () => {
+        if (moderating) return;
+        setModerationTarget(null);
+        setModerationError(null);
+    };
+
     const handleDelete = async () => {
         if (!userToDelete) return;
         setDeleting(true);
@@ -154,6 +182,60 @@ export default function UsersAdmin() {
             setDeleteError(message);
         } finally {
             setDeleting(false);
+        }
+    };
+
+    const handleModerationSave = async () => {
+        if (!moderationTarget) return;
+        if (moderationStatus === 'rejected' && !moderationComment.trim()) {
+            setModerationError('Укажите комментарий для отказа');
+            return;
+        }
+        setModerating(true);
+        setModerationError(null);
+        try {
+            const response = await fetch(
+                `/api/admin/users/${encodeURIComponent(
+                    moderationTarget.clerkUserId
+                )}/moderation`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: moderationStatus,
+                        comment: moderationComment,
+                    }),
+                }
+            );
+            const payload = (await response.json().catch(() => null)) as
+                | { ok?: true; status?: string; comment?: string; error?: string }
+                | null;
+
+            if (!response.ok || !payload || !payload.ok) {
+                const message =
+                    payload?.error || 'Не удалось обновить статус модерации';
+                setModerationError(message);
+                return;
+            }
+
+            setUsers((prev) =>
+                prev.map((item) =>
+                    item.clerkUserId === moderationTarget.clerkUserId
+                        ? {
+                              ...item,
+                              moderationStatus: moderationStatus,
+                              moderationComment: moderationComment.trim(),
+                          }
+                        : item
+                )
+            );
+            handleCloseModeration();
+        } catch (err) {
+            const message =
+                err instanceof Error ? err.message : 'Ошибка обновления';
+            setModerationError(message);
+        } finally {
+            setModerating(false);
         }
     };
 
@@ -257,6 +339,7 @@ export default function UsersAdmin() {
                                 <TableCell>Пользователь</TableCell>
                                 <TableCell>Email</TableCell>
                                 <TableCell>Роль</TableCell>
+                                <TableCell>Модерация</TableCell>
                                 <TableCell>Баланс</TableCell>
                                 <TableCell>ID</TableCell>
                                 <TableCell align="right">Действия</TableCell>
@@ -265,7 +348,7 @@ export default function UsersAdmin() {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center">
+                                    <TableCell colSpan={7} align="center">
                                         <Stack
                                             direction="row"
                                             spacing={1}
@@ -279,7 +362,7 @@ export default function UsersAdmin() {
                                 </TableRow>
                             ) : users.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center">
+                                    <TableCell colSpan={7} align="center">
                                         Нет пользователей
                                     </TableCell>
                                 </TableRow>
@@ -328,6 +411,30 @@ export default function UsersAdmin() {
                                             )}
                                         </TableCell>
                                         <TableCell>
+                                            <Chip
+                                                size="small"
+                                                label={
+                                                    user.moderationStatus === 'approved'
+                                                        ? 'Одобрен'
+                                                        : user.moderationStatus === 'rejected'
+                                                            ? 'Отклонен'
+                                                            : 'На модерации'
+                                                }
+                                                color={
+                                                    user.moderationStatus === 'approved'
+                                                        ? 'success'
+                                                        : user.moderationStatus === 'rejected'
+                                                            ? 'error'
+                                                            : 'primary'
+                                                }
+                                                variant={
+                                                    user.moderationStatus === 'pending'
+                                                        ? 'outlined'
+                                                        : 'filled'
+                                                }
+                                            />
+                                        </TableCell>
+                                        <TableCell>
                                             {Number.isFinite(user.walletBalance)
                                                 ? `${user.walletBalance} ${user.walletCurrency || 'RUB'}`
                                                 : '—'}
@@ -339,6 +446,15 @@ export default function UsersAdmin() {
                                         </TableCell>
                                         <TableCell align="right">
                                             <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                <Tooltip title="Модерация профиля">
+                                                    <IconButton
+                                                        color="secondary"
+                                                        size="small"
+                                                        onClick={() => handleOpenModeration(user)}
+                                                    >
+                                                        <GavelOutlined fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
                                                 <Tooltip title="Изменить">
                                                     <IconButton
                                                         color="primary"
@@ -444,6 +560,67 @@ export default function UsersAdmin() {
                         }
                     >
                         {deleting ? 'Удаляем…' : 'Удалить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog
+                open={Boolean(moderationTarget)}
+                onClose={handleCloseModeration}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle>Модерация профиля</DialogTitle>
+                <DialogContent dividers>
+                    {moderationTarget ? (
+                        <Stack spacing={2}>
+                            <Typography variant="subtitle1">
+                                {normalizeValue(moderationTarget.name) || '—'} ·{' '}
+                                {moderationTarget.clerkUserId}
+                            </Typography>
+                            <TextField
+                                select
+                                label="Статус"
+                                value={moderationStatus}
+                                onChange={(event) =>
+                                    setModerationStatus(
+                                        event.target.value as 'pending' | 'approved' | 'rejected'
+                                    )
+                                }
+                                size="small"
+                            >
+                                <MenuItem value="pending">На модерации</MenuItem>
+                                <MenuItem value="approved">Одобрен</MenuItem>
+                                <MenuItem value="rejected">Отклонен</MenuItem>
+                            </TextField>
+                            <TextField
+                                label="Комментарий модератора"
+                                value={moderationComment}
+                                onChange={(event) =>
+                                    setModerationComment(event.target.value)
+                                }
+                                multiline
+                                minRows={3}
+                                placeholder="Добавьте пояснение для пользователя"
+                            />
+                            {moderationError && (
+                                <Alert severity="error">{moderationError}</Alert>
+                            )}
+                        </Stack>
+                    ) : null}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseModeration} disabled={moderating}>
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleModerationSave}
+                        disabled={moderating}
+                        startIcon={
+                            moderating ? <CircularProgress size={16} color="inherit" /> : null
+                        }
+                    >
+                        {moderating ? 'Сохраняем…' : 'Применить'}
                     </Button>
                 </DialogActions>
             </Dialog>
