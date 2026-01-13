@@ -1,6 +1,7 @@
 import React from 'react';
 import NextLink from 'next/link';
 import { Box, Button, Chip, Link, Stack, Typography } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import type { PhotoReportSummary } from '@/app/types/reportTypes';
 import { getStatusColor } from '@/utils/statusColors';
@@ -48,11 +49,11 @@ export default function ReportSummaryList({
                         statusColor === 'default'
                             ? {
                                   fontWeight: 600,
-                                  backgroundColor: (theme) =>
+                                  backgroundColor: (theme: Theme) =>
                                       theme.palette.mode === 'dark'
                                           ? 'rgba(148,163,184,0.2)'
                                           : 'rgba(15,23,42,0.08)',
-                                  color: (theme) => theme.palette.text.primary,
+                                  color: (theme: Theme) => theme.palette.text.primary,
                               }
                             : { backgroundColor: statusColor, color: '#fff', fontWeight: 600 };
                     const isActive = activeBaseId?.toLowerCase() === item.baseId.toLowerCase();
@@ -72,7 +73,7 @@ export default function ReportSummaryList({
                                 ...(isActive
                                     ? {
                                           borderColor: 'rgba(59,130,246,0.4)',
-                                          backgroundColor: (theme) =>
+                                          backgroundColor: (theme: Theme) =>
                                               theme.palette.mode === 'dark'
                                                   ? 'rgba(59,130,246,0.18)'
                                                   : 'rgba(59,130,246,0.08)',
@@ -86,7 +87,7 @@ export default function ReportSummaryList({
                                     sx={{
                                         color:
                                             statusColor === 'default'
-                                                ? (theme) =>
+                                                ? (theme: Theme) =>
                                                       theme.palette.mode === 'dark'
                                                           ? 'rgba(226,232,240,0.6)'
                                                           : 'rgba(15,23,42,0.45)'
@@ -120,11 +121,11 @@ export default function ReportSummaryList({
                     statusColor === 'default'
                         ? {
                               fontWeight: 500,
-                              backgroundColor: (theme) =>
+                              backgroundColor: (theme: Theme) =>
                                   theme.palette.mode === 'dark'
                                       ? 'rgba(148,163,184,0.2)'
                                       : 'rgba(15,23,42,0.08)',
-                              color: (theme) => theme.palette.text.primary,
+                              color: (theme: Theme) => theme.palette.text.primary,
                           }
                         : { bgcolor: statusColor, color: '#fff', fontWeight: 500 };
                 return (
@@ -143,7 +144,7 @@ export default function ReportSummaryList({
                             borderRadius: 999,
                             backgroundColor: isActive
                                 ? 'rgba(59,130,246,0.12)'
-                                : (theme) =>
+                                : (theme: Theme) =>
                                       theme.palette.mode === 'dark'
                                           ? 'rgba(148,163,184,0.16)'
                                           : 'rgba(15,23,42,0.04)',
@@ -151,7 +152,7 @@ export default function ReportSummaryList({
                             '&:hover': {
                                 backgroundColor: isActive
                                     ? 'rgba(59,130,246,0.18)'
-                                    : (theme) =>
+                                    : (theme: Theme) =>
                                           theme.palette.mode === 'dark'
                                               ? 'rgba(148,163,184,0.26)'
                                               : 'rgba(15,23,42,0.08)',
