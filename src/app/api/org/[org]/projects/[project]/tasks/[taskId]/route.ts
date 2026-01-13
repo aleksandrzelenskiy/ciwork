@@ -10,6 +10,7 @@ import {
     BsCoordinate as IBaseStation,
 } from '@/server/models/BsCoordinateModel';
 import { BASE_STATION_COLLECTIONS } from '@/app/constants/baseStations';
+import { normalizeOperatorCode } from '@/app/utils/operators';
 import { Types } from 'mongoose';
 import { getOrgAndProjectByRef } from '@/server/org/project-ref';
 import {
@@ -56,16 +57,18 @@ const STATUS_TITLE_MAP: Record<string, string> = {
 };
 
 const DEFAULT_BS_COLLECTION =
-    BASE_STATION_COLLECTIONS[0]?.collection || '38-t2-bs-coords';
+    BASE_STATION_COLLECTIONS[0]?.collection || '38-250020-bs-coords';
 
 function resolveCollectionName(region?: string | null, operator?: string | null): string {
     const regionCode = region?.toString().trim();
-    const operatorCode = operator?.toString().trim();
+    const operatorCode =
+        normalizeOperatorCode(operator) ?? operator?.toString().trim();
     if (regionCode && operatorCode) {
         const entry = BASE_STATION_COLLECTIONS.find(
             (item) => item.region === regionCode && item.operator === operatorCode
         );
         if (entry?.collection) return entry.collection;
+        return `${regionCode}-${operatorCode}-bs-coords`;
     }
     return DEFAULT_BS_COLLECTION;
 }

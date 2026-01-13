@@ -2,6 +2,7 @@
 
 import mongoose, { Types } from 'mongoose';
 import { BASE_STATION_COLLECTIONS } from '@/app/constants/baseStations';
+import { normalizeOperatorCode } from '@/app/utils/operators';
 
 export interface BsLocationItem {
     name: string;
@@ -53,18 +54,18 @@ function coordsEqual(a?: number, b?: number): boolean {
  */
 function resolveCollectionName(region?: string | null, operatorCode?: string | null): string | null {
     const normalizedRegion = region?.toString().trim();
-    const operator = operatorCode?.toString().trim();
-    if (!normalizedRegion || !operator) return null;
+    const normalizedOperator = normalizeOperatorCode(operatorCode) ?? operatorCode?.toString().trim();
+    if (!normalizedRegion || !normalizedOperator) return null;
 
     const mapping = BASE_STATION_COLLECTIONS.find(
-        (entry) => entry.region === normalizedRegion && entry.operator === operator
+        (entry) => entry.region === normalizedRegion && entry.operator === normalizedOperator
     );
 
     if (mapping?.collection) {
         return mapping.collection;
     }
 
-    return `${normalizedRegion}-${operator.toLowerCase()}-bs-coords`;
+    return `${normalizedRegion}-${normalizedOperator}-bs-coords`;
 }
 
 export async function syncBsCoordsForProject(params: SyncBsCoordsParams): Promise<void> {
@@ -79,7 +80,7 @@ export async function syncBsCoordsForProject(params: SyncBsCoordsParams): Promis
     } = params;
 
     const normalizedRegion = region?.toString().trim();
-    const op = operatorCode?.toString().trim();
+    const op = normalizeOperatorCode(operatorCode) ?? operatorCode?.toString().trim();
 
     if (!normalizedRegion || !op) {
         // нет привязки к региону/оператору
@@ -92,7 +93,7 @@ export async function syncBsCoordsForProject(params: SyncBsCoordsParams): Promis
         return;
     }
 
-    // пример: "38-t2-bs-coords"
+    // пример: "38-250020-bs-coords"
     const collectionName = resolveCollectionName(normalizedRegion, op);
     if (!collectionName) return;
     const col = db.collection(collectionName);
@@ -179,6 +180,7 @@ export async function syncBsCoordsForProject(params: SyncBsCoordsParams): Promis
                 lat?: number;
                 lon?: number;
                 address?: string;
+                operatorCode?: string;
             }>({ name });
 
             if (!existing) {
@@ -187,6 +189,7 @@ export async function syncBsCoordsForProject(params: SyncBsCoordsParams): Promis
                     name,
                     region: normalizedRegion,
                     op,
+                    operatorCode: op,
                     createdAt: new Date(),
                     updatedAt: new Date(),
                 };
@@ -232,6 +235,11 @@ export async function syncBsCoordsForProject(params: SyncBsCoordsParams): Promis
                     update.coordKey = `${item.lat}|${item.lon}`;
                     needUpdate = true;
                 }
+            }
+
+            if (!existing.operatorCode && op) {
+                update.operatorCode = op;
+                needUpdate = true;
             }
 
             if (needUpdate) {

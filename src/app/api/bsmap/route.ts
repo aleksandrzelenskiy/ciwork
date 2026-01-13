@@ -3,23 +3,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/server/db/mongoose';
 import { getBsCoordinateModel } from '@/server/models/BsCoordinateModel';
+import { OPERATORS, OperatorCode, normalizeOperatorCode } from '@/app/utils/operators';
 import { Types } from 'mongoose';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const OPERATOR_COLLECTIONS: Record<string, { collection: string; label: string }> = {
-    t2: { collection: '38-t2-bs-coords', label: 'T2' },
-    beeline: { collection: '38-beeline-bs-coords', label: 'Билайн' },
-    megafon: { collection: '38-megafon-bs-coords', label: 'Мегафон' },
-    mts: { collection: '38-mts-bs-coords', label: 'МТС' },
-};
+const OPERATOR_COLLECTIONS = Object.fromEntries(
+    OPERATORS.map((operator) => [
+        operator.value,
+        { collection: `38-${operator.value}-bs-coords`, label: operator.name },
+    ])
+) as Record<OperatorCode, { collection: string; label: string }>;
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
         const { searchParams } = new URL(request.url);
-        const operatorParam = searchParams.get('operator')?.toLowerCase().trim() ?? 't2';
-        const operator = OPERATOR_COLLECTIONS[operatorParam] ? operatorParam : 't2';
+        const operatorParam = searchParams.get('operator');
+        const operator =
+            normalizeOperatorCode(operatorParam) ??
+            (OPERATORS[0]?.value as OperatorCode);
         const { collection } = OPERATOR_COLLECTIONS[operator];
 
         await dbConnect();
@@ -63,14 +66,6 @@ type StationPayload = {
 };
 type StationDocument = StationPayload & { _id: Types.ObjectId | string };
 
-function normalizeOperator(value: string | null | undefined): keyof typeof OPERATOR_COLLECTIONS | null {
-    const key = value?.toLowerCase().trim();
-    if (key && key in OPERATOR_COLLECTIONS) {
-        return key as keyof typeof OPERATOR_COLLECTIONS;
-    }
-    return null;
-}
-
 function resolveStationName(primary: unknown): string | null {
     if (typeof primary === 'string') {
         const trimmed = primary.trim();
@@ -111,7 +106,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: 'Некорректные данные' }, { status: 400 });
         }
 
-        const operatorKey = normalizeOperator(body.operator) ?? 't2';
+        const operatorKey =
+            normalizeOperatorCode(body.operator) ??
+            (OPERATORS[0]?.value as OperatorCode);
         const collectionEntry = OPERATOR_COLLECTIONS[operatorKey];
         const stationName = resolveStationName(body.name);
         if (!stationName) {
@@ -127,6 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const Model = getBsCoordinateModel(collectionEntry.collection);
         const createdDoc = await Model.create({
             op: operatorKey,
+            operatorCode: operatorKey,
             name: stationName,
             lat: body.lat,
             lon: body.lon,
@@ -160,7 +158,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: 'Не указан идентификатор базовой станции' }, { status: 400 });
         }
 
-        const operatorKey = normalizeOperator(body.operator) ?? 't2';
+        const operatorKey =
+            normalizeOperatorCode(body.operator) ??
+            (OPERATORS[0]?.value as OperatorCode);
         const collectionEntry = OPERATOR_COLLECTIONS[operatorKey];
 
         if (typeof body.lat !== 'number' || Number.isNaN(body.lat) || typeof body.lon !== 'number' || Number.isNaN(body.lon)) {
@@ -212,7 +212,9 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: 'Не указан идентификатор базовой станции' }, { status: 400 });
         }
 
-        const operatorKey = normalizeOperator(body.operator) ?? 't2';
+        const operatorKey =
+            normalizeOperatorCode(body.operator) ??
+            (OPERATORS[0]?.value as OperatorCode);
         const collectionEntry = OPERATOR_COLLECTIONS[operatorKey];
 
         await dbConnect();

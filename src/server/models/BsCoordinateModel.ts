@@ -3,12 +3,13 @@ import 'server-only';
 // src/server/models/BsCoordinateModel.ts
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import { BASE_STATION_COLLECTIONS } from '@/app/constants/baseStations';
+import { normalizeOperatorCode as normalizeOperatorCodeValue } from '@/app/utils/operators';
 
 export const IRKUTSK_REGION_CODE = '38';
 export const T2_OPERATOR_CODE = '250020';
 const T2_OPERATOR_SLUGS = new Set(['t2', 't-2', '250020', '250-20']);
 const DEFAULT_COLLECTION =
-    BASE_STATION_COLLECTIONS[0]?.collection || '38-t2-bs-coords';
+    BASE_STATION_COLLECTIONS[0]?.collection || '38-250020-bs-coords';
 
 export interface BsCoordinate extends Document {
     name?: string;
@@ -62,6 +63,8 @@ export function normalizeBsNumber(input: string): string {
 
 export function normalizeOperatorCode(input?: string | null): string | undefined {
     if (!input) return undefined;
+    const normalized = normalizeOperatorCodeValue(input);
+    if (normalized) return normalized;
     const trimmed = input.trim();
     if (!trimmed) return undefined;
     const lower = trimmed.toLowerCase();

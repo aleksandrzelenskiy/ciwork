@@ -39,6 +39,12 @@ import {
     OPERATOR_COLORS,
     normalizeOperator,
 } from '@/utils/operatorColors';
+import {
+    OPERATORS,
+    OperatorCode,
+    getOperatorLabel,
+    normalizeOperatorCode,
+} from '@/app/utils/operators';
 
 type BaseStation = {
     _id: string;
@@ -135,12 +141,7 @@ type YMapInstance = {
 };
 
 const DEFAULT_CENTER: [number, number] = [56.0, 104.0];
-const OPERATORS = [
-    { value: 't2', label: 'T2' },
-    { value: 'beeline', label: 'Билайн' },
-    { value: 'megafon', label: 'Мегафон' },
-    { value: 'mts', label: 'МТС' },
-] as const;
+const DEFAULT_OPERATOR = (OPERATORS[0]?.value ?? '250020') as OperatorCode;
 const ACTION_ICON_WRAPPER_STYLE = 'display:flex;align-items:center;gap:12px;margin-top:12px;';
 const ACTION_ICON_STYLE =
     'display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid #d1d5db;background:#fff;color:#1976d2;cursor:pointer;';
@@ -252,7 +253,7 @@ export default function BSMap(): React.ReactElement {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
     const [searchName, setSearchName] = React.useState('');
-    const [operator, setOperator] = React.useState<typeof OPERATORS[number]['value']>('t2');
+    const [operator, setOperator] = React.useState<OperatorCode>(DEFAULT_OPERATOR);
     const [filtersOpen, setFiltersOpen] = React.useState(false);
     const [selectedRegionCode, setSelectedRegionCode] = React.useState<string>(ALL_REGIONS_OPTION.code);
     const [isFullscreen, setIsFullscreen] = React.useState(false);
@@ -344,7 +345,8 @@ export default function BSMap(): React.ReactElement {
 
     const regionFilteredStations = React.useMemo(() => {
         return stations.filter((station) => {
-            if (normalizeOperator(station.op) !== operator) {
+            const stationOperator = normalizeOperatorCode(station.op) ?? DEFAULT_OPERATOR;
+            if (stationOperator !== operator) {
                 return false;
             }
             if (selectedRegion.code === ALL_REGIONS_OPTION.code) {
@@ -391,7 +393,7 @@ export default function BSMap(): React.ReactElement {
     const noStationsAfterFilters =
         !loading && !error && selectedRegion.code !== ALL_REGIONS_OPTION.code && !regionFilteredStations.length;
     const selectedOperatorLabel = React.useMemo(
-        () => OPERATORS.find((item) => item.value === operator)?.label ?? '',
+        () => getOperatorLabel(operator) ?? '',
         [operator]
     );
     const isIrkutskRegionSelected = selectedRegion.code === IRKUTSK_REGION_CODE;
@@ -536,7 +538,8 @@ export default function BSMap(): React.ReactElement {
     const handleEditSave = React.useCallback(async () => {
         if (!editingStation) return;
 
-        const editingOperator = normalizeOperator(editingStation.op ?? operator);
+        const editingOperator =
+            normalizeOperatorCode(editingStation.op ?? operator) ?? operator;
         const nameValue = editForm.name.trim() || null;
         const latNumber = Number(editForm.lat);
         const lonNumber = Number(editForm.lon);
@@ -584,7 +587,8 @@ export default function BSMap(): React.ReactElement {
 
     const handleDeleteConfirm = React.useCallback(async () => {
         if (!deletingStation) return;
-        const deletingOperator = normalizeOperator(deletingStation.op ?? operator);
+        const deletingOperator =
+            normalizeOperatorCode(deletingStation.op ?? operator) ?? operator;
         setDeleteDialogLoading(true);
         setDeleteDialogError(null);
 
@@ -666,7 +670,9 @@ export default function BSMap(): React.ReactElement {
 
     const buildBalloonContent = React.useCallback((station: BaseStation) => {
         const hintTitle = station.name ? `БС №${station.name}` : 'Базовая станция';
-        const operatorLabel = station.op ? station.op.toUpperCase() : '—';
+        const operatorLabel =
+            getOperatorLabel(station.op) ??
+            (station.op ? station.op.toUpperCase() : '—');
         const mccMnc = station.mcc && station.mnc ? ` (${station.mcc}/${station.mnc})` : '';
         const linkStyle = 'color:#1976d2;text-decoration:none;font-weight:500;';
         const regionInfo = formatRegion(station.region);
@@ -867,7 +873,7 @@ export default function BSMap(): React.ReactElement {
                             )}
                             <Clusterer
                                 options={{
-                                    preset: OPERATOR_CLUSTER_PRESETS[operator],
+                                    preset: OPERATOR_CLUSTER_PRESETS[normalizeOperator(operator)],
                                     groupByCoordinates: false,
                                     gridSize: 80,
                                 }}

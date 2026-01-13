@@ -4,6 +4,7 @@ import dbConnect from '@/server/db/mongoose';
 import mongoose from 'mongoose';
 import { getBsCoordinateModel, normalizeBsNumber } from '@/server/models/BsCoordinateModel';
 import { BASE_STATION_COLLECTIONS } from '@/app/constants/baseStations';
+import { normalizeOperatorCode } from '@/app/utils/operators';
 import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 
 export const runtime = 'nodejs';
@@ -34,14 +35,14 @@ const normalizeRegionCode = (input?: string | null): string | null => {
 const findCollectionName = (region?: string | null, operator?: string | null): string | null => {
     const normalizedRegion = normalizeRegionCode(region);
     if (!normalizedRegion || !operator) return null;
-    const normalizedOperator = operator.trim();
+    const normalizedOperator = normalizeOperatorCode(operator) ?? operator.trim();
     if (!normalizedOperator) return null;
 
     const entry = BASE_STATION_COLLECTIONS.find(
         (item) => item.region === normalizedRegion && item.operator === normalizedOperator
     );
 
-    return entry?.collection ?? null;
+    return entry?.collection ?? `${normalizedRegion}-${normalizedOperator}-bs-coords`;
 };
 
 const mapStation = (doc: StationDoc) => {
