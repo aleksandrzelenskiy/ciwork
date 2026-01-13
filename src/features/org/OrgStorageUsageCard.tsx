@@ -178,12 +178,6 @@ export default function OrgStorageUsageCard({
                                 <Typography variant="body2" color="text.secondary">
                                     {limitLabel}
                                 </Typography>
-                                {usage && (
-                                    <Typography variant="caption" color="text.secondary">
-                                        Включено: {usage.includedGb ?? '∞'} GB · Пакеты: {usage.packageGb} GB ·
-                                        Перерасход: {usage.overageGb} GB · {usage.hourlyCharge.toFixed(2)} ₽/час
-                                    </Typography>
-                                )}
                             </Stack>
                             <Box
                                 sx={{

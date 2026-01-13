@@ -141,6 +141,12 @@ export default function OrgOverviewPanel({
     const secondaryLabel = secondaryActionLabel ?? 'Пригласить';
     const primaryIcon = primaryActionIcon ?? <DriveFileMoveIcon />;
     const secondaryIcon = secondaryActionIcon ?? <PersonAddIcon />;
+    const statCardCompactSx = {
+        ...statCardSx,
+        px: { xs: 1.5, md: 2.5 },
+        py: { xs: 1, md: 1.5 },
+        minWidth: { xs: 0, md: 220 },
+    };
 
     return (
         <Box
@@ -226,6 +232,7 @@ export default function OrgOverviewPanel({
                             startIcon={primaryIcon}
                             sx={{
                                 ...actionButtonBaseSx,
+                                width: { xs: '100%', sm: 'auto' },
                                 borderColor: headerBorder,
                                 color: textPrimary,
                                 backgroundColor: isDarkMode
@@ -236,7 +243,7 @@ export default function OrgOverviewPanel({
                             {primaryLabel}
                         </Button>
                         <Tooltip title={inviteTooltip} disableHoverListener={!disableCreationActions}>
-                            <span style={{ display: 'inline-flex' }}>
+                            <span style={{ display: 'inline-flex', width: '100%' }}>
                                 <Button
                                     variant="contained"
                                     disableElevation
@@ -245,6 +252,7 @@ export default function OrgOverviewPanel({
                                     disabled={disableCreationActions}
                                     sx={{
                                         ...actionButtonBaseSx,
+                                        width: { xs: '100%', sm: 'auto' },
                                         border: 'none',
                                         color: '#ffffff',
                                         backgroundImage: disableCreationActions
@@ -262,17 +270,17 @@ export default function OrgOverviewPanel({
                 </Stack>
             </Box>
 
-            <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                spacing={{ xs: 2, md: 2.5 }}
-                useFlexGap
+            <Box
                 sx={{
                     mt: { xs: 2.5, md: 3 },
                     px: { xs: 2, md: 2.5 },
-                    flexWrap: { xs: 'nowrap', md: 'wrap' },
+                    display: { xs: 'grid', md: 'flex' },
+                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))' },
+                    gap: { xs: 1, sm: 1.25, md: 2.5 },
+                    flexWrap: { md: 'wrap' },
                 }}
             >
-                <Box sx={statCardSx}>
+                <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
                         Активные проекты
                     </Typography>
@@ -283,7 +291,7 @@ export default function OrgOverviewPanel({
                         из {projectsLimitLabel} доступных
                     </Typography>
                 </Box>
-                <Box sx={statCardSx}>
+                <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
                         Рабочих мест
                     </Typography>
@@ -294,7 +302,7 @@ export default function OrgOverviewPanel({
                         Всего {seatsLabel}
                     </Typography>
                 </Box>
-                <Box sx={statCardSx}>
+                <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
                         Задач за неделю
                     </Typography>
@@ -305,7 +313,7 @@ export default function OrgOverviewPanel({
                         из {tasksWeeklyLimitLabel} доступных
                     </Typography>
                 </Box>
-                <Box sx={statCardSx}>
+                <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
                         Публичных задач
                     </Typography>
@@ -316,7 +324,7 @@ export default function OrgOverviewPanel({
                         из {publicTasksLimitLabel} в месяц
                     </Typography>
                 </Box>
-                <Box sx={statCardSx}>
+                <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
                         Статус подписки
                     </Typography>
@@ -340,7 +348,7 @@ export default function OrgOverviewPanel({
                         Изменить
                     </Button>
                 </Box>
-                <Box sx={statCardSx}>
+                <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
                         Ваша роль
                     </Typography>
@@ -351,7 +359,7 @@ export default function OrgOverviewPanel({
                         Организация {orgName || orgSlug}
                     </Typography>
                 </Box>
-            </Stack>
+            </Box>
 
             <Box sx={{ px: panelPadding }}>
                 <Stack spacing={1.5} sx={{ mt: { xs: 2, md: 2.5 } }}>
