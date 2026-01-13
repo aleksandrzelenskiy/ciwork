@@ -18,12 +18,16 @@ type AdminTab = 'organizations' | 'users' | 'plans';
 export default function AdminPage() {
     const theme = useTheme();
     const searchParams = useSearchParams();
+    const safeParams = React.useMemo(
+        () => searchParams ?? new URLSearchParams(),
+        [searchParams]
+    );
     const focusUserId = React.useMemo(() => {
-        const value = searchParams.get('focusUser');
+        const value = safeParams.get('focusUser');
         return value?.trim() || null;
-    }, [searchParams]);
+    }, [safeParams]);
     const resolveTab = React.useCallback((): AdminTab | null => {
-        const rawTab = searchParams.get('tab')?.trim().toLowerCase();
+        const rawTab = safeParams.get('tab')?.trim().toLowerCase();
         if (rawTab === 'organizations' || rawTab === 'users' || rawTab === 'plans') {
             return rawTab;
         }
@@ -31,7 +35,7 @@ export default function AdminPage() {
             return 'users';
         }
         return null;
-    }, [focusUserId, searchParams]);
+    }, [focusUserId, safeParams]);
     const isDarkMode = theme.palette.mode === 'dark';
     const [tab, setTab] = React.useState<AdminTab>(() => resolveTab() ?? 'organizations');
     const tabBorderColor = isDarkMode ? 'rgba(148,163,184,0.3)' : 'rgba(15,23,42,0.16)';

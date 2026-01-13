@@ -442,6 +442,24 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
                                         hover
                                         selected={user.clerkUserId === normalizedFocusUserId}
                                         sx={{
+                                            ...(user.clerkUserId === normalizedFocusUserId
+                                                ? {
+                                                      animation: 'focusPulse 2.4s ease-out 1',
+                                                  }
+                                                : {}),
+                                            '@keyframes focusPulse': {
+                                                '0%': {
+                                                    boxShadow: '0 0 0 rgba(14,116,144,0)',
+                                                },
+                                                '40%': {
+                                                    boxShadow: isDarkMode
+                                                        ? '0 0 0 4px rgba(14,116,144,0.35)'
+                                                        : '0 0 0 4px rgba(14,116,144,0.22)',
+                                                },
+                                                '100%': {
+                                                    boxShadow: '0 0 0 rgba(14,116,144,0)',
+                                                },
+                                            },
                                             '&.Mui-selected': {
                                                 backgroundColor: isDarkMode
                                                     ? 'rgba(14,116,144,0.22)'
