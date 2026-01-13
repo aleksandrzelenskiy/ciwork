@@ -56,9 +56,17 @@ const normalizeValue = (value?: string | null) => {
     return value.trim();
 };
 
-export default function UsersAdmin() {
+type UsersAdminProps = {
+    focusUserId?: string | null;
+};
+
+export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
+    const normalizedFocusUserId = normalizeValue(focusUserId);
+    const focusRowRef = React.useRef<HTMLTableRowElement | null>(null);
+    const focusAppliedRef = React.useRef<string | null>(null);
+    const focusScrolledRef = React.useRef<string | null>(null);
     const [users, setUsers] = React.useState<UserRow[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
@@ -111,10 +119,30 @@ export default function UsersAdmin() {
         void fetchUsers();
     }, [fetchUsers]);
 
+    React.useEffect(() => {
+        if (!normalizedFocusUserId) {
+            focusAppliedRef.current = null;
+            return;
+        }
+        if (focusAppliedRef.current === normalizedFocusUserId) return;
+        focusAppliedRef.current = normalizedFocusUserId;
+        if (filterStatus !== 'all') {
+            setFilterStatus('all');
+        }
+    }, [filterStatus, normalizedFocusUserId]);
+
     const filteredUsers = React.useMemo(() => {
         if (filterStatus === 'all') return users;
         return users.filter((user) => user.moderationStatus === filterStatus);
     }, [filterStatus, users]);
+
+    React.useEffect(() => {
+        if (!normalizedFocusUserId || loading) return;
+        if (!focusRowRef.current) return;
+        if (focusScrolledRef.current === normalizedFocusUserId) return;
+        focusScrolledRef.current = normalizedFocusUserId;
+        focusRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, [filteredUsers, loading, normalizedFocusUserId]);
 
     const handleOpenDialog = (user: UserRow) => {
         setSelectedUser(user);
@@ -404,7 +432,28 @@ export default function UsersAdmin() {
                                 </TableRow>
                             ) : (
                                 filteredUsers.map((user) => (
-                                    <TableRow key={user.clerkUserId} hover>
+                                    <TableRow
+                                        key={user.clerkUserId}
+                                        ref={
+                                            user.clerkUserId === normalizedFocusUserId
+                                                ? focusRowRef
+                                                : undefined
+                                        }
+                                        hover
+                                        selected={user.clerkUserId === normalizedFocusUserId}
+                                        sx={{
+                                            '&.Mui-selected': {
+                                                backgroundColor: isDarkMode
+                                                    ? 'rgba(14,116,144,0.22)'
+                                                    : 'rgba(14,116,144,0.12)',
+                                            },
+                                            '&.Mui-selected:hover': {
+                                                backgroundColor: isDarkMode
+                                                    ? 'rgba(14,116,144,0.3)'
+                                                    : 'rgba(14,116,144,0.18)',
+                                            },
+                                        }}
+                                    >
                                         <TableCell>
                                             <ButtonBase
                                                 onClick={() => handleOpenProfile(user)}

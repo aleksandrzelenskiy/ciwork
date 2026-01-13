@@ -5,6 +5,7 @@
 import UserModel, { type IUser, type ProfileType } from '@/server/models/UserModel';
 import dbConnect from '@/server/db/mongoose';
 import { currentUser } from '@clerk/nextjs/server';
+import { createNotification } from '@/server/notifications/service';
 
 type UserSuccessResponse = {
   success: true;
@@ -31,6 +32,36 @@ const normalizeProfileType = (
     return 'employer';
   }
   return undefined;
+};
+
+const notifySuperAdminsOnRegistration = async (user: IUser) => {
+  const superAdmins = await UserModel.find({ platformRole: 'super_admin' })
+    .select('_id')
+    .lean();
+  if (superAdmins.length === 0) return;
+  const displayName = user.name || user.email || user.clerkUserId;
+  const messageParts = [displayName];
+  if (user.email) {
+    messageParts.push(user.email);
+  }
+  const message = `Зарегистрирован новый пользователь: ${messageParts.join(' · ')}`;
+  const link = `/admin?tab=users&focusUser=${encodeURIComponent(user.clerkUserId)}`;
+
+  await Promise.all(
+    superAdmins.map((admin) =>
+      createNotification({
+        recipientUserId: admin._id,
+        type: 'user_registered',
+        title: 'Новый пользователь',
+        message,
+        link,
+        metadata: {
+          clerkUserId: user.clerkUserId,
+          userId: user._id.toString(),
+        },
+      })
+    )
+  );
 };
 
 export const GetCurrentUserFromMongoDB =
@@ -166,6 +197,19 @@ export const GetCurrentUserFromMongoDB =
         setDefaultsOnInsert: true,
       }
     );
+
+    if (!newUser) {
+      return {
+        success: false,
+        message: 'Failed to create user',
+      };
+    }
+
+    try {
+      await notifySuperAdminsOnRegistration(newUser);
+    } catch (notifyError) {
+      console.error('Failed to notify super admins about registration', notifyError);
+    }
 
     return {
       success: true,

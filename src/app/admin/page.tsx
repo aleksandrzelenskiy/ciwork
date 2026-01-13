@@ -7,6 +7,7 @@ import {
     Tabs,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { useSearchParams } from 'next/navigation';
 import OrganizationsAdmin from '@/features/admin/OrganizationsAdmin';
 import UsersAdmin from '@/features/admin/UsersAdmin';
 import PlanConfigAdmin from '@/features/admin/PlanConfigAdmin';
@@ -16,11 +17,33 @@ type AdminTab = 'organizations' | 'users' | 'plans';
 
 export default function AdminPage() {
     const theme = useTheme();
+    const searchParams = useSearchParams();
+    const focusUserId = React.useMemo(() => {
+        const value = searchParams.get('focusUser');
+        return value?.trim() || null;
+    }, [searchParams]);
+    const resolveTab = React.useCallback((): AdminTab | null => {
+        const rawTab = searchParams.get('tab')?.trim().toLowerCase();
+        if (rawTab === 'organizations' || rawTab === 'users' || rawTab === 'plans') {
+            return rawTab;
+        }
+        if (focusUserId) {
+            return 'users';
+        }
+        return null;
+    }, [focusUserId, searchParams]);
     const isDarkMode = theme.palette.mode === 'dark';
-    const [tab, setTab] = React.useState<AdminTab>('organizations');
+    const [tab, setTab] = React.useState<AdminTab>(() => resolveTab() ?? 'organizations');
     const tabBorderColor = isDarkMode ? 'rgba(148,163,184,0.3)' : 'rgba(15,23,42,0.16)';
     const tabActiveBg = isDarkMode ? 'rgba(14,116,144,0.24)' : 'rgba(14,116,144,0.1)';
     const tabInactiveColor = isDarkMode ? 'rgba(226,232,240,0.7)' : 'rgba(15,23,42,0.6)';
+
+    React.useEffect(() => {
+        const nextTab = resolveTab();
+        if (nextTab && nextTab !== tab) {
+            setTab(nextTab);
+        }
+    }, [resolveTab, tab]);
 
     return (
         <Box sx={{ px: { xs: 1, md: 2 }, py: { xs: 2, md: 3 } }}>
@@ -87,7 +110,7 @@ export default function AdminPage() {
             </Tabs>
 
             {tab === 'organizations' && <OrganizationsAdmin />}
-            {tab === 'users' && <UsersAdmin />}
+            {tab === 'users' && <UsersAdmin focusUserId={focusUserId} />}
             {tab === 'plans' && <PlanConfigAdmin />}
         </Box>
     );

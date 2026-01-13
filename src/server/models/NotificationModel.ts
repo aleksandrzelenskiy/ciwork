@@ -41,6 +41,7 @@ const NotificationSchema = new Schema<NotificationDoc>(
                 'task_published',
                 'task_application_submitted',
                 'task_application_status',
+                'user_registered',
                 'subscription_expiring',
             ],
             required: true,
