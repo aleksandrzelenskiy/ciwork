@@ -185,23 +185,27 @@ export default function ReportListPage() {
 
   return (
     <Box
-      sx={{
+      sx={(theme) => ({
         px: { xs: 2, md: 6 },
         py: { xs: 3, md: 6 },
-        background: 'linear-gradient(180deg, #f7f8fb 0%, #ffffff 100%)',
+        background:
+          theme.palette.mode === 'dark'
+            ? 'linear-gradient(180deg, #0b0f16 0%, #0f141f 100%)'
+            : 'linear-gradient(180deg, #f7f8fb 0%, #ffffff 100%)',
         minHeight: '100vh',
         position: 'relative',
-      }}
+      })}
     >
       {highlightActive && (
         <Box
-          sx={{
+          sx={(theme) => ({
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(15,23,42,0.35)',
+            backgroundColor:
+              theme.palette.mode === 'dark' ? 'rgba(6, 8, 14, 0.75)' : 'rgba(15,23,42,0.35)',
             zIndex: 1,
             pointerEvents: 'none',
-          }}
+          })}
         />
       )}
       <Stack spacing={2} sx={{ mb: 4 }}>
@@ -250,17 +254,25 @@ export default function ReportListPage() {
               ref={(node) => {
                 reportRefs.current[reportKey] = node as HTMLDivElement | null;
               }}
-              sx={{
+              sx={(theme) => ({
                 position: 'relative',
                 zIndex: isHighlighted ? 2 : 0,
                 borderRadius: 4,
                 p: 3,
-                border: '1px solid rgba(15,23,42,0.08)',
-                background: 'rgba(255,255,255,0.92)',
+                border:
+                  theme.palette.mode === 'dark'
+                    ? '1px solid rgba(148,163,184,0.18)'
+                    : '1px solid rgba(15,23,42,0.08)',
+                background:
+                  theme.palette.mode === 'dark' ? 'rgba(15,18,26,0.92)' : 'rgba(255,255,255,0.92)',
                 boxShadow: isHighlighted
-                  ? '0 0 0 3px rgba(56, 189, 248, 0.9), 0 30px 70px rgba(15,23,42,0.25)'
-                  : '0 24px 60px rgba(15,23,42,0.08)',
-              }}
+                  ? theme.palette.mode === 'dark'
+                    ? '0 0 0 2px rgba(56, 189, 248, 0.7), 0 30px 70px rgba(0,0,0,0.65)'
+                    : '0 0 0 3px rgba(56, 189, 248, 0.9), 0 30px 70px rgba(15,23,42,0.25)'
+                  : theme.palette.mode === 'dark'
+                    ? '0 24px 60px rgba(0,0,0,0.55)'
+                    : '0 24px 60px rgba(15,23,42,0.08)',
+              })}
             >
               <Stack spacing={2}>
                 <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
@@ -331,7 +343,14 @@ export default function ReportListPage() {
                     const baseStatusColor = getStatusColor(baseStatus);
                     const baseStatusChipSx =
                       baseStatusColor === 'default'
-                        ? { fontWeight: 600 }
+                        ? {
+                            fontWeight: 600,
+                            backgroundColor: (theme) =>
+                              theme.palette.mode === 'dark'
+                                ? 'rgba(148,163,184,0.2)'
+                                : 'rgba(15,23,42,0.08)',
+                            color: (theme) => theme.palette.text.primary,
+                          }
                         : { backgroundColor: baseStatusColor, color: '#fff', fontWeight: 600 };
                     return (
                       <Stack
@@ -349,7 +368,10 @@ export default function ReportListPage() {
                           sx={{
                             borderRadius: 999,
                             px: 1,
-                            backgroundColor: 'rgba(15,23,42,0.04)',
+                            backgroundColor: (theme) =>
+                              theme.palette.mode === 'dark'
+                                ? 'rgba(148,163,184,0.16)'
+                                : 'rgba(15,23,42,0.04)',
                           }}
                         />
                         <Chip label={baseStatusLabel} size="small" sx={baseStatusChipSx} />

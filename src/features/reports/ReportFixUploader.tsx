@@ -123,14 +123,21 @@ export default function ReportFixUploader({
                     </Typography>
                     <Stack
                         {...getRootProps()}
-                        sx={{
-                            border: '1px dashed rgba(15,23,42,0.25)',
+                        sx={(theme) => ({
+                            border:
+                                theme.palette.mode === 'dark'
+                                    ? '1px dashed rgba(148,163,184,0.35)'
+                                    : '1px dashed rgba(15,23,42,0.25)',
                             borderRadius: 3,
                             p: 3,
                             textAlign: 'center',
-                            background: isDragActive ? 'rgba(59,130,246,0.06)' : 'transparent',
+                            background: isDragActive
+                                ? theme.palette.mode === 'dark'
+                                    ? 'rgba(59,130,246,0.14)'
+                                    : 'rgba(59,130,246,0.06)'
+                                : 'transparent',
                             cursor: 'pointer',
-                        }}
+                        })}
                     >
                         <input {...getInputProps()} />
                         <Typography variant="body1">
@@ -155,13 +162,16 @@ export default function ReportFixUploader({
                                 {previews.map((preview, index) => (
                                     <Box
                                         key={`${preview.name}-${index}`}
-                                        sx={{
+                                        sx={(theme) => ({
                                             position: 'relative',
                                             borderRadius: 2,
                                             overflow: 'hidden',
-                                            border: '1px solid rgba(15,23,42,0.08)',
+                                            border:
+                                                theme.palette.mode === 'dark'
+                                                    ? '1px solid rgba(148,163,184,0.18)'
+                                                    : '1px solid rgba(15,23,42,0.08)',
                                             height: 96,
-                                        }}
+                                        })}
                                     >
                                         <Box
                                             component="img"
@@ -179,16 +189,22 @@ export default function ReportFixUploader({
                                             aria-label={`Удалить ${preview.name}`}
                                             onClick={() => handleRemoveFile(index)}
                                             disabled={uploading}
-                                            sx={{
+                                            sx={(theme) => ({
                                                 position: 'absolute',
                                                 top: 4,
                                                 right: 4,
-                                                backgroundColor: 'rgba(15,23,42,0.7)',
+                                                backgroundColor:
+                                                    theme.palette.mode === 'dark'
+                                                        ? 'rgba(2,6,14,0.75)'
+                                                        : 'rgba(15,23,42,0.7)',
                                                 color: '#fff',
                                                 '&:hover': {
-                                                    backgroundColor: 'rgba(15,23,42,0.85)',
+                                                    backgroundColor:
+                                                        theme.palette.mode === 'dark'
+                                                            ? 'rgba(2,6,14,0.85)'
+                                                            : 'rgba(15,23,42,0.85)',
                                                 },
-                                            }}
+                                            })}
                                         >
                                             <DeleteOutlineIcon fontSize="small" />
                                         </IconButton>

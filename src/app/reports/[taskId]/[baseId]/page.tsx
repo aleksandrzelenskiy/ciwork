@@ -224,12 +224,15 @@ export default function PhotoReportPage() {
 
     return (
         <Box
-            sx={{
+            sx={(theme) => ({
                 px: { xs: 2, md: 6 },
                 py: { xs: 3, md: 6 },
-                background: 'linear-gradient(180deg, #f5f7fb 0%, #ffffff 100%)',
+                background:
+                    theme.palette.mode === 'dark'
+                        ? 'linear-gradient(180deg, #0b0f16 0%, #0f141f 100%)'
+                        : 'linear-gradient(180deg, #f5f7fb 0%, #ffffff 100%)',
                 minHeight: '100vh',
-            }}
+            })}
         >
             <Snackbar
                 open={alertState.open}
@@ -286,12 +289,18 @@ export default function PhotoReportPage() {
                             onEdit={() => setEditDialogOpen(true)}
                         />
                         <Box
-                            sx={{
+                            sx={(theme) => ({
                                 borderRadius: UI_RADIUS.tooltip,
-                                border: '1px solid rgba(15,23,42,0.08)',
-                                backgroundColor: '#fff',
+                                border:
+                                    theme.palette.mode === 'dark'
+                                        ? '1px solid rgba(148,163,184,0.18)'
+                                        : '1px solid rgba(15,23,42,0.08)',
+                                backgroundColor:
+                                    theme.palette.mode === 'dark'
+                                        ? 'rgba(15,18,26,0.92)'
+                                        : '#fff',
                                 p: 2,
-                            }}
+                            })}
                         >
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
                                 Фотоотчеты по задаче

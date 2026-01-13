@@ -303,7 +303,7 @@ function buildTaskQuery(
     if (Types.ObjectId.isValid(rawTaskId)) {
         query._id = new Types.ObjectId(rawTaskId);
     } else {
-        query.taskId = rawTaskId;
+        query.taskId = rawTaskId.trim().toUpperCase();
     }
     return query;
 }

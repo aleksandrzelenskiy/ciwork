@@ -71,12 +71,18 @@ export default function ReportIssuesPanel({
 
     return (
         <Box
-            sx={{
+            sx={(theme) => ({
                 borderRadius: 4,
-                border: '1px solid rgba(15,23,42,0.08)',
+                border:
+                    theme.palette.mode === 'dark'
+                        ? '1px solid rgba(148,163,184,0.18)'
+                        : '1px solid rgba(15,23,42,0.08)',
                 p: 3,
-                background: 'rgba(255,255,255,0.9)',
-            }}
+                background:
+                    theme.palette.mode === 'dark'
+                        ? 'rgba(15,18,26,0.92)'
+                        : 'rgba(255,255,255,0.9)',
+            })}
         >
             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
                 <Typography variant="subtitle1" fontWeight={600}>

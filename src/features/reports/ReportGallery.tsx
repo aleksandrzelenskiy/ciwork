@@ -12,12 +12,18 @@ export default function ReportGallery({ title, photos }: ReportGalleryProps) {
     if (!photos.length) {
         return (
             <Box
-                sx={{
+                sx={(theme) => ({
                     borderRadius: 4,
-                    border: '1px solid rgba(15,23,42,0.08)',
+                    border:
+                        theme.palette.mode === 'dark'
+                            ? '1px solid rgba(148,163,184,0.18)'
+                            : '1px solid rgba(15,23,42,0.08)',
                     p: 3,
-                    background: 'rgba(255,255,255,0.8)',
-                }}
+                    background:
+                        theme.palette.mode === 'dark'
+                            ? 'rgba(15,18,26,0.9)'
+                            : 'rgba(255,255,255,0.8)',
+                })}
             >
                 <Typography variant="subtitle1" fontWeight={600}>
                     {title}
@@ -31,13 +37,22 @@ export default function ReportGallery({ title, photos }: ReportGalleryProps) {
 
     return (
         <Box
-            sx={{
+            sx={(theme) => ({
                 borderRadius: 4,
-                border: '1px solid rgba(15,23,42,0.08)',
+                border:
+                    theme.palette.mode === 'dark'
+                        ? '1px solid rgba(148,163,184,0.18)'
+                        : '1px solid rgba(15,23,42,0.08)',
                 p: 3,
-                background: 'rgba(255,255,255,0.9)',
-                boxShadow: '0 24px 60px rgba(15,23,42,0.08)',
-            }}
+                background:
+                    theme.palette.mode === 'dark'
+                        ? 'rgba(15,18,26,0.92)'
+                        : 'rgba(255,255,255,0.9)',
+                boxShadow:
+                    theme.palette.mode === 'dark'
+                        ? '0 24px 60px rgba(0,0,0,0.55)'
+                        : '0 24px 60px rgba(15,23,42,0.08)',
+            })}
         >
             <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
                 {title}
@@ -47,18 +62,21 @@ export default function ReportGallery({ title, photos }: ReportGalleryProps) {
                     {photos.map((photo, idx) => (
                         <Grid size={{ xs: 6, sm: 4, md: 3 }} key={`${photo}-${idx}`}>
                             <PhotoView src={photo}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
+                                <Box
+                                    component="img"
                                     src={photo}
                                     alt={`Photo ${idx + 1}`}
-                                    style={{
+                                    sx={(theme) => ({
                                         width: '100%',
                                         aspectRatio: '1 / 1',
                                         objectFit: 'cover',
                                         borderRadius: '14px',
                                         cursor: 'pointer',
-                                        boxShadow: '0 10px 30px rgba(15,23,42,0.12)',
-                                    }}
+                                        boxShadow:
+                                            theme.palette.mode === 'dark'
+                                                ? '0 10px 30px rgba(0,0,0,0.4)'
+                                                : '0 10px 30px rgba(15,23,42,0.12)',
+                                    })}
                                 />
                             </PhotoView>
                         </Grid>

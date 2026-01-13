@@ -46,7 +46,14 @@ export default function ReportSummaryList({
                     const statusColor = getStatusColor(normalizedStatus);
                     const statusChipSx =
                         statusColor === 'default'
-                            ? { fontWeight: 600 }
+                            ? {
+                                  fontWeight: 600,
+                                  backgroundColor: (theme) =>
+                                      theme.palette.mode === 'dark'
+                                          ? 'rgba(148,163,184,0.2)'
+                                          : 'rgba(15,23,42,0.08)',
+                                  color: (theme) => theme.palette.text.primary,
+                              }
                             : { backgroundColor: statusColor, color: '#fff', fontWeight: 600 };
                     const isActive = activeBaseId?.toLowerCase() === item.baseId.toLowerCase();
                     return (
@@ -65,7 +72,10 @@ export default function ReportSummaryList({
                                 ...(isActive
                                     ? {
                                           borderColor: 'rgba(59,130,246,0.4)',
-                                          backgroundColor: 'rgba(59,130,246,0.08)',
+                                          backgroundColor: (theme) =>
+                                              theme.palette.mode === 'dark'
+                                                  ? 'rgba(59,130,246,0.18)'
+                                                  : 'rgba(59,130,246,0.08)',
                                       }
                                     : null),
                             }}
@@ -76,7 +86,10 @@ export default function ReportSummaryList({
                                     sx={{
                                         color:
                                             statusColor === 'default'
-                                                ? 'rgba(15,23,42,0.45)'
+                                                ? (theme) =>
+                                                      theme.palette.mode === 'dark'
+                                                          ? 'rgba(226,232,240,0.6)'
+                                                          : 'rgba(15,23,42,0.45)'
                                                 : statusColor,
                                     }}
                                 />
@@ -105,7 +118,14 @@ export default function ReportSummaryList({
                 const isActive = activeBaseId?.toLowerCase() === item.baseId.toLowerCase();
                 const chipSx =
                     statusColor === 'default'
-                        ? { fontWeight: 500 }
+                        ? {
+                              fontWeight: 500,
+                              backgroundColor: (theme) =>
+                                  theme.palette.mode === 'dark'
+                                      ? 'rgba(148,163,184,0.2)'
+                                      : 'rgba(15,23,42,0.08)',
+                              color: (theme) => theme.palette.text.primary,
+                          }
                         : { bgcolor: statusColor, color: '#fff', fontWeight: 500 };
                 return (
                     <Link
@@ -121,12 +141,20 @@ export default function ReportSummaryList({
                             px: 1,
                             py: 0.5,
                             borderRadius: 999,
-                            backgroundColor: isActive ? 'rgba(59,130,246,0.12)' : 'rgba(15,23,42,0.04)',
+                            backgroundColor: isActive
+                                ? 'rgba(59,130,246,0.12)'
+                                : (theme) =>
+                                      theme.palette.mode === 'dark'
+                                          ? 'rgba(148,163,184,0.16)'
+                                          : 'rgba(15,23,42,0.04)',
                             border: isActive ? '1px solid rgba(59,130,246,0.35)' : '1px solid transparent',
                             '&:hover': {
                                 backgroundColor: isActive
                                     ? 'rgba(59,130,246,0.18)'
-                                    : 'rgba(15,23,42,0.08)',
+                                    : (theme) =>
+                                          theme.palette.mode === 'dark'
+                                              ? 'rgba(148,163,184,0.26)'
+                                              : 'rgba(15,23,42,0.08)',
                             },
                         }}
                     >
