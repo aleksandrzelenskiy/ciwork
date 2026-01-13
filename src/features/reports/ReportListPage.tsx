@@ -20,6 +20,7 @@ import {
   Alert,
   Tooltip,
 } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import NextLink from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -185,7 +186,7 @@ export default function ReportListPage() {
 
   return (
     <Box
-      sx={(theme) => ({
+      sx={(theme: Theme) => ({
         px: { xs: 2, md: 6 },
         py: { xs: 3, md: 6 },
         background:
@@ -198,7 +199,7 @@ export default function ReportListPage() {
     >
       {highlightActive && (
         <Box
-          sx={(theme) => ({
+          sx={(theme: Theme) => ({
             position: 'fixed',
             inset: 0,
             backgroundColor:
@@ -254,7 +255,7 @@ export default function ReportListPage() {
               ref={(node) => {
                 reportRefs.current[reportKey] = node as HTMLDivElement | null;
               }}
-              sx={(theme) => ({
+              sx={(theme: Theme) => ({
                 position: 'relative',
                 zIndex: isHighlighted ? 2 : 0,
                 borderRadius: 4,
@@ -345,11 +346,11 @@ export default function ReportListPage() {
                       baseStatusColor === 'default'
                         ? {
                             fontWeight: 600,
-                            backgroundColor: (theme) =>
+                            backgroundColor: (theme: Theme) =>
                               theme.palette.mode === 'dark'
                                 ? 'rgba(148,163,184,0.2)'
                                 : 'rgba(15,23,42,0.08)',
-                            color: (theme) => theme.palette.text.primary,
+                            color: (theme: Theme) => theme.palette.text.primary,
                           }
                         : { backgroundColor: baseStatusColor, color: '#fff', fontWeight: 600 };
                     return (
@@ -368,7 +369,7 @@ export default function ReportListPage() {
                           sx={{
                             borderRadius: 999,
                             px: 1,
-                            backgroundColor: (theme) =>
+                            backgroundColor: (theme: Theme) =>
                               theme.palette.mode === 'dark'
                                 ? 'rgba(148,163,184,0.16)'
                                 : 'rgba(15,23,42,0.04)',
