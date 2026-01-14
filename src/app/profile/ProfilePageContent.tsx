@@ -15,11 +15,10 @@ import {
     Button,
     Collapse,
     CircularProgress,
-    IconButton,
     Paper,
+    Rating,
     Snackbar,
     Stack,
-    Tooltip,
     Typography,
     Chip,
 } from '@mui/material';
@@ -27,7 +26,6 @@ import { alpha } from '@mui/material/styles';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import type { PlatformRole } from '@/app/types/roles';
 import SendIcon from '@mui/icons-material/Send';
-import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
 import ProfileEditForm from '@/features/profile/ProfileEditForm';
 import ReviewDialog from '@/features/profile/ReviewDialog';
 
@@ -330,30 +328,29 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                         : 0
                 ),
             },
-            {
-                label: 'Рейтинг',
-                value:
-                    typeof profile.rating === 'number'
-                        ? profile.rating.toFixed(1)
-                        : '—',
-            },
         ]
-        : [
-            {
-                label: 'Профиль',
-                value: roleLabel,
-            },
-            {
-                label: 'Регион',
-                value: regionName ? `${profile.regionCode} — ${regionName}` : '—',
-            },
-            {
-                label: 'Контакт',
-                value: profile.email || '—',
-            },
-        ];
+        : isEmployer
+            ? []
+            : [
+                {
+                    label: 'Профиль',
+                    value: roleLabel,
+                },
+                {
+                    label: 'Регион',
+                    value: regionName ? `${profile.regionCode} — ${regionName}` : '—',
+                },
+                {
+                    label: 'Контакт',
+                    value: profile.email || '—',
+                },
+            ];
     const canMessage = Boolean(profile.email) && !canEdit;
     const canReview = Boolean(profile.clerkUserId) && !canEdit;
+    const canOpenReviews = Boolean(profile.clerkUserId);
+    const ratingValue = typeof profile.rating === 'number' ? profile.rating : 0;
+    const ratingLabel =
+        typeof profile.rating === 'number' ? profile.rating.toFixed(1) : '—';
 
     const handleOpenMessage = () => {
         if (!profile.email || typeof window === 'undefined') return;
@@ -374,6 +371,14 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 960, mx: 'auto' }}>
             <Paper
                 sx={(theme) => ({
+                    ...(theme.palette.mode === 'dark' && {
+                        background: `linear-gradient(180deg, ${alpha(
+                            theme.palette.background.paper,
+                            0.95
+                        )} 0%, ${alpha(theme.palette.grey[900], 0.98)} 100%)`,
+                        borderColor: alpha(theme.palette.common.white, 0.08),
+                        boxShadow: '0 24px 80px rgba(0, 0, 0, 0.45)',
+                    }),
                     borderRadius: 4,
                     border: '1px solid',
                     borderColor: alpha(theme.palette.common.black, 0.08),
@@ -393,6 +398,12 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                         gap: { xs: 2.5, sm: 3.5 },
                         flexDirection: { xs: 'column', sm: 'row' },
                         alignItems: { xs: 'flex-start', sm: 'center' },
+                        ...(theme.palette.mode === 'dark' && {
+                            background: `linear-gradient(135deg, ${alpha(
+                                theme.palette.primary.dark,
+                                0.35
+                            )}, ${alpha(theme.palette.background.paper, 0.85)})`,
+                        }),
                         background: `linear-gradient(135deg, ${alpha(
                             theme.palette.primary.light,
                             0.16
@@ -463,6 +474,36 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                 />
                             </Stack>
                         </Stack>
+                        <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            onClick={() => {
+                                if (canOpenReviews) {
+                                    setReviewOpen(true);
+                                }
+                            }}
+                            onKeyDown={(event) => {
+                                if (
+                                    canOpenReviews &&
+                                    (event.key === 'Enter' || event.key === ' ')
+                                ) {
+                                    event.preventDefault();
+                                    setReviewOpen(true);
+                                }
+                            }}
+                            role={canOpenReviews ? 'button' : undefined}
+                            tabIndex={canOpenReviews ? 0 : -1}
+                            sx={{
+                                cursor: canOpenReviews ? 'pointer' : 'default',
+                                width: 'fit-content',
+                            }}
+                        >
+                            <Rating value={ratingValue} precision={0.1} readOnly />
+                            <Typography variant="body2" color="text.secondary">
+                                {ratingLabel}
+                            </Typography>
+                        </Stack>
                         <Stack direction="row" spacing={2} flexWrap="wrap">
                             <Typography variant="body2" color="text.secondary">
                                 {profile.email}
@@ -499,19 +540,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                 >
                                     {showEditForm ? 'Скрыть редактирование' : 'Редактировать'}
                                 </Button>
-                            )}
-                            {canReview && (
-                                <Tooltip title="Оставить отзыв">
-                                    <span>
-                                        <IconButton
-                                            sx={{ borderRadius: 999 }}
-                                            aria-label="Оставить отзыв"
-                                            onClick={() => setReviewOpen(true)}
-                                        >
-                                            <RateReviewOutlinedIcon />
-                                        </IconButton>
-                                    </span>
-                                </Tooltip>
                             )}
                         </Stack>
                         {canEdit && (
@@ -557,12 +585,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                     {profile.moderationComment}
                                 </Alert>
                             )}
-                        {!canEdit && (
-                            <Alert severity="info">
-                                Это публичный профиль. Редактировать может только
-                                владелец.
-                            </Alert>
-                        )}
                     </Box>
                 ) : null}
 
@@ -573,42 +595,55 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                         pt: { xs: 2, sm: 3 },
                     }}
                 >
-                    <Stack
-                        direction={{ xs: 'column', md: 'row' }}
-                        spacing={2}
-                        sx={{ mb: isContractor ? 2.5 : 2 }}
-                    >
-                        {highlightItems.map((item) => (
-                            <Box
-                                key={item.label}
-                                sx={(theme) => ({
-                                    flex: 1,
-                                    p: 2.5,
-                                    borderRadius: 3,
+                    {highlightItems.length > 0 && (
+                        <Stack
+                            direction={{ xs: 'column', md: 'row' }}
+                            spacing={2}
+                            sx={{ mb: isContractor ? 2.5 : 2 }}
+                        >
+                            {highlightItems.map((item) => (
+                                <Box
+                                    key={item.label}
+                            sx={(theme) => ({
+                                flex: 1,
+                                p: 2.5,
+                                borderRadius: 3,
+                                backgroundColor: alpha(
+                                    theme.palette.background.paper,
+                                    0.8
+                                ),
+                                border: '1px solid',
+                                borderColor: alpha(
+                                    theme.palette.common.black,
+                                    0.08
+                                ),
+                                boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)',
+                                ...(theme.palette.mode === 'dark' && {
                                     backgroundColor: alpha(
-                                        theme.palette.background.paper,
-                                        0.8
+                                        theme.palette.background.default,
+                                        0.7
                                     ),
-                                    border: '1px solid',
                                     borderColor: alpha(
-                                        theme.palette.common.black,
+                                        theme.palette.common.white,
                                         0.08
                                     ),
-                                    boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)',
-                                })}
-                            >
-                                <Typography
-                                    variant="subtitle2"
-                                    color="text.secondary"
-                                >
-                                    {item.label}
-                                </Typography>
-                                <Typography variant="h5" fontWeight={700}>
-                                    {item.value}
-                                </Typography>
-                            </Box>
-                        ))}
-                    </Stack>
+                                    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.35)',
+                                }),
+                            })}
+                        >
+                                    <Typography
+                                        variant="subtitle2"
+                                        color="text.secondary"
+                                    >
+                                        {item.label}
+                                    </Typography>
+                                    <Typography variant="h5" fontWeight={700}>
+                                        {item.value}
+                                    </Typography>
+                                </Box>
+                            ))}
+                        </Stack>
+                    )}
                     {isContractor && (
                         <Stack spacing={1}>
                             <Typography variant="subtitle1" fontWeight={600}>
@@ -728,6 +763,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 targetClerkUserId={profile.clerkUserId}
                 targetName={profile.name}
                 onSubmitted={loadProfile}
+                canReview={canReview}
             />
             <Snackbar
                 open={chatToast.open}

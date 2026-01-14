@@ -43,6 +43,7 @@ const NotificationSchema = new Schema<NotificationDoc>(
                 'task_application_status',
                 'user_registered',
                 'subscription_expiring',
+                'review_received',
             ],
             required: true,
         },

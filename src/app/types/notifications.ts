@@ -15,7 +15,8 @@ export type NotificationKind =
     | 'task_application_status'
     | 'profile_moderation'
     | 'subscription_expiring'
-    | 'user_registered';
+    | 'user_registered'
+    | 'review_received';
 
 export type NotificationStatus = 'unread' | 'read';
 
