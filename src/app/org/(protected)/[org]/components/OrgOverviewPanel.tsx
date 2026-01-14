@@ -243,7 +243,7 @@ export default function OrgOverviewPanel({
                             {primaryLabel}
                         </Button>
                         <Tooltip title={inviteTooltip} disableHoverListener={!disableCreationActions}>
-                            <span style={{ display: 'inline-flex', width: '100%' }}>
+                            <Box component="span" sx={{ display: 'inline-flex', width: { xs: '100%', sm: 'auto' } }}>
                                 <Button
                                     variant="contained"
                                     disableElevation
@@ -264,7 +264,7 @@ export default function OrgOverviewPanel({
                                 >
                                     {secondaryLabel}
                                 </Button>
-                            </span>
+                            </Box>
                         </Tooltip>
                     </Stack>
                 </Stack>

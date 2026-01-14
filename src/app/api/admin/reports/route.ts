@@ -6,6 +6,7 @@ import TaskModel from '@/server/models/TaskModel';
 import ProjectModel from '@/server/models/ProjectModel';
 import OrganizationModel from '@/server/models/OrganizationModel';
 import { GetUserContext } from '@/server-actions/user-context';
+import UserModel from '@/server/models/UserModel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -74,6 +75,27 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
                 orgId: task.orgId ? task.orgId.toString() : null,
                 taskName: task.taskName,
             },
+        ])
+    );
+
+    const authorIds = Array.from(
+        new Set(
+            rawReports
+                .map((report) =>
+                    typeof report.createdById === 'string' ? report.createdById : ''
+                )
+                .filter((id) => id.length > 0)
+        )
+    );
+    const authorProfiles = authorIds.length
+        ? await UserModel.find({ clerkUserId: { $in: authorIds } })
+              .select('clerkUserId name email')
+              .lean()
+        : [];
+    const authorMap = new Map(
+        authorProfiles.map((profile) => [
+            profile.clerkUserId,
+            profile.name?.trim() || profile.email?.trim() || profile.clerkUserId,
         ])
     );
 
@@ -147,7 +169,10 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             taskName: report.taskName || taskMeta?.taskName,
             bsNumber: taskMeta?.bsNumber,
             createdById: report.createdById,
-            createdByName: report.createdByName,
+            createdByName:
+                authorMap.get(report.createdById) ||
+                report.createdByName ||
+                report.createdById,
             executorName: taskMeta?.executorName ?? report.createdByName,
             initiatorName: report.initiatorName,
             createdAt: createdAt.toISOString(),

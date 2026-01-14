@@ -4,6 +4,7 @@ import ReportModel from '@/server/models/ReportModel';
 import TaskModel from '@/server/models/TaskModel';
 import ProjectModel from '@/server/models/ProjectModel';
 import OrganizationModel from '@/server/models/OrganizationModel';
+import UserModel from '@/server/models/UserModel';
 import { GetUserContext } from '@/server-actions/user-context';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
 import { verifyInitiatorAccessToken } from '@/utils/initiatorAccessToken';
@@ -137,6 +138,27 @@ export const listReportsForRequest = async ({
         console.error('Error during report fetch:', error);
         return { ok: false, error: 'Failed to fetch reports', status: 500 };
     }
+
+    const authorIds = Array.from(
+        new Set(
+            rawReports
+                .map((report) =>
+                    typeof report.createdById === 'string' ? report.createdById : ''
+                )
+                .filter((id) => id.length > 0)
+        )
+    );
+    const authorProfiles = authorIds.length
+        ? await UserModel.find({ clerkUserId: { $in: authorIds } })
+              .select('clerkUserId name email')
+              .lean()
+        : [];
+    const authorMap = new Map(
+        authorProfiles.map((profile) => [
+            profile.clerkUserId,
+            profile.name?.trim() || profile.email?.trim() || profile.clerkUserId,
+        ])
+    );
 
     const taskIds = Array.from(
         new Set(
@@ -312,7 +334,10 @@ export const listReportsForRequest = async ({
             taskName: report.taskName,
             bsNumber: taskMetaEntry?.bsNumber,
             createdById: report.createdById,
-            createdByName: report.createdByName,
+            createdByName:
+                authorMap.get(report.createdById) ||
+                report.createdByName ||
+                report.createdById,
             executorName: taskMetaEntry?.executorName ?? report.createdByName,
             initiatorName: report.initiatorName,
             createdAt,
