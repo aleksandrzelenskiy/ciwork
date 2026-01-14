@@ -22,6 +22,7 @@ type ReviewDialogProps = {
     targetName?: string;
     onSubmitted?: () => void;
     canReview?: boolean;
+    reviewBlockReason?: string;
 };
 
 type ReviewItem = {
@@ -39,6 +40,7 @@ export default function ReviewDialog({
     targetName,
     onSubmitted,
     canReview = true,
+    reviewBlockReason,
 }: ReviewDialogProps) {
     const [rating, setRating] = React.useState<number | null>(0);
     const [comment, setComment] = React.useState('');
@@ -231,7 +233,8 @@ export default function ReviewDialog({
                     />
                     {!canReview && (
                         <Alert severity="info">
-                            Оставлять отзыв может только другой пользователь.
+                            {reviewBlockReason ||
+                                'Оставлять отзыв можно только после совместной задачи.'}
                         </Alert>
                     )}
                     {message && <Alert severity={message.type}>{message.text}</Alert>}

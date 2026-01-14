@@ -51,6 +51,8 @@ type ProfileResponse = {
     organizationRole?: string;
     managedProjects?: { name: string; key?: string | null }[];
     recentTasks?: { taskName: string; bsNumber: string }[];
+    canReview?: boolean;
+    reviewBlockReason?: string | null;
     error?: string;
 };
 
@@ -370,7 +372,11 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 },
             ];
     const canMessage = Boolean(profile.email) && !canEdit;
-    const canReview = Boolean(profile.clerkUserId) && !canEdit;
+    const canReview =
+        typeof profile.canReview === 'boolean'
+            ? profile.canReview
+            : Boolean(profile.clerkUserId) && !canEdit;
+    const reviewBlockReason = profile.reviewBlockReason ?? null;
     const canOpenReviews = Boolean(profile.clerkUserId);
     const ratingValue = typeof profile.rating === 'number' ? profile.rating : 0;
     const ratingLabel =
@@ -525,6 +531,11 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                 {ratingLabel}
                             </Typography>
                         </Stack>
+                        {!canReview && reviewBlockReason && !canEdit && (
+                            <Typography variant="caption" color="text.secondary">
+                                {reviewBlockReason}
+                            </Typography>
+                        )}
                         <Stack direction="row" spacing={2} flexWrap="wrap">
                             <Typography variant="body2" color="text.secondary">
                                 {profile.email}
@@ -862,6 +873,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 targetName={profile.name}
                 onSubmitted={loadProfile}
                 canReview={canReview}
+                reviewBlockReason={reviewBlockReason ?? undefined}
             />
             <Snackbar
                 open={chatToast.open}

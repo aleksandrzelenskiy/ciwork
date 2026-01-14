@@ -6,6 +6,7 @@ import MembershipModel from '@/server/models/MembershipModel';
 import OrganizationModel from '@/server/models/OrganizationModel';
 import ProjectModel from '@/server/models/ProjectModel';
 import TaskModel from '@/server/models/TaskModel';
+import { checkReviewEligibility } from '@/server/reviews/permissions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -110,6 +111,13 @@ export async function GET(
     const isAdminViewer =
         viewer.data.platformRole === 'super_admin' ||
         viewer.data.platformRole === 'staff';
+    const reviewEligibility = await checkReviewEligibility(
+        { clerkUserId: viewer.data.clerkUserId, email: viewer.data.email },
+        { clerkUserId: user.clerkUserId, email: user.email }
+    );
+    const reviewBlockReason = reviewEligibility.canReview
+        ? null
+        : reviewEligibility.reason || null;
 
     return NextResponse.json({
         profile: {
@@ -135,6 +143,8 @@ export async function GET(
             organizationRole,
             managedProjects,
             recentTasks,
+            canReview: reviewEligibility.canReview,
+            reviewBlockReason,
         },
         canEdit,
     });

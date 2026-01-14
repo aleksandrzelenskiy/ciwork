@@ -4,6 +4,7 @@ import dbConnect from '@/server/db/mongoose';
 import UserModel from '@/server/models/UserModel';
 import ReviewModel from '@/server/models/ReviewModel';
 import { createNotification } from '@/server/notifications/service';
+import { checkReviewEligibility } from '@/server/reviews/permissions';
 
 type ReviewPayload = {
     targetClerkUserId?: string;
@@ -116,6 +117,17 @@ export async function POST(request: Request) {
         const target = await UserModel.findOne({ clerkUserId: targetClerkUserId }).lean();
         if (!target) {
             return NextResponse.json({ error: 'Пользователь не найден' }, { status: 404 });
+        }
+
+        const eligibility = await checkReviewEligibility(
+            { clerkUserId: author.clerkUserId, email: author.email },
+            { clerkUserId: target.clerkUserId, email: target.email }
+        );
+        if (!eligibility.canReview) {
+            return NextResponse.json(
+                { error: eligibility.reason || 'Недостаточно прав для отзыва' },
+                { status: 403 }
+            );
         }
 
         await ReviewModel.findOneAndUpdate(

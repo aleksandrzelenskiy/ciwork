@@ -7,6 +7,7 @@ import MembershipModel from '@/server/models/MembershipModel';
 import OrganizationModel from '@/server/models/OrganizationModel';
 import ProjectModel from '@/server/models/ProjectModel';
 import TaskModel from '@/server/models/TaskModel';
+import { checkReviewEligibility } from '@/server/reviews/permissions';
 
 const sanitizeString = (value?: string | null) => value?.trim() ?? '';
 
@@ -81,8 +82,16 @@ export async function GET() {
       recentTasks = tasks.map((task) => ({
         taskName: task.taskName,
         bsNumber: task.bsNumber,
-      }));
+        }));
     }
+
+    const reviewEligibility = await checkReviewEligibility(
+      { clerkUserId: user.clerkUserId, email: user.email },
+      { clerkUserId: user.clerkUserId, email: user.email }
+    );
+    const reviewBlockReason = reviewEligibility.canReview
+      ? null
+      : reviewEligibility.reason || null;
 
     return NextResponse.json({
       name: user.name,
@@ -106,6 +115,8 @@ export async function GET() {
       organizationRole,
       managedProjects,
       recentTasks,
+      canReview: reviewEligibility.canReview,
+      reviewBlockReason,
     });
   } catch (error) {
     console.error('GET /api/profile error:', error);
