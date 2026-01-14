@@ -55,6 +55,7 @@ export default function MiniReportsList({
   const [reports, setReports] = useState<ReportClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isAdmin = isAdminRole(role);
 
   // Диалоговое окно
   const [openDialog, setOpenDialog] = useState(false);
@@ -230,10 +231,10 @@ export default function MiniReportsList({
 
         {/* Кнопка All Reports */}
         <Box sx={{ textAlign: 'center' }}>
-          <Link href='/reports'>
-            <Button variant='text'>Все отчеты</Button>
-          </Link>
-        </Box>
+        <Link href={isAdmin ? '/admin/reports' : '/reports'}>
+          <Button variant='text'>Все отчеты</Button>
+        </Link>
+      </Box>
       </Box>
 
       {/* Диалог с базовыми станциями */}
