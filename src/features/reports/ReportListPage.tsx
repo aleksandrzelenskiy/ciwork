@@ -29,6 +29,7 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import { BaseStatus, ReportClient, ApiResponse } from '@/app/types/reportTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 const getTaskStatus = (baseStatuses: BaseStatus[] = []) => {
   const nonAgreedStatus = baseStatuses.find(
@@ -52,6 +53,8 @@ export default function ReportListPage() {
   const [deleteTarget, setDeleteTarget] = React.useState<ReportClient | null>(null);
   const [deleteLoading, setDeleteLoading] = React.useState(false);
   const [downloadingTaskId, setDownloadingTaskId] = React.useState<string | null>(null);
+  const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = React.useState(false);
   const searchParams = useSearchParams();
   const token = searchParams?.get('token')?.trim() || '';
   const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
@@ -113,6 +116,17 @@ export default function ReportListPage() {
     if (deleteLoading) return;
     setDeleteDialogOpen(false);
     setDeleteTarget(null);
+  };
+
+  const openProfileDialog = (clerkUserId?: string | null) => {
+    if (!clerkUserId) return;
+    setProfileUserId(clerkUserId);
+    setProfileOpen(true);
+  };
+
+  const closeProfileDialog = () => {
+    setProfileOpen(false);
+    setProfileUserId(null);
   };
 
   const handleConfirmDelete = async () => {
@@ -304,9 +318,21 @@ export default function ReportListPage() {
                       )}{' '}
                       · {report.createdAt ? new Date(report.createdAt).toLocaleDateString() : '—'}
                     </Typography>
-                    {(report.executorName || report.createdByName) && (
+                    {report.createdByName && (
                       <Typography variant="body2" color="text.secondary">
-                        Исполнитель: {report.executorName || report.createdByName}
+                        Автор:{' '}
+                        {report.createdById ? (
+                          <Button
+                            variant="text"
+                            size="small"
+                            onClick={() => openProfileDialog(report.createdById)}
+                            sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                          >
+                            {report.createdByName}
+                          </Button>
+                        ) : (
+                          report.createdByName
+                        )}
                       </Typography>
                     )}
                   </Box>
@@ -407,6 +433,12 @@ export default function ReportListPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ProfileDialog
+        open={profileOpen}
+        onClose={closeProfileDialog}
+        clerkUserId={profileUserId}
+      />
     </Box>
   );
 }

@@ -47,6 +47,7 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle, STATUS_ORDER } from '@/utils/statusLabels';
 import { getOperatorLabel } from '@/app/utils/operators';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 type AdminReport = {
     taskId: string;
@@ -171,6 +172,8 @@ export default function AdminReportsPage() {
     const [filterDialogOpen, setFilterDialogOpen] = React.useState(false);
     const [filters, setFilters] = React.useState<AdminReportFilters>(defaultFilters);
     const [detailReport, setDetailReport] = React.useState<AdminReport | null>(null);
+    const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = React.useState(false);
 
     const load = React.useCallback(async () => {
         try {
@@ -375,6 +378,17 @@ export default function AdminReportsPage() {
 
     const handleRemoveFilter = (key: keyof AdminReportFilters) => {
         setFilters((prev) => ({ ...prev, [key]: defaultFilters[key] }));
+    };
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
     };
 
     const orgCount = orgOptions.length;
@@ -817,7 +831,20 @@ export default function AdminReportsPage() {
                                                         {operatorLabel}
                                                     </Typography>
                                                 </TableCell>
-                                                <TableCell>{report.createdByName || '—'}</TableCell>
+                                                <TableCell>
+                                                    {report.createdById ? (
+                                                        <Button
+                                                            variant="text"
+                                                            size="small"
+                                                            onClick={() => openProfileDialog(report.createdById)}
+                                                            sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                                        >
+                                                            {report.createdByName || report.createdById}
+                                                        </Button>
+                                                    ) : (
+                                                        report.createdByName || '—'
+                                                    )}
+                                                </TableCell>
                                                 <TableCell align="center">{formatDateRU(report.createdAt)}</TableCell>
                                                 <TableCell align="center">
                                                     <Chip
@@ -954,6 +981,12 @@ export default function AdminReportsPage() {
                     </>
                 )}
             </Dialog>
+
+            <ProfileDialog
+                open={profileOpen}
+                onClose={closeProfileDialog}
+                clerkUserId={profileUserId}
+            />
         </Box>
     );
 }

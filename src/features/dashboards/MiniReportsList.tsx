@@ -35,6 +35,7 @@ import { getStatusColor } from '@/utils/statusColors';
 import { BaseStatus, ReportClient, ApiResponse } from '@/app/types/reportTypes';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 interface MiniReportsListProps {
   role: EffectiveOrgRole | null;
@@ -56,6 +57,8 @@ export default function MiniReportsList({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const isAdmin = isAdminRole(role);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // Диалоговое окно
   const [openDialog, setOpenDialog] = useState(false);
@@ -156,6 +159,17 @@ export default function MiniReportsList({
     setSelectedReport(null);
   };
 
+  const openProfileDialog = (clerkUserId?: string | null) => {
+    if (!clerkUserId) return;
+    setProfileUserId(clerkUserId);
+    setProfileOpen(true);
+  };
+
+  const closeProfileDialog = () => {
+    setProfileOpen(false);
+    setProfileUserId(null);
+  };
+
   return (
     <>
       <Box>
@@ -201,7 +215,20 @@ export default function MiniReportsList({
                         </Box>
                       </TableCell>
 
-                      <TableCell>{report.createdByName}</TableCell>
+                      <TableCell>
+                        {report.createdById ? (
+                          <Button
+                            variant='text'
+                            size='small'
+                            onClick={() => openProfileDialog(report.createdById)}
+                            sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                          >
+                            {report.createdByName || report.createdById}
+                          </Button>
+                        ) : (
+                          report.createdByName || '—'
+                        )}
+                      </TableCell>
                       <TableCell>
                         {new Date(report.createdAt).toLocaleDateString()}
                       </TableCell>
@@ -324,6 +351,12 @@ export default function MiniReportsList({
           </>
         )}
       </Dialog>
+
+      <ProfileDialog
+        open={profileOpen}
+        onClose={closeProfileDialog}
+        clerkUserId={profileUserId}
+      />
     </>
   );
 }
