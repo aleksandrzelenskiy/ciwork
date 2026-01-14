@@ -64,6 +64,7 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle, STATUS_ORDER } from '@/utils/statusLabels';
 import { getOperatorLabel } from '@/app/utils/operators';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 type Priority = 'urgent' | 'high' | 'medium' | 'low';
 
@@ -77,8 +78,17 @@ type AdminTask = {
     createdAt?: string;
     bsNumber?: string;
     totalCost?: number;
+    authorId?: string;
+    authorName?: string;
+    authorEmail?: string;
+    authorClerkUserId?: string;
+    initiatorName?: string;
+    initiatorEmail?: string;
+    initiatorClerkUserId?: string;
+    executorId?: string;
     executorName?: string;
     executorEmail?: string;
+    executorClerkUserId?: string;
     orgId?: string;
     orgName?: string;
     orgSlug?: string;
@@ -151,6 +161,18 @@ const getExecutorLabel = (task: AdminTask) => {
     const name = task.executorName?.trim() || '';
     if (name) return name;
     return task.executorEmail?.trim() || '';
+};
+
+const getAuthorLabel = (task: AdminTask) => {
+    const name = task.authorName?.trim() || '';
+    if (name) return name;
+    return task.authorEmail?.trim() || '';
+};
+
+const getInitiatorLabel = (task: AdminTask) => {
+    const name = task.initiatorName?.trim() || '';
+    if (name) return name;
+    return task.initiatorEmail?.trim() || '';
 };
 
 const getRegionLabel = (code?: string | null) => {
@@ -231,7 +253,13 @@ function CalendarToolbar({ label, view, date, onNavigate, onView }: ToolbarProps
     );
 }
 
-function AdminTaskTable({ items }: { items: AdminTask[] }) {
+function AdminTaskTable({
+    items,
+    onOpenProfile,
+}: {
+    items: AdminTask[];
+    onOpenProfile: (clerkUserId?: string | null) => void;
+}) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const tableBg = isDark ? 'rgba(10,13,20,0.92)' : '#ffffff';
@@ -249,6 +277,8 @@ function AdminTaskTable({ items }: { items: AdminTask[] }) {
                         <TableCell>Организация</TableCell>
                         <TableCell>Проект</TableCell>
                         <TableCell>Регион / оператор</TableCell>
+                        <TableCell>Автор</TableCell>
+                        <TableCell>Инициатор</TableCell>
                         <TableCell>Исполнитель</TableCell>
                         <TableCell align="center">Срок</TableCell>
                         <TableCell align="center">Статус</TableCell>
@@ -261,6 +291,8 @@ function AdminTaskTable({ items }: { items: AdminTask[] }) {
                         const orgHref = getOrgHref(task);
                         const projectHref = getProjectHref(task);
                         const executorLabel = getExecutorLabel(task);
+                        const authorLabel = getAuthorLabel(task);
+                        const initiatorLabel = getInitiatorLabel(task);
                         const priority = normalizePriority(task.priority);
                         const operatorLabel = getOperatorLabel(task.projectOperator);
                         return (
@@ -321,7 +353,48 @@ function AdminTaskTable({ items }: { items: AdminTask[] }) {
                                         {operatorLabel || task.projectOperator || '—'}
                                     </Typography>
                                 </TableCell>
-                                <TableCell>{executorLabel || '—'}</TableCell>
+                                <TableCell>
+                                    {task.authorClerkUserId ? (
+                                        <Button
+                                            variant="text"
+                                            size="small"
+                                            onClick={() => onOpenProfile(task.authorClerkUserId)}
+                                            sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                        >
+                                            {authorLabel || task.authorClerkUserId}
+                                        </Button>
+                                    ) : (
+                                        authorLabel || '—'
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    {task.initiatorClerkUserId ? (
+                                        <Button
+                                            variant="text"
+                                            size="small"
+                                            onClick={() => onOpenProfile(task.initiatorClerkUserId)}
+                                            sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                        >
+                                            {initiatorLabel || task.initiatorClerkUserId}
+                                        </Button>
+                                    ) : (
+                                        initiatorLabel || '—'
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    {task.executorClerkUserId ? (
+                                        <Button
+                                            variant="text"
+                                            size="small"
+                                            onClick={() => onOpenProfile(task.executorClerkUserId)}
+                                            sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                        >
+                                            {executorLabel || task.executorClerkUserId}
+                                        </Button>
+                                    ) : (
+                                        executorLabel || '—'
+                                    )}
+                                </TableCell>
                                 <TableCell align="center">{formatDateRU(task.dueDate)}</TableCell>
                                 <TableCell align="center">
                                     <Chip
@@ -354,7 +427,13 @@ function AdminTaskTable({ items }: { items: AdminTask[] }) {
     );
 }
 
-function AdminTaskBoard({ items }: { items: AdminTask[] }) {
+function AdminTaskBoard({
+    items,
+    onOpenProfile,
+}: {
+    items: AdminTask[];
+    onOpenProfile: (clerkUserId?: string | null) => void;
+}) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const columnBg = isDark ? 'rgba(10,13,20,0.9)' : 'rgba(255,255,255,0.94)';
@@ -447,7 +526,16 @@ function AdminTaskBoard({ items }: { items: AdminTask[] }) {
                                         }}
                                     />
                                     {executorLabel ? (
-                                        <Chip label={executorLabel} size="small" variant="outlined" />
+                                        <Chip
+                                            label={executorLabel}
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={(event) => {
+                                                event.preventDefault();
+                                                event.stopPropagation();
+                                                onOpenProfile(task.executorClerkUserId);
+                                            }}
+                                        />
                                     ) : (
                                         <Chip label="Исполнитель: —" size="small" variant="outlined" />
                                     )}
@@ -605,6 +693,8 @@ export default function AdminTasksPage() {
     const [searchAnchor, setSearchAnchor] = React.useState<HTMLElement | null>(null);
     const [filterDialogOpen, setFilterDialogOpen] = React.useState(false);
     const [filters, setFilters] = React.useState<AdminTaskFilters>(defaultFilters);
+    const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = React.useState(false);
 
     const load = React.useCallback(async () => {
         try {
@@ -819,6 +909,17 @@ export default function AdminTasksPage() {
 
     const handleRemoveFilter = (key: keyof AdminTaskFilters) => {
         setFilters((prev) => ({ ...prev, [key]: defaultFilters[key] }));
+    };
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
     };
 
     const orgCount = orgOptions.length;
@@ -1247,8 +1348,18 @@ export default function AdminTasksPage() {
                         </Box>
                     ) : (
                         <>
-                            {tab === 'list' && <AdminTaskTable items={filteredItems} />}
-                            {tab === 'board' && <AdminTaskBoard items={filteredItems} />}
+                            {tab === 'list' && (
+                                <AdminTaskTable
+                                    items={filteredItems}
+                                    onOpenProfile={openProfileDialog}
+                                />
+                            )}
+                            {tab === 'board' && (
+                                <AdminTaskBoard
+                                    items={filteredItems}
+                                    onOpenProfile={openProfileDialog}
+                                />
+                            )}
                             {tab === 'calendar' && <AdminTaskCalendar items={filteredItems} />}
                         </>
                     )}
@@ -1291,6 +1402,12 @@ export default function AdminTasksPage() {
                     />
                 </DialogContent>
             </Dialog>
+
+            <ProfileDialog
+                open={profileOpen}
+                onClose={closeProfileDialog}
+                clerkUserId={profileUserId}
+            />
         </Box>
     );
 }
