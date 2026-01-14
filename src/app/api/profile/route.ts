@@ -3,6 +3,10 @@ import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import UserModel from '@/server/models/UserModel';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
+import MembershipModel from '@/server/models/MembershipModel';
+import OrganizationModel from '@/server/models/OrganizationModel';
+import ProjectModel from '@/server/models/ProjectModel';
+import TaskModel from '@/server/models/TaskModel';
 
 const sanitizeString = (value?: string | null) => value?.trim() ?? '';
 
@@ -25,6 +29,61 @@ export async function GET() {
       );
     }
 
+    const normalizedEmail = user.email?.toLowerCase?.() ?? '';
+    let organizationName: string | null = null;
+    let organizationRole: string | null = null;
+    let managedProjects: { name: string; key?: string | null }[] = [];
+
+    if (user.profileType === 'employer' && normalizedEmail) {
+      let membership = user.activeOrgId
+        ? await MembershipModel.findOne({
+            orgId: user.activeOrgId,
+            userEmail: normalizedEmail,
+          }).lean()
+        : null;
+
+      if (!membership) {
+        membership = await MembershipModel.findOne({
+          userEmail: normalizedEmail,
+          status: 'active',
+        }).lean();
+      }
+
+      if (membership) {
+        const org = await OrganizationModel.findById(membership.orgId)
+          .select('name')
+          .lean();
+        organizationName = org?.name ?? null;
+        organizationRole = membership.role ?? null;
+        const projects = await ProjectModel.find({
+          orgId: membership.orgId,
+          managers: { $in: [normalizedEmail] },
+        })
+          .select('name key')
+          .lean();
+        managedProjects = projects.map((project) => ({
+          name: project.name,
+          key: project.key ?? null,
+        }));
+      }
+    }
+
+    let recentTasks: { taskName: string; bsNumber: string }[] = [];
+    if (user.profileType === 'contractor' && normalizedEmail) {
+      const tasks = await TaskModel.find({
+        executorEmail: normalizedEmail,
+        status: { $in: ['Done', 'Agreed'] },
+      })
+        .select('taskName bsNumber workCompletionDate createdAt')
+        .sort({ workCompletionDate: -1, createdAt: -1 })
+        .limit(3)
+        .lean();
+      recentTasks = tasks.map((task) => ({
+        taskName: task.taskName,
+        bsNumber: task.bsNumber,
+      }));
+    }
+
     return NextResponse.json({
       name: user.name,
       email: user.email,
@@ -40,6 +99,13 @@ export async function GET() {
       portfolioLinks: user.portfolioLinks ?? [],
       moderationStatus: user.profileStatus ?? 'pending',
       moderationComment: user.moderationComment ?? '',
+      completedCount: user.completedCount ?? 0,
+      rating: typeof user.rating === 'number' ? user.rating : null,
+      workRating: null,
+      organizationName,
+      organizationRole,
+      managedProjects,
+      recentTasks,
     });
   } catch (error) {
     console.error('GET /api/profile error:', error);

@@ -46,6 +46,11 @@ type ProfileResponse = {
     clerkUserId?: string;
     completedCount?: number;
     rating?: number | null;
+    workRating?: number | null;
+    organizationName?: string;
+    organizationRole?: string;
+    managedProjects?: { name: string; key?: string | null }[];
+    recentTasks?: { taskName: string; bsNumber: string }[];
     error?: string;
 };
 
@@ -297,7 +302,9 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
 
     const isContractor = profile.profileType === 'contractor';
     const isEmployer = profile.profileType === 'employer';
-    const isSuperAdminViewer = profile.viewerPlatformRole === 'super_admin';
+    const isAdminViewer =
+        profile.viewerPlatformRole === 'super_admin' ||
+        profile.viewerPlatformRole === 'staff';
     const regionName = profile.regionCode
         ? RUSSIAN_REGIONS.find((region) => region.code === profile.regionCode)?.name
         : '';
@@ -306,6 +313,16 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         : isEmployer
             ? 'Работодатель'
             : 'Профиль';
+    const orgRoleLabels: Record<string, string> = {
+        owner: 'Владелец',
+        org_admin: 'Администратор',
+        manager: 'Менеджер',
+        executor: 'Исполнитель',
+        viewer: 'Наблюдатель',
+    };
+    const organizationRoleLabel = profile.organizationRole
+        ? orgRoleLabels[profile.organizationRole] || profile.organizationRole
+        : null;
     const moderationLabel =
         profile.moderationStatus === 'approved'
             ? 'Подтвержден'
@@ -327,6 +344,13 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                         ? profile.completedCount
                         : 0
                 ),
+            },
+            {
+                label: 'Рабочий рейтинг',
+                value:
+                    typeof profile.workRating === 'number'
+                        ? profile.workRating.toFixed(1)
+                        : '—',
             },
         ]
         : isEmployer
@@ -371,23 +395,27 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 960, mx: 'auto' }}>
             <Paper
                 sx={(theme) => ({
-                    ...(theme.palette.mode === 'dark' && {
-                        background: `linear-gradient(180deg, ${alpha(
-                            theme.palette.background.paper,
-                            0.95
-                        )} 0%, ${alpha(theme.palette.grey[900], 0.98)} 100%)`,
-                        borderColor: alpha(theme.palette.common.white, 0.08),
-                        boxShadow: '0 24px 80px rgba(0, 0, 0, 0.45)',
-                    }),
                     borderRadius: 4,
                     border: '1px solid',
-                    borderColor: alpha(theme.palette.common.black, 0.08),
-                    boxShadow: '0 24px 80px rgba(15, 23, 42, 0.12)',
+                    borderColor:
+                        theme.palette.mode === 'dark'
+                            ? alpha(theme.palette.common.white, 0.12)
+                            : alpha(theme.palette.common.black, 0.08),
+                    boxShadow:
+                        theme.palette.mode === 'dark'
+                            ? '0 24px 80px rgba(0, 0, 0, 0.5)'
+                            : '0 24px 80px rgba(15, 23, 42, 0.12)',
                     overflow: 'hidden',
-                    background: `linear-gradient(180deg, ${alpha(
-                        theme.palette.background.paper,
-                        0.98
-                    )} 0%, ${alpha(theme.palette.grey[50], 0.92)} 100%)`,
+                    background:
+                        theme.palette.mode === 'dark'
+                            ? `linear-gradient(180deg, ${alpha(
+                                theme.palette.grey[900],
+                                0.95
+                            )} 0%, ${alpha(theme.palette.grey[800], 0.98)} 100%)`
+                            : `linear-gradient(180deg, ${alpha(
+                                theme.palette.background.paper,
+                                0.98
+                            )} 0%, ${alpha(theme.palette.grey[50], 0.92)} 100%)`,
                 })}
             >
                 <Box
@@ -398,16 +426,16 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                         gap: { xs: 2.5, sm: 3.5 },
                         flexDirection: { xs: 'column', sm: 'row' },
                         alignItems: { xs: 'flex-start', sm: 'center' },
-                        ...(theme.palette.mode === 'dark' && {
-                            background: `linear-gradient(135deg, ${alpha(
-                                theme.palette.primary.dark,
-                                0.35
-                            )}, ${alpha(theme.palette.background.paper, 0.85)})`,
-                        }),
-                        background: `linear-gradient(135deg, ${alpha(
-                            theme.palette.primary.light,
-                            0.16
-                        )}, ${alpha(theme.palette.background.paper, 0.95)})`,
+                        background:
+                            theme.palette.mode === 'dark'
+                                ? `linear-gradient(135deg, ${alpha(
+                                    theme.palette.primary.dark,
+                                    0.35
+                                )}, ${alpha(theme.palette.grey[900], 0.85)})`
+                                : `linear-gradient(135deg, ${alpha(
+                                    theme.palette.primary.light,
+                                    0.16
+                                )}, ${alpha(theme.palette.background.paper, 0.95)})`,
                     })}
                 >
                     <Box
@@ -455,13 +483,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                     }
                                     size="small"
                                 />
-                                {profile.platformRole === 'super_admin' && (
-                                    <Chip
-                                        label="Супер-админ"
-                                        color="warning"
-                                        size="small"
-                                    />
-                                )}
                                 <Chip
                                     label={moderationLabel}
                                     color={moderationColor}
@@ -515,7 +536,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                         : profile.regionCode}
                                 </Typography>
                             )}
-                            {profile.clerkUserId && isSuperAdminViewer && (
+                            {profile.clerkUserId && isAdminViewer && (
                                 <Typography variant="caption" color="text.secondary">
                                     ID: {profile.clerkUserId}
                                 </Typography>
@@ -576,6 +597,63 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     </Stack>
                 </Box>
 
+                {isEmployer && (
+                    <Box
+                        sx={(theme) => ({
+                            px: { xs: 3, sm: 4 },
+                            pt: 2,
+                            pb: 1,
+                            borderTop: '1px solid',
+                            borderColor:
+                                theme.palette.mode === 'dark'
+                                    ? alpha(theme.palette.common.white, 0.08)
+                                    : alpha(theme.palette.common.black, 0.08),
+                            ...(theme.palette.mode === 'dark' && {
+                                backgroundColor: alpha(
+                                    theme.palette.background.default,
+                                    0.55
+                                ),
+                            }),
+                        })}
+                    >
+                        <Stack spacing={1}>
+                            <Typography variant="body2" color="text.secondary">
+                                Работодатель управляет задачами, проектами и формирует
+                                команды подрядчиков.
+                            </Typography>
+                            {profile.organizationName && (
+                                <Typography variant="body2" color="text.secondary">
+                                    Организация: {profile.organizationName}
+                                </Typography>
+                            )}
+                            {organizationRoleLabel && (
+                                <Typography variant="body2" color="text.secondary">
+                                    Роль: {organizationRoleLabel}
+                                </Typography>
+                            )}
+                            {profile.managedProjects && profile.managedProjects.length > 0 && (
+                                <Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Проекты управления:
+                                    </Typography>
+                                    <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                                        {profile.managedProjects.map((project) => (
+                                            <Typography
+                                                key={`${project.key ?? project.name}`}
+                                                variant="body2"
+                                                color="text.secondary"
+                                            >
+                                                {project.name}
+                                                {project.key ? ` (${project.key})` : ''}
+                                            </Typography>
+                                        ))}
+                                    </Stack>
+                                </Box>
+                            )}
+                        </Stack>
+                    </Box>
+                )}
+
                 {(profile.moderationStatus === 'rejected' && profile.moderationComment) ||
                 !canEdit ? (
                     <Box sx={{ px: { xs: 3, sm: 4 }, pt: 2 }}>
@@ -589,11 +667,17 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 ) : null}
 
                 <Box
-                    sx={{
+                    sx={(theme) => ({
                         px: { xs: 3, sm: 4 },
                         pb: 3,
                         pt: { xs: 2, sm: 3 },
-                    }}
+                        ...(theme.palette.mode === 'dark' && {
+                            backgroundColor: alpha(
+                                theme.palette.background.default,
+                                0.6
+                            ),
+                        }),
+                    })}
                 >
                     {highlightItems.length > 0 && (
                         <Stack
@@ -604,33 +688,35 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             {highlightItems.map((item) => (
                                 <Box
                                     key={item.label}
-                            sx={(theme) => ({
-                                flex: 1,
-                                p: 2.5,
-                                borderRadius: 3,
-                                backgroundColor: alpha(
-                                    theme.palette.background.paper,
-                                    0.8
-                                ),
-                                border: '1px solid',
-                                borderColor: alpha(
-                                    theme.palette.common.black,
-                                    0.08
-                                ),
-                                boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)',
-                                ...(theme.palette.mode === 'dark' && {
-                                    backgroundColor: alpha(
-                                        theme.palette.background.default,
-                                        0.7
-                                    ),
-                                    borderColor: alpha(
-                                        theme.palette.common.white,
-                                        0.08
-                                    ),
-                                    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.35)',
-                                }),
-                            })}
-                        >
+                                    sx={(theme) => ({
+                                        flex: 1,
+                                        p: 2.5,
+                                        borderRadius: 3,
+                                        backgroundColor: alpha(
+                                            theme.palette.background.paper,
+                                            0.8
+                                        ),
+                                        border: '1px solid',
+                                        borderColor: alpha(
+                                            theme.palette.common.black,
+                                            0.08
+                                        ),
+                                        boxShadow:
+                                            '0 12px 30px rgba(15, 23, 42, 0.08)',
+                                        ...(theme.palette.mode === 'dark' && {
+                                            backgroundColor: alpha(
+                                                theme.palette.background.default,
+                                                0.7
+                                            ),
+                                            borderColor: alpha(
+                                                theme.palette.common.white,
+                                                0.08
+                                            ),
+                                            boxShadow:
+                                                '0 12px 30px rgba(0, 0, 0, 0.35)',
+                                        }),
+                                    })}
+                                >
                                     <Typography
                                         variant="subtitle2"
                                         color="text.secondary"
@@ -656,7 +742,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             >
                                 {bio || 'Пока нет описания.'}
                             </Typography>
-                            {isSuperAdminViewer && profile.phone && (
+                            {isAdminViewer && profile.phone && (
                                 <Typography variant="body2" color="text.secondary">
                                     Телефон: {profile.phone}
                                 </Typography>
@@ -686,11 +772,23 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             ) : null}
                         </Stack>
                     )}
-                    {isEmployer && (
-                        <Typography variant="body2" color="text.secondary">
-                            Работодатель управляет задачами, проектами и формирует
-                            команды подрядчиков.
-                        </Typography>
+                    {isContractor && profile.recentTasks && profile.recentTasks.length > 0 && (
+                        <Stack spacing={1} sx={{ mt: 2 }}>
+                            <Typography variant="subtitle1" fontWeight={600}>
+                                Последние выполненные задачи
+                            </Typography>
+                            <Stack spacing={0.5}>
+                                {profile.recentTasks.map((task, index) => (
+                                    <Typography
+                                        key={`${task.taskName}-${task.bsNumber}-${index}`}
+                                        variant="body2"
+                                        color="text.secondary"
+                                    >
+                                        {task.taskName} — БС {task.bsNumber}
+                                    </Typography>
+                                ))}
+                            </Stack>
+                        </Stack>
                     )}
                     {profile.platformRole === 'super_admin' && (
                         <Typography
