@@ -59,6 +59,7 @@ import { STATUS_ORDER, getStatusLabel, normalizeStatusTitle } from '@/utils/stat
 import type { CurrentStatus } from '@/app/types/taskTypes';
 import { UI_RADIUS } from '@/config/uiTokens';
 
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 import WorkspaceTaskDialog, { TaskForEdit } from '@/app/workspace/components/WorkspaceTaskDialog';
 
@@ -152,6 +153,7 @@ export interface ProjectTaskListHandle {
 type UserProfile = {
     name?: string;
     profilePic?: string;
+    clerkUserId?: string;
 };
 
 type ProjectTaskListProps = {
@@ -197,6 +199,19 @@ const ProjectTaskListInner = (
     const headBg = isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(248,250,252,0.95)';
     const cellBorder = isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
     const tableShadow = isDarkMode ? '0 25px 70px rgba(0,0,0,0.55)' : '0 20px 50px rgba(15,23,42,0.12)';
+    const [profileUserId, setProfileUserId] = useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = useState(false);
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
+    };
 
     const storageKey = useMemo(
         () => `${COLUMN_STORAGE_PREFIX}:${org || 'org'}:${project || 'project'}`,
@@ -517,23 +532,39 @@ const ProjectTaskListInner = (
 
                                     {columnVisibility.executor && (
                                         <TableCell>
-                                            {execLabel ? (
-                                                <Stack direction="row" spacing={1} alignItems="center">
-                                                    <Avatar
-                                                        src={execProfile?.profilePic}
-                                                        sx={{ width: 32, height: 32 }}
-                                                    >
-                                                        {getInitials(t.executorName || t.executorEmail)}
-                                                    </Avatar>
-                                                    <Box>
+                                        {execLabel ? (
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                <Avatar
+                                                    src={execProfile?.profilePic}
+                                                    sx={{ width: 32, height: 32 }}
+                                                >
+                                                    {getInitials(t.executorName || t.executorEmail)}
+                                                </Avatar>
+                                                <Box>
+                                                    {execProfile?.clerkUserId || t.executorId ? (
+                                                        <Button
+                                                            variant="text"
+                                                            size="small"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                openProfileDialog(
+                                                                    execProfile?.clerkUserId || t.executorId
+                                                                );
+                                                            }}
+                                                            sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                                        >
+                                                            {execLabel}
+                                                        </Button>
+                                                    ) : (
                                                         <Typography variant="body2">{execLabel}</Typography>
-                                                        {execSub && (
-                                                            <Typography variant="caption" color="text.secondary">
-                                                                {execSub}
-                                                            </Typography>
-                                                        )}
-                                                    </Box>
-                                                </Stack>
+                                                    )}
+                                                    {execSub && (
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            {execSub}
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            </Stack>
                                             ) : (
                                                 <Typography variant="body2" color="text.secondary">
                                                     —
@@ -844,6 +875,12 @@ const ProjectTaskListInner = (
                         onCreatedAction={handleEdited}
                     />
                 )}
+
+                <ProfileDialog
+                    open={profileOpen}
+                    onClose={closeProfileDialog}
+                    clerkUserId={profileUserId}
+                />
         </Box>
     );
 };

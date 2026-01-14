@@ -34,6 +34,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { MemberDTO, MemberStatus } from '@/types/org';
 import { makeAbsoluteUrl, roleLabel } from '@/utils/org';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 const initialsFromMember = (member: MemberDTO) => {
     const base = member.userName || member.userEmail || '';
@@ -106,6 +107,20 @@ export default function MembersDialog({
     dialogActionsSx,
     dialogContentBg,
 }: MembersDialogProps) {
+    const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = React.useState(false);
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
+    };
+
     return (
         <Dialog
             open={open}
@@ -223,7 +238,20 @@ export default function MembersDialog({
                                                         <Avatar src={member.profilePic} sx={{ width: 28, height: 28 }}>
                                                             {initialsFromMember(member)}
                                                         </Avatar>
-                                                        <Typography variant="body2">{member.userName || '—'}</Typography>
+                                                        {member.clerkId ? (
+                                                            <Button
+                                                                variant="text"
+                                                                size="small"
+                                                                onClick={() => openProfileDialog(member.clerkId)}
+                                                                sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                                            >
+                                                                {member.userName || '—'}
+                                                            </Button>
+                                                        ) : (
+                                                            <Typography variant="body2">
+                                                                {member.userName || '—'}
+                                                            </Typography>
+                                                        )}
                                                     </Stack>
                                                 </TableCell>
                                                 <TableCell>{member.userEmail}</TableCell>
@@ -291,6 +319,12 @@ export default function MembersDialog({
             <DialogActions sx={dialogActionsSx}>
                 <Button onClick={onClose}>Закрыть</Button>
             </DialogActions>
+
+            <ProfileDialog
+                open={profileOpen}
+                onClose={closeProfileDialog}
+                clerkUserId={profileUserId}
+            />
         </Dialog>
     );
 }

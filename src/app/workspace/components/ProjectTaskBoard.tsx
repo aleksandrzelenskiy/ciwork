@@ -28,6 +28,7 @@ import type { CurrentStatus } from '@/app/types/taskTypes';
 import WorkspaceTaskDialog, { TaskForEdit } from '@/app/workspace/components/WorkspaceTaskDialog';
 import TaskContextMenu from '@/app/workspace/components/TaskContextMenu';
 import { UI_RADIUS } from '@/config/uiTokens';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 type StatusTitle = CurrentStatus;
 
@@ -71,11 +72,13 @@ function TaskCard({
                       statusTitle,
                       onClick,
                       onContextMenu,
+                      onOpenProfile,
                   }: {
     t: Task;
     statusTitle: StatusTitle;
     onClick?: (task: Task) => void;
     onContextMenu?: (e: React.MouseEvent, task: Task) => void;
+    onOpenProfile?: (clerkUserId?: string | null) => void;
 }) {
     const p = normalizePriority(t.priority);
     const execLabel = t.executorName || t.executorEmail || '';
@@ -125,7 +128,17 @@ function TaskCard({
                 <Box sx={{ mt: 0.5, minHeight: 28 }}>
                     {execLabel ? (
                         <Tooltip title={execTooltip}>
-                            <Chip size="small" label={execLabel} variant="outlined" sx={{ maxWidth: '100%' }} />
+                            <Chip
+                                size="small"
+                                label={execLabel}
+                                variant="outlined"
+                                sx={{ maxWidth: '100%' }}
+                                onClick={(event) => {
+                                    if (!t.executorId) return;
+                                    event.stopPropagation();
+                                    onOpenProfile?.(t.executorId);
+                                }}
+                            />
                         </Tooltip>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
@@ -189,6 +202,19 @@ export default function ProjectTaskBoard({
     const columnBg = isDark ? 'rgba(10,13,20,0.9)' : 'rgba(255,255,255,0.94)';
     const columnBorder = isDark ? 'rgba(255,255,255,0.08)' : 'divider';
     const columnShadow = isDark ? '0 30px 70px rgba(0,0,0,0.55)' : '0 12px 30px rgba(15,23,42,0.12)';
+    const [profileUserId, setProfileUserId] = useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = useState(false);
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
+    };
 
     const router = useRouter();
 
@@ -329,6 +355,7 @@ export default function ProjectTaskBoard({
                                 statusTitle={status}
                                 onClick={handleCardClick}
                                 onContextMenu={handleCardContext}
+                                onOpenProfile={openProfileDialog}
                             />
                         ))}
                     </Box>
@@ -397,6 +424,12 @@ export default function ProjectTaskBoard({
                     onCreatedAction={handleEdited}
                 />
             )}
+
+            <ProfileDialog
+                open={profileOpen}
+                onClose={closeProfileDialog}
+                clerkUserId={profileUserId}
+            />
         </Box>
     );
 }

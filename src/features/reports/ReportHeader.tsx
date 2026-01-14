@@ -1,4 +1,4 @@
-import { Box, Link, Typography, Stack } from '@mui/material';
+import { Box, Button, Link, Typography, Stack } from '@mui/material';
 import NextLink from 'next/link';
 import ReportStatusPill from '@/features/reports/ReportStatusPill';
 
@@ -10,8 +10,10 @@ type ReportHeaderProps = {
     orgSlug?: string | null;
     projectKey?: string | null;
     createdByName?: string | null;
+    createdById?: string | null;
     createdAt?: string;
     status: string;
+    onOpenProfile?: (clerkUserId?: string | null) => void;
 };
 
 export default function ReportHeader({
@@ -22,8 +24,10 @@ export default function ReportHeader({
     orgSlug,
     projectKey,
     createdByName,
+    createdById,
     createdAt,
     status,
+    onOpenProfile,
 }: ReportHeaderProps) {
     const title = `${taskName || taskId}${bsNumber ? ` ${bsNumber}` : ''}`;
 
@@ -89,7 +93,19 @@ export default function ReportHeader({
                             : 'rgba(15,23,42,0.65)',
                 })}
             >
-                Создан {createdAt || '—'} · {createdByName || 'Исполнитель'}
+                Создан {createdAt || '—'} ·{' '}
+                {createdById && onOpenProfile ? (
+                    <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => onOpenProfile(createdById)}
+                        sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                    >
+                        {createdByName || 'Исполнитель'}
+                    </Button>
+                ) : (
+                    createdByName || 'Исполнитель'
+                )}
             </Typography>
         </Stack>
     );

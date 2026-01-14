@@ -51,6 +51,7 @@ import { defaultTaskFilters, type TaskFilters } from '@/app/types/taskFilters';
 import { getPriorityLabelRu } from '@/utils/priorityIcons';
 import { startOfDay, endOfDay, format } from 'date-fns';
 import { getStatusLabel, normalizeStatusTitle, STATUS_ORDER } from '@/utils/statusLabels';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 type Priority = 'urgent' | 'high' | 'medium' | 'low';
 
@@ -81,6 +82,7 @@ type MemberDTO = {
     role: OrgRole;
     status: 'active' | 'invited';
     profilePic?: string;
+    clerkId?: string;
 };
 type MembersResponse = { members: MemberDTO[] } | { error: string };
 type ProjectMetaResponse =
@@ -132,6 +134,8 @@ export default function ProjectTasksPage() {
     const [orgInfoError, setOrgInfoError] = React.useState<string | null>(null);
     const [projectManagers, setProjectManagers] = React.useState<string[]>([]);
     const [membersByEmail, setMembersByEmail] = React.useState<Record<string, MemberDTO>>({});
+    const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = React.useState(false);
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
     const headerBg = isDarkMode ? 'rgba(17,22,33,0.85)' : 'rgba(255,255,255,0.55)';
@@ -479,12 +483,30 @@ export default function ProjectTasksPage() {
         return primaryManagerRaw;
     }, [primaryManagerRaw, membersByEmail]);
 
+    const managerClerkId = React.useMemo(() => {
+        if (!primaryManagerRaw) return null;
+        const normalized = primaryManagerRaw.toLowerCase();
+        return membersByEmail[normalized]?.clerkId ?? null;
+    }, [primaryManagerRaw, membersByEmail]);
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
+    };
+
     const userProfilesForList = React.useMemo(() => {
-        const record: Record<string, { name?: string; profilePic?: string }> = {};
+        const record: Record<string, { name?: string; profilePic?: string; clerkUserId?: string }> = {};
         for (const [email, member] of Object.entries(membersByEmail)) {
             record[email] = {
                 name: member.userName ?? member.userEmail,
                 profilePic: member.profilePic,
+                clerkUserId: member.clerkId,
             };
         }
         return record;
@@ -574,9 +596,20 @@ export default function ProjectTasksPage() {
                                     sx={{ fontSize: { xs: '1rem', md: '1.05rem' }, mt: 0.5 }}
                                 >
                                     Менеджер проекта:{' '}
-                                    <Box component="span" sx={{ color: textPrimary, fontWeight: 600 }}>
-                                        {managerDisplayName}
-                                    </Box>
+                                    {managerClerkId ? (
+                                        <Button
+                                            variant="text"
+                                            size="small"
+                                            onClick={() => openProfileDialog(managerClerkId)}
+                                            sx={{ textTransform: 'none', px: 0, minWidth: 0, fontWeight: 600 }}
+                                        >
+                                            {managerDisplayName}
+                                        </Button>
+                                    ) : (
+                                        <Box component="span" sx={{ color: textPrimary, fontWeight: 600 }}>
+                                            {managerDisplayName}
+                                        </Box>
+                                    )}
                                 </Typography>
                             )}
                             {projectDescription && (
@@ -965,6 +998,12 @@ export default function ProjectTasksPage() {
                             setOpen(false);
                             void load();
                         }}
+                    />
+
+                    <ProfileDialog
+                        open={profileOpen}
+                        onClose={closeProfileDialog}
+                        clerkUserId={profileUserId}
                     />
                 </Paper>
             </Box>

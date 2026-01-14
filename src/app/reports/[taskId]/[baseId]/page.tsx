@@ -32,6 +32,7 @@ import { usePhotoReports } from '@/hooks/usePhotoReports';
 import ReportSummaryList from '@/features/reports/ReportSummaryList';
 import { getPhotoReportPermissions, type PhotoReportRole } from '@/utils/photoReportState';
 import { UI_RADIUS } from '@/config/uiTokens';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 type ReportPayload = {
     taskId: string;
@@ -42,6 +43,8 @@ type ReportPayload = {
     files: string[];
     fixedFiles: string[];
     createdAt: string;
+    createdById?: string;
+    createdByName?: string;
     executorName?: string;
     status: string;
     issues: string[];
@@ -66,6 +69,8 @@ export default function PhotoReportPage() {
     const [approveDialogOpen, setApproveDialogOpen] = React.useState(false);
     const [approving, setApproving] = React.useState(false);
     const [downloading, setDownloading] = React.useState(false);
+    const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = React.useState(false);
 
     const showAlert = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
         setAlertState({ open: true, message, severity });
@@ -73,6 +78,17 @@ export default function PhotoReportPage() {
 
     const handleCloseAlert = () => {
         setAlertState((prev) => ({ ...prev, open: false }));
+    };
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
     };
 
     const fetchReport = React.useCallback(async () => {
@@ -255,17 +271,19 @@ export default function PhotoReportPage() {
             </Button>
 
             <Stack spacing={3}>
-                <ReportHeader
-                    taskId={report.taskId}
-                    taskName={report.taskName}
-                    bsNumber={report.bsNumber}
-                    baseId={baseId}
-                    orgSlug={report.orgSlug}
-                    projectKey={report.projectKey}
-                    createdByName={report.executorName}
-                    createdAt={report.createdAt}
-                    status={report.status}
-                />
+            <ReportHeader
+                taskId={report.taskId}
+                taskName={report.taskName}
+                bsNumber={report.bsNumber}
+                baseId={baseId}
+                orgSlug={report.orgSlug}
+                projectKey={report.projectKey}
+                createdByName={report.createdByName || report.executorName}
+                createdById={report.createdById}
+                createdAt={report.createdAt}
+                status={report.status}
+                onOpenProfile={openProfileDialog}
+            />
 
                 <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems="flex-start">
                     <Stack spacing={3} sx={{ flex: 1 }}>
@@ -384,6 +402,12 @@ export default function PhotoReportPage() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <ProfileDialog
+                open={profileOpen}
+                onClose={closeProfileDialog}
+                clerkUserId={profileUserId}
+            />
         </Box>
     );
 }

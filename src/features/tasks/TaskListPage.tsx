@@ -40,6 +40,7 @@ import { useRouter } from 'next/navigation';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
 import { defaultTaskFilters, type TaskFilterOptions, type TaskFilters } from '@/app/types/taskFilters';
 import { getStatusLabel } from '@/utils/statusLabels';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 interface TaskListPageProps {
   searchQuery?: string;
@@ -108,6 +109,7 @@ type UserProfile = {
   email: string;
   name?: string;
   profilePic?: string;
+  clerkUserId?: string;
 };
 
 
@@ -116,10 +118,12 @@ function Row({
   task,
   columnVisibility,
   authorProfile,
+  onOpenProfile,
 }: {
   task: Task;
   columnVisibility: Record<ColumnKey, boolean>;
   authorProfile?: UserProfile | null;
+  onOpenProfile: (clerkUserId?: string | null) => void;
 }) {
   const router = useRouter();
 
@@ -136,6 +140,7 @@ function Row({
     authorProfile?.name?.trim() || task.authorName?.trim() || '';
   const authorEmail = task.authorEmail?.trim() || authorProfile?.email || '';
   const authorInitials = getInitials(authorName || authorEmail);
+  const authorClerkId = authorProfile?.clerkUserId || task.authorId || '';
 
   return (
     <TableRow
@@ -184,7 +189,21 @@ function Row({
               {authorInitials}
             </Avatar>
             <Box>
-              <Typography variant="body2">{authorName || authorEmail || '—'}</Typography>
+              {authorClerkId ? (
+                <Button
+                  variant="text"
+                  size="small"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenProfile(authorClerkId);
+                  }}
+                  sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                >
+                  {authorName || authorEmail || '—'}
+                </Button>
+              ) : (
+                <Typography variant="body2">{authorName || authorEmail || '—'}</Typography>
+              )}
               {authorName && authorEmail && (
                 <Typography variant="caption" color="text.secondary">
                   {authorEmail}
@@ -276,6 +295,8 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
     boolean
   >>({ ...DEFAULT_COLUMN_VISIBILITY });
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   /* ----- popover / пагинация ----- */
   const [currentPage, setCurrentPage] = useState(1);
@@ -340,6 +361,7 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
               email: user.email.toLowerCase(),
               name: user.name,
               profilePic: user.profilePic,
+              clerkUserId: user.clerkUserId,
             };
           }
         }
@@ -439,6 +461,17 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
       setColumnsAnchorEl(anchor);
     }
   }, []);
+
+  const openProfileDialog = (clerkUserId?: string | null) => {
+    if (!clerkUserId) return;
+    setProfileUserId(clerkUserId);
+    setProfileOpen(true);
+  };
+
+  const closeProfileDialog = () => {
+    setProfileOpen(false);
+    setProfileUserId(null);
+  };
 
   const closeColumns = useCallback(() => {
     setColumnsAnchorEl(null);
@@ -612,6 +645,7 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
                     task={task}
                     columnVisibility={columnVisibility}
                     authorProfile={emailKey ? userProfiles[emailKey] : undefined}
+                    onOpenProfile={openProfileDialog}
                   />
                 );
               })}
@@ -729,6 +763,12 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
           </Box>
         </Box>
       </Popover>
+
+      <ProfileDialog
+        open={profileOpen}
+        onClose={closeProfileDialog}
+        clerkUserId={profileUserId}
+      />
     </Box>
   );
 });

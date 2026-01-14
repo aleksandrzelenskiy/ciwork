@@ -17,6 +17,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import type { MemberDTO } from '@/types/org';
 import { roleLabel } from '@/utils/org';
 import { UI_RADIUS } from '@/config/uiTokens';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 type OrgMembersCardProps = {
     loading: boolean;
@@ -57,6 +58,20 @@ export default function OrgMembersCard({
     textSecondary,
     buttonRadius,
 }: OrgMembersCardProps) {
+    const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = React.useState(false);
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
+    };
+
     return (
         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
             <Stack spacing={2}>
@@ -111,9 +126,20 @@ export default function OrgMembersCard({
                                         {initialsFromMember(member)}
                                     </Avatar>
                                     <Box>
-                                        <Typography variant="body2" fontWeight={600}>
-                                            {member.userName || 'Без имени'}
-                                        </Typography>
+                                        {member.clerkId ? (
+                                            <Button
+                                                variant="text"
+                                                size="small"
+                                                onClick={() => openProfileDialog(member.clerkId)}
+                                                sx={{ textTransform: 'none', px: 0, minWidth: 0, fontWeight: 600 }}
+                                            >
+                                                {member.userName || 'Без имени'}
+                                            </Button>
+                                        ) : (
+                                            <Typography variant="body2" fontWeight={600}>
+                                                {member.userName || 'Без имени'}
+                                            </Typography>
+                                        )}
                                         <Typography variant="caption" color="text.secondary">
                                             {member.userEmail} · {roleLabel(member.role)}
                                         </Typography>
@@ -149,6 +175,12 @@ export default function OrgMembersCard({
                     </Tooltip>
                 </Stack>
             </Stack>
+
+            <ProfileDialog
+                open={profileOpen}
+                onClose={closeProfileDialog}
+                clerkUserId={profileUserId}
+            />
         </Box>
     );
 }

@@ -9,6 +9,7 @@ export type MemberDTO = {
     profilePic?: string;
     role: OrgRole;
     status: MemberStatus;
+    clerkId?: string;
     inviteToken?: string;
     inviteExpiresAt?: string;
 };

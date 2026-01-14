@@ -69,6 +69,7 @@ import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { usePhotoReports } from '@/hooks/usePhotoReports';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 const parseUserInfo = (userString?: string) => {
     if (!userString) return { name: 'N/A', email: 'N/A' };
@@ -153,11 +154,24 @@ export default function TaskDetailPage() {
     const [error, setError] = React.useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = React.useState<string>('');
     const [profileType, setProfileType] = React.useState<'employer' | 'contractor' | undefined>(undefined);
+    const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = React.useState(false);
     const [workItemsFullScreen, setWorkItemsFullScreen] = React.useState(false);
     const [commentsFullScreen, setCommentsFullScreen] = React.useState(false);
     const [pendingDecision, setPendingDecision] = React.useState<'accept' | 'reject' | null>(null);
     const [decisionLoading, setDecisionLoading] = React.useState(false);
     const [decisionError, setDecisionError] = React.useState<string | null>(null);
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
+    };
     const [completeConfirmOpen, setCompleteConfirmOpen] = React.useState(false);
     const [completeLoading, setCompleteLoading] = React.useState(false);
     const [completeError, setCompleteError] = React.useState<string | null>(null);
@@ -954,7 +968,19 @@ export default function TaskDetailPage() {
 
                                 {(task.executorName || task.executorEmail) && (
                                     <Typography variant="body1">
-                                        <strong>Исполнитель:</strong> {task.executorName || task.executorEmail}
+                                        <strong>Исполнитель:</strong>{' '}
+                                        {task.executorId ? (
+                                            <Button
+                                                variant="text"
+                                                size="small"
+                                                onClick={() => openProfileDialog(task.executorId)}
+                                                sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                            >
+                                                {task.executorName || task.executorEmail}
+                                            </Button>
+                                        ) : (
+                                            task.executorName || task.executorEmail
+                                        )}
                                     </Typography>
                                 )}
 
@@ -1748,6 +1774,12 @@ export default function TaskDetailPage() {
 
                 <Box sx={{ p: 2 }}>{renderCommentsSection('calc(100vh - 80px)')}</Box>
             </Dialog>
+
+            <ProfileDialog
+                open={profileOpen}
+                onClose={closeProfileDialog}
+                clerkUserId={profileUserId}
+            />
         </Container>
     );
 }

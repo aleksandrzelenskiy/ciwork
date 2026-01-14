@@ -28,6 +28,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { MemberDTO, ProjectDTO } from '@/types/org';
+import ProfileDialog from '@/features/profile/ProfileDialog';
 
 type ProjectsDialogProps = {
     open: boolean;
@@ -70,6 +71,20 @@ export default function ProjectsDialog({
     dialogActionsSx,
     dialogContentBg,
 }: ProjectsDialogProps) {
+    const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
+    const [profileOpen, setProfileOpen] = React.useState(false);
+
+    const openProfileDialog = (clerkUserId?: string | null) => {
+        if (!clerkUserId) return;
+        setProfileUserId(clerkUserId);
+        setProfileOpen(true);
+    };
+
+    const closeProfileDialog = () => {
+        setProfileOpen(false);
+        setProfileUserId(null);
+    };
+
     return (
         <Dialog
             open={open}
@@ -173,7 +188,18 @@ export default function ProjectsDialog({
                                                     if (name && email) {
                                                         return (
                                                             <Stack spacing={0}>
-                                                                <Typography variant="body2">{name}</Typography>
+                                                                {member?.clerkId ? (
+                                                                    <Button
+                                                                        variant="text"
+                                                                        size="small"
+                                                                        onClick={() => openProfileDialog(member.clerkId)}
+                                                                        sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                                                    >
+                                                                        {name}
+                                                                    </Button>
+                                                                ) : (
+                                                                    <Typography variant="body2">{name}</Typography>
+                                                                )}
                                                                 <Typography variant="caption" color="text.secondary">
                                                                     {email}
                                                                 </Typography>
@@ -236,6 +262,12 @@ export default function ProjectsDialog({
             <DialogActions sx={dialogActionsSx}>
                 <Button onClick={onClose}>Закрыть</Button>
             </DialogActions>
+
+            <ProfileDialog
+                open={profileOpen}
+                onClose={closeProfileDialog}
+                clerkUserId={profileUserId}
+            />
         </Dialog>
     );
 }

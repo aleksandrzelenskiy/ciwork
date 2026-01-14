@@ -63,6 +63,16 @@ export const getReportDetails = async ({
         orgId ? OrganizationModel.findById(orgId).select('orgSlug').lean() : null,
     ]);
 
+    const authorProfile = report.createdById
+        ? await UserModel.findOne({ clerkUserId: report.createdById })
+              .select('name email')
+              .lean()
+        : null;
+    const createdByName =
+        authorProfile?.name?.trim() ||
+        authorProfile?.email?.trim() ||
+        report.createdByName;
+
     const trimmedToken = token?.trim() ?? '';
     const guestAccess = trimmedToken ? verifyInitiatorAccessToken(trimmedToken) : null;
     const initiatorEmail = taskRecord?.initiatorEmail?.trim().toLowerCase() || '';
@@ -100,6 +110,8 @@ export const getReportDetails = async ({
             bsNumber: taskRecord?.bsNumber,
             files: report.files,
             createdAt: report.createdAt,
+            createdById: report.createdById,
+            createdByName,
             executorName: taskRecord?.executorName ?? report.createdByName,
             reviewerName: report.initiatorName,
             status: report.status,

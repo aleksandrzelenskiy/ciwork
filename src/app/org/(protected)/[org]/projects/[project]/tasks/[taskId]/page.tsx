@@ -1875,7 +1875,18 @@ export default function TaskDetailsPage() {
                                     {(task.executorName || task.executorEmail) && (
                                         <Typography variant="body1">
                                             <strong>Исполнитель:</strong>{' '}
-                                            {task.executorName || task.executorEmail}
+                                            {task.executorId ? (
+                                                <Button
+                                                    variant="text"
+                                                    size="small"
+                                                    onClick={() => openProfileDialog(task.executorId)}
+                                                    sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                                >
+                                                    {task.executorName || task.executorEmail}
+                                                </Button>
+                                            ) : (
+                                                task.executorName || task.executorEmail
+                                            )}
                                         </Typography>
                                     )}
                                     {(task.initiatorName || task.initiatorEmail) && (
