@@ -681,7 +681,7 @@ export default function AdminTasksPage() {
 
     const filterOptions = React.useMemo(() => {
         const executors = new Set<string>();
-        const statuses = new Set<string>();
+        const statuses = new Set<(typeof STATUS_ORDER)[number]>();
         const priorities = new Set<Priority | string>();
         items.forEach((task) => {
             const executorLabel = getExecutorLabel(task);
