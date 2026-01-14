@@ -11,9 +11,10 @@ import { useSearchParams } from 'next/navigation';
 import OrganizationsAdmin from '@/features/admin/OrganizationsAdmin';
 import UsersAdmin from '@/features/admin/UsersAdmin';
 import PlanConfigAdmin from '@/features/admin/PlanConfigAdmin';
+import AdminTasksPage from '@/features/admin/AdminTasksPage';
 import { UI_RADIUS } from '@/config/uiTokens';
 
-type AdminTab = 'organizations' | 'users' | 'plans';
+type AdminTab = 'organizations' | 'users' | 'plans' | 'tasks';
 
 export default function AdminPage() {
     const theme = useTheme();
@@ -28,7 +29,7 @@ export default function AdminPage() {
     }, [safeParams]);
     const resolveTab = React.useCallback((): AdminTab | null => {
         const rawTab = safeParams.get('tab')?.trim().toLowerCase();
-        if (rawTab === 'organizations' || rawTab === 'users' || rawTab === 'plans') {
+        if (rawTab === 'organizations' || rawTab === 'users' || rawTab === 'plans' || rawTab === 'tasks') {
             return rawTab;
         }
         if (focusUserId) {
@@ -111,11 +112,28 @@ export default function AdminPage() {
                         border: `1px solid ${tabBorderColor}`,
                     }}
                 />
+                <Tab
+                    value="tasks"
+                    label="ЗАДАЧИ"
+                    sx={{
+                        textTransform: 'uppercase',
+                        fontWeight: 600,
+                        borderRadius: UI_RADIUS.tab,
+                        minHeight: 0,
+                        px: 2.5,
+                        py: 1.2,
+                        mx: 0.5,
+                        color: tab === 'tasks' ? theme.palette.text.primary : tabInactiveColor,
+                        backgroundColor: tab === 'tasks' ? tabActiveBg : 'transparent',
+                        border: `1px solid ${tabBorderColor}`,
+                    }}
+                />
             </Tabs>
 
             {tab === 'organizations' && <OrganizationsAdmin />}
             {tab === 'users' && <UsersAdmin focusUserId={focusUserId} />}
             {tab === 'plans' && <PlanConfigAdmin />}
+            {tab === 'tasks' && <AdminTasksPage />}
         </Box>
     );
 }

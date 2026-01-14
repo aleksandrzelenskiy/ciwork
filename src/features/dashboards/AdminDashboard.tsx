@@ -9,7 +9,6 @@ import { useTheme } from '@mui/material/styles';
 import MiniMap from '@/features/dashboards/MiniMap';
 import MiniTaskTable from '@/features/dashboards/MiniTaskTable';
 import MiniReportsList from '@/features/dashboards/MiniReportsList';
-import FinancialMetrics from '@/features/dashboards/FinancialMetrics';
 import TaskMetricDiagram from './TaskMetricDiagram';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
@@ -85,9 +84,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </CardItem>
 
           <CardItem sx={{ minWidth: 0 }}>
-            <Box sx={{ mb: 2 }}>
-              <FinancialMetrics />
-            </Box>
             <Box sx={{ mb: 2 }}>
               <TaskMetricDiagram role={role} clerkUserId={clerkUserId} />
             </Box>
