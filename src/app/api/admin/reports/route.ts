@@ -142,7 +142,7 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
         const orgId = reportOrgId || taskMeta?.orgId || null;
         const projectInfo = projectId ? projectInfoMap.get(projectId) : undefined;
         const orgInfo = orgId ? orgInfoMap.get(orgId) : undefined;
-        const entry = taskMap.get(taskId) ?? {
+        const entry: AdminReport = taskMap.get(taskId) ?? {
             taskId,
             taskName: report.taskName || taskMeta?.taskName,
             bsNumber: taskMeta?.bsNumber,
