@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   PieChart,
   Pie,
@@ -56,6 +57,7 @@ export default function TaskMetricDiagram({
   role,
   clerkUserId,
 }: TaskMetricDiagramProps) {
+  const theme = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -237,7 +239,7 @@ export default function TaskMetricDiagram({
                   href={{ pathname: baseHref, query: { status: data.name } }}
                   style={{
                     marginRight: 10,
-                    color: entry.color || '#000',
+                    color: entry.color || theme.palette.text.primary,
                     cursor: 'pointer',
                     textDecoration: 'underline',
                   }}
@@ -250,7 +252,7 @@ export default function TaskMetricDiagram({
                   component='span'
                   sx={{
                     marginRight: 1,
-                    color: entry.color || '#000',
+                    color: entry.color || theme.palette.text.primary,
                   }}
                 >
                   {`${getStatusLabel(data.name)} (${data.count})`}
@@ -292,6 +294,13 @@ export default function TaskMetricDiagram({
             <Tooltip
               formatter={(value: number) => `${value}`}
               labelFormatter={(name) => getStatusLabel(name as string)}
+              contentStyle={{
+                backgroundColor: theme.palette.background.paper,
+                border: `1px solid ${theme.palette.divider}`,
+                color: theme.palette.text.primary,
+              }}
+              itemStyle={{ color: theme.palette.text.primary }}
+              labelStyle={{ color: theme.palette.text.primary }}
             />
             <Legend
               payload={legendData.map((item) => ({

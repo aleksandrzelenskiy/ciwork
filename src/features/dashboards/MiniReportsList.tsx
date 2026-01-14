@@ -26,6 +26,7 @@ import {
   IconButton,
   Chip,
 } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import Link from 'next/link';
 import CloseIcon from '@mui/icons-material/Close';
 import FolderIcon from '@mui/icons-material/Folder';
@@ -50,6 +51,7 @@ export default function MiniReportsList({
   role,
   clerkUserId,
 }: MiniReportsListProps) {
+  const theme = useTheme();
   const [reports, setReports] = useState<ReportClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -217,7 +219,10 @@ export default function MiniReportsList({
               left: 0,
               right: 0,
               height: 40,
-              background: 'linear-gradient(rgba(255,255,255,0), #fff 80%)',
+              background: `linear-gradient(${alpha(
+                theme.palette.background.paper,
+                0
+              )}, ${theme.palette.background.paper} 80%)`,
               pointerEvents: 'none',
             }}
           />
@@ -292,7 +297,7 @@ export default function MiniReportsList({
                               label={base.status}
                               sx={{
                                 backgroundColor: color,
-                                color: '#fff',
+                                color: theme.palette.common.white,
                                 textTransform: 'capitalize',
                               }}
                               size='small'

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Chip, CircularProgress, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import type { ReportClient } from '@/app/types/reportTypes';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { getStatusColor } from '@/utils/statusColors';
@@ -12,6 +13,7 @@ const REPORT_STATUSES = ['Pending', 'Issues', 'Fixed', 'Agreed'] as const;
 type ReportStatus = (typeof REPORT_STATUSES)[number];
 
 export default function ContractorReportsStatus() {
+    const theme = useTheme();
     const [reports, setReports] = useState<ReportClient[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export default function ContractorReportsStatus() {
                         label={`${getStatusLabel(status)}: ${statusCounts[status]}`}
                         sx={{
                             backgroundColor: getStatusColor(status),
-                            color: '#fff',
+                            color: theme.palette.common.white,
                         }}
                         size='small'
                     />

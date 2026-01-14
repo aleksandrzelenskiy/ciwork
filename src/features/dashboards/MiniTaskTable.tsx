@@ -18,6 +18,7 @@ import {
   Chip,
   Tooltip,
 } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 import Link from 'next/link';
 
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -69,6 +70,7 @@ export default function MiniTaskTable({
   ctaHref,
   maxItems,
 }: MiniTaskTableProps) {
+  const theme = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -212,11 +214,11 @@ export default function MiniTaskTable({
       <Box
         sx={{
           position: 'relative',
-        maxHeight: tableMaxHeight,
-        overflow: 'hidden',
-        mb: 2,
-      }}
-    >
+          maxHeight: tableMaxHeight,
+          overflow: 'hidden',
+          mb: 2,
+        }}
+      >
         <TableContainer component={Paper} sx={{ maxHeight: tableMaxHeight }}>
           <Table size='small' stickyHeader>
             <TableHead>
@@ -250,7 +252,7 @@ export default function MiniTaskTable({
                       label={getStatusLabel(task.status)}
                       sx={{
                         backgroundColor: getStatusColor(task.status),
-                        color: '#fff',
+                        color: theme.palette.common.white,
                       }}
                       size='small'
                     />
@@ -274,22 +276,25 @@ export default function MiniTaskTable({
             bottom: 0,
             left: 0,
             right: 0,
-        height: 40,
-        background: 'linear-gradient(rgba(255,255,255,0), #fff 80%)',
-        pointerEvents: 'none',
-      }}
-    />
-  </Box>
+            height: 40,
+            background: `linear-gradient(${alpha(
+              theme.palette.background.paper,
+              0
+            )}, ${theme.palette.background.paper} 80%)`,
+            pointerEvents: 'none',
+          }}
+        />
+      </Box>
 
       <Box
         sx={{
           textAlign: 'center',
         }}
       >
-      <Link href={resolvedCtaHref}>
-        <Button variant='text'>{ctaLabel ?? 'Все задачи'}</Button>
-      </Link>
+        <Link href={resolvedCtaHref}>
+          <Button variant='text'>{ctaLabel ?? 'Все задачи'}</Button>
+        </Link>
+      </Box>
     </Box>
-  </Box>
-);
+  );
 }

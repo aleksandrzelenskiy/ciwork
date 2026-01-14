@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Task } from '@/app/types/taskTypes';
 import {
   PieChart,
@@ -14,6 +15,7 @@ import {
 import { FINANCE_CONFIG } from '@/config/finance';
 
 export default function FinancialMetrics() {
+  const theme = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +99,33 @@ export default function FinancialMetrics() {
   // Форматирование процента
   const formatPercent = (value: number) => ((value / totalAgreed) * 100).toFixed(1) + '%';
 
+  type PieLabelProps = {
+    x?: number;
+    y?: number;
+    name?: string;
+    value?: number;
+    textAnchor?: string;
+    dominantBaseline?: string;
+  };
+
+  const renderChartLabel = (props: PieLabelProps) => {
+    if (props.x == null || props.y == null || props.value == null || !props.name) {
+      return null;
+    }
+    return (
+      <text
+        x={props.x}
+        y={props.y}
+        textAnchor={props.textAnchor ?? 'middle'}
+        dominantBaseline={props.dominantBaseline ?? 'central'}
+        fill={theme.palette.text.primary}
+        style={{ fontSize: 12, fontWeight: 500 }}
+      >
+        {`${props.name}: ${formatPercent(props.value)}`}
+      </text>
+    );
+  };
+
   return (
       <Box>
         <Typography variant='h6' sx={{ mb: 2 }}>
@@ -115,7 +144,7 @@ export default function FinancialMetrics() {
                   outerRadius={120}
                   innerRadius={90}
                   labelLine={false}
-                  label={({ name, value }) => `${name}: ${formatPercent(value)}`} // тут только проценты, без ₽
+                  label={renderChartLabel} // тут только проценты, без ₽
               >
                 {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index]} />
@@ -128,6 +157,7 @@ export default function FinancialMetrics() {
                   y="47.5%"
                   textAnchor="middle"
                   dominantBaseline="middle"
+                  fill={theme.palette.text.primary}
                   style={{
                     fontSize: '20px',
                     fontWeight: 'bold',
@@ -143,13 +173,16 @@ export default function FinancialMetrics() {
                     name,
                   ]}
                   contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #ccc',
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: 8,
+                    color: theme.palette.text.primary,
                   }}
+                  itemStyle={{ color: theme.palette.text.primary }}
+                  labelStyle={{ color: theme.palette.text.primary }}
               />
 
-              <Legend />
+              <Legend wrapperStyle={{ color: theme.palette.text.primary }} />
             </PieChart>
           </ResponsiveContainer>
         </Box>
