@@ -111,7 +111,12 @@ export default function MiniTaskTable({
           | OrgResponse
           | { organizations?: Array<{ orgId: string; orgSlug: string }> }
           | { error: string };
-        const orgList = 'orgs' in data ? data.orgs : data.organizations;
+        const orgList =
+          'orgs' in data
+            ? data.orgs
+            : 'organizations' in data
+              ? data.organizations
+              : undefined;
         if (!orgList || !Array.isArray(orgList)) return;
         const map = orgList.reduce<Record<string, string>>((acc, org) => {
           const id = '_id' in org ? org._id : org.orgId;
