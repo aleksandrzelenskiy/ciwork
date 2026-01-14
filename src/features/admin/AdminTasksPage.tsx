@@ -328,7 +328,7 @@ function AdminTaskTable({ items }: { items: AdminTask[] }) {
                                         label={getStatusLabel(task.status)}
                                         size="small"
                                         sx={{
-                                            backgroundColor: getStatusColor(task.status),
+                                            backgroundColor: getStatusColor(task.status ?? ''),
                                             color: '#fff',
                                             fontWeight: 600,
                                         }}
