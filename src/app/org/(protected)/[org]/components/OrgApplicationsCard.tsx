@@ -106,7 +106,7 @@ export default function OrgApplicationsCard({
                             >
                                 <Typography variant="body2" fontWeight={600}>
                                     {app.taskName}
-                                    {app.bsNumber ? ` · BS${app.bsNumber}` : ''}
+                                    {app.bsNumber ? ` · ${app.bsNumber}` : ''}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
                                     {app.contractorName || app.contractorEmail || 'Без кандидата'} ·{' '}

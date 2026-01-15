@@ -3,7 +3,7 @@
 'use client';
 
 import * as React from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
     Box,
@@ -90,6 +90,7 @@ type ProjectMetaResponse =
     ok: true;
     project: {
         description?: string | null;
+        key?: string | null;
         managers?: string[] | null;
     };
 }
@@ -111,11 +112,18 @@ export default function ProjectTasksPage() {
         org: string;
         project: string;
     };
+    const router = useRouter();
     const org = params.org;
     const project = params.project;
 
     const orgSlug = React.useMemo(() => org?.trim(), [org]);
     const projectRef = React.useMemo(() => project?.trim(), [project]);
+    const [projectKey, setProjectKey] = React.useState<string | null>(null);
+    const projectKeyRef = projectKey || projectRef;
+
+    React.useEffect(() => {
+        setProjectKey(null);
+    }, [projectRef]);
 
     const [tab, setTab] = React.useState<'list' | 'board' | 'calendar'>('list');
     const [open, setOpen] = React.useState(false);
@@ -310,6 +318,7 @@ export default function ProjectTasksPage() {
                 if (!data || 'error' in data) return;
                 if (!cancelled) {
                     setProjectDescription(data.project.description ?? null);
+                    setProjectKey(data.project.key ?? null);
                     setProjectManagers(
                         Array.isArray(data.project.managers) ? data.project.managers : []
                     );
@@ -323,6 +332,14 @@ export default function ProjectTasksPage() {
             cancelled = true;
         };
     }, [orgSlug, projectRef]);
+
+    React.useEffect(() => {
+        if (!orgSlug || !projectRef || !projectKey) return;
+        if (projectKey === projectRef) return;
+        router.replace(
+            `/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(projectKey)}/tasks`
+        );
+    }, [orgSlug, projectKey, projectRef, router]);
 
     React.useEffect(() => {
         if (!orgSlug) return;
@@ -563,7 +580,7 @@ export default function ProjectTasksPage() {
                                     color={textPrimary}
                                     sx={{ fontSize: { xs: '1.6rem', md: '1.95rem' } }}
                                 >
-                                    Задачи {projectRef}
+                                    Задачи {projectKeyRef}
                                 </Typography>
                             </Stack>
                             <Typography
@@ -954,7 +971,7 @@ export default function ProjectTasksPage() {
                             loading={loading}
                             error={error}
                             org={orgSlug || ''}
-                            project={projectRef || ''}
+                            project={projectKeyRef || ''}
                             onReloadAction={() => {
                                 void load();
                             }}
@@ -969,7 +986,7 @@ export default function ProjectTasksPage() {
                             loading={loading}
                             error={error}
                             org={orgSlug || ''}
-                            project={projectRef || ''}
+                            project={projectKeyRef || ''}
                             onReloadAction={() => {
                                 void load();
                             }}
@@ -982,7 +999,7 @@ export default function ProjectTasksPage() {
                             loading={loading}
                             error={error}
                             org={orgSlug || ''}
-                            project={projectRef || ''}
+                            project={projectKeyRef || ''}
                             onReloadAction={() => {
                                 void load();
                             }}
@@ -992,7 +1009,7 @@ export default function ProjectTasksPage() {
                     <WorkspaceTaskDialog
                         open={open}
                         org={orgSlug || ''}
-                        project={projectRef || ''}
+                        project={projectKeyRef || ''}
                         onCloseAction={() => setOpen(false)}
                         onCreatedAction={() => {
                             setOpen(false);

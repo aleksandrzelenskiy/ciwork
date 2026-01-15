@@ -143,7 +143,7 @@ export default function ApplicationsDialog({
                                             <TableCell sx={{ maxWidth: 220 }}>
                                                 <Typography variant="body2" fontWeight={600} noWrap>
                                                     {app.taskName}
-                                                    {app.bsNumber ? ` · BS${app.bsNumber}` : ''}
+                                                    {app.bsNumber ? ` · ${app.bsNumber}` : ''}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary" noWrap>
                                                     {app.bsNumber ? `БС ${app.bsNumber}` : '—'}
