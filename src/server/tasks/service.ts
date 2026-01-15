@@ -111,15 +111,26 @@ export const listTasksForCurrentUser = async () => {
             },
         },
         {
+            $lookup: {
+                from: 'organizations',
+                localField: 'orgId',
+                foreignField: '_id',
+                as: 'orgDoc',
+            },
+        },
+        {
             $addFields: {
                 projectKey: { $arrayElemAt: ['$projectDoc.key', 0] },
                 projectName: { $arrayElemAt: ['$projectDoc.name', 0] },
                 projectOperator: { $arrayElemAt: ['$projectDoc.operator', 0] },
+                orgName: { $arrayElemAt: ['$orgDoc.name', 0] },
+                orgSlug: { $arrayElemAt: ['$orgDoc.orgSlug', 0] },
             },
         },
         {
             $project: {
                 projectDoc: 0,
+                orgDoc: 0,
             },
         },
         {

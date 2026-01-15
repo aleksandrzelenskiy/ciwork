@@ -46,6 +46,8 @@ type TaskLocation = {
     projectName?: string | null;
     projectKey?: string | null;
     projectOperator?: string | null;
+    orgName?: string | null;
+    orgSlug?: string | null;
     executorName?: string | null;
     executorEmail?: string | null;
 };
@@ -63,6 +65,8 @@ type MapPoint = {
     projectName?: string | null;
     projectKey?: string | null;
     operator: OperatorSlug;
+    operatorLabel?: string | null;
+    orgName?: string | null;
     executorName?: string | null;
     executorEmail?: string | null;
 };
@@ -79,6 +83,12 @@ const ALL_STATUSES: CurrentStatus[] = [
     'Agreed',
 ];
 const ALL_PRIORITIES: PriorityLevel[] = ['urgent', 'high', 'medium', 'low'];
+const OPERATOR_LABELS: Record<OperatorSlug, string> = {
+    t2: 'Т2',
+    beeline: 'Билайн',
+    megafon: 'МегаФон',
+    mts: 'МТС',
+};
 
 const parseCoords = (raw?: string | null): [number, number] | null => {
     if (!raw) return null;
@@ -119,6 +129,13 @@ const buildRelatedNumbers = (task: TaskLocation, pool: string[], currentIndex: n
     return values.join(', ');
 };
 
+const resolveOperatorLabel = (raw?: string | null, fallback?: OperatorSlug): string | null => {
+    const trimmed = raw?.toString().trim();
+    if (trimmed) return trimmed;
+    if (fallback) return OPERATOR_LABELS[fallback] ?? fallback;
+    return null;
+};
+
 export default function ProjectTaskLocation(): React.ReactElement {
     const [tasks, setTasks] = React.useState<TaskLocation[]>([]);
     const [loading, setLoading] = React.useState(true);
@@ -147,9 +164,9 @@ export default function ProjectTaskLocation(): React.ReactElement {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const accentBase = isDark ? '#e2e8f0' : '#0f172a';
-    const filterButtonBg = isDark ? 'rgba(255,255,255,0.08)' : '#ffffff';
+    const filterButtonBg = isDark ? 'rgba(248,250,252,0.92)' : '#ffffff';
     const filterButtonBorder = alpha(accentBase, isDark ? 0.18 : 0.12);
-    const filterButtonColor = isDark ? '#f8fafc' : '#0f172a';
+    const filterButtonColor = isDark ? '#0b1220' : '#0f172a';
     const params = useParams<{ org?: string; project?: string }>();
     const orgSlug = params?.org;
     const projectSlug = params?.project;
@@ -251,6 +268,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
                     (loc?.name && loc.name.trim()) || bsNumbers[idx] || bsNumbers[0] || task.bsNumber || `БС ${idx + 1}`;
                 const relatedNumbers = buildRelatedNumbers(task, bsNumbers, idx);
 
+                const operator = normalizeOperator(task.projectOperator);
                 result.push({
                     id: `${task._id ?? task.taskId ?? 'task'}-${idx}`,
                     coords,
@@ -266,7 +284,9 @@ export default function ProjectTaskLocation(): React.ReactElement {
                     priority: task.priority,
                     projectKey: task.projectKey ?? null,
                     projectName: task.projectName ?? null,
-                    operator: normalizeOperator(task.projectOperator),
+                    operator,
+                    operatorLabel: resolveOperatorLabel(task.projectOperator, operator),
+                    orgName: task.orgName ?? task.orgSlug ?? null,
                     executorName: task.executorName ?? null,
                     executorEmail: task.executorEmail ?? null,
                 });
@@ -274,6 +294,22 @@ export default function ProjectTaskLocation(): React.ReactElement {
         }
         return result;
     }, [tasks]);
+
+    const availableStatuses = React.useMemo(() => {
+        const present = new Set<CurrentStatus>();
+        placemarks.forEach((point) => {
+            if (point.status) present.add(point.status);
+        });
+        return ALL_STATUSES.filter((status) => present.has(status));
+    }, [placemarks]);
+
+    const availablePriorities = React.useMemo(() => {
+        const present = new Set<PriorityLevel>();
+        placemarks.forEach((point) => {
+            if (point.priority) present.add(point.priority);
+        });
+        return ALL_PRIORITIES.filter((priority) => present.has(priority));
+    }, [placemarks]);
 
     const filteredPlacemarks = React.useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -284,7 +320,9 @@ export default function ProjectTaskLocation(): React.ReactElement {
                 point.taskName.toLowerCase().includes(query) ||
                 (point.relatedNumbers ? point.relatedNumbers.toLowerCase().includes(query) : false) ||
                 (point.projectName ? point.projectName.toLowerCase().includes(query) : false) ||
-                (point.projectKey ? point.projectKey.toLowerCase().includes(query) : false);
+                (point.projectKey ? point.projectKey.toLowerCase().includes(query) : false) ||
+                (point.orgName ? point.orgName.toLowerCase().includes(query) : false) ||
+                (point.operatorLabel ? point.operatorLabel.toLowerCase().includes(query) : false);
             const statusOk = point.status ? Boolean(statusFilter[point.status]) : true;
             const priorityOk = point.priority ? Boolean(priorityFilter[point.priority]) : true;
             return matchesSearch && statusOk && priorityOk;
@@ -328,15 +366,15 @@ export default function ProjectTaskLocation(): React.ReactElement {
     const showEmptyState = !loading && !error && filteredPlacemarks.length === 0;
     const filtersPristine = React.useMemo(() => {
         if (search.trim()) return false;
-        for (const status of ALL_STATUSES) {
+        for (const status of availableStatuses) {
             const expected = status !== 'Agreed';
             if (statusFilter[status] !== expected) return false;
         }
-        for (const pr of ALL_PRIORITIES) {
+        for (const pr of availablePriorities) {
             if (!priorityFilter[pr]) return false;
         }
         return true;
-    }, [priorityFilter, search, statusFilter]);
+    }, [availablePriorities, availableStatuses, priorityFilter, search, statusFilter]);
 
     const buildBalloonContent = React.useCallback(
         (point: MapPoint) => {
@@ -360,6 +398,12 @@ export default function ProjectTaskLocation(): React.ReactElement {
                 point.projectName || point.projectKey
                     ? `<div style="margin-bottom:4px;">Проект: ${point.projectName ?? point.projectKey}</div>`
                     : '';
+            const orgLine = point.orgName
+                ? `<div style="margin-bottom:4px;">Организация: ${point.orgName}</div>`
+                : '';
+            const operatorLine = point.operatorLabel
+                ? `<div style="margin-bottom:4px;">Оператор: ${point.operatorLabel}</div>`
+                : '';
             const executorLine =
                 point.executorName || point.executorEmail
                     ? `<div style="margin-bottom:4px;">Исполнитель: ${point.executorName ?? point.executorEmail}</div>`
@@ -368,7 +412,9 @@ export default function ProjectTaskLocation(): React.ReactElement {
             <div style="font-weight:600;margin-bottom:4px;">БС ${point.bsNumber}</div>
             <div style="margin-bottom:4px;">ID задачи: ${point.taskId || '—'}</div>
             <div style="margin-bottom:4px;">${point.taskName || '—'}</div>
+            ${orgLine}
             ${projectLine}
+            ${operatorLine}
             ${statusLine}
             ${priorityLine}
             ${executorLine}
@@ -416,6 +462,21 @@ export default function ProjectTaskLocation(): React.ReactElement {
             low: true,
         });
     }, []);
+
+    const activeStatusCount = React.useMemo(
+        () => availableStatuses.filter((status) => statusFilter[status]).length,
+        [availableStatuses, statusFilter]
+    );
+    const activePriorityCount = React.useMemo(
+        () => availablePriorities.filter((priority) => priorityFilter[priority]).length,
+        [availablePriorities, priorityFilter]
+    );
+    const statusLabel = availableStatuses.length
+        ? `Статусы · ${activeStatusCount}/${availableStatuses.length}`
+        : 'Статусы';
+    const priorityLabel = availablePriorities.length
+        ? `Приоритет · ${activePriorityCount}/${availablePriorities.length}`
+        : 'Приоритет';
 
     return (
         <Box
@@ -503,7 +564,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
                             <Stack spacing={1}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                        Статусы
+                                        {statusLabel}
                                     </Typography>
                                     <Tooltip title="Сбросить фильтры">
                                         <IconButton size="small" onClick={resetFilters}>
@@ -512,7 +573,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                     </Tooltip>
                                 </Box>
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                    {ALL_STATUSES.map((status) => {
+                                    {availableStatuses.map((status) => {
                                         const active = statusFilter[status];
                                         return (
                                             <Chip
@@ -535,6 +596,16 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                                         }}
                                                     />
                                                 }
+                                                onDelete={
+                                                    active
+                                                        ? () =>
+                                                              setStatusFilter((prev) => ({
+                                                                  ...prev,
+                                                                  [status]: false,
+                                                              }))
+                                                        : undefined
+                                                }
+                                                deleteIcon={active ? <CloseRoundedIcon fontSize="small" /> : undefined}
                                                 variant={active ? 'filled' : 'outlined'}
                                                 sx={{
                                                     backgroundColor: active
@@ -542,6 +613,10 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                                         : 'transparent',
                                                     borderColor: alpha(getStatusColor(status), active ? 0.32 : 0.4),
                                                     color: active ? theme.palette.text.primary : theme.palette.text.secondary,
+                                                    fontWeight: active ? 700 : 500,
+                                                    boxShadow: active
+                                                        ? `0 10px 20px ${alpha(getStatusColor(status), isDark ? 0.35 : 0.2)}`
+                                                        : 'none',
                                                     '&:hover': {
                                                         backgroundColor: alpha(getStatusColor(status), isDark ? 0.28 : 0.2),
                                                     },
@@ -554,10 +629,10 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                 <Divider flexItem sx={{ my: 0.5, opacity: 0.35 }} />
 
                                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                    Приоритет
+                                    {priorityLabel}
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                    {ALL_PRIORITIES.map((priority) => {
+                                    {availablePriorities.map((priority) => {
                                         const active = priorityFilter[priority];
                                         const icon = getPriorityIcon(priority, { fontSize: 18 });
                                         return (
@@ -572,6 +647,16 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                                 }
                                                 size="small"
                                                 icon={icon ?? undefined}
+                                                onDelete={
+                                                    active
+                                                        ? () =>
+                                                              setPriorityFilter((prev) => ({
+                                                                  ...prev,
+                                                                  [priority]: false,
+                                                              }))
+                                                        : undefined
+                                                }
+                                                deleteIcon={active ? <CloseRoundedIcon fontSize="small" /> : undefined}
                                                 variant={active ? 'filled' : 'outlined'}
                                                 sx={{
                                                     backgroundColor: active
@@ -579,6 +664,10 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                                         : 'transparent',
                                                     color: active ? theme.palette.text.primary : theme.palette.text.secondary,
                                                     borderColor: alpha(accentBase, isDark ? 0.3 : 0.2),
+                                                    fontWeight: active ? 700 : 500,
+                                                    boxShadow: active
+                                                        ? `0 10px 20px ${alpha(accentBase, isDark ? 0.4 : 0.18)}`
+                                                        : 'none',
                                                     '&:hover': {
                                                         backgroundColor: alpha(accentBase, isDark ? 0.45 : 0.18),
                                                     },
