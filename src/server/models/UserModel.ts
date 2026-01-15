@@ -28,6 +28,8 @@ export interface IUser extends Document {
     rating?: number;
     profileStatus?: 'pending' | 'approved' | 'rejected';
     moderationComment?: string;
+    consentAcceptedAt?: Date | null;
+    consentVersion?: string;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -90,6 +92,8 @@ const UserSchema = new Schema<IUser>(
             default: 'pending',
         },
         moderationComment: { type: String, default: '' },
+        consentAcceptedAt: { type: Date, default: null },
+        consentVersion: { type: String, default: '' },
     },
     { timestamps: true, collection: 'users' }
 );

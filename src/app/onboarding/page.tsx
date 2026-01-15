@@ -13,6 +13,13 @@ import {
   Stack,
   Chip,
   Button,
+  Checkbox,
+  FormControlLabel,
+  Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -26,6 +33,8 @@ import {
 } from '@/app/utils/regions';
 import type { Theme } from '@mui/material/styles';
 import { UI_RADIUS } from '@/config/uiTokens';
+import NextLink from 'next/link';
+import { CONSENT_VERSION } from '@/config/legal';
 
 type ProfileResponse = {
   profileType?: ProfileType;
@@ -123,6 +132,8 @@ export default function OnboardingPage() {
   const [selectedType, setSelectedType] = useState<ProfileType | null>(null);
   const [roleStepVisible, setRoleStepVisible] = useState(false);
   const roleSectionRef = useRef<HTMLDivElement | null>(null);
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [consentDialogOpen, setConsentDialogOpen] = useState(false);
   const [formValues, setFormValues] = useState<ProfileFormValues>({
     firstName: '',
     lastName: '',
@@ -224,6 +235,10 @@ export default function OnboardingPage() {
   };
 
   const handleContinue = () => {
+    if (!consentAccepted) {
+      setError('Для продолжения примите согласие на обработку персональных данных.');
+      return;
+    }
     const trimmed = getTrimmedFormValues();
     if (!trimmed) {
       return;
@@ -233,6 +248,10 @@ export default function OnboardingPage() {
   };
 
   const handleSelect = async (profileType: ProfileType) => {
+    if (!consentAccepted) {
+      setError('Для продолжения примите согласие на обработку персональных данных.');
+      return;
+    }
     const trimmedValues = getTrimmedFormValues();
     if (!trimmedValues) {
       return;
@@ -248,6 +267,9 @@ export default function OnboardingPage() {
         body: JSON.stringify({
           profileType,
           ...trimmedValues,
+          consentAccepted,
+          consentVersion: CONSENT_VERSION,
+          consentAcceptedAt: consentAccepted ? new Date().toISOString() : null,
         }),
       });
       const data = await res.json();
@@ -298,6 +320,7 @@ export default function OnboardingPage() {
       Boolean(formValues.lastName.trim()) &&
       Boolean(formValues.regionCode.trim()) &&
       isPhoneValid(formValues.phone);
+  const canContinue = isFormValid && consentAccepted;
 
   const currentRegion: RegionOption | null =
       RUSSIAN_REGIONS.find((region) => region.code === formValues.regionCode) ??
@@ -554,6 +577,49 @@ export default function OnboardingPage() {
                     их только для уведомлений.
                   </Typography>
 
+                  <Stack spacing={1.5} sx={{ width: '100%' }}>
+                    <Stack direction='row' spacing={1} alignItems='flex-start'>
+                      <FormControlLabel
+                          sx={{ alignItems: 'flex-start', m: 0, flex: 1 }}
+                          control={(
+                              <Checkbox
+                                  checked={consentAccepted}
+                                  onChange={(event) => {
+                                    setConsentAccepted(event.target.checked);
+                                    if (event.target.checked) {
+                                      setError(null);
+                                    }
+                                  }}
+                              />
+                          )}
+                          label={(
+                              <Typography variant='body2' color='text.secondary'>
+                                Я принимаю{' '}
+                                <Link component={NextLink} href='#'>
+                                  Пользовательское соглашение
+                                </Link>{' '}
+                                и даю{' '}
+                                <Link component={NextLink} href='/consent'>
+                                  согласие
+                                </Link>{' '}
+                                на обработку персональных данных, ознакомлен(а) с{' '}
+                                <Link component={NextLink} href='/privacy'>
+                                  политикой конфиденциальности
+                                </Link>
+                                .
+                              </Typography>
+                          )}
+                      />
+                      <Button
+                          size='small'
+                          variant='text'
+                          onClick={() => setConsentDialogOpen(true)}
+                      >
+                        Что это значит?
+                      </Button>
+                    </Stack>
+                  </Stack>
+
                   <Box
                       sx={{
                         display: 'flex',
@@ -565,7 +631,7 @@ export default function OnboardingPage() {
                         variant='contained'
                         size='large'
                         onClick={handleContinue}
-                        disabled={!isFormValid}
+                        disabled={!canContinue}
                         sx={{ minWidth: 180 }}
                     >
                       Далее
@@ -634,7 +700,7 @@ export default function OnboardingPage() {
                                     description={option.description}
                                     helperText={option.helperText}
                                     onSelect={() => handleSelect(option.type)}
-                                    disabled={!isFormValid || Boolean(savingType)}
+                                    disabled={!canContinue || Boolean(savingType)}
                                     selected={selectedType === option.type}
                                     icon={option.icon}
                                     actionLabel={
@@ -682,6 +748,47 @@ export default function OnboardingPage() {
             </Paper>
           </Box>
         </Container>
+
+        <Dialog
+            open={consentDialogOpen}
+            onClose={() => setConsentDialogOpen(false)}
+            fullWidth
+            maxWidth='sm'
+        >
+          <DialogTitle>Что это значит?</DialogTitle>
+          <DialogContent dividers>
+            <Stack component='ul' spacing={1.5} sx={{ pl: 2, m: 0 }}>
+              <Typography component='li' variant='body2'>
+                Данные (ФИО, телефон, email, регион) нужны для регистрации и работы
+                сервиса.
+              </Typography>
+              <Typography component='li' variant='body2'>
+                Контакты могут быть видны другим пользователям только в рамках
+                задач или организации.
+              </Typography>
+              <Typography component='li' variant='body2'>
+                Сообщения и медиа в чате используются только для выполнения задач.
+              </Typography>
+              <Typography component='li' variant='body2'>
+                Документы (сметы/заказы), загружаемые пользователем, могут
+                содержать данные третьих лиц, ответственность за законность
+                загрузки лежит на пользователе.
+              </Typography>
+              <Typography component='li' variant='body2'>
+                Данные хранятся на серверах в РФ.
+              </Typography>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button component={NextLink} href='/privacy'>
+              Открыть политику
+            </Button>
+            <Button component={NextLink} href='/consent'>
+              Открыть согласие
+            </Button>
+            <Button onClick={() => setConsentDialogOpen(false)}>Закрыть</Button>
+          </DialogActions>
+        </Dialog>
       </Box>
   );
 }

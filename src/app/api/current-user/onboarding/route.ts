@@ -14,6 +14,9 @@ type OnboardingPayload = {
   lastName?: string;
   phone?: string;
   regionCode?: string;
+  consentAccepted?: boolean;
+  consentVersion?: string;
+  consentAcceptedAt?: string;
 };
 
 const REGION_CODES = new Set(RUSSIAN_REGIONS.map((region) => region.code));
@@ -43,6 +46,16 @@ export async function POST(request: Request) {
   const lastName = (body.lastName ?? '').trim();
   const phone = (body.phone ?? '').trim();
   const regionCode = (body.regionCode ?? '').trim();
+  const consentAccepted = body.consentAccepted === true;
+  const consentVersion = (body.consentVersion ?? '').trim();
+  const consentAcceptedAt = (body.consentAcceptedAt ?? '').trim();
+
+  if (!consentAccepted) {
+    return NextResponse.json(
+      { error: 'Для продолжения примите согласие на обработку персональных данных.' },
+      { status: 400 }
+    );
+  }
 
   if (!firstName || !lastName || !phone || !regionCode) {
     return NextResponse.json(
@@ -69,6 +82,8 @@ export async function POST(request: Request) {
     name: fullName,
     phone,
     regionCode,
+    consentAcceptedAt: consentAcceptedAt ? new Date(consentAcceptedAt) : new Date(),
+    consentVersion,
   };
 
   if (profileType === 'contractor') {

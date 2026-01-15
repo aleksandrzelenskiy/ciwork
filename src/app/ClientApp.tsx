@@ -29,6 +29,8 @@ import {
     ListItem,
     ListItemText,
     Button,
+    Link,
+    Stack,
 } from '@mui/material';
 import { Menu as MenuIcon } from '@mui/icons-material';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
@@ -43,6 +45,7 @@ import MessengerTrigger from '@/features/messenger/MessengerTrigger';
 import RubleAmount from '@/features/shared/RubleAmount';
 import dayjs from 'dayjs';
 import { UI_RADIUS } from '@/config/uiTokens';
+import NextLink from 'next/link';
 
 const getTransactionDescription = (source: string) => {
   switch (source) {
@@ -769,7 +772,24 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                       mt: 2,
                     }}
                   >
-                    © CI Work {currentYear}
+                    <Stack
+                      spacing={1}
+                      alignItems='center'
+                      justifyContent='center'
+                      sx={{ fontSize: '0.9rem' }}
+                    >
+                      <Stack direction='row' spacing={2} flexWrap='wrap' justifyContent='center'>
+                        <Link component={NextLink} href='/privacy' color='text.secondary'>
+                          Политика конфиденциальности
+                        </Link>
+                        <Link component={NextLink} href='/consent' color='text.secondary'>
+                          Согласие на обработку ПДн
+                        </Link>
+                      </Stack>
+                      <Typography variant='body2' color='text.secondary'>
+                        © CI Work {currentYear}
+                      </Typography>
+                    </Stack>
                   </Box>
                 </Box>
               </>
