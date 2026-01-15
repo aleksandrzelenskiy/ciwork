@@ -1,5 +1,5 @@
-import AdminTasksPage from '@/features/admin/AdminTasksPage';
+import TasksAdmin from '@/features/admin/TasksAdmin';
 
 export default function AdminTasksRoute() {
-    return <AdminTasksPage />;
+    return <TasksAdmin />;
 }

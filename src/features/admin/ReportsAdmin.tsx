@@ -141,7 +141,7 @@ const getReportHref = (report: AdminReport) => {
     )}/tasks/${encodeURIComponent(report.taskId)}`;
 };
 
-export default function AdminReportsPage() {
+export default function ReportsAdmin() {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
     const headerBg = isDarkMode ? 'rgba(17,22,33,0.85)' : 'rgba(255,255,255,0.55)';

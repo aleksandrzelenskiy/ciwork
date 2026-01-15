@@ -11,8 +11,8 @@ import { useSearchParams } from 'next/navigation';
 import OrganizationsAdmin from '@/features/admin/OrganizationsAdmin';
 import UsersAdmin from '@/features/admin/UsersAdmin';
 import PlanConfigAdmin from '@/features/admin/PlanConfigAdmin';
-import AdminTasksPage from '@/features/admin/AdminTasksPage';
-import AdminReportsPage from '@/features/admin/AdminReportsPage';
+import TasksAdmin from '@/features/admin/TasksAdmin';
+import ReportsAdmin from '@/features/admin/ReportsAdmin';
 import { UI_RADIUS } from '@/config/uiTokens';
 
 type AdminTab = 'organizations' | 'users' | 'plans' | 'tasks' | 'reports';
@@ -150,8 +150,8 @@ export default function AdminPage() {
             {tab === 'organizations' && <OrganizationsAdmin />}
             {tab === 'users' && <UsersAdmin focusUserId={focusUserId} />}
             {tab === 'plans' && <PlanConfigAdmin />}
-            {tab === 'tasks' && <AdminTasksPage />}
-            {tab === 'reports' && <AdminReportsPage />}
+            {tab === 'tasks' && <TasksAdmin />}
+            {tab === 'reports' && <ReportsAdmin />}
         </Box>
     );
 }

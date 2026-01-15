@@ -34,7 +34,9 @@ import { useTheme } from '@mui/material/styles';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import EditOutlined from '@mui/icons-material/EditOutlined';
 import GavelOutlined from '@mui/icons-material/GavelOutlined';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type UserRow = {
     clerkUserId: string;
@@ -63,6 +65,23 @@ type UsersAdminProps = {
 export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
+    const headerBg = isDarkMode ? 'rgba(17,22,33,0.85)' : 'rgba(255,255,255,0.55)';
+    const headerBorder = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)';
+    const headerShadow = isDarkMode ? '0 25px 70px rgba(0,0,0,0.55)' : '0 25px 80px rgba(15,23,42,0.1)';
+    const sectionBg = isDarkMode ? 'rgba(18,24,36,0.85)' : 'rgba(255,255,255,0.65)';
+    const sectionBorder = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)';
+    const sectionShadow = isDarkMode ? '0 35px 90px rgba(0,0,0,0.5)' : '0 35px 90px rgba(15,23,42,0.15)';
+    const textPrimary = isDarkMode ? '#f8fafc' : '#0f172a';
+    const textSecondary = isDarkMode ? 'rgba(226,232,240,0.8)' : 'rgba(15,23,42,0.7)';
+    const iconBorderColor = isDarkMode ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.12)';
+    const iconBg = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)';
+    const iconHoverBg = isDarkMode ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.9)';
+    const iconShadow = isDarkMode ? '0 6px 18px rgba(0,0,0,0.4)' : '0 6px 18px rgba(15,23,42,0.08)';
+    const iconText = textPrimary;
+    const tableBg = isDarkMode ? 'rgba(10,13,20,0.92)' : '#ffffff';
+    const headBg = isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(248,250,252,0.95)';
+    const cellBorder = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
+    const tableShadow = isDarkMode ? '0 25px 70px rgba(0,0,0,0.55)' : '0 20px 50px rgba(15,23,42,0.12)';
     const normalizedFocusUserId = normalizeValue(focusUserId);
     const focusRowRef = React.useRef<HTMLTableRowElement | null>(null);
     const focusAppliedRef = React.useRef<string | null>(null);
@@ -329,257 +348,311 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
         }
     };
 
-    const containerSx = {
-        backgroundColor: isDarkMode ? 'rgba(15,23,42,0.8)' : '#fff',
-        border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'}`,
-        borderRadius: 3,
-        boxShadow: isDarkMode
-            ? '0 40px 90px rgba(0,0,0,0.55)'
-            : '0 40px 80px rgba(15,23,42,0.15)',
-    } as const;
+    const userCount = users.length;
 
     return (
-        <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 3, md: 5 }, minHeight: '100vh' }}>
-            <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                spacing={2}
-                alignItems="flex-start"
-                justifyContent="space-between"
-                sx={{ mb: 3 }}
-            >
-                <Stack spacing={0.5}>
-                    <Typography variant="h5" fontWeight={700}>
-                        Администрирование пользователей
-                    </Typography>
-                    <Typography color="text.secondary" variant="body2">
-                        Список пользователей платформы и их текущие роли.
-                    </Typography>
-                </Stack>
-                <Stack direction="row" spacing={1} alignItems="center">
-                    <FormControl size="small" sx={{ minWidth: 200 }}>
-                        <InputLabel id="user-moderation-filter-label">
-                            Модерация
-                        </InputLabel>
-                        <Select
-                            labelId="user-moderation-filter-label"
-                            label="Модерация"
-                            value={filterStatus}
-                            onChange={(event) =>
-                                setFilterStatus(
-                                    event.target.value as
-                                        | 'all'
-                                        | 'pending'
-                                        | 'approved'
-                                        | 'rejected'
-                                )
-                            }
-                        >
-                            <MenuItem value="all">Все</MenuItem>
-                            <MenuItem value="pending">На модерации</MenuItem>
-                            <MenuItem value="approved">Подтвержден</MenuItem>
-                            <MenuItem value="rejected">Отклонен</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <Button
-                        variant="outlined"
-                        onClick={() => void fetchUsers()}
-                        disabled={loading}
+        <Box
+            sx={{
+                minHeight: '100%',
+                py: { xs: 4, md: 6 },
+                px: { xs: 0.25, md: 6 },
+            }}
+        >
+            <Box sx={{ maxWidth: 1320, mx: 'auto', width: '100%' }}>
+                <Box
+                    sx={{
+                        mb: 3,
+                        borderRadius: UI_RADIUS.surface,
+                        p: { xs: 2, md: 3 },
+                        backgroundColor: headerBg,
+                        border: `1px solid ${headerBorder}`,
+                        boxShadow: headerShadow,
+                        backdropFilter: 'blur(22px)',
+                    }}
+                >
+                    <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={2}
+                        alignItems={{ xs: 'flex-start', md: 'center' }}
+                        justifyContent="space-between"
                     >
-                        {loading ? 'Обновляем…' : 'Обновить список'}
-                    </Button>
-                </Stack>
-            </Stack>
-
-            {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    {error}
-                </Alert>
-            )}
-
-            <Paper elevation={0} sx={{ ...containerSx, overflow: 'hidden' }}>
-                <TableContainer>
-                    <Table size="small">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Пользователь</TableCell>
-                                <TableCell>Email</TableCell>
-                                <TableCell>Роль</TableCell>
-                                <TableCell>Модерация</TableCell>
-                                <TableCell>Баланс</TableCell>
-                                <TableCell align="right">Действия</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} align="center">
-                                        <Stack
-                                            direction="row"
-                                            spacing={1}
-                                            alignItems="center"
-                                            justifyContent="center"
-                                        >
-                                            <CircularProgress size={20} />
-                                            <Typography>Загрузка …</Typography>
-                                        </Stack>
-                                    </TableCell>
-                                </TableRow>
-                            ) : filteredUsers.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} align="center">
-                                        Нет пользователей
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredUsers.map((user) => (
-                                    <TableRow
-                                        key={user.clerkUserId}
-                                        ref={
-                                            user.clerkUserId === normalizedFocusUserId
-                                                ? focusRowRef
-                                                : undefined
-                                        }
-                                        hover
-                                        selected={user.clerkUserId === normalizedFocusUserId}
+                        <Box>
+                            <Typography
+                                variant="h5"
+                                fontWeight={700}
+                                color={textPrimary}
+                                sx={{ fontSize: { xs: '1.6rem', md: '1.95rem' } }}
+                            >
+                                Администрирование пользователей
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                color={textSecondary}
+                                sx={{ fontSize: { xs: '0.95rem', md: '1.05rem' }, mt: 0.5 }}
+                            >
+                                {loading
+                                    ? 'Загружаем пользователей...'
+                                    : `Всего пользователей: ${userCount}.`}
+                            </Typography>
+                            {error && (
+                                <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                                    {error}
+                                </Typography>
+                            )}
+                        </Box>
+                        <Stack direction="row" spacing={1.25} alignItems="center">
+                            <FormControl size="small" sx={{ minWidth: 200 }}>
+                                <InputLabel id="user-moderation-filter-label">
+                                    Модерация
+                                </InputLabel>
+                                <Select
+                                    labelId="user-moderation-filter-label"
+                                    label="Модерация"
+                                    value={filterStatus}
+                                    onChange={(event) =>
+                                        setFilterStatus(
+                                            event.target.value as
+                                                | 'all'
+                                                | 'pending'
+                                                | 'approved'
+                                                | 'rejected'
+                                        )
+                                    }
+                                >
+                                    <MenuItem value="all">Все</MenuItem>
+                                    <MenuItem value="pending">На модерации</MenuItem>
+                                    <MenuItem value="approved">Подтвержден</MenuItem>
+                                    <MenuItem value="rejected">Отклонен</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <Tooltip title="Обновить">
+                                <span>
+                                    <IconButton
+                                        onClick={() => void fetchUsers()}
+                                        disabled={loading}
                                         sx={{
-                                            ...(user.clerkUserId === normalizedFocusUserId
-                                                ? {
-                                                      animation: 'focusPulse 2.4s ease-out 1',
-                                                  }
-                                                : {}),
-                                            '@keyframes focusPulse': {
-                                                '0%': {
-                                                    boxShadow: '0 0 0 rgba(14,116,144,0)',
-                                                },
-                                                '40%': {
-                                                    boxShadow: isDarkMode
-                                                        ? '0 0 0 4px rgba(14,116,144,0.35)'
-                                                        : '0 0 0 4px rgba(14,116,144,0.22)',
-                                                },
-                                                '100%': {
-                                                    boxShadow: '0 0 0 rgba(14,116,144,0)',
-                                                },
-                                            },
-                                            '&.Mui-selected': {
-                                                backgroundColor: isDarkMode
-                                                    ? 'rgba(14,116,144,0.22)'
-                                                    : 'rgba(14,116,144,0.12)',
-                                            },
-                                            '&.Mui-selected:hover': {
-                                                backgroundColor: isDarkMode
-                                                    ? 'rgba(14,116,144,0.3)'
-                                                    : 'rgba(14,116,144,0.18)',
+                                            borderRadius: UI_RADIUS.overlay,
+                                            border: `1px solid ${iconBorderColor}`,
+                                            backgroundColor: iconBg,
+                                            color: iconText,
+                                            boxShadow: iconShadow,
+                                            backdropFilter: 'blur(14px)',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                backgroundColor: iconHoverBg,
                                             },
                                         }}
                                     >
-                                        <TableCell>
-                                            <ButtonBase
-                                                onClick={() => handleOpenProfile(user)}
-                                                aria-label={`Открыть профиль ${normalizeValue(user.name) || user.clerkUserId}`}
-                                                sx={{
-                                                    width: '100%',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'flex-start',
-                                                    textAlign: 'left',
-                                                    borderRadius: 1,
-                                                    py: 0.5,
-                                                    px: 0.5,
-                                                    '&:hover': {
-                                                        backgroundColor: 'action.hover',
-                                                    },
-                                                }}
+                                        <RefreshIcon />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                        </Stack>
+                    </Stack>
+                </Box>
+
+                <Paper
+                    variant="outlined"
+                    sx={{
+                        p: { xs: 2, md: 3 },
+                        borderRadius: UI_RADIUS.surface,
+                        border: `1px solid ${sectionBorder}`,
+                        backgroundColor: sectionBg,
+                        boxShadow: sectionShadow,
+                        backdropFilter: 'blur(18px)',
+                    }}
+                >
+                    <TableContainer sx={{ borderRadius: UI_RADIUS.panel, boxShadow: tableShadow, bgcolor: tableBg }}>
+                        <Table size="small" stickyHeader>
+                            <TableHead>
+                                <TableRow sx={{ '& th': { bgcolor: headBg, borderColor: cellBorder } }}>
+                                    <TableCell>Пользователь</TableCell>
+                                    <TableCell>Email</TableCell>
+                                    <TableCell>Роль</TableCell>
+                                    <TableCell>Модерация</TableCell>
+                                    <TableCell>Баланс</TableCell>
+                                    <TableCell align="right">Действия</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center">
+                                            <Stack
+                                                direction="row"
+                                                spacing={1}
+                                                alignItems="center"
+                                                justifyContent="center"
                                             >
-                                                <Stack direction="row" spacing={1.5} alignItems="center">
-                                                    <Avatar
-                                                        src={user.profilePic || undefined}
-                                                        alt={normalizeValue(user.name) || 'User'}
-                                                    >
-                                                        {normalizeValue(user.name).slice(0, 1).toUpperCase()}
-                                                    </Avatar>
-                                                    <Typography fontWeight={600}>
-                                                        {normalizeValue(user.name) || '—'}
-                                                    </Typography>
-                                                </Stack>
-                                            </ButtonBase>
-                                        </TableCell>
-                                        <TableCell>{normalizeValue(user.email) || '—'}</TableCell>
-                                        <TableCell>
-                                            {normalizeValue(user.role) ? (
-                                                <Typography fontWeight={600}>
-                                                    {normalizeValue(user.role)}
-                                                </Typography>
-                                            ) : (
-                                                '—'
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Chip
-                                                size="small"
-                                                label={
-                                                    user.moderationStatus === 'approved'
-                                                        ? 'Подтвержден'
-                                                        : user.moderationStatus === 'rejected'
-                                                            ? 'Отклонен'
-                                                            : 'На модерации'
-                                                }
-                                                color={
-                                                    user.moderationStatus === 'approved'
-                                                        ? 'success'
-                                                        : user.moderationStatus === 'rejected'
-                                                            ? 'error'
-                                                            : 'primary'
-                                                }
-                                                variant={
-                                                    user.moderationStatus === 'pending'
-                                                        ? 'outlined'
-                                                        : 'filled'
-                                                }
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            {Number.isFinite(user.walletBalance)
-                                                ? `${user.walletBalance} ${user.walletCurrency || 'RUB'}`
-                                                : '—'}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                                <Tooltip title="Модерация профиля">
-                                                    <IconButton
-                                                        color="secondary"
-                                                        size="small"
-                                                        onClick={() => handleOpenModeration(user)}
-                                                    >
-                                                        <GavelOutlined fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Изменить">
-                                                    <IconButton
-                                                        color="primary"
-                                                        size="small"
-                                                        onClick={() => handleOpenDialog(user)}
-                                                    >
-                                                        <EditOutlined fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Удалить">
-                                                    <IconButton
-                                                        color="error"
-                                                        size="small"
-                                                        onClick={() => handleOpenDelete(user)}
-                                                    >
-                                                        <DeleteOutline fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
+                                                <CircularProgress size={20} />
+                                                <Typography>Загрузка …</Typography>
                                             </Stack>
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
+                                ) : filteredUsers.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} align="center">
+                                            Нет пользователей
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredUsers.map((user) => (
+                                        <TableRow
+                                            key={user.clerkUserId}
+                                            ref={
+                                                user.clerkUserId === normalizedFocusUserId
+                                                    ? focusRowRef
+                                                    : undefined
+                                            }
+                                            hover
+                                            selected={user.clerkUserId === normalizedFocusUserId}
+                                            sx={{
+                                                '& td': { borderColor: cellBorder },
+                                                ...(user.clerkUserId === normalizedFocusUserId
+                                                    ? {
+                                                          animation: 'focusPulse 2.4s ease-out 1',
+                                                      }
+                                                    : {}),
+                                                '@keyframes focusPulse': {
+                                                    '0%': {
+                                                        boxShadow: '0 0 0 rgba(14,116,144,0)',
+                                                    },
+                                                    '40%': {
+                                                        boxShadow: isDarkMode
+                                                            ? '0 0 0 4px rgba(14,116,144,0.35)'
+                                                            : '0 0 0 4px rgba(14,116,144,0.22)',
+                                                    },
+                                                    '100%': {
+                                                        boxShadow: '0 0 0 rgba(14,116,144,0)',
+                                                    },
+                                                },
+                                                '&.Mui-selected': {
+                                                    backgroundColor: isDarkMode
+                                                        ? 'rgba(14,116,144,0.22)'
+                                                        : 'rgba(14,116,144,0.12)',
+                                                },
+                                                '&.Mui-selected:hover': {
+                                                    backgroundColor: isDarkMode
+                                                        ? 'rgba(14,116,144,0.3)'
+                                                        : 'rgba(14,116,144,0.18)',
+                                                },
+                                                '&:hover': {
+                                                    backgroundColor: isDarkMode
+                                                        ? 'rgba(255,255,255,0.08)'
+                                                        : '#fffde7',
+                                                },
+                                            }}
+                                        >
+                                            <TableCell>
+                                                <ButtonBase
+                                                    onClick={() => handleOpenProfile(user)}
+                                                    aria-label={`Открыть профиль ${normalizeValue(user.name) || user.clerkUserId}`}
+                                                    sx={{
+                                                        width: '100%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'flex-start',
+                                                        textAlign: 'left',
+                                                        borderRadius: 1,
+                                                        py: 0.5,
+                                                        px: 0.5,
+                                                        '&:hover': {
+                                                            backgroundColor: 'action.hover',
+                                                        },
+                                                    }}
+                                                >
+                                                    <Stack direction="row" spacing={1.5} alignItems="center">
+                                                        <Avatar
+                                                            src={user.profilePic || undefined}
+                                                            alt={normalizeValue(user.name) || 'User'}
+                                                        >
+                                                            {normalizeValue(user.name).slice(0, 1).toUpperCase()}
+                                                        </Avatar>
+                                                        <Typography fontWeight={600}>
+                                                            {normalizeValue(user.name) || '—'}
+                                                        </Typography>
+                                                    </Stack>
+                                                </ButtonBase>
+                                            </TableCell>
+                                            <TableCell>{normalizeValue(user.email) || '—'}</TableCell>
+                                            <TableCell>
+                                                {normalizeValue(user.role) ? (
+                                                    <Typography fontWeight={600}>
+                                                        {normalizeValue(user.role)}
+                                                    </Typography>
+                                                ) : (
+                                                    '—'
+                                                )}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    size="small"
+                                                    label={
+                                                        user.moderationStatus === 'approved'
+                                                            ? 'Подтвержден'
+                                                            : user.moderationStatus === 'rejected'
+                                                                ? 'Отклонен'
+                                                                : 'На модерации'
+                                                    }
+                                                    color={
+                                                        user.moderationStatus === 'approved'
+                                                            ? 'success'
+                                                            : user.moderationStatus === 'rejected'
+                                                                ? 'error'
+                                                                : 'primary'
+                                                    }
+                                                    variant={
+                                                        user.moderationStatus === 'pending'
+                                                            ? 'outlined'
+                                                            : 'filled'
+                                                    }
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                {Number.isFinite(user.walletBalance)
+                                                    ? `${user.walletBalance} ${user.walletCurrency || 'RUB'}`
+                                                    : '—'}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                    <Tooltip title="Модерация профиля">
+                                                        <IconButton
+                                                            color="secondary"
+                                                            size="small"
+                                                            onClick={() => handleOpenModeration(user)}
+                                                        >
+                                                            <GavelOutlined fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Изменить">
+                                                        <IconButton
+                                                            color="primary"
+                                                            size="small"
+                                                            onClick={() => handleOpenDialog(user)}
+                                                        >
+                                                            <EditOutlined fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Удалить">
+                                                        <IconButton
+                                                            color="error"
+                                                            size="small"
+                                                            onClick={() => handleOpenDelete(user)}
+                                                        >
+                                                            <DeleteOutline fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Stack>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Paper>
+            </Box>
 
             <Dialog open={Boolean(selectedUser)} onClose={handleCloseDialog} fullWidth maxWidth="sm">
                 <DialogTitle>Пополнить кошелек</DialogTitle>

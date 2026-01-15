@@ -1,5 +1,5 @@
-import AdminReportsPage from '@/features/admin/AdminReportsPage';
+import ReportsAdmin from '@/features/admin/ReportsAdmin';
 
 export default function AdminReportsRoute() {
-    return <AdminReportsPage />;
+    return <ReportsAdmin />;
 }

@@ -31,6 +31,9 @@ import Tooltip from '@mui/material/Tooltip';
 import { useTheme } from '@mui/material/styles';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import EditOutlined from '@mui/icons-material/EditOutlined';
+import RefreshIcon from '@mui/icons-material/Refresh';
+
+import { UI_RADIUS } from '@/config/uiTokens';
 
 type Plan = 'basic' | 'pro' | 'business' | 'enterprise';
 type SubStatus = 'active' | 'trial' | 'suspended' | 'past_due' | 'inactive';
@@ -113,6 +116,23 @@ const formatDate = (value?: string | null): string => {
 export default function OrganizationsAdmin() {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
+    const headerBg = isDarkMode ? 'rgba(17,22,33,0.85)' : 'rgba(255,255,255,0.55)';
+    const headerBorder = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)';
+    const headerShadow = isDarkMode ? '0 25px 70px rgba(0,0,0,0.55)' : '0 25px 80px rgba(15,23,42,0.1)';
+    const sectionBg = isDarkMode ? 'rgba(18,24,36,0.85)' : 'rgba(255,255,255,0.65)';
+    const sectionBorder = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)';
+    const sectionShadow = isDarkMode ? '0 35px 90px rgba(0,0,0,0.5)' : '0 35px 90px rgba(15,23,42,0.15)';
+    const textPrimary = isDarkMode ? '#f8fafc' : '#0f172a';
+    const textSecondary = isDarkMode ? 'rgba(226,232,240,0.8)' : 'rgba(15,23,42,0.7)';
+    const iconBorderColor = isDarkMode ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.12)';
+    const iconBg = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)';
+    const iconHoverBg = isDarkMode ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.9)';
+    const iconShadow = isDarkMode ? '0 6px 18px rgba(0,0,0,0.4)' : '0 6px 18px rgba(15,23,42,0.08)';
+    const iconText = textPrimary;
+    const tableBg = isDarkMode ? 'rgba(10,13,20,0.92)' : '#ffffff';
+    const headBg = isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(248,250,252,0.95)';
+    const cellBorder = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.06)';
+    const tableShadow = isDarkMode ? '0 25px 70px rgba(0,0,0,0.55)' : '0 20px 50px rgba(15,23,42,0.12)';
     const [organizations, setOrganizations] = React.useState<OrganizationRow[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
@@ -302,152 +322,213 @@ export default function OrganizationsAdmin() {
         />
     );
 
-    const containerSx = {
-        backgroundColor: isDarkMode ? 'rgba(15,23,42,0.8)' : '#fff',
-        border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'}`,
-        borderRadius: 3,
-        boxShadow: isDarkMode
-            ? '0 40px 90px rgba(0,0,0,0.55)'
-            : '0 40px 80px rgba(15,23,42,0.15)',
-    } as const;
+    const orgCount = organizations.length;
 
     return (
-        <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 3, md: 5 }, minHeight: '100vh' }}>
-            <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                spacing={2}
-                alignItems="flex-start"
-                justifyContent="space-between"
-                sx={{ mb: 3 }}
-            >
-                <Stack spacing={0.5}>
-                    <Typography variant="h5" fontWeight={700}>
-                        Администрирование организаций
-                    </Typography>
-                    <Typography color="text.secondary" variant="body2">
-                        Просматривайте текущий статус подписки и изменяйте тариф для любой организации.
-                    </Typography>
-                </Stack>
-                <Button
-                    variant="outlined"
-                    onClick={() => void fetchOrganizations()}
-                    disabled={loading}
+        <Box
+            sx={{
+                minHeight: '100%',
+                py: { xs: 4, md: 6 },
+                px: { xs: 0.25, md: 6 },
+            }}
+        >
+            <Box sx={{ maxWidth: 1320, mx: 'auto', width: '100%' }}>
+                <Box
+                    sx={{
+                        mb: 3,
+                        borderRadius: UI_RADIUS.surface,
+                        p: { xs: 2, md: 3 },
+                        backgroundColor: headerBg,
+                        border: `1px solid ${headerBorder}`,
+                        boxShadow: headerShadow,
+                        backdropFilter: 'blur(22px)',
+                    }}
                 >
-                    {loading ? 'Обновляем…' : 'Обновить список'}
-                </Button>
-            </Stack>
+                    <Stack
+                        direction={{ xs: 'column', md: 'row' }}
+                        spacing={2}
+                        alignItems={{ xs: 'flex-start', md: 'center' }}
+                        justifyContent="space-between"
+                    >
+                        <Box>
+                            <Typography
+                                variant="h5"
+                                fontWeight={700}
+                                color={textPrimary}
+                                sx={{ fontSize: { xs: '1.6rem', md: '1.95rem' } }}
+                            >
+                                Администрирование организаций
+                            </Typography>
+                            <Typography
+                                variant="body2"
+                                color={textSecondary}
+                                sx={{ fontSize: { xs: '0.95rem', md: '1.05rem' }, mt: 0.5 }}
+                            >
+                                {loading
+                                    ? 'Загружаем организации...'
+                                    : `Всего организаций: ${orgCount}.`}
+                            </Typography>
+                            {error && (
+                                <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                                    {error}
+                                </Typography>
+                            )}
+                        </Box>
+                        <Stack direction="row" spacing={1.25} alignItems="center">
+                            <Tooltip title="Обновить">
+                                <span>
+                                    <IconButton
+                                        onClick={() => void fetchOrganizations()}
+                                        disabled={loading}
+                                        sx={{
+                                            borderRadius: UI_RADIUS.overlay,
+                                            border: `1px solid ${iconBorderColor}`,
+                                            backgroundColor: iconBg,
+                                            color: iconText,
+                                            boxShadow: iconShadow,
+                                            backdropFilter: 'blur(14px)',
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                backgroundColor: iconHoverBg,
+                                            },
+                                        }}
+                                    >
+                                        <RefreshIcon />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                        </Stack>
+                    </Stack>
+                </Box>
 
-            {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    {error}
-                </Alert>
-            )}
-
-            <Paper elevation={0} sx={{ ...containerSx, overflow: 'hidden' }}>
-                <TableContainer>
-                    <Table size="small">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Организация</TableCell>
-                                <TableCell>Владелец</TableCell>
-                                <TableCell>Тариф</TableCell>
-                                <TableCell>Статус</TableCell>
-                                <TableCell>Лимиты</TableCell>
-                                <TableCell>Баланс</TableCell>
-                                <TableCell>Последнее обновление</TableCell>
-                                <TableCell align="right">Действия</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={8} align="center">
-                                        <Stack
-                                            direction="row"
-                                            spacing={1}
-                                            alignItems="center"
-                                            justifyContent="center"
-                                        >
-                                            <CircularProgress size={20} />
-                                            <Typography>Загрузка …</Typography>
-                                        </Stack>
-                                    </TableCell>
+                <Paper
+                    variant="outlined"
+                    sx={{
+                        p: { xs: 2, md: 3 },
+                        borderRadius: UI_RADIUS.surface,
+                        border: `1px solid ${sectionBorder}`,
+                        backgroundColor: sectionBg,
+                        boxShadow: sectionShadow,
+                        backdropFilter: 'blur(18px)',
+                    }}
+                >
+                    <TableContainer sx={{ borderRadius: UI_RADIUS.panel, boxShadow: tableShadow, bgcolor: tableBg }}>
+                        <Table size="small" stickyHeader>
+                            <TableHead>
+                                <TableRow sx={{ '& th': { bgcolor: headBg, borderColor: cellBorder } }}>
+                                    <TableCell>Организация</TableCell>
+                                    <TableCell>Владелец</TableCell>
+                                    <TableCell>Тариф</TableCell>
+                                    <TableCell>Статус</TableCell>
+                                    <TableCell>Лимиты</TableCell>
+                                    <TableCell>Баланс</TableCell>
+                                    <TableCell>Последнее обновление</TableCell>
+                                    <TableCell align="right">Действия</TableCell>
                                 </TableRow>
-                            ) : organizations.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={8} align="center">
-                                        Нет зарегистрированных организаций
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                organizations.map((org) => (
-                                    <TableRow key={org.orgId} hover>
-                                        <TableCell>
-                                            <Typography fontWeight={600}>{org.name || '—'}</Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {org.orgSlug}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2">
-                                                {org.ownerEmail || '—'}
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography fontWeight={600}>{org.plan.toUpperCase()}</Typography>
-                                        </TableCell>
-                                        <TableCell>{statusChip(org.status)}</TableCell>
-                                        <TableCell>
-                                            <Stack spacing={0.25}>
-                                                <Typography variant="body2">
-                                                    Рабочие места: {org.seats ?? '—'}
-                                                </Typography>
-                                                <Typography variant="body2">
-                                                    Проекты: {org.projectsLimit ?? '—'}
-                                                </Typography>
-                                                <Typography variant="body2">
-                                                    Публикации: {org.publicTasksLimit ?? '—'} ·
-                                                    Задачи/нед: {org.tasksWeeklyLimit ?? '—'}
-                                                </Typography>
-                                            </Stack>
-                                        </TableCell>
-                                        <TableCell>
-                                            {Number.isFinite(org.walletBalance)
-                                                ? `${org.walletBalance} ${org.walletCurrency || 'RUB'}`
-                                                : '—'}
-                                        </TableCell>
-                                        <TableCell>
-                                            {formatDate(org.updatedAt)}
-                                        </TableCell>
-                                        <TableCell align="right">
-                                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                                                <Tooltip title="Изменить">
-                                                    <IconButton
-                                                        color="primary"
-                                                        size="small"
-                                                        onClick={() => handleOpenDialog(org)}
-                                                    >
-                                                        <EditOutlined fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
-                                                <Tooltip title="Удалить">
-                                                    <IconButton
-                                                        color="error"
-                                                        size="small"
-                                                        onClick={() => handleOpenDelete(org)}
-                                                    >
-                                                        <DeleteOutline fontSize="small" />
-                                                    </IconButton>
-                                                </Tooltip>
+                            </TableHead>
+                            <TableBody>
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} align="center">
+                                            <Stack
+                                                direction="row"
+                                                spacing={1}
+                                                alignItems="center"
+                                                justifyContent="center"
+                                            >
+                                                <CircularProgress size={20} />
+                                                <Typography>Загрузка …</Typography>
                                             </Stack>
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </Paper>
+                                ) : organizations.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} align="center">
+                                            Нет зарегистрированных организаций
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    organizations.map((org) => (
+                                        <TableRow
+                                            key={org.orgId}
+                                            hover
+                                            sx={{
+                                                '& td': { borderColor: cellBorder },
+                                                '&:hover': {
+                                                    backgroundColor: isDarkMode
+                                                        ? 'rgba(255,255,255,0.08)'
+                                                        : '#fffde7',
+                                                },
+                                            }}
+                                        >
+                                            <TableCell>
+                                                <Typography fontWeight={600}>{org.name || '—'}</Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {org.orgSlug}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2">
+                                                    {org.ownerEmail || '—'}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography fontWeight={600}>{org.plan.toUpperCase()}</Typography>
+                                            </TableCell>
+                                            <TableCell>{statusChip(org.status)}</TableCell>
+                                            <TableCell>
+                                                <Stack spacing={0.25}>
+                                                    <Typography variant="body2">
+                                                        Рабочие места: {org.seats ?? '—'}
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        Проекты: {org.projectsLimit ?? '—'}
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        Публикации: {org.publicTasksLimit ?? '—'} ·
+                                                        Задачи/нед: {org.tasksWeeklyLimit ?? '—'}
+                                                    </Typography>
+                                                </Stack>
+                                            </TableCell>
+                                            <TableCell>
+                                                {Number.isFinite(org.walletBalance)
+                                                    ? `${org.walletBalance} ${org.walletCurrency || 'RUB'}`
+                                                    : '—'}
+                                            </TableCell>
+                                            <TableCell>
+                                                {formatDate(org.updatedAt)}
+                                            </TableCell>
+                                            <TableCell align="right">
+                                                <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                                    <Tooltip title="Изменить">
+                                                        <IconButton
+                                                            color="primary"
+                                                            size="small"
+                                                            onClick={() => handleOpenDialog(org)}
+                                                        >
+                                                            <EditOutlined fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title="Удалить">
+                                                        <IconButton
+                                                            color="error"
+                                                            size="small"
+                                                            onClick={() => handleOpenDelete(org)}
+                                                        >
+                                                            <DeleteOutline fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                </Stack>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Paper>
+            </Box>
 
             <Dialog open={Boolean(selectedOrg)} onClose={handleCloseDialog} fullWidth maxWidth="sm">
                 <DialogTitle>Изменить тариф</DialogTitle>

@@ -663,7 +663,7 @@ function AdminTaskCalendar({ items }: { items: AdminTask[] }) {
     );
 }
 
-export default function AdminTasksPage() {
+export default function TasksAdmin() {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
     const headerBg = isDarkMode ? 'rgba(17,22,33,0.85)' : 'rgba(255,255,255,0.55)';
