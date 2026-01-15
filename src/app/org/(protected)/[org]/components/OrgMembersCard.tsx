@@ -14,8 +14,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
-import type { MemberDTO } from '@/types/org';
-import { roleLabel } from '@/utils/org';
+import type { MemberDTO, OrgRole } from '@/types/org';
 import { UI_RADIUS } from '@/config/uiTokens';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 
@@ -41,6 +40,23 @@ const initialsFromMember = (member: MemberDTO) => {
     if (parts.length === 0) return '?';
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
+
+const roleLabelRu = (role: OrgRole) => {
+    switch (role) {
+        case 'owner':
+            return 'Владелец';
+        case 'org_admin':
+            return 'Администратор';
+        case 'manager':
+            return 'Менеджер';
+        case 'executor':
+            return 'Исполнитель';
+        case 'viewer':
+            return 'Наблюдатель';
+        default:
+            return role;
+    }
 };
 
 export default function OrgMembersCard({
@@ -126,22 +142,27 @@ export default function OrgMembersCard({
                                         {initialsFromMember(member)}
                                     </Avatar>
                                     <Box>
-                                        {member.clerkId ? (
-                                            <Button
-                                                variant="text"
-                                                size="small"
-                                                onClick={() => openProfileDialog(member.clerkId)}
-                                                sx={{ textTransform: 'none', px: 0, minWidth: 0, fontWeight: 600 }}
-                                            >
-                                                {member.userName || 'Без имени'}
-                                            </Button>
-                                        ) : (
-                                            <Typography variant="body2" fontWeight={600}>
-                                                {member.userName || 'Без имени'}
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            {member.clerkId ? (
+                                                <Button
+                                                    variant="text"
+                                                    size="small"
+                                                    onClick={() => openProfileDialog(member.clerkId)}
+                                                    sx={{ textTransform: 'none', px: 0, minWidth: 0, fontWeight: 600 }}
+                                                >
+                                                    {member.userName || 'Без имени'}
+                                                </Button>
+                                            ) : (
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {member.userName || 'Без имени'}
+                                                </Typography>
+                                            )}
+                                            <Typography variant="caption" color="text.secondary">
+                                                {roleLabelRu(member.role)}
                                             </Typography>
-                                        )}
+                                        </Stack>
                                         <Typography variant="caption" color="text.secondary">
-                                            {member.userEmail} · {roleLabel(member.role)}
+                                            {member.userEmail || '—'}
                                         </Typography>
                                     </Box>
                                 </Stack>
