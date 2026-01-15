@@ -5,7 +5,19 @@ import ProjectTaskLocation from '@/app/workspace/components/ProjectTaskLocation'
 
 export default function ProjectTasksLocationsPage() {
     return (
-        <Box sx={{ width: '100%', height: '100vh', p: 0, m: 0 }}>
+        <Box
+            sx={{
+                position: 'fixed',
+                top: 70,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100vw',
+                height: 'calc(100vh - 70px)',
+                p: 0,
+                m: 0,
+            }}
+        >
             <ProjectTaskLocation />
         </Box>
     );

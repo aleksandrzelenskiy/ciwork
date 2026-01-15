@@ -34,6 +34,7 @@ import {
     normalizeOperator,
     type OperatorSlug,
 } from '@/utils/operatorColors';
+import { CORE_OPERATORS } from '@/app/constants/operators';
 
 type TaskLocation = {
     _id?: string;
@@ -48,6 +49,8 @@ type TaskLocation = {
     projectOperator?: string | null;
     orgName?: string | null;
     orgSlug?: string | null;
+    authorName?: string | null;
+    authorEmail?: string | null;
     executorName?: string | null;
     executorEmail?: string | null;
 };
@@ -67,6 +70,8 @@ type MapPoint = {
     operator: OperatorSlug;
     operatorLabel?: string | null;
     orgName?: string | null;
+    managerName?: string | null;
+    managerEmail?: string | null;
     executorName?: string | null;
     executorEmail?: string | null;
 };
@@ -86,9 +91,27 @@ const ALL_PRIORITIES: PriorityLevel[] = ['urgent', 'high', 'medium', 'low'];
 const OPERATOR_LABELS: Record<OperatorSlug, string> = {
     t2: 'Т2',
     beeline: 'Билайн',
-    megafon: 'МегаФон',
+    megafon: 'Мегафон',
     mts: 'МТС',
 };
+const OPERATOR_LABEL_BY_SLUG = CORE_OPERATORS.reduce<Record<OperatorSlug, string>>((acc, operator) => {
+    const slug = normalizeOperator(operator.value);
+    acc[slug] = `${operator.name} (${operator.value})`;
+    return acc;
+}, {
+    t2: 'Т2 (250020)',
+    beeline: 'Билайн (250099)',
+    megafon: 'Мегафон (250002)',
+    mts: 'МТС (250001)',
+});
+const OPERATOR_LABEL_ALIASES = CORE_OPERATORS.reduce<Record<string, string>>((acc, operator) => {
+    const label = `${operator.name} (${operator.value})`;
+    acc[operator.value.toLowerCase()] = label;
+    acc[operator.visibleCode.toLowerCase()] = label;
+    acc[operator.name.toLowerCase()] = label;
+    acc[normalizeOperator(operator.value)] = label;
+    return acc;
+}, {});
 
 const parseCoords = (raw?: string | null): [number, number] | null => {
     if (!raw) return null;
@@ -131,12 +154,24 @@ const buildRelatedNumbers = (task: TaskLocation, pool: string[], currentIndex: n
 
 const resolveOperatorLabel = (raw?: string | null, fallback?: OperatorSlug): string | null => {
     const trimmed = raw?.toString().trim();
-    if (trimmed) return trimmed;
-    if (fallback) return OPERATOR_LABELS[fallback] ?? fallback;
+    if (trimmed) {
+        const normalized = trimmed.toLowerCase();
+        if (OPERATOR_LABEL_ALIASES[normalized]) {
+            return OPERATOR_LABEL_ALIASES[normalized];
+        }
+        return trimmed;
+    }
+    if (fallback) return OPERATOR_LABEL_BY_SLUG[fallback] ?? OPERATOR_LABELS[fallback] ?? fallback;
     return null;
 };
 
-export default function ProjectTaskLocation(): React.ReactElement {
+type ProjectTaskLocationProps = {
+    contactRole?: 'executor' | 'manager';
+};
+
+export default function ProjectTaskLocation({
+    contactRole = 'executor',
+}: ProjectTaskLocationProps): React.ReactElement {
     const [tasks, setTasks] = React.useState<TaskLocation[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
@@ -167,6 +202,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
     const filterButtonBg = isDark ? 'rgba(248,250,252,0.92)' : '#ffffff';
     const filterButtonBorder = alpha(accentBase, isDark ? 0.18 : 0.12);
     const filterButtonColor = isDark ? '#0b1220' : '#0f172a';
+    const controlsTopOffset = 28;
     const params = useParams<{ org?: string; project?: string }>();
     const orgSlug = params?.org;
     const projectSlug = params?.project;
@@ -287,6 +323,8 @@ export default function ProjectTaskLocation(): React.ReactElement {
                     operator,
                     operatorLabel: resolveOperatorLabel(task.projectOperator, operator),
                     orgName: task.orgName ?? task.orgSlug ?? null,
+                    managerName: task.authorName ?? null,
+                    managerEmail: task.authorEmail ?? null,
                     executorName: task.executorName ?? null,
                     executorEmail: task.executorEmail ?? null,
                 });
@@ -322,7 +360,9 @@ export default function ProjectTaskLocation(): React.ReactElement {
                 (point.projectName ? point.projectName.toLowerCase().includes(query) : false) ||
                 (point.projectKey ? point.projectKey.toLowerCase().includes(query) : false) ||
                 (point.orgName ? point.orgName.toLowerCase().includes(query) : false) ||
-                (point.operatorLabel ? point.operatorLabel.toLowerCase().includes(query) : false);
+                (point.operatorLabel ? point.operatorLabel.toLowerCase().includes(query) : false) ||
+                (point.managerName ? point.managerName.toLowerCase().includes(query) : false) ||
+                (point.managerEmail ? point.managerEmail.toLowerCase().includes(query) : false);
             const statusOk = point.status ? Boolean(statusFilter[point.status]) : true;
             const priorityOk = point.priority ? Boolean(priorityFilter[point.priority]) : true;
             return matchesSearch && statusOk && priorityOk;
@@ -384,7 +424,9 @@ export default function ProjectTaskLocation(): React.ReactElement {
                     ? `/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
                           projectRef
                       )}/tasks/${encodeURIComponent(point.taskIdentifier)}`
-                    : null;
+                    : point.taskIdentifier
+                      ? `/tasks/${encodeURIComponent(point.taskIdentifier)}`
+                      : null;
             const relatedBlock = point.relatedNumbers
                 ? `<div style="margin-bottom:4px;">Связанные БС: ${point.relatedNumbers}</div>`
                 : '';
@@ -404,6 +446,10 @@ export default function ProjectTaskLocation(): React.ReactElement {
             const operatorLine = point.operatorLabel
                 ? `<div style="margin-bottom:4px;">Оператор: ${point.operatorLabel}</div>`
                 : '';
+            const managerLine =
+                point.managerName || point.managerEmail
+                    ? `<div style="margin-bottom:4px;">Менеджер: ${point.managerName ?? point.managerEmail}</div>`
+                    : '';
             const executorLine =
                 point.executorName || point.executorEmail
                     ? `<div style="margin-bottom:4px;">Исполнитель: ${point.executorName ?? point.executorEmail}</div>`
@@ -417,7 +463,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
             ${operatorLine}
             ${statusLine}
             ${priorityLine}
-            ${executorLine}
+            ${contactRole === 'manager' ? managerLine : executorLine}
             ${relatedBlock}
             ${
                 linkHref
@@ -426,7 +472,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
             }
         </div>`;
         },
-        [orgSlug, projectSlug]
+        [contactRole, orgSlug, projectSlug]
     );
 
     const glassPaperSx = React.useMemo(() => {
@@ -491,7 +537,7 @@ export default function ProjectTaskLocation(): React.ReactElement {
             <Box
                 sx={{
                     position: 'absolute',
-                    top: { xs: 12, md: 16 },
+                    top: { xs: 24, md: 28 },
                     left: { xs: 12, md: 16 },
                     zIndex: 5,
                     width: { xs: 'auto', sm: 420, md: 460 },
@@ -734,8 +780,8 @@ export default function ProjectTaskLocation(): React.ReactElement {
                                 suppressMapOpenBlock: true,
                             }}
                         >
-                            <FullscreenControl options={{ position: { right: 16, top: 16 } }} />
-                            <ZoomControl options={{ position: { right: 16, top: 80 } }} />
+                            <FullscreenControl options={{ position: { right: 16, top: controlsTopOffset } }} />
+                            <ZoomControl options={{ position: { right: 16, top: controlsTopOffset + 64 } }} />
                             <Clusterer
                                 options={{
                                     preset: clusterPreset,

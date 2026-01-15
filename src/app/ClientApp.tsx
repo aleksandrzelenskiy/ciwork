@@ -513,7 +513,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                           horizontal: 'right',
                         }}
                       >
-                        <Typography variant='h6'>WS ICIA</Typography>
+                        <Typography variant='h6'>ICIA</Typography>
                       </Badge>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: appBarIconGap }}>
