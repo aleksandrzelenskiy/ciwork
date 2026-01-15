@@ -36,6 +36,7 @@ import ProjectDialog, {
     ProjectManagerOption,
 } from '@/app/workspace/components/ProjectDialog';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { roleLabelRu } from '@/utils/org';
 
 const getRegionInfo = (code: string) => REGION_MAP.get(code) ?? REGION_ISO_MAP.get(code);
 const getRegionLabel = (code: string): string => getRegionInfo(code)?.label ?? code;
@@ -64,14 +65,6 @@ type MemberDTO = {
     status: 'active' | 'invited';
 };
 type MembersResponse = { members: MemberDTO[] } | { error: string };
-
-const ROLE_LABELS: Record<OrgRole, string> = {
-    owner: 'Владелец',
-    org_admin: 'Администратор',
-    manager: 'Менеджер',
-    executor: 'Исполнитель',
-    viewer: 'Наблюдатель',
-};
 
 // Ответ /api/org/[org]
 type OrgInfoOk = { org: { _id: string; name: string; orgSlug: string }; role: OrgRole };
@@ -362,7 +355,7 @@ export default function OrgProjectsPage() {
         subscription?.status && subscription.status !== 'inactive' && subscriptionEndDate
             ? `Действует до ${subscriptionEndDate}`
             : null;
-    const roleLabel = myRole ? ROLE_LABELS[myRole] ?? myRole : '—';
+    const roleLabel = myRole ? roleLabelRu(myRole) : '—';
 
 
     // ---- Участники для менеджеров ----

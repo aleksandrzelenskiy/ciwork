@@ -12,7 +12,7 @@ import {
 import type { SxProps, Theme } from '@mui/material/styles';
 
 import type { MemberDTO, OrgRole } from '@/types/org';
-import { roleLabel } from '@/utils/org';
+import { roleLabelRu } from '@/utils/org';
 
 type MemberRoleDialogProps = {
     open: boolean;
@@ -66,7 +66,7 @@ export default function MemberRoleDialog({
                 >
                     {(['org_admin', 'manager', 'executor', 'viewer'] as OrgRole[]).map((role) => (
                         <MenuItem key={role} value={role}>
-                            {roleLabel(role)}
+                            {roleLabelRu(role)}
                         </MenuItem>
                     ))}
                 </TextField>

@@ -20,6 +20,23 @@ export function roleLabel(role: OrgRole) {
     }
 }
 
+export function roleLabelRu(role: OrgRole) {
+    switch (role) {
+        case 'owner':
+            return 'Владелец';
+        case 'org_admin':
+            return 'Администратор';
+        case 'manager':
+            return 'Менеджер';
+        case 'executor':
+            return 'Исполнитель';
+        case 'viewer':
+            return 'Наблюдатель';
+        default:
+            return role;
+    }
+}
+
 export function integrationTypeLabel(value: string) {
     switch (value) {
         case 'google_sheets':

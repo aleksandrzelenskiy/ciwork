@@ -14,7 +14,8 @@ import GroupIcon from '@mui/icons-material/Group';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
-import type { MemberDTO, OrgRole } from '@/types/org';
+import type { MemberDTO } from '@/types/org';
+import { roleLabelRu } from '@/utils/org';
 import { UI_RADIUS } from '@/config/uiTokens';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 
@@ -40,23 +41,6 @@ const initialsFromMember = (member: MemberDTO) => {
     if (parts.length === 0) return '?';
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-};
-
-const roleLabelRu = (role: OrgRole) => {
-    switch (role) {
-        case 'owner':
-            return 'Владелец';
-        case 'org_admin':
-            return 'Администратор';
-        case 'manager':
-            return 'Менеджер';
-        case 'executor':
-            return 'Исполнитель';
-        case 'viewer':
-            return 'Наблюдатель';
-        default:
-            return role;
-    }
 };
 
 export default function OrgMembersCard({

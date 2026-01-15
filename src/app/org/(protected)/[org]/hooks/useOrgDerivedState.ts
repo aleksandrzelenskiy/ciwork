@@ -1,7 +1,7 @@
 import * as React from 'react';
 
-import type { PlanConfig, SubscriptionBillingInfo, SubscriptionInfo } from '@/types/org';
-import { DAY_MS } from '@/utils/org';
+import type { OrgRole, PlanConfig, SubscriptionBillingInfo, SubscriptionInfo } from '@/types/org';
+import { DAY_MS, roleLabelRu } from '@/utils/org';
 
 type UseOrgDerivedStateArgs = {
     subscription: SubscriptionInfo | null;
@@ -43,14 +43,6 @@ type UseOrgDerivedState = {
     integrationRequestTooltip: string;
     integrationKeyTooltip: (isSuperAdmin: boolean) => string;
     formatExpire: (iso?: string) => string;
-};
-
-const roleLabels: Record<string, string> = {
-    owner: 'Владелец',
-    org_admin: 'Администратор',
-    manager: 'Менеджер',
-    executor: 'Исполнитель',
-    viewer: 'Наблюдатель',
 };
 
 export default function useOrgDerivedState({
@@ -148,7 +140,7 @@ export default function useOrgDerivedState({
             : subscription?.plan
                 ? `Тариф ${subscription.plan.toUpperCase()}`
                 : 'Тариф не выбран';
-    const roleLabelRu = myRole ? roleLabels[myRole] ?? myRole : '—';
+    const roleLabelRuLabel = myRole ? roleLabelRu(myRole as OrgRole) : '—';
     const canEditOrgSettings = myRole === 'owner' || myRole === 'org_admin';
     const canRequestIntegrations = myRole === 'owner' || myRole === 'org_admin';
     const settingsTooltip = !canEditOrgSettings
@@ -190,7 +182,7 @@ export default function useOrgDerivedState({
         subscriptionStatusColor,
         subscriptionStatusDescription,
         subscriptionEndLabel,
-        roleLabelRu,
+        roleLabelRu: roleLabelRuLabel,
         tasksWeeklyLimitLabel,
         publicTasksLimitLabel,
         canEditOrgSettings,

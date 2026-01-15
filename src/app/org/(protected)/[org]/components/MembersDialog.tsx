@@ -33,7 +33,7 @@ import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { MemberDTO, MemberStatus } from '@/types/org';
-import { makeAbsoluteUrl, roleLabel } from '@/utils/org';
+import { makeAbsoluteUrl, roleLabelRu } from '@/utils/org';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 
 const initialsFromMember = (member: MemberDTO) => {
@@ -255,7 +255,7 @@ export default function MembersDialog({
                                                     </Stack>
                                                 </TableCell>
                                                 <TableCell>{member.userEmail}</TableCell>
-                                                <TableCell>{roleLabel(member.role)}</TableCell>
+                                                <TableCell>{roleLabelRu(member.role)}</TableCell>
                                                 <TableCell>
                                                     <Stack direction="row" spacing={1} alignItems="center">
                                                         {statusChip(member.status)}
