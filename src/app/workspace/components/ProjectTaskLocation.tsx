@@ -195,6 +195,12 @@ export default function ProjectTaskLocation({
         medium: true,
         low: true,
     }));
+    const [operatorFilter, setOperatorFilter] = React.useState<Record<OperatorSlug, boolean>>(() => ({
+        t2: true,
+        beeline: true,
+        megafon: true,
+        mts: true,
+    }));
     const [filtersOpen, setFiltersOpen] = React.useState(false);
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -349,6 +355,16 @@ export default function ProjectTaskLocation({
         return ALL_PRIORITIES.filter((priority) => present.has(priority));
     }, [placemarks]);
 
+    const availableOperators = React.useMemo(() => {
+        const present = new Set<OperatorSlug>();
+        placemarks.forEach((point) => {
+            present.add(point.operator);
+        });
+        return (['t2', 'beeline', 'megafon', 'mts'] as OperatorSlug[]).filter((operator) =>
+            present.has(operator)
+        );
+    }, [placemarks]);
+
     const filteredPlacemarks = React.useMemo(() => {
         const query = search.trim().toLowerCase();
         return placemarks.filter((point) => {
@@ -365,9 +381,10 @@ export default function ProjectTaskLocation({
                 (point.managerEmail ? point.managerEmail.toLowerCase().includes(query) : false);
             const statusOk = point.status ? Boolean(statusFilter[point.status]) : true;
             const priorityOk = point.priority ? Boolean(priorityFilter[point.priority]) : true;
-            return matchesSearch && statusOk && priorityOk;
+            const operatorOk = Boolean(operatorFilter[point.operator]);
+            return matchesSearch && statusOk && priorityOk && operatorOk;
         });
-    }, [placemarks, priorityFilter, search, statusFilter]);
+    }, [operatorFilter, placemarks, priorityFilter, search, statusFilter]);
 
     const mapCenter = React.useMemo<[number, number]>(() => {
         if (!filteredPlacemarks.length) return DEFAULT_CENTER;
@@ -413,8 +430,19 @@ export default function ProjectTaskLocation({
         for (const pr of availablePriorities) {
             if (!priorityFilter[pr]) return false;
         }
+        for (const operator of availableOperators) {
+            if (!operatorFilter[operator]) return false;
+        }
         return true;
-    }, [availablePriorities, availableStatuses, priorityFilter, search, statusFilter]);
+    }, [
+        availableOperators,
+        availablePriorities,
+        availableStatuses,
+        operatorFilter,
+        priorityFilter,
+        search,
+        statusFilter,
+    ]);
 
     const buildBalloonContent = React.useCallback(
         (point: MapPoint) => {
@@ -447,8 +475,8 @@ export default function ProjectTaskLocation({
                 ? `<div style="margin-bottom:4px;">Оператор: ${point.operatorLabel}</div>`
                 : '';
             const managerLine =
-                point.managerName || point.managerEmail
-                    ? `<div style="margin-bottom:4px;">Менеджер: ${point.managerName ?? point.managerEmail}</div>`
+                point.managerName
+                    ? `<div style="margin-bottom:4px;">Менеджер: ${point.managerName}</div>`
                     : '';
             const executorLine =
                 point.executorName || point.executorEmail
@@ -507,6 +535,12 @@ export default function ProjectTaskLocation({
             medium: true,
             low: true,
         });
+        setOperatorFilter({
+            t2: true,
+            beeline: true,
+            megafon: true,
+            mts: true,
+        });
     }, []);
 
     const activeStatusCount = React.useMemo(
@@ -517,12 +551,19 @@ export default function ProjectTaskLocation({
         () => availablePriorities.filter((priority) => priorityFilter[priority]).length,
         [availablePriorities, priorityFilter]
     );
+    const activeOperatorCount = React.useMemo(
+        () => availableOperators.filter((operator) => operatorFilter[operator]).length,
+        [availableOperators, operatorFilter]
+    );
     const statusLabel = availableStatuses.length
         ? `Статусы · ${activeStatusCount}/${availableStatuses.length}`
         : 'Статусы';
     const priorityLabel = availablePriorities.length
         ? `Приоритет · ${activePriorityCount}/${availablePriorities.length}`
         : 'Приоритет';
+    const operatorLabel = availableOperators.length
+        ? `Оператор · ${activeOperatorCount}/${availableOperators.length}`
+        : 'Оператор';
 
     return (
         <Box
@@ -618,7 +659,7 @@ export default function ProjectTaskLocation({
                                         </IconButton>
                                     </Tooltip>
                                 </Box>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, rowGap: 1 }}>
                                     {availableStatuses.map((status) => {
                                         const active = statusFilter[status];
                                         return (
@@ -716,6 +757,66 @@ export default function ProjectTaskLocation({
                                                         : 'none',
                                                     '&:hover': {
                                                         backgroundColor: alpha(accentBase, isDark ? 0.45 : 0.18),
+                                                    },
+                                                }}
+                                            />
+                                        );
+                                    })}
+                                </Box>
+
+                                <Divider flexItem sx={{ my: 0.5, opacity: 0.35 }} />
+
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                                    {operatorLabel}
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                                    {availableOperators.map((operator) => {
+                                        const active = operatorFilter[operator];
+                                        const label = OPERATOR_LABEL_BY_SLUG[operator] ?? OPERATOR_LABELS[operator];
+                                        return (
+                                            <Chip
+                                                key={operator}
+                                                label={label}
+                                                onClick={() =>
+                                                    setOperatorFilter((prev) => ({
+                                                        ...prev,
+                                                        [operator]: !prev[operator],
+                                                    }))
+                                                }
+                                                size="small"
+                                                icon={
+                                                    <Box
+                                                        sx={{
+                                                            width: 10,
+                                                            height: 10,
+                                                            borderRadius: UI_RADIUS.circle,
+                                                            backgroundColor: OPERATOR_COLORS[operator],
+                                                        }}
+                                                    />
+                                                }
+                                                onDelete={
+                                                    active
+                                                        ? () =>
+                                                              setOperatorFilter((prev) => ({
+                                                                  ...prev,
+                                                                  [operator]: false,
+                                                              }))
+                                                        : undefined
+                                                }
+                                                deleteIcon={active ? <CloseRoundedIcon fontSize="small" /> : undefined}
+                                                variant={active ? 'filled' : 'outlined'}
+                                                sx={{
+                                                    backgroundColor: active
+                                                        ? alpha(OPERATOR_COLORS[operator], isDark ? 0.25 : 0.14)
+                                                        : 'transparent',
+                                                    color: active ? theme.palette.text.primary : theme.palette.text.secondary,
+                                                    borderColor: alpha(OPERATOR_COLORS[operator], active ? 0.32 : 0.4),
+                                                    fontWeight: active ? 700 : 500,
+                                                    boxShadow: active
+                                                        ? `0 10px 20px ${alpha(OPERATOR_COLORS[operator], isDark ? 0.35 : 0.2)}`
+                                                        : 'none',
+                                                    '&:hover': {
+                                                        backgroundColor: alpha(OPERATOR_COLORS[operator], isDark ? 0.32 : 0.2),
                                                     },
                                                 }}
                                             />
