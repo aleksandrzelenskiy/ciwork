@@ -4,8 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="bd80d4b0-b8c7-4fda-9fdc-9fe8b04a544f" name="Changes" comment=" Обновил страницу src/app/tasks/[id]/page.tsx: кнопка «Завершено» теперь открывает диалог подтверждения, делает PATCH на статус Done, обновляет задачу в состоянии, показывает ошибки и блокирует кнопку на время запроса — дальше работают почтовые уведомления и колокол, как для остальных статусов.">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="bd80d4b0-b8c7-4fda-9fdc-9fe8b04a544f" name="Changes" comment="Сделал переименование portfolioStatus → profileStatus с обратной совместимостью при чтении, добавил фильтр по статусу в админке, убрал колонку ID из таблицы и показал ID в карточке профиля.">
+      <change beforePath="$PROJECT_DIR$/src/app/profile/ProfilePageContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/profile/ProfilePageContent.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -14,6 +14,7 @@
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="UPDATE_TYPE" value="REBASE" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
   &quot;lastFilter&quot;: {
@@ -78,158 +79,6 @@
       <workItem from="1765420062843" duration="8024000" />
       <workItem from="1765464879017" duration="171000" />
       <workItem from="1766383977791" duration="1437000" />
-    </task>
-    <task id="LOCAL-00056" summary="Added an At work-only “Завершено” placeholder button at the bottom of the info card (src/app/tasks/[id]/page.tsx) to surface the completion control even before it’s wired up.">
-      <option name="closed" value="true" />
-      <created>1764118813849</created>
-      <option name="number" value="00056" />
-      <option name="presentableId" value="LOCAL-00056" />
-      <option name="project" value="LOCAL" />
-      <updated>1764118813849</updated>
-    </task>
-    <task id="LOCAL-00057" summary="Added a “Добавить” flow in src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx: documents list now shows orders with download/delete icons, includes an Add button, opens a type-selection dialog (order for now), shows an order form with drag-and-drop upload, and surfaces a 3s MUI alert on success/error.&#10;Wired order upload/delete logic to PATCH/DELETE /api/tasks/[id], updating task metadata immediately and handling confirmation messages dynamically.&#10; Updated src/app/api/tasks/[id]/route.ts so order files upload to taskId-documents, old order files/links are cleaned up, order URLs get stored in documents, and responses return normalized attachments/documents; deletes now also pull the order link from documents/attachments.">
-      <option name="closed" value="true" />
-      <created>1764145320495</created>
-      <option name="number" value="00057" />
-      <option name="presentableId" value="LOCAL-00057" />
-      <option name="project" value="LOCAL" />
-      <updated>1764145320495</updated>
-    </task>
-    <task id="LOCAL-00058" summary="fix build app error">
-      <option name="closed" value="true" />
-      <created>1764145833559</created>
-      <option name="number" value="00058" />
-      <option name="presentableId" value="LOCAL-00058" />
-      <option name="project" value="LOCAL" />
-      <updated>1764145833559</updated>
-    </task>
-    <task id="LOCAL-00059" summary="fix build app error#2">
-      <option name="closed" value="true" />
-      <created>1764146054610</created>
-      <option name="number" value="00059" />
-      <option name="presentableId" value="LOCAL-00059" />
-      <option name="project" value="LOCAL" />
-      <updated>1764146054610</updated>
-    </task>
-    <task id="LOCAL-00060" summary="fix build app error#3">
-      <option name="closed" value="true" />
-      <created>1764146234666</created>
-      <option name="number" value="00060" />
-      <option name="presentableId" value="LOCAL-00060" />
-      <option name="project" value="LOCAL" />
-      <updated>1764146234666</updated>
-    </task>
-    <task id="LOCAL-00061" summary="fix build app error#4">
-      <option name="closed" value="true" />
-      <created>1764146552688</created>
-      <option name="number" value="00061" />
-      <option name="presentableId" value="LOCAL-00061" />
-      <option name="project" value="LOCAL" />
-      <updated>1764146552688</updated>
-    </task>
-    <task id="LOCAL-00062" summary="fix build app error#5">
-      <option name="closed" value="true" />
-      <created>1764147123208</created>
-      <option name="number" value="00062" />
-      <option name="presentableId" value="LOCAL-00062" />
-      <option name="project" value="LOCAL" />
-      <updated>1764147123208</updated>
-    </task>
-    <task id="LOCAL-00063" summary="Added a multi-select for related tasks with async search, debounced lookups, and selection prefill in src/app/workspace/components/WorkspaceTaskDialog.tsx">
-      <option name="closed" value="true" />
-      <created>1764202055675</created>
-      <option name="number" value="00063" />
-      <option name="presentableId" value="LOCAL-00063" />
-      <option name="project" value="LOCAL" />
-      <updated>1764202055677</updated>
-    </task>
-    <task id="LOCAL-00064" summary="Added relatedTasks to the local Task type in src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx">
-      <option name="closed" value="true" />
-      <created>1764202410485</created>
-      <option name="number" value="00064" />
-      <option name="presentableId" value="LOCAL-00064" />
-      <option name="project" value="LOCAL" />
-      <updated>1764202410486</updated>
-    </task>
-    <task id="LOCAL-00065" summary="Populated and normalized relatedTasks data all the way through the APIs and UI so both task-detail views show actual related-task metadata, and the workspace dialog now understands those normalized references.">
-      <option name="closed" value="true" />
-      <created>1764206566866</created>
-      <option name="number" value="00065" />
-      <option name="presentableId" value="LOCAL-00065" />
-      <option name="project" value="LOCAL" />
-      <updated>1764206566866</updated>
-    </task>
-    <task id="LOCAL-00066" summary="Replaced the inline list of related tasks on the protected task page with an Accordion that sits directly below the info card and stays open by default, and dropped the priority chips so only status badges remain (src/app/org/&#10;    (protected)/[org]/projects/[project]/tasks/[id]/page.tsx">
-      <option name="closed" value="true" />
-      <created>1764207524290</created>
-      <option name="number" value="00066" />
-      <option name="presentableId" value="LOCAL-00066" />
-      <option name="project" value="LOCAL" />
-      <updated>1764207524290</updated>
-    </task>
-    <task id="LOCAL-00067" summary="Added normalizeRelatedTasks/relatedTasksSync helpers so we can treat related-task refs consistently and mutate the inverse relations (src/app/utils/relatedTasks.ts, src/app/utils/relatedTasksSync.ts)">
-      <option name="closed" value="true" />
-      <created>1764209742428</created>
-      <option name="number" value="00067" />
-      <option name="presentableId" value="LOCAL-00067" />
-      <option name="project" value="LOCAL" />
-      <updated>1764209742428</updated>
-    </task>
-    <task id="LOCAL-00068" summary="fix build app error">
-      <option name="closed" value="true" />
-      <created>1764210613692</created>
-      <option name="number" value="00068" />
-      <option name="presentableId" value="LOCAL-00068" />
-      <option name="project" value="LOCAL" />
-      <updated>1764210613692</updated>
-    </task>
-    <task id="LOCAL-00069" summary="src/app/tasks/[id]/page.tsx:Заказ / договор card was removed entirely so contractors can’t view sensitive order/contract data">
-      <option name="closed" value="true" />
-      <created>1764217469952</created>
-      <option name="number" value="00069" />
-      <option name="presentableId" value="LOCAL-00069" />
-      <option name="project" value="LOCAL" />
-      <updated>1764217469953</updated>
-    </task>
-    <task id="LOCAL-00070" summary="src/app/tasks/[id]/page.tsx:блок &quot;Звязанные задачи&quot; размещен после блока &quot;Информация&quot;">
-      <option name="closed" value="true" />
-      <created>1764218031336</created>
-      <option name="number" value="00070" />
-      <option name="presentableId" value="LOCAL-00070" />
-      <option name="project" value="LOCAL" />
-      <updated>1764218031336</updated>
-    </task>
-    <task id="LOCAL-00071" summary="src/app/tasks/[id]/page.tsx:блок &quot;Звязанные задачи&quot; размещен после блока &quot;Информация&quot;. src/app/tasks/[id]/page и src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx не рендерят Описание и Вложения,если нет данных">
-      <option name="closed" value="true" />
-      <created>1764218334831</created>
-      <option name="number" value="00071" />
-      <option name="presentableId" value="LOCAL-00071" />
-      <option name="project" value="LOCAL" />
-      <updated>1764218334831</updated>
-    </task>
-    <task id="LOCAL-00072" summary="src/app/tasks/[id]/page и src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx блок &quot;заказ/договор&quot; после блока &quot;документы&quot;">
-      <option name="closed" value="true" />
-      <created>1764219266385</created>
-      <option name="number" value="00072" />
-      <option name="presentableId" value="LOCAL-00072" />
-      <option name="project" value="LOCAL" />
-      <updated>1764219266385</updated>
-    </task>
-    <task id="LOCAL-00073" summary="Updated the project task table’s">
-      <option name="closed" value="true" />
-      <created>1764223273937</created>
-      <option name="number" value="00073" />
-      <option name="presentableId" value="LOCAL-00073" />
-      <option name="project" value="LOCAL" />
-      <updated>1764223273938</updated>
-    </task>
-    <task id="LOCAL-00074" summary="Added a Заказ column to the project task table header so users can toggle visibility just like the other columns (src/app/workspace/components/ProjectTaskList.tsx">
-      <option name="closed" value="true" />
-      <created>1764247273800</created>
-      <option name="number" value="00074" />
-      <option name="presentableId" value="LOCAL-00074" />
-      <option name="project" value="LOCAL" />
-      <updated>1764247273801</updated>
     </task>
     <task id="LOCAL-00075" summary="fix build app error">
       <option name="closed" value="true" />
@@ -471,31 +320,165 @@
       <option name="project" value="LOCAL" />
       <updated>1766384827984</updated>
     </task>
-    <option name="localTasksCounter" value="105" />
+    <task id="LOCAL-00105" summary="Fixed the TypeScript errors by switching Providers to a proper ReactNode type">
+      <option name="closed" value="true" />
+      <created>1768064871817</created>
+      <option name="number" value="00105" />
+      <option name="presentableId" value="LOCAL-00105" />
+      <option name="project" value="LOCAL" />
+      <updated>1768064871817</updated>
+    </task>
+    <task id="LOCAL-00106" summary="src/app/(public)/sign-in/[[...sign-in]]/page.tsx&#10;Блоки изменены на темный и светлый apple glass style, изменена типографика">
+      <option name="closed" value="true" />
+      <created>1768100745809</created>
+      <option name="number" value="00106" />
+      <option name="presentableId" value="LOCAL-00106" />
+      <option name="project" value="LOCAL" />
+      <updated>1768100745809</updated>
+    </task>
+    <task id="LOCAL-00107" summary="src/app/(public)/sign-in/[[...sign-in]]/page.tsx&#10;Блоки изменены на темный и светлый apple glass style, изменена типографика. Поправил источник стилей: src/app/globals.css">
+      <option name="closed" value="true" />
+      <created>1768102318481</created>
+      <option name="number" value="00107" />
+      <option name="presentableId" value="LOCAL-00107" />
+      <option name="project" value="LOCAL" />
+      <updated>1768102318481</updated>
+    </task>
+    <task id="LOCAL-00108" summary="src/app/(public)/sign-up/[[...sign-up]]/page.tsx&#10;Блоки изменены на темный и светлый apple glass style, изменена типографика для страницы регистрации.">
+      <option name="closed" value="true" />
+      <created>1768103205502</created>
+      <option name="number" value="00108" />
+      <option name="presentableId" value="LOCAL-00108" />
+      <option name="project" value="LOCAL" />
+      <updated>1768103205502</updated>
+    </task>
+    <task id="LOCAL-00109" summary="В обоих текстовых блоках поставил универсальный короткий текст для employer/contractor в src/app/(public)/sign-in/[[...sign-in]]/page.tsx и src/app(public)/sign-up/[[...sign-up]]/page.tsx.">
+      <option name="closed" value="true" />
+      <created>1768106376350</created>
+      <option name="number" value="00109" />
+      <option name="presentableId" value="LOCAL-00109" />
+      <option name="project" value="LOCAL" />
+      <updated>1768106376350</updated>
+    </task>
+    <task id="LOCAL-00110" summary="Сделал локализацию ошибок Clerk через единый маппер и убрал выдачу английских сообщений — теперь даже неизвестные ошибки показываются на русском.">
+      <option name="closed" value="true" />
+      <created>1768107661012</created>
+      <option name="number" value="00110" />
+      <option name="presentableId" value="LOCAL-00110" />
+      <option name="project" value="LOCAL" />
+      <updated>1768107661012</updated>
+    </task>
+    <task id="LOCAL-00111" summary="Fix build app error">
+      <option name="closed" value="true" />
+      <created>1768151660814</created>
+      <option name="number" value="00111" />
+      <option name="presentableId" value="LOCAL-00111" />
+      <option name="project" value="LOCAL" />
+      <updated>1768151660814</updated>
+    </task>
+    <task id="LOCAL-00112" summary="- src/utils/billingLimits.ts: добавил общие хелперы resolveEffectivePlanLimits&#10;    и resolveEffectiveStorageLimit, обновил loadPlanForOrg на использование&#10;    тарифов как источника.&#10;  - src/app/api/admin/organizations/route.ts: в выдаче организаций лимиты/&#10;    хранилище считаются из конфигураций тарифов, а не из подписок.&#10;  - src/app/api/admin/organizations/[org]/subscription/route.ts: ответ после&#10;    PATCH возвращает вычисленные лимиты из тарифа.&#10;  - src/app/api/org/[org]/subscription/route.ts: и GET, и PATCH выдают лимиты,&#10;    рассчитанные из тарифа; фоллбек без подписки тоже берет значения из&#10;    конфигурации тарифа.">
+      <option name="closed" value="true" />
+      <created>1768211329642</created>
+      <option name="number" value="00112" />
+      <option name="presentableId" value="LOCAL-00112" />
+      <option name="project" value="LOCAL" />
+      <updated>1768211329643</updated>
+    </task>
+    <task id="LOCAL-00113" summary="Добавил начисление приветственного баланса и отправку уведомления владельцу при создании организации: кредитую 30000 ₽ в кошелек, затем создаю welcome-уведомление (оно же уходит в email), привязав к новой организации.">
+      <option name="closed" value="true" />
+      <created>1768212155870</created>
+      <option name="number" value="00113" />
+      <option name="presentableId" value="LOCAL-00113" />
+      <option name="project" value="LOCAL" />
+      <updated>1768212155870</updated>
+    </task>
+    <task id="LOCAL-00114" summary="Fix build app error">
+      <option name="closed" value="true" />
+      <created>1768212500249</created>
+      <option name="number" value="00114" />
+      <option name="presentableId" value="LOCAL-00114" />
+      <option name="project" value="LOCAL" />
+      <updated>1768212500249</updated>
+    </task>
+    <task id="LOCAL-00115" summary="Fix build app error #2">
+      <option name="closed" value="true" />
+      <created>1768212741260</created>
+      <option name="number" value="00115" />
+      <option name="presentableId" value="LOCAL-00115" />
+      <option name="project" value="LOCAL" />
+      <updated>1768212741260</updated>
+    </task>
+    <task id="LOCAL-00116" summary="Fix E11000 src/utils/storageUsage.ts">
+      <option name="closed" value="true" />
+      <created>1768213921060</created>
+      <option name="number" value="00116" />
+      <option name="presentableId" value="LOCAL-00116" />
+      <option name="project" value="LOCAL" />
+      <updated>1768213921060</updated>
+    </task>
+    <task id="LOCAL-00117" summary="Сдвинул логику периода на “от момента оформления до того же числа следующего месяца” src/utils/subscriptionBilling.ts">
+      <option name="closed" value="true" />
+      <created>1768215833245</created>
+      <option name="number" value="00117" />
+      <option name="presentableId" value="LOCAL-00117" />
+      <option name="project" value="LOCAL" />
+      <updated>1768215833245</updated>
+    </task>
+    <task id="LOCAL-00118" summary="Обновил логику приветственного бонуса: теперь начисляется 5000 ₽, при создании кошелька отправляется приветственное уведомление (оно попадет в&#10;  NotificationBell и уйдет на email)">
+      <option name="closed" value="true" />
+      <created>1768217342971</created>
+      <option name="number" value="00118" />
+      <option name="presentableId" value="LOCAL-00118" />
+      <option name="project" value="LOCAL" />
+      <updated>1768217342971</updated>
+    </task>
+    <task id="LOCAL-00119" summary="Убрал всю n8n-логику из интеграций и связанного UI: удалил тип n8n_webhook, очистил валидацию и подписи, а также убрал шаблоны n8n и тексты про них.">
+      <option name="closed" value="true" />
+      <created>1768218971780</created>
+      <option name="number" value="00119" />
+      <option name="presentableId" value="LOCAL-00119" />
+      <option name="project" value="LOCAL" />
+      <updated>1768218971780</updated>
+    </task>
+    <task id="LOCAL-00120" summary="Сделал переиспользуемый диалог профиля с иконкой закрытия и подключил его в админском списке пользователей: теперь клик по имени/аватару открывает профиль&#10;  в модальном окне.&#10;- Новый компонент: src/features/profile/ProfileDialog.tsx&#10;- Обновлено: src/features/admin/UsersAdmin.tsx">
+      <option name="closed" value="true" />
+      <created>1768219628885</created>
+      <option name="number" value="00120" />
+      <option name="presentableId" value="LOCAL-00120" />
+      <option name="project" value="LOCAL" />
+      <updated>1768219628885</updated>
+    </task>
+    <task id="LOCAL-00121" summary="Переориентировал профильный API на clerkUserId и обновил диалог/админку, чтобы они использовали clerkUserId.&#10;- src/app/api/profile/[userId]/route.ts&#10;- src/features/profile/ProfileDialog.tsx&#10;- src/features/admin/UsersAdmin.tsx&#10;также перевел остальные места открытия профиля на clerkUserId&#10;- src/app/api/profile/[userId]/route.ts&#10;- src/app/api/tasks/[taskId]/applications/route.ts&#10;- src/app/types/application.ts&#10;- src/app/org/(protected)/[org]/projects/[project]/tasks/[taskId]/page.tsx&#10;- src/app/api/admin/users/route.ts (убрал userId из ответа, он больше не нужен)">
+      <option name="closed" value="true" />
+      <created>1768220944426</created>
+      <option name="number" value="00121" />
+      <option name="presentableId" value="LOCAL-00121" />
+      <option name="project" value="LOCAL" />
+      <updated>1768220944426</updated>
+    </task>
+    <task id="LOCAL-00122" summary=" Добавил полноценную модерацию профиля (pending/approved/rejected) с уведомлениями по email и в-app, вывел статус в профиле, и сделал UX для модерации в админке.">
+      <option name="closed" value="true" />
+      <created>1768223840334</created>
+      <option name="number" value="00122" />
+      <option name="presentableId" value="LOCAL-00122" />
+      <option name="project" value="LOCAL" />
+      <updated>1768223840336</updated>
+    </task>
+    <task id="LOCAL-00123" summary="Сделал переименование portfolioStatus → profileStatus с обратной совместимостью при чтении, добавил фильтр по статусу в админке, убрал колонку ID из таблицы и показал ID в карточке профиля.">
+      <option name="closed" value="true" />
+      <created>1768225939553</created>
+      <option name="number" value="00123" />
+      <option name="presentableId" value="LOCAL-00123" />
+      <option name="project" value="LOCAL" />
+      <updated>1768225939554</updated>
+    </task>
+    <option name="localTasksCounter" value="124" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="TaskLocation.tsx - если разные задачи ссылаются на одну БС показваем карусель балунов с информацие о задачах." />
-    <MESSAGE value="ProjectTaskLocation.tsx - Map balloons now read org/project route params and send “Перейти к задаче” to the manager task page /org/[org]/projects/[project]/tasks/[id]" />
-    <MESSAGE value="ProjectTaskLocation.tsx - удалена нормализация slug. Slug - taskId передаем в верхнем регистре" />
-    <MESSAGE value="Added calculation of the 60-day execution deadline from the order signing date and displayed it under “Дата подписания” in src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx" />
-    <MESSAGE value="fix build app error" />
-    <MESSAGE value=" NCW generator перемещен в src/app/workspace/components/T2/T2NcwGenerator.tsx&#10; src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx добавлен функционал создания УОР" />
-    <MESSAGE value="fix Uncaught Error: MUI X: Can not find the date and time pickers localization context." />
-    <MESSAGE value="Done-date defaults &amp; modal UX: The “Создать УОР” action captures the timestamp of the status → Done change, feeds it into the generator’s&#10;    completion date, and launches a full-screen modal with its own close button that spins up the same component src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx" />
-    <MESSAGE value="T2NcwGenerator.tsx - изменен UI Диалога генерации УОР" />
-    <MESSAGE value="/api/upload now understands projectKey and uses the shared key builder so documents land under uploads/&lt;org&gt;/&lt;project&gt;/&lt;taskId&gt;/&lt;taskId&gt;-documents/...&#10; (src/pages/api/upload.ts)" />
-    <MESSAGE value="Выполнена нормализация имен загружаемых документов" />
-    <MESSAGE value="Added project operator load in src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx and derived canCreateNcw flag so the “Создать уведомление” (УОР) option only renders when operator is 250020; guarded the opener accordingly." />
-    <MESSAGE value="Added project operator load in src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx and derived canCreateNcw flag so the “Создать уведомление” option only renders when operator is 250020; guarded the opener accordingly." />
-    <MESSAGE value="Удалена иконка скачивания из блока «Документы» в src/app/org/(protected)/[org]/projects/[project]/tasks/[id]/page.tsx" />
-    <MESSAGE value="В src/app/onboarding/page.tsx телефон теперь автоматически приводится к формату +7XXXXXXXXXX(обрабатывает ввод с 8/9 или без +), проверяется регуляркой, показывает подсказку при недостатке цифр; исходное значение тоже нормализуется" />
-    <MESSAGE value="Выровнены формы по единой ширине с адаптивными отступами: поля растягиваются на всю колонку и смотрятся одинаково на мобиле/десктопе(src/app/onboarding/page.tsx)" />
-    <MESSAGE value="src/app/components/NavigationMenu.tsx&#10;- Меню строится только после получения profileType (navLoading держит лоадер, пока роли нет; загрузка менеджерских данных включается только для employer-view).&#10;- Employer-view (employer/manager) видит: Главная, Организация, Мои проекты, Геолокации.&#10;- Contractor/executor-view видит: Главная, Мои задачи, Биржа (/market), Геолокации." />
-    <MESSAGE value="Правки UI в src/app/onboarding/page.tsx" />
     <MESSAGE value="Обновил логику геолокаций для employer-view в src/app/components/NavigationMenu.tsx:&#10;- Ввёл флаг isOwnerLike (owner/org_admin/super_admin).&#10;- Геолокации для owner-like ведут на /tasks/locations с картой всех задач организации (фильтр по activeOrgId).&#10;- Для менеджера без owner-прав — на локации первого проекта, где пользователь назначен менеджером; если проектов нет, fallback на /tasks/locations.&#10;- Добавил флаг в зависимости useMemo." />
     <MESSAGE value="Обновил перенаправления после онбординга для заказчиков:&#10;- src/app/ClientApp.tsx: берем profileType из контекста и после завершения онбординга отправляем заказчиков на /org/new, остальных — на /.&#10;- src/app/onboarding/page.tsx: при уже завершённом онбординге или после сохранения роли заказчики попадают на /org/new, остальные на главную" />
     <MESSAGE value="Изменен UI src/app/onboarding/page.tsx" />
@@ -503,6 +486,24 @@
     <MESSAGE value="Изменения UI в src/app/onboarding/page.tsx." />
     <MESSAGE value="Изменения UI в src/app/onboarding/page.tsx. Fix отступов." />
     <MESSAGE value=" Обновил страницу src/app/tasks/[id]/page.tsx: кнопка «Завершено» теперь открывает диалог подтверждения, делает PATCH на статус Done, обновляет задачу в состоянии, показывает ошибки и блокирует кнопку на время запроса — дальше работают почтовые уведомления и колокол, как для остальных статусов." />
-    <option name="LAST_COMMIT_MESSAGE" value=" Обновил страницу src/app/tasks/[id]/page.tsx: кнопка «Завершено» теперь открывает диалог подтверждения, делает PATCH на статус Done, обновляет задачу в состоянии, показывает ошибки и блокирует кнопку на время запроса — дальше работают почтовые уведомления и колокол, как для остальных статусов." />
+    <MESSAGE value="Fixed the TypeScript errors by switching Providers to a proper ReactNode type" />
+    <MESSAGE value="src/app/(public)/sign-in/[[...sign-in]]/page.tsx&#10;Блоки изменены на темный и светлый apple glass style, изменена типографика" />
+    <MESSAGE value="src/app/(public)/sign-in/[[...sign-in]]/page.tsx&#10;Блоки изменены на темный и светлый apple glass style, изменена типографика. Поправил источник стилей: src/app/globals.css" />
+    <MESSAGE value="src/app/(public)/sign-up/[[...sign-up]]/page.tsx&#10;Блоки изменены на темный и светлый apple glass style, изменена типографика для страницы регистрации." />
+    <MESSAGE value="В обоих текстовых блоках поставил универсальный короткий текст для employer/contractor в src/app/(public)/sign-in/[[...sign-in]]/page.tsx и src/app(public)/sign-up/[[...sign-up]]/page.tsx." />
+    <MESSAGE value="Сделал локализацию ошибок Clerk через единый маппер и убрал выдачу английских сообщений — теперь даже неизвестные ошибки показываются на русском." />
+    <MESSAGE value="- src/utils/billingLimits.ts: добавил общие хелперы resolveEffectivePlanLimits&#10;    и resolveEffectiveStorageLimit, обновил loadPlanForOrg на использование&#10;    тарифов как источника.&#10;  - src/app/api/admin/organizations/route.ts: в выдаче организаций лимиты/&#10;    хранилище считаются из конфигураций тарифов, а не из подписок.&#10;  - src/app/api/admin/organizations/[org]/subscription/route.ts: ответ после&#10;    PATCH возвращает вычисленные лимиты из тарифа.&#10;  - src/app/api/org/[org]/subscription/route.ts: и GET, и PATCH выдают лимиты,&#10;    рассчитанные из тарифа; фоллбек без подписки тоже берет значения из&#10;    конфигурации тарифа." />
+    <MESSAGE value="Добавил начисление приветственного баланса и отправку уведомления владельцу при создании организации: кредитую 30000 ₽ в кошелек, затем создаю welcome-уведомление (оно же уходит в email), привязав к новой организации." />
+    <MESSAGE value="Fix build app error" />
+    <MESSAGE value="Fix build app error #2" />
+    <MESSAGE value="Fix E11000 src/utils/storageUsage.ts" />
+    <MESSAGE value="Сдвинул логику периода на “от момента оформления до того же числа следующего месяца” src/utils/subscriptionBilling.ts" />
+    <MESSAGE value="Обновил логику приветственного бонуса: теперь начисляется 5000 ₽, при создании кошелька отправляется приветственное уведомление (оно попадет в&#10;  NotificationBell и уйдет на email)" />
+    <MESSAGE value="Убрал всю n8n-логику из интеграций и связанного UI: удалил тип n8n_webhook, очистил валидацию и подписи, а также убрал шаблоны n8n и тексты про них." />
+    <MESSAGE value="Сделал переиспользуемый диалог профиля с иконкой закрытия и подключил его в админском списке пользователей: теперь клик по имени/аватару открывает профиль&#10;  в модальном окне.&#10;- Новый компонент: src/features/profile/ProfileDialog.tsx&#10;- Обновлено: src/features/admin/UsersAdmin.tsx" />
+    <MESSAGE value="Переориентировал профильный API на clerkUserId и обновил диалог/админку, чтобы они использовали clerkUserId.&#10;- src/app/api/profile/[userId]/route.ts&#10;- src/features/profile/ProfileDialog.tsx&#10;- src/features/admin/UsersAdmin.tsx&#10;также перевел остальные места открытия профиля на clerkUserId&#10;- src/app/api/profile/[userId]/route.ts&#10;- src/app/api/tasks/[taskId]/applications/route.ts&#10;- src/app/types/application.ts&#10;- src/app/org/(protected)/[org]/projects/[project]/tasks/[taskId]/page.tsx&#10;- src/app/api/admin/users/route.ts (убрал userId из ответа, он больше не нужен)" />
+    <MESSAGE value=" Добавил полноценную модерацию профиля (pending/approved/rejected) с уведомлениями по email и в-app, вывел статус в профиле, и сделал UX для модерации в админке." />
+    <MESSAGE value="Сделал переименование portfolioStatus → profileStatus с обратной совместимостью при чтении, добавил фильтр по статусу в админке, убрал колонку ID из таблицы и показал ID в карточке профиля." />
+    <option name="LAST_COMMIT_MESSAGE" value="Сделал переименование portfolioStatus → profileStatus с обратной совместимостью при чтении, добавил фильтр по статусу в админке, убрал колонку ID из таблицы и показал ID в карточке профиля." />
   </component>
 </project>
