@@ -13,6 +13,8 @@ export type NotificationKind =
     | 'task_published'
     | 'task_application_submitted'
     | 'task_application_status'
+    | 'task_public_moderation_requested'
+    | 'task_public_moderation_result'
     | 'profile_moderation'
     | 'subscription_expiring'
     | 'user_registered'

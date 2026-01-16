@@ -20,6 +20,7 @@ export type RequiredAttachmentType = 'photo' | 'pdf' | 'doc' | 'dwg';
 
 export type TaskVisibility = 'private' | 'public';
 export type PublicTaskStatus = 'open' | 'in_review' | 'assigned' | 'closed';
+export type PublicTaskModerationStatus = 'pending' | 'approved' | 'rejected';
 
 export interface BsLocation {
   id?: string;
@@ -125,6 +126,11 @@ export interface Task {
   // Маркетплейс параметры
   visibility?: TaskVisibility;
   publicStatus?: PublicTaskStatus;
+  publicModerationStatus?: PublicTaskModerationStatus;
+  publicModerationComment?: string;
+  publicModeratedById?: string;
+  publicModeratedByName?: string;
+  publicModeratedAt?: Date | string;
   budget?: number | null;
   publicDescription?: string;
   currency?: string;

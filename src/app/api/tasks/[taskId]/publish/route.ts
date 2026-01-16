@@ -3,11 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import dbConnect from '@/server/db/mongoose';
 import TaskModel from '@/server/models/TaskModel';
+import UserModel from '@/server/models/UserModel';
 import { GetUserContext } from '@/server-actions/user-context';
 import { ensurePublicTaskSlot } from '@/utils/publicTasks';
 import { getBillingConfig } from '@/utils/billingConfig';
 import { debitOrgWallet, ensureOrgWallet } from '@/utils/orgWallet';
 import { notifyTaskPublished } from '@/server/tasks/notifications';
+import { createNotification } from '@/server/notifications/service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -44,7 +46,7 @@ export async function PATCH(
         return NextResponse.json({ error: 'Требуется авторизация' }, { status: 401 });
     }
 
-    const { effectiveOrgRole, isSuperAdmin, memberships } = context.data;
+    const { effectiveOrgRole, isSuperAdmin, memberships, user } = context.data;
     const payload = (await request.json()) as Payload;
 
     const taskQuery = mongoose.Types.ObjectId.isValid(taskId)
@@ -57,6 +59,24 @@ export async function PATCH(
     }
     const wasPublic = task.visibility === 'public';
     const previousPublicStatus = task.publicStatus;
+    const authorEmail = task.authorEmail?.toLowerCase();
+    const authorQuery: Array<{ clerkUserId?: string; email?: string }> = [];
+    if (task.authorId) {
+        authorQuery.push({ clerkUserId: task.authorId });
+    }
+    if (authorEmail) {
+        authorQuery.push({ email: authorEmail });
+    }
+    const authorIsSuperAdmin =
+        authorQuery.length > 0
+            ? await UserModel.findOne({
+                platformRole: 'super_admin',
+                $or: authorQuery,
+            })
+                  .select('_id')
+                  .lean()
+            : null;
+    const bypassModeration = isSuperAdmin || Boolean(authorIsSuperAdmin);
 
     const orgId = task.orgId?.toString();
     const isMember = orgId
@@ -137,10 +157,33 @@ export async function PATCH(
 
         const taskUpdate: Record<string, unknown> = { ...update };
 
-        if (payload.visibility === 'public' && freshTask.visibility !== 'public') {
-            taskUpdate.visibility = 'public';
-            if (!taskUpdate.publicStatus) {
-                taskUpdate.publicStatus = 'open';
+        const wantsPublic = payload.visibility === 'public';
+        const shouldRequestModeration =
+            wantsPublic &&
+            !bypassModeration &&
+            freshTask.visibility !== 'public';
+
+        if (shouldRequestModeration) {
+            taskUpdate.visibility = 'private';
+            taskUpdate.publicStatus = 'closed';
+            taskUpdate.publicModerationStatus = 'pending';
+            taskUpdate.publicModerationComment = '';
+            taskUpdate.publicModeratedById = null;
+            taskUpdate.publicModeratedByName = null;
+            taskUpdate.publicModeratedAt = null;
+        } else if (wantsPublic) {
+            if (freshTask.visibility !== 'public') {
+                taskUpdate.visibility = 'public';
+                if (!taskUpdate.publicStatus) {
+                    taskUpdate.publicStatus = 'open';
+                }
+            }
+            if (bypassModeration) {
+                taskUpdate.publicModerationStatus = 'approved';
+                taskUpdate.publicModerationComment = '';
+                taskUpdate.publicModeratedById = user?._id?.toString();
+                taskUpdate.publicModeratedByName = user?.name || user?.email;
+                taskUpdate.publicModeratedAt = new Date();
             }
         } else if (payload.visibility === 'private') {
             taskUpdate.visibility = 'private';
@@ -262,6 +305,66 @@ export async function PATCH(
             });
         } catch (notifyErr) {
             console.error('Failed to notify about task publication', notifyErr);
+        }
+    }
+
+    const moderationRequested =
+        payload.visibility === 'public' &&
+        savedTask?.visibility !== 'public' &&
+        savedTask?.publicModerationStatus === 'pending';
+
+    if (moderationRequested) {
+        const superAdmins = await UserModel.find({ platformRole: 'super_admin' })
+            .select('_id')
+            .lean();
+        const taskLabel = savedTask?.taskName ?? task.taskName ?? 'Задача';
+        const bsInfo = savedTask?.bsNumber ?? task.bsNumber;
+        const message = `Запрошена модерация публичной задачи: ${taskLabel}${bsInfo ? ` (БС ${bsInfo})` : ''}.`;
+        const link = `/admin?tab=tasks`;
+
+        await Promise.all(
+            superAdmins.map((admin) =>
+                createNotification({
+                    recipientUserId: admin._id,
+                    type: 'task_public_moderation_requested',
+                    title: 'Новая задача на модерацию',
+                    message,
+                    link,
+                    orgId: savedTask?.orgId ?? task.orgId ?? undefined,
+                    orgSlug: (savedTask as { orgSlug?: string })?.orgSlug ?? (task as { orgSlug?: string })?.orgSlug,
+                    orgName: (savedTask as { orgName?: string })?.orgName ?? (task as { orgName?: string })?.orgName,
+                    metadata: {
+                        taskId: savedTask?._id?.toString() ?? task._id?.toString(),
+                        taskCode: savedTask?.taskId ?? task.taskId,
+                    },
+                })
+            )
+        );
+
+        if (authorQuery.length > 0) {
+            const author = await UserModel.findOne({ $or: authorQuery })
+                .select('_id')
+                .lean();
+            if (author?._id) {
+                const taskCode = task.taskId ?? savedTask?.taskId;
+                const authorLink = taskCode
+                    ? `/tasks/${encodeURIComponent(taskCode)}`
+                    : undefined;
+                await createNotification({
+                    recipientUserId: author._id,
+                    type: 'task_public_moderation_requested',
+                    title: 'Задача отправлена на модерацию',
+                    message: `Задача «${taskLabel}» отправлена на модерацию.`,
+                    link: authorLink,
+                    orgId: savedTask?.orgId ?? task.orgId ?? undefined,
+                    orgSlug: (savedTask as { orgSlug?: string })?.orgSlug ?? (task as { orgSlug?: string })?.orgSlug,
+                    orgName: (savedTask as { orgName?: string })?.orgName ?? (task as { orgName?: string })?.orgName,
+                    metadata: {
+                        taskId: savedTask?._id?.toString() ?? task._id?.toString(),
+                        taskCode: savedTask?.taskId ?? task.taskId,
+                    },
+                });
+            }
         }
     }
 

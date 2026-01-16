@@ -56,6 +56,9 @@ async function loadTask(taskId: string) {
     return TaskModel.findById(taskId).lean();
 }
 
+const isPublicApproved = (task?: { publicModerationStatus?: string | null }) =>
+    !task?.publicModerationStatus || task.publicModerationStatus === 'approved';
+
 async function resolveStorageScope(task: {
     orgId?: unknown;
     projectId?: unknown;
@@ -184,7 +187,7 @@ export async function POST(
     }
 
     const task = await loadTask(taskId);
-    if (!task || task.visibility !== 'public') {
+    if (!task || task.visibility !== 'public' || !isPublicApproved(task)) {
         return NextResponse.json({ error: 'Задача недоступна для откликов' }, { status: 404 });
     }
 
@@ -226,7 +229,7 @@ export async function POST(
         const freshTaskQuery = TaskModel.findById(task._id);
         if (txnSession) freshTaskQuery.session(txnSession);
         const freshTask = await freshTaskQuery;
-        if (!freshTask || freshTask.visibility !== 'public') {
+        if (!freshTask || freshTask.visibility !== 'public' || !isPublicApproved(freshTask)) {
             return { ok: false, code: 'TASK_NOT_AVAILABLE' };
         }
 

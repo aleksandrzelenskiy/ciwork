@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import {
+    Alert,
     Autocomplete,
     Box,
     Button,
@@ -97,6 +98,16 @@ type AdminTask = {
     projectName?: string;
     projectOperator?: string;
     projectRegionCode?: string;
+    visibility?: string;
+    publicStatus?: string;
+    publicModerationStatus?: 'pending' | 'approved' | 'rejected';
+    publicModerationComment?: string;
+    publicModeratedById?: string;
+    publicModeratedByName?: string;
+    publicModeratedAt?: string;
+    budget?: number;
+    publicDescription?: string;
+    currency?: string;
 };
 
 type AdminTaskFilters = {
@@ -208,6 +219,21 @@ const formatDateRU = (value?: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '—';
     return date.toLocaleDateString('ru-RU');
+};
+
+const formatBudget = (budget?: number, currency?: string) => {
+    if (!budget || budget <= 0) return '—';
+    const code = currency || 'RUB';
+    const isRuble = code === 'RUB';
+    const formatted = budget.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+    return `${formatted} ${isRuble ? '₽' : code}`;
+};
+
+const truncate = (value?: string, max = 120) => {
+    if (!value) return '—';
+    const trimmed = value.trim();
+    if (trimmed.length <= max) return trimmed;
+    return `${trimmed.slice(0, max).trim()}…`;
 };
 
 type ToolbarProps = {
@@ -417,6 +443,117 @@ function AdminTaskTable({
                                     ) : (
                                         '—'
                                     )}
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
+                </TableBody>
+            </Table>
+        </TableContainer>
+    );
+}
+
+function PublicModerationTable({
+    items,
+    onModerate,
+    onOpenProfile,
+}: {
+    items: AdminTask[];
+    onModerate: (task: AdminTask, status: 'approved' | 'rejected') => void;
+    onOpenProfile: (clerkUserId?: string | null) => void;
+}) {
+    const theme = useTheme();
+    const isDarkMode = theme.palette.mode === 'dark';
+    const tableBg = isDarkMode ? 'rgba(13,17,26,0.8)' : 'rgba(255,255,255,0.9)';
+    const headBg = isDarkMode ? 'rgba(15,23,42,0.9)' : 'rgba(248,250,252,0.9)';
+    const cellBorder = isDarkMode ? 'rgba(148,163,184,0.15)' : 'rgba(148,163,184,0.25)';
+    const tableShadow = isDarkMode ? '0 12px 30px rgba(0,0,0,0.45)' : '0 12px 30px rgba(15,23,42,0.1)';
+
+    return (
+        <TableContainer sx={{ borderRadius: UI_RADIUS.panel, boxShadow: tableShadow, bgcolor: tableBg }}>
+            <Table size="small" stickyHeader>
+                <TableHead>
+                    <TableRow sx={{ '& th': { bgcolor: headBg, borderColor: cellBorder } }}>
+                        <TableCell>Задача</TableCell>
+                        <TableCell>Организация</TableCell>
+                        <TableCell>Автор</TableCell>
+                        <TableCell>Бюджет</TableCell>
+                        <TableCell>Описание</TableCell>
+                        <TableCell align="center">Создана</TableCell>
+                        <TableCell align="center">Действия</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {items.map((task) => {
+                        const taskHref = getTaskHref(task);
+                        const orgHref = getOrgHref(task);
+                        return (
+                            <TableRow key={task._id} hover>
+                                <TableCell>
+                                    <Stack spacing={0.5}>
+                                        {taskHref ? (
+                                            <Link href={taskHref} target="_blank">
+                                                {task.taskName || 'Задача'}
+                                            </Link>
+                                        ) : (
+                                            <Typography variant="body2">
+                                                {task.taskName || 'Задача'}
+                                            </Typography>
+                                        )}
+                                        <Typography variant="caption" color="text.secondary">
+                                            {task.taskId || '—'} · {task.bsNumber || '—'}
+                                        </Typography>
+                                    </Stack>
+                                </TableCell>
+                                <TableCell>
+                                    {orgHref ? (
+                                        <Link href={orgHref} target="_blank">
+                                            {task.orgName || task.orgSlug || task.orgId || '—'}
+                                        </Link>
+                                    ) : (
+                                        task.orgName || task.orgSlug || task.orgId || '—'
+                                    )}
+                                </TableCell>
+                                <TableCell>
+                                    <Stack spacing={0.5}>
+                                        <Typography variant="body2">
+                                            {getAuthorLabel(task) || '—'}
+                                        </Typography>
+                                        {task.authorClerkUserId && (
+                                            <Button
+                                                size="small"
+                                                onClick={() => onOpenProfile(task.authorClerkUserId)}
+                                            >
+                                                Профиль
+                                            </Button>
+                                        )}
+                                    </Stack>
+                                </TableCell>
+                                <TableCell>{formatBudget(task.budget, task.currency)}</TableCell>
+                                <TableCell>
+                                    <Typography variant="body2">
+                                        {truncate(task.publicDescription)}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="center">{formatDateRU(task.createdAt)}</TableCell>
+                                <TableCell align="center">
+                                    <Stack direction="row" spacing={1} justifyContent="center">
+                                        <Button
+                                            size="small"
+                                            variant="contained"
+                                            onClick={() => onModerate(task, 'approved')}
+                                        >
+                                            Одобрить
+                                        </Button>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            color="error"
+                                            onClick={() => onModerate(task, 'rejected')}
+                                        >
+                                            Отклонить
+                                        </Button>
+                                    </Stack>
                                 </TableCell>
                             </TableRow>
                         );
@@ -685,7 +822,7 @@ export default function TasksAdmin() {
     const tabInactiveColor = isDarkMode ? 'rgba(226,232,240,0.65)' : 'rgba(15,23,42,0.55)';
     const tabBorderColor = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.08)';
 
-    const [tab, setTab] = React.useState<'list' | 'board' | 'calendar'>('list');
+    const [tab, setTab] = React.useState<'list' | 'board' | 'calendar' | 'moderation'>('list');
     const [q, setQ] = React.useState('');
     const [loading, setLoading] = React.useState(true);
     const [items, setItems] = React.useState<AdminTask[]>([]);
@@ -695,6 +832,11 @@ export default function TasksAdmin() {
     const [filters, setFilters] = React.useState<AdminTaskFilters>(defaultFilters);
     const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
     const [profileOpen, setProfileOpen] = React.useState(false);
+    const [moderationTarget, setModerationTarget] = React.useState<AdminTask | null>(null);
+    const [moderationStatus, setModerationStatus] = React.useState<'approved' | 'rejected'>('approved');
+    const [moderationComment, setModerationComment] = React.useState('');
+    const [moderationError, setModerationError] = React.useState<string | null>(null);
+    const [moderationLoading, setModerationLoading] = React.useState(false);
 
     const load = React.useCallback(async () => {
         try {
@@ -838,6 +980,11 @@ export default function TasksAdmin() {
         });
     }, [filters, items, q]);
 
+    const moderationItems = React.useMemo(
+        () => items.filter((task) => task.publicModerationStatus === 'pending'),
+        [items]
+    );
+
     const handleSearchIconClick = (event: React.MouseEvent<HTMLElement>) => {
         if (searchAnchor && event.currentTarget === searchAnchor) {
             setSearchAnchor(null);
@@ -922,9 +1069,64 @@ export default function TasksAdmin() {
         setProfileUserId(null);
     };
 
+    const openModerationDialog = (task: AdminTask, status: 'approved' | 'rejected') => {
+        setModerationTarget(task);
+        setModerationStatus(status);
+        setModerationComment(task.publicModerationComment ?? '');
+        setModerationError(null);
+    };
+
+    const closeModerationDialog = () => {
+        if (moderationLoading) return;
+        setModerationTarget(null);
+        setModerationComment('');
+        setModerationError(null);
+    };
+
+    const submitModeration = async () => {
+        if (!moderationTarget) return;
+        if (moderationStatus === 'rejected' && !moderationComment.trim()) {
+            setModerationError('Укажите причину отказа');
+            return;
+        }
+
+        setModerationLoading(true);
+        setModerationError(null);
+        try {
+            const response = await fetch(
+                `/api/admin/tasks/${encodeURIComponent(moderationTarget._id)}/moderation`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: moderationStatus,
+                        comment: moderationComment,
+                    }),
+                }
+            );
+            const payload = (await response.json().catch(() => null)) as
+                | { ok?: boolean; task?: AdminTask; error?: string }
+                | null;
+            if (!response.ok || !payload?.ok || !payload.task) {
+                setModerationError(payload?.error || 'Не удалось обновить модерацию');
+                return;
+            }
+
+            setItems((prev) =>
+                prev.map((item) => (item._id === payload.task?._id ? { ...item, ...payload.task } : item))
+            );
+            closeModerationDialog();
+        } catch (err) {
+            setModerationError(err instanceof Error ? err.message : 'Ошибка сети');
+        } finally {
+            setModerationLoading(false);
+        }
+    };
+
     const orgCount = orgOptions.length;
     const projectCount = projectOptions.length;
     const regionCount = regionOptions.length;
+    const moderationCount = moderationItems.length;
 
     return (
         <Box
@@ -968,7 +1170,7 @@ export default function TasksAdmin() {
                             >
                                 {loading
                                     ? 'Загружаем задачи...'
-                                    : `Всего задач: ${items.length}. Организаций: ${orgCount}. Проектов: ${projectCount}. Регионов: ${regionCount}.`}
+                                    : `Всего задач: ${items.length}. Организаций: ${orgCount}. Проектов: ${projectCount}. Регионов: ${regionCount}. На модерации: ${moderationCount}.`}
                             </Typography>
                             {error && (
                                 <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
@@ -1260,7 +1462,7 @@ export default function TasksAdmin() {
                 >
                     <Tabs
                         value={tab}
-                        onChange={(_, v) => setTab(v as 'list' | 'board' | 'calendar')}
+                        onChange={(_, v) => setTab(v as 'list' | 'board' | 'calendar' | 'moderation')}
                         sx={{
                             minHeight: 0,
                             mb: 2.5,
@@ -1336,13 +1538,33 @@ export default function TasksAdmin() {
                                 },
                             }}
                         />
+                        <Tab
+                            value="moderation"
+                            label={`Модерация${moderationCount ? ` · ${moderationCount}` : ''}`}
+                            sx={{
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                fontSize: { xs: '0.9rem', md: '1rem' },
+                                borderRadius: UI_RADIUS.tooltip,
+                                px: { xs: 1.5, md: 2.5 },
+                                py: 1,
+                                minHeight: 0,
+                                minWidth: 0,
+                                color: tabInactiveColor,
+                                '&.Mui-selected': {
+                                    backgroundColor: tabActiveBg,
+                                    color: textPrimary,
+                                    boxShadow: iconShadow,
+                                },
+                            }}
+                        />
                     </Tabs>
 
                     {loading ? (
                         <Box sx={{ p: 3 }}>
                             <Typography color="text.secondary">Загрузка…</Typography>
                         </Box>
-                    ) : filteredItems.length === 0 ? (
+                    ) : tab !== 'moderation' && filteredItems.length === 0 ? (
                         <Box sx={{ p: 3 }}>
                             <Typography color="text.secondary">Задачи не найдены.</Typography>
                         </Box>
@@ -1361,6 +1583,20 @@ export default function TasksAdmin() {
                                 />
                             )}
                             {tab === 'calendar' && <AdminTaskCalendar items={filteredItems} />}
+                            {tab === 'moderation' &&
+                                (moderationItems.length === 0 ? (
+                                    <Box sx={{ p: 3 }}>
+                                        <Typography color="text.secondary">
+                                            Нет задач на модерации.
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <PublicModerationTable
+                                        items={moderationItems}
+                                        onModerate={openModerationDialog}
+                                        onOpenProfile={openProfileDialog}
+                                    />
+                                ))}
                         </>
                     )}
                 </Paper>
@@ -1401,6 +1637,58 @@ export default function TasksAdmin() {
                         }}
                     />
                 </DialogContent>
+            </Dialog>
+
+            <Dialog open={Boolean(moderationTarget)} onClose={closeModerationDialog} fullWidth maxWidth="sm">
+                <DialogTitle>Модерация публикации</DialogTitle>
+                <DialogContent sx={{ pt: 1 }}>
+                    {moderationTarget && (
+                        <Stack spacing={2} sx={{ mt: 1 }}>
+                            <Typography variant="subtitle2">
+                                {moderationTarget.taskName || 'Задача'} · {moderationTarget.taskId || '—'}
+                            </Typography>
+                            <FormControl fullWidth size="small">
+                                <InputLabel id="task-moderation-status-label">Статус</InputLabel>
+                                <Select
+                                    labelId="task-moderation-status-label"
+                                    label="Статус"
+                                    value={moderationStatus}
+                                    onChange={(event) =>
+                                        setModerationStatus(event.target.value as 'approved' | 'rejected')
+                                    }
+                                >
+                                    <MenuItem value="approved">Одобрить</MenuItem>
+                                    <MenuItem value="rejected">Отклонить</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <TextField
+                                label="Комментарий"
+                                value={moderationComment}
+                                onChange={(event) => setModerationComment(event.target.value)}
+                                minRows={3}
+                                multiline
+                                helperText={
+                                    moderationStatus === 'rejected'
+                                        ? 'Укажите причину отклонения'
+                                        : 'Комментарий виден автору задачи'
+                                }
+                            />
+                            {moderationError && <Alert severity="error">{moderationError}</Alert>}
+                        </Stack>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button onClick={closeModerationDialog} disabled={moderationLoading}>
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={submitModeration}
+                        disabled={moderationLoading}
+                    >
+                        {moderationLoading ? 'Сохранение...' : 'Подтвердить'}
+                    </Button>
+                </DialogActions>
             </Dialog>
 
             <ProfileDialog

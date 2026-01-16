@@ -37,6 +37,16 @@ type AdminTask = {
     projectName?: string;
     projectOperator?: string;
     projectRegionCode?: string;
+    visibility?: string;
+    publicStatus?: string;
+    publicModerationStatus?: string;
+    publicModerationComment?: string;
+    publicModeratedById?: string;
+    publicModeratedByName?: string;
+    publicModeratedAt?: string;
+    budget?: number;
+    publicDescription?: string;
+    currency?: string;
 };
 
 type ResponsePayload = { tasks: AdminTask[] };

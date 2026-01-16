@@ -41,6 +41,11 @@ export async function GET(request: NextRequest) {
 
     const matchStage: Record<string, unknown> = {
         visibility: 'public',
+        $or: [
+            { publicModerationStatus: 'approved' },
+            { publicModerationStatus: null },
+            { publicModerationStatus: { $exists: false } },
+        ],
     };
 
     if (status) {

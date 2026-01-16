@@ -41,6 +41,8 @@ const NotificationSchema = new Schema<NotificationDoc>(
                 'task_published',
                 'task_application_submitted',
                 'task_application_status',
+                'task_public_moderation_requested',
+                'task_public_moderation_result',
                 'user_registered',
                 'subscription_expiring',
                 'review_received',

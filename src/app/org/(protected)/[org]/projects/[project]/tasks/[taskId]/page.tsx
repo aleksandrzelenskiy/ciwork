@@ -536,10 +536,18 @@ export default function TaskDetailsPage() {
                     });
                     return false;
                 }
+                const updatedTask = data.task as Task | undefined;
+                const moderationPending =
+                    Boolean(updatedTask?.publicModerationStatus === 'pending') &&
+                    updatedTask?.visibility !== 'public';
                 setPublishSnack({
                     open: true,
                     sev: 'success',
-                    message: makePublic ? 'Задача опубликована' : 'Публикация снята',
+                    message: makePublic
+                        ? moderationPending
+                            ? 'Задача отправлена на модерацию'
+                            : 'Задача опубликована'
+                        : 'Публикация снята',
                 });
                 await load();
                 return true;
@@ -985,6 +993,9 @@ export default function TaskDetailsPage() {
     const canCreateNcw = projectOperator === '250020';
     const executorAssigned = Boolean(task?.executorId || task?.executorName || task?.executorEmail);
     const normalizedStatus = normalizeStatusTitle(task?.status);
+    const publicModerationStatus = task?.publicModerationStatus;
+    const isModerationPending = publicModerationStatus === 'pending';
+    const isModerationRejected = publicModerationStatus === 'rejected';
     const canUnassignExecutor = ![
         'Done',
         'Pending',
@@ -1630,6 +1641,22 @@ export default function TaskDetailsPage() {
                                         }}
                                     />
                                 )}
+                                {isModerationPending && (
+                                    <Chip
+                                        label="На модерации"
+                                        size="small"
+                                        color="warning"
+                                        variant="outlined"
+                                    />
+                                )}
+                                {isModerationRejected && (
+                                    <Chip
+                                        label="Публикация отклонена"
+                                        size="small"
+                                        color="error"
+                                        variant="outlined"
+                                    />
+                                )}
                             </Stack>
 
                             <Typography
@@ -1656,6 +1683,11 @@ export default function TaskDetailsPage() {
                                     {projectKey || task?.projectKey || project}
                                 </Link>
                             </Typography>
+                            {isModerationRejected && task?.publicModerationComment && (
+                                <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                                    Комментарий модератора: {task.publicModerationComment}
+                                </Typography>
+                            )}
                         </Box>
                     </Stack>
                     <Stack
@@ -1680,9 +1712,11 @@ export default function TaskDetailsPage() {
                             {task && !executorAssigned && (
                                 <Tooltip
                                     title={
-                                        task.visibility === 'public'
-                                            ? 'Снять с публикации'
-                                            : 'Опубликовать на бирже'
+                                        isModerationPending
+                                            ? 'Задача на модерации'
+                                            : task.visibility === 'public'
+                                                ? 'Снять с публикации'
+                                                : 'Опубликовать на бирже'
                                     }
                                 >
                                     <span>
@@ -1692,12 +1726,12 @@ export default function TaskDetailsPage() {
                                                     ? void handlePublishToggle(false)
                                                     : openPublishDialog()
                                             }
-                                            disabled={publishLoading}
+                                            disabled={publishLoading || isModerationPending}
                                             sx={getIconButtonSx({
                                                 active: task.visibility === 'public',
                                                 activeColor: '#ffffff',
                                                 activeBg: theme.palette.primary.main,
-                                                disabled: publishLoading,
+                                                disabled: publishLoading || isModerationPending,
                                             })}
                                         >
                                             <CampaignOutlinedIcon />
