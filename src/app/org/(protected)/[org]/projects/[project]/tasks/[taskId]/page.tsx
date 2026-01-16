@@ -132,6 +132,11 @@ type Task = {
     status?: string;
     visibility?: 'public' | 'private';
     publicStatus?: 'open' | 'in_review' | 'assigned' | 'closed';
+    publicModerationStatus?: 'pending' | 'approved' | 'rejected';
+    publicModerationComment?: string;
+    publicModeratedById?: string;
+    publicModeratedByName?: string;
+    publicModeratedAt?: string;
     bsNumber?: string;
     bsAddress?: string;
     bsLocation?: Array<{ name?: string; coordinates: string; address?: string | null }>;
