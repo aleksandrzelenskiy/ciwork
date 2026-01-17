@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: __dirname,
+  basePath: '/ws',
   experimental: {
     serverActions: {
       // ставим с запасом: 100 мегабайт

@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useDropzone } from 'react-dropzone';
+import { withBasePath } from '@/utils/basePath';
 
 type ReportFixUploaderProps = {
     open: boolean;
@@ -91,7 +92,7 @@ export default function ReportFixUploader({
             formData.append('baseId', baseId);
             files.forEach((file) => formData.append('files', file));
 
-            const res = await fetch('/api/reports/upload-fix', {
+            const res = await fetch(withBasePath('/api/reports/upload-fix'), {
                 method: 'POST',
                 body: formData,
             });

@@ -6,6 +6,7 @@ import { ruRU } from '@clerk/localizations';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import type { ReactNode } from 'react';
 import ClientApp from './ClientApp';
+import { withBasePath } from '@/utils/basePath';
 
 type ProvidersProps = {
     publishableKey: string;
@@ -38,8 +39,8 @@ export default function Providers({ publishableKey, fontFamily, children }: Prov
             localization={localization}
             publishableKey={publishableKey}
             dynamic
-            signInUrl="/sign-in"
-            signUpUrl="/sign-up"
+            signInUrl={withBasePath('/sign-in')}
+            signUpUrl={withBasePath('/sign-up')}
         >
             <ThemeProvider theme={theme}>
                 <CssBaseline />

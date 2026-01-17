@@ -26,6 +26,7 @@ import { YMaps, Map, Placemark, Clusterer, ZoomControl, FullscreenControl } from
 import type { PublicTaskStatus, PriorityLevel, TaskVisibility, TaskType } from '@/app/types/taskTypes';
 import type { TaskApplication } from '@/app/types/application';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
+import { withBasePath } from '@/utils/basePath';
 
 export type MarketPublicTask = {
     _id: string;
@@ -133,7 +134,7 @@ export default function MarketLocations({ onOpenInfo, onOpenApply }: MarketLocat
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/tasks/public?limit=200', { cache: 'no-store' });
+            const res = await fetch(withBasePath('/api/tasks/public?limit=200'), { cache: 'no-store' });
             const payload = (await res.json()) as { tasks?: MarketPublicTask[]; error?: string };
             if (!res.ok || payload.error) {
                 setError(payload.error || 'Не удалось загрузить публичные задачи');

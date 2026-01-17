@@ -14,6 +14,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
+import { withBasePath } from '@/utils/basePath';
 
 type ReviewDialogProps = {
     open: boolean;
@@ -56,7 +57,7 @@ export default function ReviewDialog({
         setReviewsError(null);
         try {
             const res = await fetch(
-                `/api/reviews?targetClerkUserId=${encodeURIComponent(targetClerkUserId)}`,
+                withBasePath(`/api/reviews?targetClerkUserId=${encodeURIComponent(targetClerkUserId)}`),
                 { cache: 'no-store' }
             );
             const data = await res.json().catch(() => ({}));
@@ -95,7 +96,7 @@ export default function ReviewDialog({
         setSaving(true);
         setMessage(null);
         try {
-            const res = await fetch('/api/reviews', {
+            const res = await fetch(withBasePath('/api/reviews'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

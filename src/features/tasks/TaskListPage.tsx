@@ -41,6 +41,7 @@ import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
 import { defaultTaskFilters, type TaskFilterOptions, type TaskFilters } from '@/app/types/taskFilters';
 import { getStatusLabel } from '@/utils/statusLabels';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { withBasePath } from '@/utils/basePath';
 
 interface TaskListPageProps {
   searchQuery?: string;
@@ -350,7 +351,7 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
     let active = true;
     (async () => {
       try {
-        const response = await fetch('/api/users');
+        const response = await fetch(withBasePath('/api/users'));
         if (!response.ok) return;
         const data = await response.json();
         if (!active) return;
@@ -379,7 +380,7 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const response = await fetch('/api/tasks');
+        const response = await fetch(withBasePath('/api/tasks'));
         const data = await response.json();
         if (!response.ok) {
           setError(data.error || 'Failed to fetch tasks');

@@ -55,6 +55,7 @@ import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import type { RelatedTaskRef } from '@/app/types/taskTypes';
 import WorkItemsEditorDialog from '@/app/workspace/components/WorkItemsEditorDialog';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { withBasePath } from '@/utils/basePath';
 
 
 
@@ -1136,7 +1137,7 @@ export default function WorkspaceTaskDialog({
         fd.append('orgSlug', orgSlug || '');
         fd.append('projectKey', projectRef || '');
 
-        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const res = await fetch(withBasePath('/api/upload'), { method: 'POST', body: fd });
         if (!res.ok) {
             let body: unknown = null;
             try {
@@ -1166,7 +1167,7 @@ export default function WorkspaceTaskDialog({
         fd.append('subfolder', 'attachments');
         fd.append('orgSlug', orgSlug || '');
 
-            const res = await fetch('/api/upload', { method: 'POST', body: fd });
+            const res = await fetch(withBasePath('/api/upload'), { method: 'POST', body: fd });
 
             if (!res.ok) {
                 let body: unknown = null;

@@ -46,6 +46,7 @@ import RubleAmount from '@/features/shared/RubleAmount';
 import dayjs from 'dayjs';
 import { UI_RADIUS } from '@/config/uiTokens';
 import NextLink from 'next/link';
+import { withBasePath } from '@/utils/basePath';
 
 const getTransactionDescription = (source: string) => {
   switch (source) {
@@ -293,7 +294,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
   const loadWalletInfo = async () => {
       setWalletLoading(true);
       setWalletError(null);
-      const res = await fetch('/api/wallet/me', { cache: 'no-store' });
+      const res = await fetch(withBasePath('/api/wallet/me'), { cache: 'no-store' });
       const data = (await res.json().catch(() => null)) as WalletResponse | null;
       if (!res.ok || !data || !isWalletPayload(data)) {
           setWalletInfo(null);
@@ -325,7 +326,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
       setTransactionsOpen(true);
       setTransactionsLoading(true);
       setTransactionsError(null);
-      const res = await fetch('/api/wallet/transactions?limit=20', { cache: 'no-store' });
+      const res = await fetch(withBasePath('/api/wallet/transactions?limit=20'), { cache: 'no-store' });
       const data = (await res.json().catch(() => null)) as
           | {
               wallet?: { balance: number; bonusBalance: number; total: number; currency?: string };

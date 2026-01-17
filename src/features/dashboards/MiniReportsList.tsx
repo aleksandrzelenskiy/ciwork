@@ -36,6 +36,7 @@ import { BaseStatus, ReportClient, ApiResponse } from '@/app/types/reportTypes';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { withBasePath } from '@/utils/basePath';
 
 interface MiniReportsListProps {
   role: EffectiveOrgRole | null;
@@ -70,7 +71,7 @@ export default function MiniReportsList({
   useEffect(() => {
     async function fetchReports() {
       try {
-        const res = await fetch('/api/reports');
+        const res = await fetch(withBasePath('/api/reports'));
         if (!res.ok) {
           setError('Не удалось загрузить отчеты');
           return;

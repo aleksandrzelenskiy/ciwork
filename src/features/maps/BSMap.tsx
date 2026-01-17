@@ -45,6 +45,7 @@ import {
     getOperatorLabel,
     normalizeOperatorCode,
 } from '@/app/utils/operators';
+import { withBasePath } from '@/utils/basePath';
 
 type BaseStation = {
     _id: string;
@@ -552,7 +553,7 @@ export default function BSMap(): React.ReactElement {
         setEditDialogError(null);
 
         try {
-            const response = await fetch('/api/bsmap', {
+            const response = await fetch(withBasePath('/api/bsmap'), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -593,7 +594,7 @@ export default function BSMap(): React.ReactElement {
         setDeleteDialogError(null);
 
         try {
-            const response = await fetch('/api/bsmap', {
+            const response = await fetch(withBasePath('/api/bsmap'), {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -638,7 +639,7 @@ export default function BSMap(): React.ReactElement {
         setCreateDialogError(null);
 
         try {
-            const response = await fetch('/api/bsmap', {
+            const response = await fetch(withBasePath('/api/bsmap'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

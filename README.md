@@ -47,6 +47,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ### Domain configuration (icia.pro)
 
+- `NEXT_PUBLIC_BASE_PATH=/ws` (Next.js basePath, app served under `/ws`)
 - `FRONTEND_URL=https://icia.pro/ws` (server-side base URL for links)
 - `NEXT_PUBLIC_FRONTEND_URL=https://icia.pro/ws` (client-side base URL fallback)
 - `EMAIL_FROM="CI Work <no-reply@icia.pro>"` (optional, default shown)

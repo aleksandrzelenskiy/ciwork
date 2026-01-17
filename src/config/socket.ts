@@ -1,3 +1,5 @@
 // src/config/socket.ts
 
-export const NOTIFICATIONS_SOCKET_PATH = '/api/socket/io';
+import { withBasePath } from '@/utils/basePath';
+
+export const NOTIFICATIONS_SOCKET_PATH = withBasePath('/api/socket/io');

@@ -28,6 +28,7 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { withBasePath } from '@/utils/basePath';
 import {
     OPERATOR_CLUSTER_PRESETS,
     OPERATOR_COLORS,
@@ -269,7 +270,7 @@ export default function ProjectTaskLocation({
                     return;
                 }
 
-                const tasksResponse = await fetch('/api/tasks', { cache: 'no-store' });
+                const tasksResponse = await fetch(withBasePath('/api/tasks'), { cache: 'no-store' });
                 const payload = (await tasksResponse.json().catch(() => null)) as
                     | { tasks?: TaskLocation[]; error?: string }
                     | null;

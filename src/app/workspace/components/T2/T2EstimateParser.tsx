@@ -25,6 +25,7 @@ import { useDropzone, FileRejection } from 'react-dropzone';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { withBasePath } from '@/utils/basePath';
 
 interface ExcelData {
     [sheetName: string]: Array<Record<string, unknown>>;
@@ -212,7 +213,7 @@ const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLab
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch('/api/estimates', {
+            const response = await fetch(withBasePath('/api/estimates'), {
                 method: 'POST',
                 body: formData,
             });

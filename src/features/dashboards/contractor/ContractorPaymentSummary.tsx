@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import type { Task, TaskPayment } from '@/app/types/taskTypes';
 import ContractorPaymentDialog from '@/features/dashboards/contractor/ContractorPaymentDialog';
+import { withBasePath } from '@/utils/basePath';
 
 const PAYABLE_STATUSES = new Set(['Agreed']);
 
@@ -31,7 +32,7 @@ export default function ContractorPaymentSummary() {
     useEffect(() => {
         async function fetchTasks() {
             try {
-                const res = await fetch('/api/tasks', { cache: 'no-store' });
+                const res = await fetch(withBasePath('/api/tasks'), { cache: 'no-store' });
                 if (!res.ok) {
                     setError('Ошибка при загрузке задач');
                     return;

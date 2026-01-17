@@ -38,6 +38,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloseIcon from '@mui/icons-material/Close';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { withBasePath } from '@/utils/basePath';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import dynamic from 'next/dynamic';
@@ -842,7 +843,7 @@ export default function TasksAdmin() {
         try {
             setLoading(true);
             setError(null);
-            const res = await fetch('/api/admin/tasks', { cache: 'no-store' });
+            const res = await fetch(withBasePath('/api/admin/tasks'), { cache: 'no-store' });
             const payload = (await res.json().catch(() => null)) as
                 | { tasks?: AdminTask[]; error?: string }
                 | null;

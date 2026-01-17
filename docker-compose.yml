@@ -18,6 +18,17 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  icia:
+    image: nginx:alpine
+    container_name: icia
+    restart: unless-stopped
+    volumes:
+      - ./icia-site:/usr/share/nginx/html:ro
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+
   mongo:
     image: mongo:6.0
     container_name: ciwork_mongo
@@ -49,7 +60,6 @@ services:
       timeout: 5s
       retries: 12
       start_period: 20s
-
     security_opt:
       - no-new-privileges:true
 

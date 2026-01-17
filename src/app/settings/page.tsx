@@ -14,6 +14,7 @@ import {
   Alert,
 } from '@mui/material';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
+import { withBasePath } from '@/utils/basePath';
 
 interface ProfileResponse {
   name?: string;
@@ -31,7 +32,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     (async () => {
-      const res = await fetch('/api/current-user', { cache: 'no-store' });
+      const res = await fetch(withBasePath('/api/current-user'), { cache: 'no-store' });
       const data: ProfileResponse = await res.json();
       if (res.ok) {
         setProfile(data);
@@ -46,7 +47,7 @@ export default function SettingsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/current-user', {
+      const res = await fetch(withBasePath('/api/current-user'), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ regionCode }),

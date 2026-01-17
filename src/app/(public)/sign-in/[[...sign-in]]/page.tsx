@@ -17,6 +17,7 @@ import {
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { getClerkErrorMessage } from '@/utils/clerkErrorMessages';
+import { withBasePath } from '@/utils/basePath';
 
 export default function Page() {
     const { isLoaded, signIn, setActive } = useSignIn();
@@ -62,8 +63,12 @@ export default function Page() {
 
             if (result.status === 'complete') {
                 await setActive({ session: result.createdSessionId });
-                const redirectUrl = searchParams?.get('redirect_url') ?? '/';
-                router.push(redirectUrl);
+                const redirectUrl = searchParams?.get('redirect_url');
+                const targetUrl =
+                    redirectUrl && redirectUrl.startsWith('/')
+                        ? withBasePath(redirectUrl)
+                        : redirectUrl || withBasePath('/');
+                router.push(targetUrl);
                 return;
             }
 

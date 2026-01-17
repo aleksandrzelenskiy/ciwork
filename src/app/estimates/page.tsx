@@ -46,6 +46,7 @@ import {
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { withBasePath } from '@/utils/basePath';
 
 interface ExcelData {
   [sheetName: string]: Array<Record<string, unknown>>;
@@ -146,7 +147,7 @@ const EstimateUploadPage: React.FC = () => {
     const fetchUsers = async () => {
       try {
         setLoadingUsers(true);
-        const response = await fetch('/api/users');
+        const response = await fetch(withBasePath('/api/users'));
         const data = await response.json().catch(() => null);
         if (!response.ok) {
           const message =
@@ -297,7 +298,7 @@ const EstimateUploadPage: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/estimates', {
+      const response = await fetch(withBasePath('/api/estimates'), {
         method: 'POST',
         body: formData,
       });
@@ -433,7 +434,7 @@ const EstimateUploadPage: React.FC = () => {
         note: String(row['__EMPTY_17'] || ''),
       }));
       formDataToSend.append('workItems', JSON.stringify(workItems));
-      const response = await fetch('/api/addtasks', {
+      const response = await fetch(withBasePath('/api/addtasks'), {
         method: 'POST',
         body: formDataToSend,
       });

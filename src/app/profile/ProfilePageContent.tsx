@@ -28,6 +28,7 @@ import type { PlatformRole } from '@/app/types/roles';
 import SendIcon from '@mui/icons-material/Send';
 import ProfileEditForm from '@/features/profile/ProfileEditForm';
 import ReviewDialog from '@/features/profile/ReviewDialog';
+import { withBasePath } from '@/utils/basePath';
 
 type ProfileResponse = {
     id?: string;
@@ -196,7 +197,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         setMessage(null);
 
         try {
-            const res = await fetch('/api/profile', {
+            const res = await fetch(withBasePath('/api/profile'), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -249,7 +250,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         try {
             const formData = new FormData();
             formData.append('avatar', file);
-            const res = await fetch('/api/profile/avatar', {
+            const res = await fetch(withBasePath('/api/profile/avatar'), {
                 method: 'POST',
                 body: formData,
             });

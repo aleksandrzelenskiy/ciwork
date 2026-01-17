@@ -5,6 +5,7 @@
 import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { withBasePath } from '@/utils/basePath';
 import {
     Box,
     Stack,
@@ -272,9 +273,11 @@ export default function ProjectTasksPage() {
             setLoading(true);
             setError(null);
             const url = new URL(
-                `/api/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
-                    projectRef
-                )}/tasks`,
+                withBasePath(
+                    `/api/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
+                        projectRef
+                    )}/tasks`
+                ),
                 window.location.origin
             );
             if (q) url.searchParams.set('q', q);
@@ -308,9 +311,11 @@ export default function ProjectTasksPage() {
         void (async () => {
             try {
                 const res = await fetch(
-                    `/api/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
-                        projectRef
-                    )}`,
+                    withBasePath(
+                        `/api/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
+                            projectRef
+                        )}`
+                    ),
                     { cache: 'no-store' }
                 );
                 if (!res.ok) return;

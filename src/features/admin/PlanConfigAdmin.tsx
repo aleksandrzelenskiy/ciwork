@@ -24,6 +24,7 @@ import {
 import Tooltip from '@mui/material/Tooltip';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import EditOutlined from '@mui/icons-material/EditOutlined';
+import { withBasePath } from '@/utils/basePath';
 
 type PlanCode = 'basic' | 'pro' | 'business' | 'enterprise';
 
@@ -67,7 +68,7 @@ export default function PlanConfigAdmin() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/admin/plans', { cache: 'no-store' });
+            const res = await fetch(withBasePath('/api/admin/plans'), { cache: 'no-store' });
             const payload = (await res.json().catch(() => null)) as PlanResponse | null;
             if (!res.ok || !payload || !('plans' in payload)) {
                 setError(payload && 'error' in payload ? payload.error ?? 'Не удалось загрузить тарифы' : 'Не удалось загрузить тарифы');
@@ -85,7 +86,7 @@ export default function PlanConfigAdmin() {
         setBillingLoading(true);
         setBillingError(null);
         try {
-            const res = await fetch('/api/admin/billing', { cache: 'no-store' });
+            const res = await fetch(withBasePath('/api/admin/billing'), { cache: 'no-store' });
             const payload = (await res.json().catch(() => null)) as BillingResponse | null;
             if (!res.ok || !payload || !('config' in payload)) {
                 setBillingError(payload && 'error' in payload ? payload.error ?? 'Не удалось загрузить настройки' : 'Не удалось загрузить настройки');
@@ -109,7 +110,7 @@ export default function PlanConfigAdmin() {
         setBillingSaving(true);
         setBillingError(null);
         try {
-            const res = await fetch('/api/admin/billing', {
+            const res = await fetch(withBasePath('/api/admin/billing'), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(billingConfig),
@@ -143,7 +144,7 @@ export default function PlanConfigAdmin() {
         setSaving(true);
         setDialogError(null);
         try {
-            const res = await fetch('/api/admin/plans', {
+            const res = await fetch(withBasePath('/api/admin/plans'), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -181,7 +182,9 @@ export default function PlanConfigAdmin() {
         setDeleting(true);
         setDeleteError(null);
         try {
-            const res = await fetch(`/api/admin/plans/${encodeURIComponent(planToDelete.plan)}`, {
+            const res = await fetch(
+                withBasePath(`/api/admin/plans/${encodeURIComponent(planToDelete.plan)}`),
+                {
                 method: 'DELETE',
             });
             const payload = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;

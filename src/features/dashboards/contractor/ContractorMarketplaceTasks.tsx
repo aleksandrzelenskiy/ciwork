@@ -15,6 +15,7 @@ import {
     Typography,
 } from '@mui/material';
 import Link from 'next/link';
+import { withBasePath } from '@/utils/basePath';
 
 interface MarketplaceTask {
     _id: string;
@@ -49,7 +50,7 @@ export default function ContractorMarketplaceTasks() {
     useEffect(() => {
         async function fetchTasks() {
             try {
-                const res = await fetch('/api/tasks/public?limit=5');
+                const res = await fetch(withBasePath('/api/tasks/public?limit=5'));
                 if (!res.ok) {
                     setError('Ошибка при загрузке задач маркетплейса');
                     return;

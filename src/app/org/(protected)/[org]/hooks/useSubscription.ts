@@ -6,6 +6,7 @@ import type {
     SubscriptionBillingInfo,
     SubscriptionInfo,
 } from '@/types/org';
+import { withBasePath } from '@/utils/basePath';
 
 type UseSubscriptionState = {
     subscription: SubscriptionInfo | null;
@@ -35,7 +36,10 @@ export default function useSubscription(
         setSubscriptionLoading(true);
         setSubscriptionError(null);
         try {
-            const res = await fetch(`/api/org/${encodeURIComponent(org)}/subscription`, { cache: 'no-store' });
+            const res = await fetch(
+                withBasePath(`/api/org/${encodeURIComponent(org)}/subscription`),
+                { cache: 'no-store' }
+            );
             const data = (await res.json().catch(() => ({}))) as GetSubscriptionResponse | { error?: string };
             if (!res.ok || !('subscription' in data)) {
                 setSubscription(null);
@@ -58,7 +62,7 @@ export default function useSubscription(
 
     const loadPlanConfigs = React.useCallback(async () => {
         try {
-            const res = await fetch('/api/plans', { cache: 'no-store' });
+            const res = await fetch(withBasePath('/api/plans'), { cache: 'no-store' });
             const data = (await res.json().catch(() => ({}))) as { plans?: PlanConfig[] };
             if (!res.ok || !Array.isArray(data.plans)) {
                 setPlanConfigs([]);

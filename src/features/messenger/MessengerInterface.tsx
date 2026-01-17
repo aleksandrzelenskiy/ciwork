@@ -54,6 +54,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import type { MessengerConversationDTO, MessengerMessageDTO } from '@/app/types/messenger';
 import getSocketClient from '@/app/lib/socketClient';
 import { formatNameFromEmail, normalizeEmail } from '@/utils/email';
+import { withBasePath } from '@/utils/basePath';
 
 type MessengerInterfaceProps = {
     onUnreadChangeAction?: (count: number, unreadMap?: Record<string, number>) => void;
@@ -384,7 +385,7 @@ export default function MessengerInterface({
             try {
                 const preferActiveId = options?.preferActiveId;
                 const preserveActive = options?.preserveActive ?? false;
-                const res = await fetch('/api/messenger/conversations', { cache: 'no-store' });
+                const res = await fetch(withBasePath('/api/messenger/conversations'), { cache: 'no-store' });
                 const payload = (await res.json().catch(() => ({}))) as {
                     ok?: boolean;
                     conversations?: MessengerConversationDTO[];
@@ -460,7 +461,7 @@ export default function MessengerInterface({
         setParticipantsError(null);
         setLoadingParticipants(true);
         try {
-            const res = await fetch('/api/messenger/participants', { cache: 'no-store' });
+            const res = await fetch(withBasePath('/api/messenger/participants'), { cache: 'no-store' });
             const payload = (await res.json().catch(() => ({}))) as {
                 ok?: boolean;
                 participants?: ParticipantOption[];
@@ -501,7 +502,7 @@ export default function MessengerInterface({
                 return { ...prev, [conversationId]: next };
             });
             try {
-                await fetch('/api/messenger/messages/read', {
+                await fetch(withBasePath('/api/messenger/messages/read'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ conversationId }),
@@ -518,7 +519,7 @@ export default function MessengerInterface({
             if (!conversationId) return;
             setLoadingMessages(true);
             try {
-                const res = await fetch(`/api/messenger/conversations/${conversationId}/messages`, {
+                const res = await fetch(withBasePath(`/api/messenger/conversations/${conversationId}/messages`), {
                     cache: 'no-store',
                 });
                 const payload = (await res.json().catch(() => ({}))) as {
@@ -1050,7 +1051,7 @@ export default function MessengerInterface({
             setMediaError(null);
             stopTyping();
             try {
-                const res = await fetch(`/api/messenger/messages/${editingMessage.id}`, {
+                const res = await fetch(withBasePath(`/api/messenger/messages/${editingMessage.id}`), {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text }),
@@ -1105,7 +1106,7 @@ export default function MessengerInterface({
         stopTyping();
         try {
             const res = mediaToSend.length
-                ? await fetch('/api/messenger/messages', {
+                ? await fetch(withBasePath('/api/messenger/messages'), {
                       method: 'POST',
                       body: (() => {
                           const formData = new FormData();
@@ -1127,7 +1128,7 @@ export default function MessengerInterface({
                           return formData;
                       })(),
                   })
-                : await fetch('/api/messenger/messages', {
+                : await fetch(withBasePath('/api/messenger/messages'), {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -1199,7 +1200,7 @@ export default function MessengerInterface({
         if (!confirmed) return;
         setDeletingMessageIds((prev) => ({ ...prev, [messageId]: true }));
         try {
-            const res = await fetch(`/api/messenger/messages/${messageId}`, { method: 'DELETE' });
+            const res = await fetch(withBasePath(`/api/messenger/messages/${messageId}`), { method: 'DELETE' });
             const payload = (await res.json().catch(() => ({}))) as {
                 ok?: boolean;
                 conversationId?: string;
@@ -1277,7 +1278,7 @@ export default function MessengerInterface({
         const projectKey = prompt('Введите ключ проекта (например, ALPHA):')?.trim();
         if (!projectKey) return;
         try {
-            const res = await fetch('/api/messenger/conversations', {
+            const res = await fetch(withBasePath('/api/messenger/conversations'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ type: 'project', projectKey }),
@@ -1302,7 +1303,7 @@ export default function MessengerInterface({
             if (!targetEmail) return;
             setCreatingChatWith(targetEmail);
             try {
-                const res = await fetch('/api/messenger/conversations', {
+                const res = await fetch(withBasePath('/api/messenger/conversations'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ type: 'direct', targetEmail }),

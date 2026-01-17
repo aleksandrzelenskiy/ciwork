@@ -16,6 +16,7 @@ import EmailIcon from '@mui/icons-material/Email';
 import MessengerInterface from '@/features/messenger/MessengerInterface';
 import { fetchSocketToken } from '@/app/lib/socketClient';
 import { NOTIFICATIONS_SOCKET_PATH } from '@/config/socket';
+import { withBasePath } from '@/utils/basePath';
 import type {
     ChatClientToServerEvents,
     ChatServerToClientEvents,
@@ -73,7 +74,7 @@ export default function MessengerTrigger({ buttonSx }: MessengerTriggerProps) {
 
     const syncUnread = React.useCallback(async () => {
         try {
-            const res = await fetch('/api/messenger/conversations', { cache: 'no-store' });
+            const res = await fetch(withBasePath('/api/messenger/conversations'), { cache: 'no-store' });
             const payload = (await res.json().catch(() => ({}))) as {
                 ok?: boolean;
                 conversations?: Array<{ id: string; unreadCount: number }>;
@@ -119,7 +120,7 @@ export default function MessengerTrigger({ buttonSx }: MessengerTriggerProps) {
         const connectSocket = async (): Promise<ChatSocket | null> => {
             if (socketRef.current) return socketRef.current;
             try {
-                await fetch('/api/socket', { cache: 'no-store', credentials: 'include' });
+                await fetch(withBasePath('/api/socket'), { cache: 'no-store', credentials: 'include' });
             } catch (error) {
                 console.error('messenger-trigger: warm socket failed', error);
             }

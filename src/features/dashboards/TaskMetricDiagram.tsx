@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
 import { getStatusLabel, STATUS_ORDER } from '@/utils/statusLabels';
+import { withBasePath } from '@/utils/basePath';
 
 interface ChartData {
   name: string;
@@ -68,7 +69,7 @@ export default function TaskMetricDiagram({
   useEffect(() => {
     async function fetchTasks() {
       try {
-        const res = await fetch('/api/tasks');
+        const res = await fetch(withBasePath('/api/tasks'));
         if (!res.ok) {
           setError('Не удалось загрузить задачи');
           return;
@@ -94,7 +95,7 @@ export default function TaskMetricDiagram({
 
     const fetchOrgs = async () => {
       try {
-        const res = await fetch('/api/org', { signal: controller.signal });
+        const res = await fetch(withBasePath('/api/org'), { signal: controller.signal });
         if (!res.ok) return;
         const data = (await res.json()) as OrgResponse;
         if (!('orgs' in data) || !Array.isArray(data.orgs)) return;

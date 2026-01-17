@@ -27,6 +27,7 @@ import type { CurrentStatus, PriorityLevel } from '@/app/types/taskTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
 import { getStatusLabel } from '@/utils/statusLabels';
+import { withBasePath } from '@/utils/basePath';
 import {
     OPERATOR_CLUSTER_PRESETS,
     OPERATOR_COLORS,
@@ -163,7 +164,7 @@ export default function TasksLocation(): React.ReactElement {
             try {
                 const [ctx, tasksResponse] = await Promise.all([
                     fetchUserContext(),
-                    fetch('/api/tasks', { cache: 'no-store' }),
+                    fetch(withBasePath('/api/tasks'), { cache: 'no-store' }),
                 ]);
                 if (!active) return;
 

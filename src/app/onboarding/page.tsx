@@ -37,6 +37,7 @@ import type { Theme } from '@mui/material/styles';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { CONSENT_VERSION } from '@/config/legal';
 import { ConsentContent, PrivacyContent, UserAgreementContent } from '@/features/legal/LegalText';
+import { withBasePath } from '@/utils/basePath';
 
 type ProfileResponse = {
   profileType?: ProfileType;
@@ -157,7 +158,7 @@ export default function OnboardingPage() {
     let mounted = true;
     const fetchProfile = async () => {
       try {
-        const res = await fetch('/api/current-user', { cache: 'no-store' });
+        const res = await fetch(withBasePath('/api/current-user'), { cache: 'no-store' });
         const data: ProfileResponse = await res.json();
         if (!mounted) return;
         if (!res.ok) {
@@ -264,7 +265,7 @@ export default function OnboardingPage() {
     setSavingType(profileType);
     setError(null);
     try {
-      const res = await fetch('/api/current-user/onboarding', {
+      const res = await fetch(withBasePath('/api/current-user/onboarding'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -16,6 +16,7 @@ import {
   OPERATOR_COLORS,
   normalizeOperator,
 } from '@/utils/operatorColors';
+import { withBasePath } from '@/utils/basePath';
 
 interface MiniMapProps {
   role: EffectiveOrgRole | null; // admin | manager | executor | viewer
@@ -53,7 +54,7 @@ export default function MiniMap({
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/api/tasks');
+        const res = await fetch(withBasePath('/api/tasks'));
         if (!res.ok) {
           setError('Не удалось загрузить задачи');
           return;
@@ -75,7 +76,7 @@ export default function MiniMap({
 
     const fetchOrgs = async () => {
       try {
-        const res = await fetch('/api/org', { signal: controller.signal });
+        const res = await fetch(withBasePath('/api/org'), { signal: controller.signal });
         if (!res.ok) return;
         const data = (await res.json()) as OrgResponse;
         if (!('orgs' in data) || !Array.isArray(data.orgs)) return;

@@ -63,6 +63,7 @@ import MarketLocations, { type MarketPublicTask } from '@/features/market/Market
 import { REGION_MAP } from '@/app/utils/regions';
 import { getPriorityLabelRu } from '@/utils/priorityIcons';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { withBasePath } from '@/utils/basePath';
 
 dayjs.locale('ru');
 
@@ -381,7 +382,7 @@ export default function MarketplacePage() {
 
     const fetchUser = async () => {
         try {
-            const res = await fetch('/api/current-user', { cache: 'no-store' });
+            const res = await fetch(withBasePath('/api/current-user'), { cache: 'no-store' });
             const data: UserContext & { error?: string } = await res.json();
             if (!res.ok) {
                 setContextError(data.error || 'Не удалось получить профиль');

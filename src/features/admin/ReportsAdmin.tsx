@@ -38,6 +38,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SearchIcon from '@mui/icons-material/Search';
 import FolderIcon from '@mui/icons-material/Folder';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { withBasePath } from '@/utils/basePath';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format, startOfDay, endOfDay } from 'date-fns';
@@ -179,7 +180,7 @@ export default function ReportsAdmin() {
         try {
             setLoading(true);
             setError(null);
-            const res = await fetch('/api/admin/reports', { cache: 'no-store' });
+            const res = await fetch(withBasePath('/api/admin/reports'), { cache: 'no-store' });
             const payload = (await res.json().catch(() => null)) as
                 | { reports?: AdminReport[]; error?: string }
                 | null;

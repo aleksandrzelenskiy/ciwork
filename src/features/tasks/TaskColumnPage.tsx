@@ -33,6 +33,7 @@ import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
 import { defaultTaskFilters, type TaskFilters } from '@/app/types/taskFilters';
 import { getStatusLabel, STATUS_ORDER } from '@/utils/statusLabels';
+import { withBasePath } from '@/utils/basePath';
 
 // Формат dd.mm.yyyy (ru-RU)
 const formatDateRU = (value?: Date | string) => {
@@ -256,7 +257,7 @@ export default function TaskColumnPage({
     const fetchTasks = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/tasks');
+        const response = await fetch(withBasePath('/api/tasks'));
         const data = await response.json();
 
         if (!response.ok) {

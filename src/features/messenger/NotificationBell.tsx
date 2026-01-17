@@ -36,6 +36,7 @@ import {
     type UserContextResponse,
 } from '@/app/utils/userContext';
 import type { Socket } from 'socket.io-client';
+import { withBasePath } from '@/utils/basePath';
 
 type NotificationSocketEventMap = {
     'notification:new': (payload: NotificationNewEventPayload) => void;
@@ -74,7 +75,7 @@ const fetchNotifications = async (
             page: String(page),
             limit: String(limit),
         });
-        const res = await fetch(`/api/notifications?${params.toString()}`, {
+        const res = await fetch(withBasePath(`/api/notifications?${params.toString()}`), {
             cache: 'no-store',
         });
         if (!res.ok) {
@@ -97,7 +98,7 @@ const fetchNotifications = async (
 
 const markAllNotificationsAsRead = async () => {
     try {
-        const res = await fetch('/api/notifications', {
+        const res = await fetch(withBasePath('/api/notifications'), {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ markAll: true }),
@@ -196,7 +197,7 @@ type NotificationBellProps = {
 const PAGE_SIZE = 10;
 
 const fetchSocketToken = async (): Promise<string> => {
-    const res = await fetch('/api/notifications/socket-auth', {
+    const res = await fetch(withBasePath('/api/notifications/socket-auth'), {
         method: 'GET',
         cache: 'no-store',
         credentials: 'include',
@@ -325,7 +326,7 @@ export default function NotificationBell({ buttonSx }: NotificationBellProps) {
         setPendingDeletes((prev) => ({ ...prev, [notificationId]: true }));
         setActionError(null);
         try {
-            const res = await fetch('/api/notifications', {
+            const res = await fetch(withBasePath('/api/notifications'), {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ notificationIds: [notificationId] }),
@@ -459,7 +460,7 @@ export default function NotificationBell({ buttonSx }: NotificationBellProps) {
         const connectSocket = async () => {
             try {
                 setRealtimeError(null);
-                await fetch('/api/socket', { cache: 'no-store', credentials: 'include' });
+                await fetch(withBasePath('/api/socket'), { cache: 'no-store', credentials: 'include' });
                 if (cancelled) return;
                 const token = await fetchSocketToken();
                 if (cancelled) return;

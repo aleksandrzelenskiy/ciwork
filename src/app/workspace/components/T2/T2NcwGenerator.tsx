@@ -23,6 +23,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/ru';
 import { PdfTemplate } from '@/features/shared/PdfTemplate';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { withBasePath } from '@/utils/basePath';
 
 dayjs.locale('ru');
 
@@ -241,7 +242,7 @@ export const T2NcwGenerator = ({
             if (orgSlug) fd.append('orgSlug', orgSlug);
             if (projectKey) fd.append('projectKey', projectKey);
 
-            const uploadResponse = await fetch('/api/upload', {
+            const uploadResponse = await fetch(withBasePath('/api/upload'), {
                 method: 'POST',
                 body: fd,
             });

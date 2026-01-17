@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { withBasePath } from '@/utils/basePath';
 
 type CreateOrgSuccess = { ok: true; org: { orgSlug: string } };
 type CreateOrgError = { error: string };
@@ -58,7 +59,7 @@ export default function NewOrgPage() {
         setLoading(true);
         setResultAlert(null);
         try {
-            const res = await fetch('/api/org', {
+            const res = await fetch(withBasePath('/api/org'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, orgSlug: slug || undefined }),

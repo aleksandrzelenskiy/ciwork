@@ -28,6 +28,7 @@ import SendIcon from '@mui/icons-material/Send';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useDropzone } from 'react-dropzone';
 import type { PhotoReport } from '@/app/types/taskTypes';
+import { withBasePath } from '@/utils/basePath';
 
 type BaseLocation = {
     name?: string | null;
@@ -575,7 +576,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setSubmitError(null);
         setSubmitSuccess(null);
         try {
-            const res = await fetch('/api/reports/submit', {
+            const res = await fetch(withBasePath('/api/reports/submit'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

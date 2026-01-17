@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { withBasePath } from '@/utils/basePath';
 
 export default function TestSendMailPage() {
   const [status, setStatus] = useState('');
@@ -13,7 +14,7 @@ export default function TestSendMailPage() {
     };
 
     try {
-      const response = await fetch('/api/sendMail', {
+      const response = await fetch(withBasePath('/api/sendMail'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -34,6 +34,7 @@ import EditOutlined from '@mui/icons-material/EditOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { UI_RADIUS } from '@/config/uiTokens';
+import { withBasePath } from '@/utils/basePath';
 
 type Plan = 'basic' | 'pro' | 'business' | 'enterprise';
 type SubStatus = 'active' | 'trial' | 'suspended' | 'past_due' | 'inactive';
@@ -150,7 +151,7 @@ export default function OrganizationsAdmin() {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/admin/organizations', { cache: 'no-store' });
+            const response = await fetch(withBasePath('/api/admin/organizations'), { cache: 'no-store' });
             const payload = (await response.json().catch(() => null)) as
                 | { organizations?: OrganizationRow[]; error?: string }
                 | null;

@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
+import { withBasePath } from '@/utils/basePath';
 
 type PlanCode = 'basic' | 'pro' | 'business' | 'enterprise';
 
@@ -159,9 +160,9 @@ export default function OrgPlansPanel({ orgSlug, showClose = false, onClose }: O
         setError(null);
         try {
             const [plansRes, subRes, orgRes] = await Promise.all([
-                fetch('/api/plans', { cache: 'no-store' }),
-                fetch(`/api/org/${encodeURIComponent(orgSlug)}/subscription`, { cache: 'no-store' }),
-                fetch(`/api/org/${encodeURIComponent(orgSlug)}`, { cache: 'no-store' }),
+                fetch(withBasePath('/api/plans'), { cache: 'no-store' }),
+                fetch(withBasePath(`/api/org/${encodeURIComponent(orgSlug)}/subscription`), { cache: 'no-store' }),
+                fetch(withBasePath(`/api/org/${encodeURIComponent(orgSlug)}`), { cache: 'no-store' }),
             ]);
             const plansPayload = (await plansRes.json().catch(() => null)) as PlansResponse | null;
             const subPayload = (await subRes.json().catch(() => null)) as SubscriptionResponse | null;

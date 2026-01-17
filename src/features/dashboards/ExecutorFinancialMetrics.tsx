@@ -6,6 +6,7 @@ import { Box, Typography, CircularProgress } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { Task } from '@/app/types/taskTypes';
 import { FINANCE_CONFIG } from '@/config/finance';
+import { withBasePath } from '@/utils/basePath';
 
 export default function ExecutorFinancialMetrics() {
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -18,7 +19,7 @@ export default function ExecutorFinancialMetrics() {
     useEffect(() => {
         async function fetchTasks() {
             try {
-                const res = await fetch('/api/tasks');
+                const res = await fetch(withBasePath('/api/tasks'));
                 // Если ответ не ок — не бросаем исключение, а выставляем ошибку и выходим
                 if (!res.ok) {
                     setError('Error fetching tasks');

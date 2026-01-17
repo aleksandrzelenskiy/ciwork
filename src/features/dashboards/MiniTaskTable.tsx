@@ -31,6 +31,7 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel } from '@/utils/statusLabels';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
+import { withBasePath } from '@/utils/basePath';
 
 interface MiniTaskTableProps {
   role: EffectiveOrgRole | null;
@@ -82,7 +83,7 @@ export default function MiniTaskTable({
   useEffect(() => {
     const fetchTasks = async () => {
       try {
-        const res = await fetch('/api/tasks');
+        const res = await fetch(withBasePath('/api/tasks'));
         if (!res.ok) {
           setError('Не удалось загрузить задачи');
           return;

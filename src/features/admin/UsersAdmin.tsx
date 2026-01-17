@@ -37,6 +37,7 @@ import GavelOutlined from '@mui/icons-material/GavelOutlined';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { withBasePath } from '@/utils/basePath';
 
 type UserRow = {
     clerkUserId: string;
@@ -114,7 +115,7 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch('/api/admin/users', { cache: 'no-store' });
+            const response = await fetch(withBasePath('/api/admin/users'), { cache: 'no-store' });
             const payload = (await response.json().catch(() => null)) as UsersResponse | null;
 
             if (!response.ok || !payload || !payload.users) {

@@ -1,6 +1,7 @@
 // src/app/utils/userContext.ts
 
 import type { EffectiveOrgRole, OrgRole, PlatformRole } from '@/app/types/roles';
+import { withBasePath } from '@/utils/basePath';
 
 export interface ActiveMembership {
   _id: string;
@@ -41,7 +42,7 @@ export const resolveRoleFromContext = (
 
 export const fetchUserContext = async (): Promise<UserContextResponse | null> => {
   try {
-    const res = await fetch('/api/current-user');
+    const res = await fetch(withBasePath('/api/current-user'));
     if (!res.ok) {
       console.error('Failed to fetch user context', res.statusText);
       return null;

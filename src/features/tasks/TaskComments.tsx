@@ -17,6 +17,7 @@ import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import type { Socket } from 'socket.io-client';
 import { getSocketClient } from '@/app/lib/socketClient';
+import { withBasePath } from '@/utils/basePath';
 
 export type TaskComment = {
     _id: string;
@@ -154,7 +155,7 @@ export default function TaskComments({
 
         const loadUser = async () => {
             try {
-                const res = await fetch('/api/current-user', { cache: 'no-store' });
+                const res = await fetch(withBasePath('/api/current-user'), { cache: 'no-store' });
                 if (!res.ok) return;
 
                 const payload = (await res.json()) as { user?: { clerkUserId?: string; id?: string } };

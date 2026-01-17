@@ -33,6 +33,7 @@ import {
     resolveRoleFromContext,
 } from '@/app/utils/userContext';
 import { MANAGER_ROLES } from '@/app/types/roles';
+import { withBasePath } from '@/utils/basePath';
 
 type NavigationMenuProps = {
     onNavigateAction: (path: string) => void;
@@ -174,7 +175,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
             });
 
             try {
-                const orgResponse = await fetch('/api/org', { cache: 'no-store' });
+                const orgResponse = await fetch(withBasePath('/api/org'), { cache: 'no-store' });
                 const orgPayload = (await orgResponse.json().catch(() => null)) as
                     | { orgs?: Array<{ _id: string; name: string; orgSlug: string }> }
                     | { error?: string }
@@ -480,7 +481,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
     const avatarSrc = contextUser?.profilePic || user?.imageUrl || '';
 
     const handleLogout = async () => {
-        await signOut({ redirectUrl: '/sign-in' });
+        await signOut({ redirectUrl: withBasePath('/sign-in') });
     };
 
     const handleProfileClick = () => {

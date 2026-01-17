@@ -7,6 +7,7 @@ import type { ReportClient } from '@/app/types/reportTypes';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { getStatusColor } from '@/utils/statusColors';
 import { fetchUserContext } from '@/app/utils/userContext';
+import { withBasePath } from '@/utils/basePath';
 
 const REPORT_STATUSES = ['Pending', 'Issues', 'Fixed', 'Agreed'] as const;
 
@@ -24,7 +25,7 @@ export default function ContractorReportsStatus() {
             try {
                 const [userContext, reportsResponse] = await Promise.all([
                     fetchUserContext(),
-                    fetch('/api/reports'),
+                    fetch(withBasePath('/api/reports')),
                 ]);
                 const userId = (userContext?.user as { clerkUserId?: string })?.clerkUserId ?? null;
                 setClerkUserId(userId);

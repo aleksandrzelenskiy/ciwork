@@ -1,6 +1,7 @@
 'use client';
 
 import { NOTIFICATIONS_SOCKET_PATH } from '@/config/socket';
+import { withBasePath } from '@/utils/basePath';
 import { io, type Socket } from 'socket.io-client';
 
 let socketInstance: Socket | null = null;
@@ -8,7 +9,7 @@ let socketPromise: Promise<Socket> | null = null;
 
 export const fetchSocketToken = async (): Promise<string | null> => {
     try {
-        const res = await fetch('/api/notifications/socket-auth', {
+        const res = await fetch(withBasePath('/api/notifications/socket-auth'), {
             cache: 'no-store',
             credentials: 'include',
         });
@@ -28,7 +29,7 @@ export const fetchSocketToken = async (): Promise<string | null> => {
 
 const createSocketClient = async (): Promise<Socket> => {
     try {
-        await fetch('/api/socket', { cache: 'no-store', credentials: 'include' });
+        await fetch(withBasePath('/api/socket'), { cache: 'no-store', credentials: 'include' });
     } catch (error) {
         console.error('socketClient: failed to warm up socket API', error);
     }
