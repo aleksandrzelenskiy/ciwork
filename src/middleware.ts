@@ -12,6 +12,7 @@ const isPublicRoute = createRouteMatcher([
   ...withOptionalBasePath('/sign-in(.*)'),
   ...withOptionalBasePath('/sign-up(.*)'),
   ...withOptionalBasePath('/api/internal(.*)'),
+  ...withOptionalBasePath('/api/current-user(.*)'),
   ...withOptionalBasePath('/api/socket(.*)'),
   ...withOptionalBasePath('/api/webhooks(.*)'),
 ]);
