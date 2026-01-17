@@ -2,16 +2,25 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import type { NextRequest } from 'next/server';
 import { withBasePath } from '@/utils/basePath';
 
+const withOptionalBasePath = (path: string): string[] => [
+  path,
+  withBasePath(path),
+];
+
 const isPublicRoute = createRouteMatcher([
-  withBasePath('/'),
-  withBasePath('/sign-in(.*)'),
-  withBasePath('/sign-up(.*)'),
-  withBasePath('/api/internal(.*)'),
-  withBasePath('/api/socket(.*)'),
-  withBasePath('/api/webhooks(.*)'),
+  ...withOptionalBasePath('/'),
+  ...withOptionalBasePath('/sign-in(.*)'),
+  ...withOptionalBasePath('/sign-up(.*)'),
+  ...withOptionalBasePath('/api/internal(.*)'),
+  ...withOptionalBasePath('/api/socket(.*)'),
+  ...withOptionalBasePath('/api/webhooks(.*)'),
 ]);
-const isReportPageRoute = createRouteMatcher([withBasePath('/reports(.*)')]);
-const isReportApiRoute = createRouteMatcher([withBasePath('/api/reports(.*)')]);
+const isReportPageRoute = createRouteMatcher([
+  ...withOptionalBasePath('/reports(.*)'),
+]);
+const isReportApiRoute = createRouteMatcher([
+  ...withOptionalBasePath('/api/reports(.*)'),
+]);
 
 const hasInitiatorToken = (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
@@ -55,6 +64,7 @@ export default clerkMiddleware(async (auth, request) => {
 
 export const config = {
   matcher: [
-    '/ws(.*)',
+    '/((?!_next|.*\\..*).*)',
+    '/(api|trpc)(.*)',
   ],
 };
