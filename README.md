@@ -47,13 +47,16 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ### Domain configuration (icia.pro)
 
-- `FRONTEND_URL=https://ws.icia.pro` (server-side base URL for links)
-- `NEXT_PUBLIC_FRONTEND_URL=https://ws.icia.pro` (client-side base URL fallback)
+- `FRONTEND_URL=https://icia.pro/ws` (server-side base URL for links)
+- `NEXT_PUBLIC_FRONTEND_URL=https://icia.pro/ws` (client-side base URL fallback)
 - `EMAIL_FROM="CI Work <no-reply@icia.pro>"` (optional, default shown)
 - Clerk custom domain/proxy (only if enabled):
   - `CLERK_DOMAIN=accounts.icia.pro` (example custom domain)
   - `CLERK_PROXY_URL=https://icia.pro` (example proxy URL)
 
-Clerk dashboard allowed origins/redirects should include:
-- `https://icia.pro`
-- `https://ws.icia.pro`
+Clerk dashboard configuration:
+- Allowed/authorized origins: `https://icia.pro`
+- Redirect URLs (examples):
+  - `https://icia.pro/ws`
+  - `https://icia.pro/ws/sign-in`
+  - `https://icia.pro/ws/sign-up`

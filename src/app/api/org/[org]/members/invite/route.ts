@@ -13,7 +13,7 @@ import { ensureSubscriptionWriteAccess } from '@/utils/subscriptionBilling';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const FRONTEND_URL = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://ws.icia.pro';
+const FRONTEND_URL = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://icia.pro/ws';
 
 type InviteBody = { userEmail: string; role?: OrgRole };
 type InviteResponse =
