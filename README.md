@@ -44,3 +44,16 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - `AWS_S3_INVENTORY_PREFIX` — prefix in the inventory bucket where `manifest.json` files are stored.
 - `REPORT_ACCESS_SECRET` — optional HMAC secret for initiator guest report links (falls back to `NOTIFICATIONS_SOCKET_SECRET` or `CLERK_SECRET_KEY`).
 - `INTEGRATIONS_ENCRYPTION_KEY` — AES key material for encrypting integration configs and webhook secrets at rest.
+
+### Domain configuration (icia.pro)
+
+- `FRONTEND_URL=https://ws.icia.pro` (server-side base URL for links)
+- `NEXT_PUBLIC_FRONTEND_URL=https://ws.icia.pro` (client-side base URL fallback)
+- `EMAIL_FROM="CI Work <no-reply@icia.pro>"` (optional, default shown)
+- Clerk custom domain/proxy (only if enabled):
+  - `CLERK_DOMAIN=accounts.icia.pro` (example custom domain)
+  - `CLERK_PROXY_URL=https://icia.pro` (example proxy URL)
+
+Clerk dashboard allowed origins/redirects should include:
+- `https://icia.pro`
+- `https://ws.icia.pro`

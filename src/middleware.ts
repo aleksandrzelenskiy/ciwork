@@ -1,7 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import type { NextRequest } from 'next/server';
 
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/api/internal(.*)']);
+const isPublicRoute = createRouteMatcher([
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/api/internal(.*)',
+  '/api/socket(.*)',
+  '/api/webhooks(.*)',
+]);
 const isReportPageRoute = createRouteMatcher(['/reports(.*)']);
 const isReportApiRoute = createRouteMatcher(['/api/reports(.*)']);
 

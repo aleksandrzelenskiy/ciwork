@@ -83,7 +83,7 @@ function createTransporter() {
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
   const transporter = createTransporter();
   const env = getServerEnv();
-  const from = env.EMAIL_FROM ?? 'CI Work <no-reply@ciwork.pro>';
+  const from = env.EMAIL_FROM ?? 'CI Work <no-reply@icia.pro>';
 
   const mailData = {
     from,
