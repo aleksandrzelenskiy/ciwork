@@ -56,6 +56,8 @@ const isAllowedGuestReportApi = (request: NextRequest) => {
 };
 
 export default clerkMiddleware(async (auth, request) => {
+  await auth();
+
   if (isPublicRoute(request)) return;
   if (isReportPageRoute(request) && hasInitiatorToken(request)) return;
   if (isAllowedGuestReportApi(request)) return;
