@@ -5,6 +5,8 @@ import { Box, Typography } from '@mui/material';
 import { GetUserContext } from '@/server-actions/user-context';
 import DashboardHome from '@/features/dashboards/DashboardHome';
 
+export const dynamic = 'force-dynamic';
+
 const DashboardPage: React.FC = async () => {
   const response = await GetUserContext();
   if (!response || !response.success) {

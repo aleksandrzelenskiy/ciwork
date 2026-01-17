@@ -3,6 +3,8 @@ import { Box, Typography } from '@mui/material';
 import BSMap from '@/features/maps/BSMap';
 import { GetUserContext } from '@/server-actions/user-context';
 
+export const dynamic = 'force-dynamic';
+
 export default async function BsMapPage() {
     const response = await GetUserContext();
     if (!response || !response.success || !response.data.isSuperAdmin) {

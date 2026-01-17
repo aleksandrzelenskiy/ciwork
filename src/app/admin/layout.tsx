@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 import { GetUserContext } from '@/server-actions/user-context';
 import { UI_RADIUS } from '@/config/uiTokens';
 
+export const dynamic = 'force-dynamic';
+
 type AdminLayoutProps = {
     children: ReactNode;
 };

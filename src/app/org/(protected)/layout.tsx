@@ -2,6 +2,8 @@ import { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { GetUserContext } from '@/server-actions/user-context';
 
+export const dynamic = 'force-dynamic';
+
 export default async function OrgLayout({
   children,
 }: {
