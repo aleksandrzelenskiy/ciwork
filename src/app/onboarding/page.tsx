@@ -801,11 +801,15 @@ export default function OnboardingPage() {
                 }}
             >
               {legalTab === 'summary' && (
-                  <Stack component='ul' spacing={1.5} sx={{ pl: 2, m: 0 }}>
-                    <Typography component='li' variant='body2'>
-                      Данные (ФИО, телефон, email, регион) нужны для регистрации и работы
-                      сервиса.
+                  <Stack spacing={2}>
+                    <Typography variant='h6' fontWeight={700}>
+                      ICIA Workspace
                     </Typography>
+                    <Stack component='ul' spacing={1.5} sx={{ pl: 2, m: 0 }}>
+                      <Typography component='li' variant='body2'>
+                        Данные (ФИО, телефон, email, регион) нужны для регистрации и работы
+                        сервиса.
+                      </Typography>
                     <Typography component='li' variant='body2'>
                       Контакты могут быть видны другим пользователям только в рамках
                       задач или организации.
@@ -821,6 +825,7 @@ export default function OnboardingPage() {
                     <Typography component='li' variant='body2'>
                       Данные хранятся на серверах в РФ.
                     </Typography>
+                    </Stack>
                   </Stack>
               )}
               {legalTab === 'agreement' && <UserAgreementContent />}
