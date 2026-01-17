@@ -35,9 +35,8 @@ import {
 } from '@/app/utils/regions';
 import type { Theme } from '@mui/material/styles';
 import { UI_RADIUS } from '@/config/uiTokens';
-import NextLink from 'next/link';
 import { CONSENT_VERSION } from '@/config/legal';
-import { ConsentContent, PrivacyContent } from '@/features/legal/LegalText';
+import { ConsentContent, PrivacyContent, UserAgreementContent } from '@/features/legal/LegalText';
 
 type ProfileResponse = {
   profileType?: ProfileType;
@@ -137,7 +136,7 @@ export default function OnboardingPage() {
   const roleSectionRef = useRef<HTMLDivElement | null>(null);
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [legalDialogOpen, setLegalDialogOpen] = useState(false);
-  const [legalTab, setLegalTab] = useState<'summary' | 'consent' | 'privacy'>('summary');
+  const [legalTab, setLegalTab] = useState<'summary' | 'agreement' | 'consent' | 'privacy'>('summary');
   const [formValues, setFormValues] = useState<ProfileFormValues>({
     firstName: '',
     lastName: '',
@@ -330,7 +329,7 @@ export default function OnboardingPage() {
       RUSSIAN_REGIONS.find((region) => region.code === formValues.regionCode) ??
       null;
 
-  const openLegalDialog = (tab: 'summary' | 'consent' | 'privacy') => {
+  const openLegalDialog = (tab: 'summary' | 'agreement' | 'consent' | 'privacy') => {
       setLegalTab(tab);
       setLegalDialogOpen(true);
   };
@@ -604,7 +603,12 @@ export default function OnboardingPage() {
                           label={(
                               <Typography variant='body2' color='text.secondary'>
                                 Я принимаю{' '}
-                                <Link component={NextLink} href='#'>
+                                <Link
+                                    component='button'
+                                    type='button'
+                                    onClick={() => openLegalDialog('agreement')}
+                                    sx={{ cursor: 'pointer' }}
+                                >
                                   Пользовательское соглашение
                                 </Link>{' '}
                                 и даю{' '}
@@ -779,11 +783,12 @@ export default function OnboardingPage() {
             <Tabs
                 value={legalTab}
                 onChange={(_, value) =>
-                    setLegalTab(value as 'summary' | 'consent' | 'privacy')
+                    setLegalTab(value as 'summary' | 'agreement' | 'consent' | 'privacy')
                 }
                 variant='fullWidth'
             >
               <Tab label='Коротко' value='summary' />
+              <Tab label='Соглашение' value='agreement' />
               <Tab label='Согласие' value='consent' />
               <Tab label='Политика' value='privacy' />
             </Tabs>
@@ -818,6 +823,7 @@ export default function OnboardingPage() {
                     </Typography>
                   </Stack>
               )}
+              {legalTab === 'agreement' && <UserAgreementContent />}
               {legalTab === 'consent' && <ConsentContent />}
               {legalTab === 'privacy' && <PrivacyContent />}
             </Box>
