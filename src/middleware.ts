@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { withBasePath } from '@/utils/basePath';
 
 const isPublicRoute = createRouteMatcher([
+  withBasePath('/'),
   withBasePath('/sign-in(.*)'),
   withBasePath('/sign-up(.*)'),
   withBasePath('/api/internal(.*)'),
@@ -54,7 +55,6 @@ export default clerkMiddleware(async (auth, request) => {
 
 export const config = {
   matcher: [
-    '/ws/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    '/ws/(api|trpc)(.*)',
+    '/ws(.*)',
   ],
 };
