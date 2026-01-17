@@ -550,7 +550,7 @@ export default function TaskDetailsPage() {
                     sev: 'success',
                     message: makePublic
                         ? moderationPending
-                            ? 'Задача отправлена на модерацию'
+                            ? 'Задача отправлена на модерацию. Задача будет опубликована после прохождения модерации'
                             : 'Задача опубликована'
                         : 'Публикация снята',
                 });

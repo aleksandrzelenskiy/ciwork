@@ -60,6 +60,35 @@ export async function PATCH(
     const wasPublic = task.visibility === 'public';
     const previousPublicStatus = task.publicStatus;
     const authorEmail = task.authorEmail?.toLowerCase();
+    const toProjectRef = (projectRef?: mongoose.Types.ObjectId | string | null) => {
+        if (!projectRef) return undefined;
+        return typeof projectRef === 'string' ? projectRef : projectRef.toString();
+    };
+
+    const buildOrgTaskLink = (source: {
+        orgSlug?: string;
+        projectKey?: string;
+        projectId?: mongoose.Types.ObjectId | string | null;
+        taskId?: string;
+    }) => {
+        if (!source.taskId) return undefined;
+        const taskSlug = source.taskId.toLowerCase();
+        const projectRef = source.projectKey ?? toProjectRef(source.projectId);
+        if (source.orgSlug && projectRef) {
+            return `/org/${encodeURIComponent(source.orgSlug)}/projects/${encodeURIComponent(
+                projectRef
+            )}/tasks/${encodeURIComponent(taskSlug)}`;
+        }
+        return `/tasks/${encodeURIComponent(taskSlug)}`;
+    };
+
+    const taskMetadataSource = {
+        orgSlug: savedTask?.orgSlug ?? task.orgSlug,
+        projectKey: savedTask?.projectKey ?? task.projectKey,
+        projectId: savedTask?.projectId ?? task.projectId,
+        taskId: savedTask?.taskId ?? task.taskId,
+    };
+
     const authorQuery: Array<{ clerkUserId?: string; email?: string }> = [];
     if (task.authorId) {
         authorQuery.push({ clerkUserId: task.authorId });
@@ -346,10 +375,10 @@ export async function PATCH(
                 .select('_id')
                 .lean();
             if (author?._id) {
-                const taskCode = task.taskId ?? savedTask?.taskId;
-                const authorLink = taskCode
-                    ? `/tasks/${encodeURIComponent(taskCode)}`
-                    : undefined;
+                const authorLink = buildOrgTaskLink({
+                    ...taskMetadataSource,
+                    taskId: savedTask?.taskId ?? task.taskId,
+                });
                 await createNotification({
                     recipientUserId: author._id,
                     type: 'task_public_moderation_requested',

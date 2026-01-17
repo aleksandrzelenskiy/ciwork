@@ -20,6 +20,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -35,6 +37,7 @@ import type { Theme } from '@mui/material/styles';
 import { UI_RADIUS } from '@/config/uiTokens';
 import NextLink from 'next/link';
 import { CONSENT_VERSION } from '@/config/legal';
+import { ConsentContent, PrivacyContent } from '@/features/legal/LegalText';
 
 type ProfileResponse = {
   profileType?: ProfileType;
@@ -133,7 +136,8 @@ export default function OnboardingPage() {
   const [roleStepVisible, setRoleStepVisible] = useState(false);
   const roleSectionRef = useRef<HTMLDivElement | null>(null);
   const [consentAccepted, setConsentAccepted] = useState(false);
-  const [consentDialogOpen, setConsentDialogOpen] = useState(false);
+  const [legalDialogOpen, setLegalDialogOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState<'summary' | 'consent' | 'privacy'>('summary');
   const [formValues, setFormValues] = useState<ProfileFormValues>({
     firstName: '',
     lastName: '',
@@ -325,6 +329,11 @@ export default function OnboardingPage() {
   const currentRegion: RegionOption | null =
       RUSSIAN_REGIONS.find((region) => region.code === formValues.regionCode) ??
       null;
+
+  const openLegalDialog = (tab: 'summary' | 'consent' | 'privacy') => {
+      setLegalTab(tab);
+      setLegalDialogOpen(true);
+  };
 
   if (loading) {
     return (
@@ -599,11 +608,21 @@ export default function OnboardingPage() {
                                   Пользовательское соглашение
                                 </Link>{' '}
                                 и даю{' '}
-                                <Link component={NextLink} href='/consent'>
+                                <Link
+                                    component='button'
+                                    type='button'
+                                    onClick={() => openLegalDialog('consent')}
+                                    sx={{ cursor: 'pointer' }}
+                                >
                                   согласие
                                 </Link>{' '}
                                 на обработку персональных данных, ознакомлен(а) с{' '}
-                                <Link component={NextLink} href='/privacy'>
+                                <Link
+                                    component='button'
+                                    type='button'
+                                    onClick={() => openLegalDialog('privacy')}
+                                    sx={{ cursor: 'pointer' }}
+                                >
                                   политикой конфиденциальности
                                 </Link>
                                 .
@@ -613,7 +632,7 @@ export default function OnboardingPage() {
                       <Button
                           size='small'
                           variant='text'
-                          onClick={() => setConsentDialogOpen(true)}
+                          onClick={() => openLegalDialog('summary')}
                       >
                         Что это значит?
                       </Button>
@@ -750,43 +769,61 @@ export default function OnboardingPage() {
         </Container>
 
         <Dialog
-            open={consentDialogOpen}
-            onClose={() => setConsentDialogOpen(false)}
+            open={legalDialogOpen}
+            onClose={() => setLegalDialogOpen(false)}
             fullWidth
-            maxWidth='sm'
+            maxWidth='md'
         >
-          <DialogTitle>Что это значит?</DialogTitle>
-          <DialogContent dividers>
-            <Stack component='ul' spacing={1.5} sx={{ pl: 2, m: 0 }}>
-              <Typography component='li' variant='body2'>
-                Данные (ФИО, телефон, email, регион) нужны для регистрации и работы
-                сервиса.
-              </Typography>
-              <Typography component='li' variant='body2'>
-                Контакты могут быть видны другим пользователям только в рамках
-                задач или организации.
-              </Typography>
-              <Typography component='li' variant='body2'>
-                Сообщения и медиа в чате используются только для выполнения задач.
-              </Typography>
-              <Typography component='li' variant='body2'>
-                Документы (сметы/заказы), загружаемые пользователем, могут
-                содержать данные третьих лиц, ответственность за законность
-                загрузки лежит на пользователе.
-              </Typography>
-              <Typography component='li' variant='body2'>
-                Данные хранятся на серверах в РФ.
-              </Typography>
-            </Stack>
+          <DialogTitle>Правовая информация</DialogTitle>
+          <DialogContent dividers sx={{ p: 0 }}>
+            <Tabs
+                value={legalTab}
+                onChange={(_, value) =>
+                    setLegalTab(value as 'summary' | 'consent' | 'privacy')
+                }
+                variant='fullWidth'
+            >
+              <Tab label='Коротко' value='summary' />
+              <Tab label='Согласие' value='consent' />
+              <Tab label='Политика' value='privacy' />
+            </Tabs>
+            <Box
+                sx={{
+                  px: { xs: 2.5, sm: 3 },
+                  py: { xs: 2.5, sm: 3 },
+                  maxHeight: { xs: '60vh', md: '65vh' },
+                  overflow: 'auto',
+                }}
+            >
+              {legalTab === 'summary' && (
+                  <Stack component='ul' spacing={1.5} sx={{ pl: 2, m: 0 }}>
+                    <Typography component='li' variant='body2'>
+                      Данные (ФИО, телефон, email, регион) нужны для регистрации и работы
+                      сервиса.
+                    </Typography>
+                    <Typography component='li' variant='body2'>
+                      Контакты могут быть видны другим пользователям только в рамках
+                      задач или организации.
+                    </Typography>
+                    <Typography component='li' variant='body2'>
+                      Сообщения и медиа в чате используются только для выполнения задач.
+                    </Typography>
+                    <Typography component='li' variant='body2'>
+                      Документы (сметы/заказы), загружаемые пользователем, могут
+                      содержать данные третьих лиц, ответственность за законность
+                      загрузки лежит на пользователе.
+                    </Typography>
+                    <Typography component='li' variant='body2'>
+                      Данные хранятся на серверах в РФ.
+                    </Typography>
+                  </Stack>
+              )}
+              {legalTab === 'consent' && <ConsentContent />}
+              {legalTab === 'privacy' && <PrivacyContent />}
+            </Box>
           </DialogContent>
           <DialogActions>
-            <Button component={NextLink} href='/privacy'>
-              Открыть политику
-            </Button>
-            <Button component={NextLink} href='/consent'>
-              Открыть согласие
-            </Button>
-            <Button onClick={() => setConsentDialogOpen(false)}>Закрыть</Button>
+            <Button onClick={() => setLegalDialogOpen(false)}>Закрыть</Button>
           </DialogActions>
         </Dialog>
       </Box>

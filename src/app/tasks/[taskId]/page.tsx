@@ -404,6 +404,15 @@ export default function TaskDetailPage() {
             .sort((a, b) => a.baseId.localeCompare(b.baseId, 'ru'));
     }, [reportSummaries, task?.photoReports]);
 
+    const orgTasksHref = React.useMemo(() => {
+        if (task?.projectKey && task?.orgId) {
+            return `/org/${encodeURIComponent(task.orgId)}/projects/${encodeURIComponent(
+                task.projectKey
+            )}/tasks`;
+        }
+        return '/tasks';
+    }, [task?.orgId, task?.projectKey]);
+
     const taskTitleLine = task?.taskName || task?.taskId || 'Задача';
     const guideText = `Нажмите для загрузки фотоотчета по задаче ${taskTitleLine}${
         bsNumberDisplay !== '—' ? ` ${bsNumberDisplay}` : ''
@@ -750,11 +759,11 @@ export default function TaskDetailPage() {
                 <Typography color="text.secondary">
                     Пожалуйста, используйте соответствующий личный кабинет.
                 </Typography>
-                <Button
-                    variant="contained"
-                    onClick={() => router.push('/tasks')}
-                    sx={{ borderRadius: UI_RADIUS.button }}
-                >
+                    <Button
+                        variant="contained"
+                        onClick={() => router.push(orgTasksHref)}
+                        sx={{ borderRadius: UI_RADIUS.button }}
+                    >
                     К списку задач
                 </Button>
             </Container>
