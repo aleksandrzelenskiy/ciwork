@@ -305,10 +305,11 @@ export async function PATCH(
 
     const savedTask = saved;
     const taskMetadataSource = {
-        orgSlug: savedTask?.orgSlug ?? task.orgSlug,
-        projectKey: savedTask?.projectKey ?? task.projectKey,
-        projectId: savedTask?.projectId ?? task.projectId,
-        taskId: savedTask?.taskId ?? task.taskId,
+        orgSlug: (savedTask as { orgSlug?: string } | null | undefined)?.orgSlug ?? task.orgSlug,
+        projectKey: (savedTask as { projectKey?: string } | null | undefined)?.projectKey ?? task.projectKey,
+        projectId: (savedTask as { projectId?: mongoose.Types.ObjectId | string | null } | null | undefined)?.projectId ??
+            task.projectId,
+        taskId: (savedTask as { taskId?: string } | null | undefined)?.taskId ?? task.taskId,
     };
 
     const becamePublic = !wasPublic && savedTask?.visibility === 'public';
