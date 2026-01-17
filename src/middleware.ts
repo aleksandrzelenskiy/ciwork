@@ -52,8 +52,7 @@ export default clerkMiddleware(async (auth, request) => {
   if (isAllowedGuestReportApi(request)) return NextResponse.next();
 
   // Защищаем всё остальное
-  const authResult = await auth();
-  return authResult.protect();
+  return auth.protect();
 });
 
 export const config = {
