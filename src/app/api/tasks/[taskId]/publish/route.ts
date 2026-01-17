@@ -82,13 +82,6 @@ export async function PATCH(
         return `/tasks/${encodeURIComponent(taskSlug)}`;
     };
 
-    const taskMetadataSource = {
-        orgSlug: savedTask?.orgSlug ?? task.orgSlug,
-        projectKey: savedTask?.projectKey ?? task.projectKey,
-        projectId: savedTask?.projectId ?? task.projectId,
-        taskId: savedTask?.taskId ?? task.taskId,
-    };
-
     const authorQuery: Array<{ clerkUserId?: string; email?: string }> = [];
     if (task.authorId) {
         authorQuery.push({ clerkUserId: task.authorId });
@@ -311,6 +304,12 @@ export async function PATCH(
     await session?.endSession();
 
     const savedTask = saved;
+    const taskMetadataSource = {
+        orgSlug: savedTask?.orgSlug ?? task.orgSlug,
+        projectKey: savedTask?.projectKey ?? task.projectKey,
+        projectId: savedTask?.projectId ?? task.projectId,
+        taskId: savedTask?.taskId ?? task.taskId,
+    };
 
     const becamePublic = !wasPublic && savedTask?.visibility === 'public';
     const reopenedFromClosed =
