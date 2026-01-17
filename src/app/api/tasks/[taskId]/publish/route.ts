@@ -305,11 +305,18 @@ export async function PATCH(
 
     const savedTask = saved;
     const taskMetadataSource = {
-        orgSlug: (savedTask as { orgSlug?: string } | null | undefined)?.orgSlug ?? task.orgSlug,
-        projectKey: (savedTask as { projectKey?: string } | null | undefined)?.projectKey ?? task.projectKey,
-        projectId: (savedTask as { projectId?: mongoose.Types.ObjectId | string | null } | null | undefined)?.projectId ??
-            task.projectId,
-        taskId: (savedTask as { taskId?: string } | null | undefined)?.taskId ?? task.taskId,
+        orgSlug:
+            (savedTask as { orgSlug?: string } | null | undefined)?.orgSlug ??
+            (task as { orgSlug?: string } | null | undefined)?.orgSlug,
+        projectKey:
+            (savedTask as { projectKey?: string } | null | undefined)?.projectKey ??
+            (task as { projectKey?: string } | null | undefined)?.projectKey,
+        projectId:
+            (savedTask as { projectId?: mongoose.Types.ObjectId | string | null } | null | undefined)?.projectId ??
+            (task as { projectId?: mongoose.Types.ObjectId | string | null } | null | undefined)?.projectId,
+        taskId:
+            (savedTask as { taskId?: string } | null | undefined)?.taskId ??
+            (task as { taskId?: string } | null | undefined)?.taskId,
     };
 
     const becamePublic = !wasPublic && savedTask?.visibility === 'public';
