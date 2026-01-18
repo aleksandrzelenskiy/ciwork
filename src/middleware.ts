@@ -45,22 +45,26 @@ const isAllowedGuestReportApi = (request: NextRequest) => {
   return false;
 };
 
-export default clerkMiddleware(async (auth, request) => {
-  // Публичные/гостевые маршруты — просто пропускаем
-  if (isPublicRoute(request)) return NextResponse.next();
-  if (isReportPageRoute(request) && hasInitiatorToken(request)) return NextResponse.next();
-  if (isAllowedGuestReportApi(request)) return NextResponse.next();
+export default clerkMiddleware(
+  async (auth, request) => {
+    // Публичные/гостевые маршруты — просто пропускаем
+    if (isPublicRoute(request)) return NextResponse.next();
+    if (isReportPageRoute(request) && hasInitiatorToken(request)) return NextResponse.next();
+    if (isAllowedGuestReportApi(request)) return NextResponse.next();
 
-  // Защищаем всё остальное
-  await auth.protect();
-  return NextResponse.next();
-});
+    // Защищаем всё остальное
+    await auth.protect();
+    return NextResponse.next();
+  },
+  {
+    signInUrl: withBasePath("/sign-in"),
+    signUpUrl: withBasePath("/sign-up"),
+  }
+);
 
 export const config = {
   matcher: [
     "/((?!_next|.*\\..*).*)",
     "/(api|trpc)(.*)",
-    "/ws/((?!_next|.*\\..*).*)",
-    "/ws/(api|trpc)(.*)",
   ],
 };
