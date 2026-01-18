@@ -47,6 +47,10 @@ const isAllowedGuestReportApi = (request: NextRequest) => {
 
 export default clerkMiddleware(
   async (auth, request) => {
+    // Инициализируем auth для всех запросов, чтобы auth()/currentUser()
+    // в Server Components/Route Handlers всегда находили middleware.
+    await auth();
+
     // Публичные/гостевые маршруты — просто пропускаем
     if (isPublicRoute(request)) return NextResponse.next();
     if (isReportPageRoute(request) && hasInitiatorToken(request)) return NextResponse.next();
