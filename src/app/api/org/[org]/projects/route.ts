@@ -6,7 +6,7 @@ import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import Project from '@/server/models/ProjectModel';
 import Membership from '@/server/models/MembershipModel';
-import { consumeUsageSlot } from '@/utils/billingLimits';
+import { consumeUsageSlot, syncProjectsUsage } from '@/utils/billingLimits';
 import { requireOrgRole } from '@/server/org/permissions';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
@@ -232,6 +232,7 @@ export async function POST(
                     ],
                     sessionOptions
                 );
+                await syncProjectsUsage(orgDoc._id, sessionOptions ? { session: txnSession } : undefined);
 
                 const createdManagers: string[] = Array.isArray(
                     (created as { managers?: unknown }).managers
@@ -253,6 +254,11 @@ export async function POST(
             } catch (error) {
                 if (isTransactionNotSupportedError(error)) {
                     throw error;
+                }
+                try {
+                    await syncProjectsUsage(orgDoc._id, sessionOptions ? { session: txnSession } : undefined);
+                } catch (syncError) {
+                    console.warn('Failed to sync project usage after create error', syncError);
                 }
                 return { ok: false, code: 'UNKNOWN', error };
             }

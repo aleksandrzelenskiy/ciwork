@@ -4,6 +4,7 @@ import { Types } from 'mongoose';
 import Subscription, { type SubscriptionPlan } from '@/server/models/SubscriptionModel';
 import BillingUsageModel, { type BillingPeriod, type BillingUsage } from '@/server/models/BillingUsageModel';
 import { getPlanConfig, type PlanConfigDTO } from '@/utils/planConfig';
+import ProjectModel from '@/server/models/ProjectModel';
 
 export type OrgId = Types.ObjectId | string;
 
@@ -315,4 +316,44 @@ export const getUsageSnapshot = async (
 ) => {
     const usage = await BillingUsageModel.findOne({ orgId, period }).lean();
     return usage ?? null;
+};
+
+export const syncProjectsUsage = async (
+    orgId: OrgId,
+    options?: { session?: ClientSession; period?: BillingPeriod }
+): Promise<number> => {
+    const orgObjectId =
+        orgId instanceof Types.ObjectId
+            ? orgId
+            : Types.ObjectId.isValid(orgId)
+                ? new Types.ObjectId(orgId)
+                : null;
+
+    if (!orgObjectId) {
+        return 0;
+    }
+
+    const period = options?.period ?? getBillingPeriod();
+    const session = options?.session;
+    const countQuery = ProjectModel.countDocuments({ orgId: orgObjectId });
+    if (session) countQuery.session(session);
+    const projectsUsed = await countQuery;
+
+    await BillingUsageModel.findOneAndUpdate(
+        { orgId: orgObjectId, period },
+        {
+            $set: { projectsUsed, updatedAt: new Date() },
+            $setOnInsert: {
+                publicationsUsed: 0,
+                tasksUsed: 0,
+                seatsUsed: 0,
+            },
+        },
+        {
+            upsert: true,
+            ...(session ? { session } : {}),
+        }
+    );
+
+    return projectsUsed;
 };

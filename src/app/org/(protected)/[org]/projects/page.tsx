@@ -12,6 +12,7 @@ import {
     Paper,
     Typography,
     Alert,
+    TextField,
     IconButton,
     Snackbar,
     Stack,
@@ -497,18 +498,29 @@ export default function OrgProjectsPage() {
     // ---- Удаление ----
     const [openDelete, setOpenDelete] = useState(false);
     const [deleteProject, setDeleteProject] = useState<Project | null>(null);
+    const [deleteConfirmation, setDeleteConfirmation] = useState('');
+    const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
     const askDelete = (p: Project) => {
         setDeleteProject(p);
+        setDeleteConfirmation('');
         setOpenDelete(true);
     };
 
     const handleDeleteConfirm = async (): Promise<void> => {
         if (!deleteProject) return;
+        if (deleteSubmitting) return;
         try {
+            setDeleteSubmitting(true);
             const projectRef = deleteProject?.key || deleteProject?._id;
             if (!projectRef) {
                 showSnack('Проект не найден', 'error');
+                return;
+            }
+            const expectedKey = String(deleteProject.key || '').trim().toUpperCase();
+            const typedKey = deleteConfirmation.trim().toUpperCase();
+            if (!expectedKey || typedKey !== expectedKey) {
+                showSnack('Введите код проекта для подтверждения удаления', 'error');
                 return;
             }
             const res = await fetch(`/api/org/${encodeURIComponent(orgSlug)}/projects/${projectRef}`, {
@@ -531,6 +543,8 @@ export default function OrgProjectsPage() {
             const msg = e instanceof Error ? e.message : 'Ошибка сети';
             setErr(msg);
             showSnack(msg, 'error');
+        } finally {
+            setDeleteSubmitting(false);
         }
     };
 
@@ -906,16 +920,53 @@ export default function OrgProjectsPage() {
                 }
             />
 
-            <Dialog open={openDelete} onClose={() => setOpenDelete(false)}>
-                <DialogTitle>Удалить проект?</DialogTitle>
+            <Dialog
+                open={openDelete}
+                onClose={() => {
+                    if (deleteSubmitting) return;
+                    setOpenDelete(false);
+                }}
+            >
+                <DialogTitle>Удалить проект без возможности восстановления?</DialogTitle>
                 <DialogContent>
-                    <Typography>
-                        Это действие нельзя отменить. Удалить проект <strong>{deleteProject?.name}</strong>?
-                    </Typography>
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        <Alert severity="error" variant="filled">
+                            ВНИМАНИЕ: удаление проекта необратимо.
+                        </Alert>
+                        <Typography>
+                            Проект <strong>{deleteProject?.name}</strong> будет удален навсегда.
+                            Вместе с ним будут удалены все задачи проекта и все связанные файлы из хранилища.
+                        </Typography>
+                        <TextField
+                            label="Введите код проекта для подтверждения"
+                            placeholder="PROJECT-KEY"
+                            fullWidth
+                            value={deleteConfirmation}
+                            onChange={(e) => setDeleteConfirmation(e.target.value)}
+                            disabled={deleteSubmitting}
+                            helperText={
+                                deleteProject?.key
+                                    ? `Нужно ввести: ${deleteProject.key}`
+                                    : 'Введите точный код проекта'
+                            }
+                        />
+                    </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenDelete(false)}>Отмена</Button>
-                    <Button color="error" variant="contained" onClick={handleDeleteConfirm}>
+                    <Button onClick={() => setOpenDelete(false)} disabled={deleteSubmitting}>
+                        Отмена
+                    </Button>
+                    <Button
+                        color="error"
+                        variant="contained"
+                        onClick={handleDeleteConfirm}
+                        disabled={
+                            deleteSubmitting ||
+                            !deleteProject?.key ||
+                            deleteConfirmation.trim().toUpperCase() !==
+                                String(deleteProject?.key || '').trim().toUpperCase()
+                        }
+                    >
                         Удалить
                     </Button>
                 </DialogActions>

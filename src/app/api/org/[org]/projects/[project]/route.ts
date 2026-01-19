@@ -9,6 +9,7 @@ import Membership from '@/server/models/MembershipModel';
 import { Types } from 'mongoose';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
+import { syncProjectsUsage } from '@/utils/billingLimits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -238,6 +239,12 @@ export async function DELETE(
 
         if (!deleted) {
             return NextResponse.json({ error: 'Проект не найден' }, { status: 404 });
+        }
+
+        try {
+            await syncProjectsUsage(org._id);
+        } catch (syncError) {
+            console.warn('Failed to sync project usage after delete', syncError);
         }
 
         return NextResponse.json({ ok: true });
