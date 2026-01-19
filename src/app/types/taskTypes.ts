@@ -122,6 +122,7 @@ export interface Task {
   priority: PriorityLevel;
   status: CurrentStatus;
   createdAt: Date;
+  updatedAt?: Date | string;
 
   // Маркетплейс параметры
   visibility?: TaskVisibility;
