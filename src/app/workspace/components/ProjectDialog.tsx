@@ -51,6 +51,9 @@ const REGION_LABEL = (code: string): string => {
 };
 
 const REGION_OPTIONS = RUSSIAN_REGIONS;
+const PROJECT_KEY_PATTERN = /^[A-Z0-9-]+$/;
+
+const normalizeProjectKey = (value: string): string => value.trim().toUpperCase();
 
 const managerOptionLabel = (option: ProjectManagerOption) => {
     if (option.name && option.email) {
@@ -136,7 +139,16 @@ export default function ProjectDialog({
 
     const isCreate = mode === 'create';
     const busy = submitting || loading;
-    const isSubmitDisabled = !name.trim() || !key.trim() || !regionCode || !operator || busy;
+    const normalizedKey = key.trim();
+    const normalizedKeyUpper = normalizeProjectKey(key);
+    const isKeyValid = normalizedKey ? PROJECT_KEY_PATTERN.test(normalizedKeyUpper) : false;
+    const isSubmitDisabled =
+        !name.trim() || !normalizedKey || !isKeyValid || !regionCode || !operator || busy;
+    const keyHelperText = !normalizedKey
+        ? 'Только латинские A-Z, цифры и дефис. Пример: ALPHA-1.'
+        : isKeyValid
+            ? `Будет сохранено как: ${normalizedKeyUpper}`
+            : 'Код может содержать только латинские A-Z, цифры и дефис.';
     const glassInputSx = {
         '& .MuiOutlinedInput-root': {
             backgroundColor: inputBg,
@@ -154,7 +166,7 @@ export default function ProjectDialog({
             const payload: ProjectDialogValues = {
                 projectId: initialData?.projectId,
                 name: name.trim(),
-                key: key.trim(),
+                key: normalizedKeyUpper,
                 description: description.trim(),
                 regionCode,
                 operator,
@@ -220,6 +232,8 @@ export default function ProjectDialog({
                     sx={{ mt: 2, ...glassInputSx }}
                     value={key}
                     disabled={busy}
+                    error={Boolean(normalizedKey) && !isKeyValid}
+                    helperText={keyHelperText}
                     onChange={(e) => setKey(e.target.value)}
                 />
                 <TextField
