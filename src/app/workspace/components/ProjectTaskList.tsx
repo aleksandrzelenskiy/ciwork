@@ -865,6 +865,8 @@ const ProjectTaskListInner = (
                             executorId: selectedTask.executorId,
                             executorName: selectedTask.executorName,
                             executorEmail: selectedTask.executorEmail,
+                            initiatorName: selectedTask.initiatorName,
+                            initiatorEmail: selectedTask.initiatorEmail,
                             files: selectedTask.files,
                             attachments: selectedTask.attachments,
                             bsLocation: selectedTask.bsLocation,
