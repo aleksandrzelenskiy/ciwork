@@ -15,7 +15,7 @@ import { sendEmail } from '@/server/email/mailer';
 import { getServerEnv } from '@/config/env';
 
 const { FRONTEND_URL, NEXT_PUBLIC_FRONTEND_URL } = getServerEnv();
-const FRONTEND_FALLBACK = 'https://icia.pro/ws';
+const FRONTEND_FALLBACK = 'https://ws.icia.pro';
 const FRONTEND_URL_VALUE = FRONTEND_URL || NEXT_PUBLIC_FRONTEND_URL || FRONTEND_FALLBACK;
 
 const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '');

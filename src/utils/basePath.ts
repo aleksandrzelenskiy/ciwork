@@ -1,4 +1,4 @@
-const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '/ws';
+const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const trimmedBasePath = rawBasePath.replace(/\/+$/, '');
 
 export const BASE_PATH = trimmedBasePath

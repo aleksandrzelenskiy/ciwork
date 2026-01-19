@@ -1,27 +1,19 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { withBasePath } from "@/utils/basePath";
-
-const withOptionalBasePath = (path: string): string[] => [path, withBasePath(path)];
-
 const isPublicRoute = createRouteMatcher([
-  ...withOptionalBasePath("/"),
-  ...withOptionalBasePath("/sign-in(.*)"),
-  ...withOptionalBasePath("/sign-up(.*)"),
-  ...withOptionalBasePath("/api/internal(.*)"),
-  ...withOptionalBasePath("/api/current-user(.*)"),
-  ...withOptionalBasePath("/api/socket(.*)"),
-  ...withOptionalBasePath("/api/webhooks(.*)"),
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/internal(.*)",
+  "/api/current-user(.*)",
+  "/api/socket(.*)",
+  "/api/webhooks(.*)",
 ]);
 
-const isReportPageRoute = createRouteMatcher([
-  ...withOptionalBasePath("/reports(.*)"),
-]);
+const isReportPageRoute = createRouteMatcher(["/reports(.*)"]);
 
-const isReportApiRoute = createRouteMatcher([
-  ...withOptionalBasePath("/api/reports(.*)"),
-]);
+const isReportApiRoute = createRouteMatcher(["/api/reports(.*)"]);
 
 const hasInitiatorToken = (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
@@ -61,14 +53,14 @@ export default clerkMiddleware(
     return NextResponse.next();
   },
   {
-    signInUrl: withBasePath("/sign-in"),
-    signUpUrl: withBasePath("/sign-up"),
+    signInUrl: "/sign-in",
+    signUpUrl: "/sign-up",
   }
 );
 
 export const config = {
   matcher: [
-    "/((?!_next|.*\\..*).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)",
     "/(api|trpc)(.*)",
   ],
 };

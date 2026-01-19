@@ -45,19 +45,18 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - `REPORT_ACCESS_SECRET` — optional HMAC secret for initiator guest report links (falls back to `NOTIFICATIONS_SOCKET_SECRET` or `CLERK_SECRET_KEY`).
 - `INTEGRATIONS_ENCRYPTION_KEY` — AES key material for encrypting integration configs and webhook secrets at rest.
 
-### Domain configuration (icia.pro)
+### Domain configuration (ws.icia.pro)
 
-- `NEXT_PUBLIC_BASE_PATH=/ws` (Next.js basePath, app served under `/ws`)
-- `FRONTEND_URL=https://icia.pro/ws` (server-side base URL for links)
-- `NEXT_PUBLIC_FRONTEND_URL=https://icia.pro/ws` (client-side base URL fallback)
+- `FRONTEND_URL=https://ws.icia.pro` (server-side base URL for links)
+- `NEXT_PUBLIC_FRONTEND_URL=https://ws.icia.pro` (client-side base URL fallback)
 - `EMAIL_FROM="CI Work <no-reply@icia.pro>"` (optional, default shown)
 - Clerk custom domain/proxy (only if enabled):
   - `CLERK_DOMAIN=accounts.icia.pro` (example custom domain)
-  - `CLERK_PROXY_URL=https://icia.pro` (example proxy URL)
+  - `CLERK_PROXY_URL=https://ws.icia.pro` (example proxy URL)
 
 Clerk dashboard configuration:
-- Allowed/authorized origins: `https://icia.pro`
+- Allowed/authorized origins: `https://ws.icia.pro`
 - Redirect URLs (examples):
-  - `https://icia.pro/ws`
-  - `https://icia.pro/ws/sign-in`
-  - `https://icia.pro/ws/sign-up`
+  - `https://ws.icia.pro`
+  - `https://ws.icia.pro/sign-in`
+  - `https://ws.icia.pro/sign-up`
