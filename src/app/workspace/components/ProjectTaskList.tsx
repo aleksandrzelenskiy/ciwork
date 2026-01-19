@@ -82,6 +82,8 @@ type Task = {
     executorId?: string;
     executorName?: string;
     executorEmail?: string;
+    initiatorName?: string;
+    initiatorEmail?: string;
     bsAddress?: string;
     taskDescription?: string;
     bsLatitude?: number;

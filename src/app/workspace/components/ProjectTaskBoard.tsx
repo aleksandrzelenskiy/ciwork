@@ -46,6 +46,8 @@ type Task = {
     executorId?: string;
     executorName?: string;
     executorEmail?: string;
+    initiatorName?: string;
+    initiatorEmail?: string;
 
     // для диалога
     bsAddress?: string;
