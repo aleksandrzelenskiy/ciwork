@@ -16,7 +16,7 @@ type PatchBody = {
 };
 
 type PatchResponse =
-    | { ok: true; balance: number; currency: string }
+    | { ok: true; balance: number; bonusBalance: number; totalBalance: number; currency: string }
     | { error: string };
 
 export async function PATCH(
@@ -81,6 +81,8 @@ export async function PATCH(
     return NextResponse.json({
         ok: true,
         balance: updated.balance ?? 0,
+        bonusBalance: updated.bonusBalance ?? 0,
+        totalBalance: (updated.balance ?? 0) + (updated.bonusBalance ?? 0),
         currency: updated.currency ?? 'RUB',
     });
 }

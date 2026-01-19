@@ -317,7 +317,14 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
                 }
             );
             const payload = (await response.json().catch(() => null)) as
-                | { ok?: true; balance?: number; currency?: string; error?: string }
+                | {
+                      ok?: true;
+                      balance?: number;
+                      bonusBalance?: number;
+                      totalBalance?: number;
+                      currency?: string;
+                      error?: string;
+                  }
                 | null;
 
             if (!response.ok || !payload || !payload.ok) {
@@ -332,7 +339,7 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
                         ? {
                               ...item,
                               walletBalance:
-                                  payload.balance ??
+                                  payload.totalBalance ??
                                   (item.walletBalance ?? 0) + topUpAmount,
                               walletCurrency: payload.currency ?? item.walletCurrency ?? 'RUB',
                           }

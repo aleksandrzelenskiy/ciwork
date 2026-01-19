@@ -55,13 +55,15 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
 
     const result: AdminUserDTO[] = users.map((user) => {
         const wallet = walletMap.get(String(user._id));
+        const balance = wallet?.balance ?? 0;
+        const bonusBalance = wallet?.bonusBalance ?? 0;
         return {
             clerkUserId: user.clerkUserId,
             name: user.name,
             email: user.email,
             role: user.platformRole,
             profilePic: user.profilePic,
-            walletBalance: wallet?.balance ?? 0,
+            walletBalance: balance + bonusBalance,
             walletCurrency: wallet?.currency ?? 'RUB',
             moderationStatus: user.profileStatus ?? 'pending',
             moderationComment: user.moderationComment ?? '',
