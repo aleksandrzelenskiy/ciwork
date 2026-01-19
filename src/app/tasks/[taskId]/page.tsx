@@ -71,12 +71,14 @@ import { UI_RADIUS } from '@/config/uiTokens';
 import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 
-const parseUserInfo = (userString?: string) => {
-    if (!userString) return { name: 'N/A', email: 'N/A' };
-    const cleanedString = userString.replace(/\)$/, '');
-    const parts = cleanedString.split(' (');
-    return { name: parts[0] || 'N/A', email: parts[1] || 'N/A' };
+type TaskEventDetailsValue = string | number | boolean | null | undefined;
+
+type Change = {
+    from?: unknown;
+    to?: unknown;
 };
+
+type TaskEventDetails = Record<string, TaskEventDetailsValue | Change>;
 
 export default function TaskDetailPage() {
     const params = useParams<{ taskId: string }>();
@@ -314,45 +316,233 @@ export default function TaskDetailPage() {
 
     const sortedEvents = React.useMemo(() => {
         if (!task?.events) return [];
-        return [...task.events].sort((a, b) => {
+
+        const raw = [...task.events].sort((a, b) => {
             const da = new Date(a.date).getTime();
             const db = new Date(b.date).getTime();
             return db - da;
         });
+
+        const result: TaskEvent[] = [];
+
+        for (const ev of raw) {
+            if (ev.action === 'status_changed_assigned') {
+                const pair = raw.find(
+                    (p) => p.action === 'updated' && p.date === ev.date
+                );
+
+                if (pair && pair.details) {
+                    const mergedDetails: TaskEventDetails = {
+                        ...((ev.details || {}) as TaskEventDetails),
+                    };
+
+                    const st = (pair.details as TaskEventDetails).status;
+                    if (
+                        st &&
+                        typeof st === 'object' &&
+                        ('from' in (st as Record<string, unknown>) || 'to' in (st as Record<string, unknown>))
+                    ) {
+                        mergedDetails.status = st as Change;
+                    }
+
+                    const executorEmail = (pair.details as TaskEventDetails).executorEmail;
+                    if (executorEmail && !mergedDetails.executorEmail) {
+                        mergedDetails.executorEmail = executorEmail;
+                    }
+
+                    result.push({
+                        ...ev,
+                        details: mergedDetails,
+                    });
+                    continue;
+                }
+
+                result.push(ev);
+                continue;
+            }
+
+            const hasAssignWithSameTime = raw.some(
+                (p) => p.action === 'status_changed_assigned' && p.date === ev.date
+            );
+            if (ev.action === 'updated' && hasAssignWithSameTime) {
+                continue;
+            }
+
+            result.push(ev);
+        }
+
+        return result;
     }, [task?.events]);
 
-    const getEventTitle = (action: string) => {
-        if (action === 'TASK_CREATED') return 'Задача создана';
-        if (action === 'STATUS_CHANGED') return 'Статус изменен';
+    const getEventTitle = (action: string, ev?: TaskEvent): string => {
+        if (action === 'created') return 'Задача создана';
+        if (action === 'status_changed_assigned') return 'Задача назначена исполнителю';
+        if (action === 'updated' && ev && isExecutorRemovedEvent(ev)) {
+            return 'Исполнитель снят с задачи';
+        }
+        if (action === 'updated') return 'Задача изменена';
         return action;
     };
 
-    const renderEventDetails = (ev: TaskEvent) => {
-        if (ev.action === 'STATUS_CHANGED' && ev.details) {
-            const oldStatus = 'oldStatus' in ev.details ? ev.details.oldStatus : undefined;
-            const newStatus = 'newStatus' in ev.details ? ev.details.newStatus : undefined;
+    const isChange = (value: unknown): value is Change => {
+        return (
+            typeof value === 'object' &&
+            value !== null &&
+            ('from' in (value as Record<string, unknown>) || 'to' in (value as Record<string, unknown>))
+        );
+    };
+
+    const isExecutorRemovedEvent = (ev: TaskEvent): boolean => {
+        if (ev.action !== 'updated') return false;
+        const d = (ev.details || {}) as TaskEventDetails;
+        const candidates = [d.executorId, d.executorName, d.executorEmail];
+
+        const isRemovedChange = (val: unknown): val is { from?: unknown; to?: unknown } => {
+            if (typeof val !== 'object' || val === null) return false;
+            const obj = val as { from?: unknown; to?: unknown };
+            if ('to' in obj && typeof obj.to === 'undefined') return true;
+            return 'from' in obj && !('to' in obj);
+        };
+
+        return candidates.some((c) => isRemovedChange(c));
+    };
+
+    const getDetailString = (details: TaskEventDetails, key: string): string => {
+        const raw = details[key];
+        if (
+            typeof raw === 'string' ||
+            typeof raw === 'number' ||
+            typeof raw === 'boolean' ||
+            raw === null ||
+            typeof raw === 'undefined'
+        ) {
+            return raw === null || typeof raw === 'undefined' ? '—' : String(raw);
+        }
+
+        return '—';
+    };
+
+    const renderEventDetails = (ev: TaskEvent): React.ReactNode => {
+        const d: TaskEventDetails = (ev.details || {}) as TaskEventDetails;
+
+        if (ev.action === 'created') {
+            const taskNameStr = getDetailString(d, 'taskName');
+            const bsNumberStr = getDetailString(d, 'bsNumber');
+            const statusStr = getDetailString(d, 'status');
+            const priorityStr = getDetailString(d, 'priority');
+
             return (
-                <Typography variant="caption" display="block">
-                    {oldStatus ? `Статус: ${oldStatus}` : 'Статус'} → {asText(newStatus)}
-                </Typography>
+                <>
+                    <Typography variant="caption" display="block">
+                        Задача: {taskNameStr}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                        BS: {bsNumberStr}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                        Статус: {statusStr}
+                    </Typography>
+                    <Typography variant="caption" display="block">
+                        Приоритет: {priorityStr}
+                    </Typography>
+                </>
             );
         }
 
-        if (ev.details?.comment) {
+        if (ev.action === 'status_changed_assigned') {
+            const executorStr = getDetailString(d, 'executorName');
+            const executorEmailStr = getDetailString(d, 'executorEmail');
+
+            let statusLine: string | null = null;
+            const maybeStatus = d.status;
+            if (
+                maybeStatus &&
+                typeof maybeStatus === 'object' &&
+                ('from' in (maybeStatus as Record<string, unknown>) ||
+                    'to' in (maybeStatus as Record<string, unknown>))
+            ) {
+                const st = maybeStatus as { from?: unknown; to?: unknown };
+                statusLine = `Статус: ${asText(st.from)} → ${asText(st.to)}`;
+            }
+
             return (
-                <Typography variant="caption" display="block">
-                    {ev.details.comment}
-                </Typography>
+                <>
+                    <Typography variant="caption" display="block">
+                        Исполнитель: {executorStr}
+                    </Typography>
+                    {executorEmailStr !== '—' && (
+                        <Typography variant="caption" display="block">
+                            Email: {executorEmailStr}
+                        </Typography>
+                    )}
+                    {statusLine && (
+                        <Typography variant="caption" display="block">
+                            {statusLine}
+                        </Typography>
+                    )}
+                </>
             );
         }
 
-        return null;
+        if (ev.action === 'updated') {
+            if (isExecutorRemovedEvent(ev)) {
+                const st = d.status;
+                let statusLine: string | null = null;
+                if (
+                    st &&
+                    typeof st === 'object' &&
+                    ('from' in (st as Record<string, unknown>) || 'to' in (st as Record<string, unknown>))
+                ) {
+                    const ch = st as Change;
+                    statusLine = `Статус: ${asText(ch.from)} → ${asText(ch.to)}`;
+                }
+
+                return (
+                    <>
+                        <Typography variant="caption" display="block">
+                            Исполнитель: —
+                        </Typography>
+                        {statusLine && (
+                            <Typography variant="caption" display="block">
+                                {statusLine}
+                            </Typography>
+                        )}
+                    </>
+                );
+            }
+
+            return Object.entries(d).map(([key, value]) => {
+                if (isChange(value)) {
+                    return (
+                        <Typography key={key} variant="caption" display="block">
+                            {key}: {asText(value.from)} → {asText(value.to)}
+                        </Typography>
+                    );
+                }
+                return (
+                    <Typography key={key} variant="caption" display="block">
+                        {key}: {asText(value)}
+                    </Typography>
+                );
+            });
+        }
+
+        return Object.entries(d).map(([key, value]) => (
+            <Typography key={key} variant="caption" display="block">
+                {key}: {value === null || typeof value === 'undefined' ? '—' : String(value)}
+            </Typography>
+        ));
     };
 
     const getEventAuthorLine = (ev: TaskEvent): string => {
-        const parsed = parseUserInfo(ev.author);
-        if (parsed.email && parsed.email !== 'N/A') return `${parsed.name} (${parsed.email})`;
-        return parsed.name;
+        const detailEmail =
+            ev.details && typeof (ev.details as TaskEventDetails).authorEmail === 'string'
+                ? (ev.details as TaskEventDetails).authorEmail
+                : undefined;
+        const email = (ev as { authorEmail?: string }).authorEmail || detailEmail;
+        if (email && ev.author) return `${ev.author} (${email})`;
+        if (email) return email;
+        return ev.author;
     };
 
     const getHasPhotoReport = React.useCallback((target: Task | null | undefined) => {
@@ -1074,9 +1264,6 @@ export default function TaskDetailPage() {
                                                 Отказать
                                             </Button>
                                         </Stack>
-                                        <Typography variant="caption" color="text.secondary">
-                                            Статус после принятия: At work. После отказа: To do.
-                                        </Typography>
                                     </Stack>
                                 )}
                                 {task.status === 'At work' && (
@@ -1451,13 +1638,13 @@ export default function TaskDetailPage() {
                                                 </TimelineOppositeContent>
                                                 <TimelineSeparator>
                                                     <TimelineDot
-                                                        color={ev.action === 'TASK_CREATED' ? 'primary' : 'success'}
+                                                        color={ev.action === 'created' ? 'primary' : 'success'}
                                                     />
                                                     {idx < sortedEvents.length - 1 && <TimelineConnector />}
                                                 </TimelineSeparator>
                                                 <TimelineContent sx={{ py: 1, minWidth: 0 }}>
                                                     <Typography variant="body2" fontWeight={600}>
-                                                        {getEventTitle(ev.action)}
+                                                        {getEventTitle(ev.action, ev)}
                                                     </Typography>
                                                     <Typography variant="body2" color="text.secondary">
                                                         Автор: {getEventAuthorLine(ev)}
@@ -1669,11 +1856,21 @@ export default function TaskDetailPage() {
                 </DialogTitle>
                 <DialogContent sx={{ pt: 1 }}>
                     <Typography variant="body1" sx={{ mb: 1.5 }}>
-                        {pendingDecision === 'accept'
-                            ? `Вы подтверждаете что готовы принять задачу ${task.taskName} ${bsNumberDisplay !== '—' ? bsNumberDisplay : ''}? Срок выполнение - ${
-                                  task.dueDate ? formatDate(task.dueDate) : '—'
-                              }.`
-                            : `Вы уверены что хотите отказаться от задачи ${task.taskName} ${bsNumberDisplay !== '—' ? bsNumberDisplay : ''}?`}
+                        {pendingDecision === 'accept' ? (
+                            <>
+                                Вы подтверждаете что готовы принять задачу {task.taskName}{' '}
+                                {bsNumberDisplay !== '—' ? bsNumberDisplay : ''}? Срок выполнения -{' '}
+                                <Box component="span" sx={{ fontWeight: 700 }}>
+                                    {task.dueDate ? formatDate(task.dueDate) : '—'}
+                                </Box>
+                                .
+                            </>
+                        ) : (
+                            <>
+                                Вы уверены что хотите отказаться от задачи {task.taskName}{' '}
+                                {bsNumberDisplay !== '—' ? bsNumberDisplay : ''}?
+                            </>
+                        )}
                     </Typography>
                     {decisionError && (
                         <Typography variant="body2" color="error" fontWeight={600}>
