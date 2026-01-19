@@ -158,6 +158,9 @@ type Task = {
     taskDescription?: string;
     createdAt?: string;
     updatedAt?: string;
+    authorId?: string;
+    authorName?: string;
+    authorEmail?: string;
     executorId?: string;
     executorName?: string;
     executorEmail?: string;
@@ -1910,6 +1913,36 @@ export default function TaskDetailsPage() {
                                         <strong>Тип задачи:</strong> {task.taskType || '—'}
                                     </Typography>
 
+                                    {(task.authorName || task.authorEmail) && (
+                                        <Typography variant="body1">
+                                            <strong>Автор:</strong>{' '}
+                                            {task.authorId ? (
+                                                <Button
+                                                    variant="text"
+                                                    size="small"
+                                                    onClick={() => openProfileDialog(task.authorId)}
+                                                    sx={{
+                                                        textTransform: 'none',
+                                                        px: 0,
+                                                        minWidth: 0,
+                                                        fontSize: 'inherit',
+                                                        fontWeight: 'inherit',
+                                                        lineHeight: 'inherit',
+                                                        color: 'inherit',
+                                                    }}
+                                                >
+                                                    {task.authorName && task.authorEmail
+                                                        ? `${task.authorName} (${task.authorEmail})`
+                                                        : task.authorName || task.authorEmail}
+                                                </Button>
+                                            ) : (
+                                                task.authorName && task.authorEmail
+                                                    ? `${task.authorName} (${task.authorEmail})`
+                                                    : task.authorName || task.authorEmail
+                                            )}
+                                        </Typography>
+                                    )}
+
                                     {/* Исполнитель (если есть) */}
                                     {(task.executorName || task.executorEmail) && (
                                         <Typography variant="body1">
@@ -1919,7 +1952,15 @@ export default function TaskDetailsPage() {
                                                     variant="text"
                                                     size="small"
                                                     onClick={() => openProfileDialog(task.executorId)}
-                                                    sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                                    sx={{
+                                                        textTransform: 'none',
+                                                        px: 0,
+                                                        minWidth: 0,
+                                                        fontSize: 'inherit',
+                                                        fontWeight: 'inherit',
+                                                        lineHeight: 'inherit',
+                                                        color: 'inherit',
+                                                    }}
                                                 >
                                                     {task.executorName || task.executorEmail}
                                                 </Button>
