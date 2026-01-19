@@ -55,14 +55,16 @@ import Masonry from '@mui/lab/Masonry';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
-import { getPriorityIcon, normalizePriority } from '@/utils/priorityIcons';
+import { getPriorityIcon, getPriorityLabelRu, normalizePriority } from '@/utils/priorityIcons';
 import TaskGeoLocation from '@/app/workspace/components/TaskGeoLocation';
 import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 import TaskComments, { type TaskComment } from '@/features/tasks/TaskComments';
 import PhotoReportUploader from '@/features/tasks/PhotoReportUploader';
 import ReportSummaryList from '@/features/reports/ReportSummaryList';
-import { fetchUserContext } from '@/app/utils/userContext';
+import { fetchUserContext, resolveRoleFromContext } from '@/app/utils/userContext';
+import type { EffectiveOrgRole } from '@/app/types/roles';
+import { MANAGER_ROLES } from '@/app/types/roles';
 import type { Task, WorkItem, TaskEvent } from '@/app/types/taskTypes';
 import { extractFileNameFromUrl, isDocumentUrl } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
@@ -155,6 +157,7 @@ export default function TaskDetailPage() {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
     const [currentUserId, setCurrentUserId] = React.useState<string>('');
+    const [userRole, setUserRole] = React.useState<EffectiveOrgRole | null>(null);
     const [profileType, setProfileType] = React.useState<'employer' | 'contractor' | undefined>(undefined);
     const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
     const [profileOpen, setProfileOpen] = React.useState(false);
@@ -274,8 +277,10 @@ export default function TaskDetailPage() {
                     '';
                 setCurrentUserId(clerkId);
                 setProfileType(ctx?.profileType);
+                setUserRole(resolveRoleFromContext(ctx));
             } catch {
                 setProfileType('contractor');
+                setUserRole(null);
             }
         };
         void fetchUserRole();
@@ -422,6 +427,83 @@ export default function TaskDetailPage() {
         return '—';
     };
 
+    const isManager = Boolean(userRole && MANAGER_ROLES.includes(userRole));
+    const statusKeys = new Set(['status', 'publicStatus', 'publicModerationStatus']);
+    const dateKeys = new Set([
+        'createdAt',
+        'updatedAt',
+        'dueDate',
+        'orderDate',
+        'orderSignDate',
+        'workCompletionDate',
+    ]);
+    const fieldLabels: Record<string, string> = {
+        taskName: 'Задача',
+        bsNumber: 'БС',
+        status: 'Статус',
+        priority: 'Приоритет',
+        executorName: 'Исполнитель',
+        executorEmail: 'Почта',
+        executorId: 'Исполнитель',
+        taskDescription: 'Описание',
+        publicDescription: 'Информация для подрядчика',
+        dueDate: 'Срок',
+        totalCost: 'Стоимость',
+        budget: 'Плановый бюджет',
+        contractorPayment: 'Оплата подрядчику',
+        taskType: 'Тип задачи',
+        visibility: 'Видимость',
+        publicStatus: 'Публичный статус',
+        publicModerationStatus: 'Статус модерации',
+        publicModerationComment: 'Комментарий модерации',
+        orderNumber: 'Номер заказа',
+        orderDate: 'Дата заказа',
+        orderSignDate: 'Дата подписания',
+        orderUrl: 'Ссылка на заказ',
+        bsAddress: 'Адрес',
+        workCompletionDate: 'Дата завершения',
+        applicationCount: 'Отклики',
+        allowInstantClaim: 'Мгновенный отклик',
+        currency: 'Валюта',
+        authorName: 'Автор',
+        authorEmail: 'Почта автора',
+        initiatorName: 'Инициатор',
+        initiatorEmail: 'Почта инициатора',
+        createdAt: 'Создана',
+        updatedAt: 'Обновлена',
+    };
+
+    const getDetailLabel = (key: string) => fieldLabels[key] ?? 'Поле';
+
+    const formatEventValue = (key: string, value: unknown): string => {
+        if (typeof value === 'boolean') return value ? 'Да' : 'Нет';
+        if (typeof value === 'string' && dateKeys.has(key)) return formatDateTime(value);
+        if (typeof value === 'string' && statusKeys.has(key)) {
+            const label = getStatusLabel(normalizeStatusTitle(value));
+            return label || value;
+        }
+        if (typeof value === 'string' && key === 'priority') {
+            const label = getPriorityLabelRu(value);
+            return label || value;
+        }
+        return asText(value);
+    };
+
+    const getEventAuthorInfo = (ev: TaskEvent) => {
+        const detailAuthorId =
+            ev.details && typeof (ev.details as TaskEventDetails).authorId === 'string'
+                ? String((ev.details as TaskEventDetails).authorId)
+                : undefined;
+        const detailAuthorName =
+            ev.details && typeof (ev.details as TaskEventDetails).authorName === 'string'
+                ? String((ev.details as TaskEventDetails).authorName)
+                : undefined;
+        return {
+            id: ev.authorId || detailAuthorId,
+            name: ev.author || detailAuthorName || '—',
+        };
+    };
+
     const renderEventDetails = (ev: TaskEvent): React.ReactNode => {
         const d: TaskEventDetails = (ev.details || {}) as TaskEventDetails;
 
@@ -434,16 +516,16 @@ export default function TaskDetailPage() {
             return (
                 <>
                     <Typography variant="caption" display="block">
-                        Задача: {taskNameStr}
+                        {getDetailLabel('taskName')}: {formatEventValue('taskName', taskNameStr)}
                     </Typography>
                     <Typography variant="caption" display="block">
-                        BS: {bsNumberStr}
+                        {getDetailLabel('bsNumber')}: {formatEventValue('bsNumber', bsNumberStr)}
                     </Typography>
                     <Typography variant="caption" display="block">
-                        Статус: {statusStr}
+                        {getDetailLabel('status')}: {formatEventValue('status', statusStr)}
                     </Typography>
                     <Typography variant="caption" display="block">
-                        Приоритет: {priorityStr}
+                        {getDetailLabel('priority')}: {formatEventValue('priority', priorityStr)}
                     </Typography>
                 </>
             );
@@ -462,17 +544,23 @@ export default function TaskDetailPage() {
                     'to' in (maybeStatus as Record<string, unknown>))
             ) {
                 const st = maybeStatus as { from?: unknown; to?: unknown };
-                statusLine = `Статус: ${asText(st.from)} → ${asText(st.to)}`;
+                statusLine = `${getDetailLabel('status')}: ${formatEventValue(
+                    'status',
+                    st.from
+                )} → ${formatEventValue('status', st.to)}`;
             }
 
             return (
                 <>
                     <Typography variant="caption" display="block">
-                        Исполнитель: {executorStr}
+                        {getDetailLabel('executorName')}: {formatEventValue(
+                            'executorName',
+                            executorStr
+                        )}
                     </Typography>
                     {executorEmailStr !== '—' && (
                         <Typography variant="caption" display="block">
-                            Email: {executorEmailStr}
+                            {getDetailLabel('executorEmail')}: {executorEmailStr}
                         </Typography>
                     )}
                     {statusLine && (
@@ -485,6 +573,13 @@ export default function TaskDetailPage() {
         }
 
         if (ev.action === 'updated') {
+            if (!isManager) {
+                return (
+                    <Typography variant="caption" display="block">
+                        Детали изменений доступны менеджеру
+                    </Typography>
+                );
+            }
             if (isExecutorRemovedEvent(ev)) {
                 const st = d.status;
                 let statusLine: string | null = null;
@@ -494,13 +589,16 @@ export default function TaskDetailPage() {
                     ('from' in (st as Record<string, unknown>) || 'to' in (st as Record<string, unknown>))
                 ) {
                     const ch = st as Change;
-                    statusLine = `Статус: ${asText(ch.from)} → ${asText(ch.to)}`;
+                    statusLine = `${getDetailLabel('status')}: ${formatEventValue(
+                        'status',
+                        ch.from
+                    )} → ${formatEventValue('status', ch.to)}`;
                 }
 
                 return (
                     <>
                         <Typography variant="caption" display="block">
-                            Исполнитель: —
+                            {getDetailLabel('executorName')}: —
                         </Typography>
                         {statusLine && (
                             <Typography variant="caption" display="block">
@@ -515,13 +613,14 @@ export default function TaskDetailPage() {
                 if (isChange(value)) {
                     return (
                         <Typography key={key} variant="caption" display="block">
-                            {key}: {asText(value.from)} → {asText(value.to)}
+                            {getDetailLabel(key)}: {formatEventValue(key, value.from)} →{' '}
+                            {formatEventValue(key, value.to)}
                         </Typography>
                     );
                 }
                 return (
                     <Typography key={key} variant="caption" display="block">
-                        {key}: {asText(value)}
+                        {getDetailLabel(key)}: {formatEventValue(key, value)}
                     </Typography>
                 );
             });
@@ -529,24 +628,9 @@ export default function TaskDetailPage() {
 
         return Object.entries(d).map(([key, value]) => (
             <Typography key={key} variant="caption" display="block">
-                {key}: {value === null || typeof value === 'undefined' ? '—' : String(value)}
+                {getDetailLabel(key)}: {formatEventValue(key, value)}
             </Typography>
         ));
-    };
-
-    const getEventAuthorLine = (ev: TaskEvent): string => {
-        const detailEmail =
-            ev.details && typeof (ev.details as TaskEventDetails).authorEmail === 'string'
-                ? String((ev.details as TaskEventDetails).authorEmail)
-                : undefined;
-        const authorEmail =
-            typeof (ev as { authorEmail?: unknown }).authorEmail === 'string'
-                ? (ev as { authorEmail?: string }).authorEmail
-                : undefined;
-        const email = authorEmail || detailEmail;
-        if (email && ev.author) return `${ev.author} (${email})`;
-        if (email) return email;
-        return ev.author;
     };
 
     const getHasPhotoReport = React.useCallback((target: Task | null | undefined) => {
@@ -1185,17 +1269,13 @@ export default function TaskDetailPage() {
                                                     fontSize: 'inherit',
                                                     fontWeight: 'inherit',
                                                     lineHeight: 'inherit',
-                                                    color: 'inherit',
+                                                    color: 'primary.main',
                                                 }}
                                             >
-                                                {task.authorName && task.authorEmail
-                                                    ? `${task.authorName} (${task.authorEmail})`
-                                                    : task.authorName || task.authorEmail}
+                                                {task.authorName || task.authorEmail}
                                             </Button>
                                         ) : (
-                                            task.authorName && task.authorEmail
-                                                ? `${task.authorName} (${task.authorEmail})`
-                                                : task.authorName || task.authorEmail
+                                            task.authorName || task.authorEmail
                                         )}
                                     </Typography>
                                 )}
@@ -1221,6 +1301,10 @@ export default function TaskDetailPage() {
                                     <Typography variant="body1">
                                         <strong>Создана:</strong>{' '}
                                         {task.createdAt ? formatDate(task.createdAt) : '—'}
+                                    </Typography>
+                                    <Typography variant="body1">
+                                        <strong>Обновлена:</strong>{' '}
+                                        {task.updatedAt ? formatDateTime(task.updatedAt) : '—'}
                                     </Typography>
                                 </Box>
 
@@ -1663,9 +1747,32 @@ export default function TaskDetailPage() {
                                                     <Typography variant="body2" fontWeight={600}>
                                                         {getEventTitle(ev.action, ev)}
                                                     </Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Автор: {getEventAuthorLine(ev)}
-                                                    </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Автор:{' '}
+                                                {(() => {
+                                                    const author = getEventAuthorInfo(ev);
+                                                    return author.id ? (
+                                                        <Button
+                                                            variant="text"
+                                                            size="small"
+                                                            onClick={() => openProfileDialog(author.id)}
+                                                            sx={{
+                                                                textTransform: 'none',
+                                                                px: 0,
+                                                                minWidth: 0,
+                                                                fontSize: 'inherit',
+                                                                fontWeight: 'inherit',
+                                                                lineHeight: 'inherit',
+                                                                color: 'primary.main',
+                                                            }}
+                                                        >
+                                                            {author.name}
+                                                        </Button>
+                                                    ) : (
+                                                        author.name
+                                                    );
+                                                })()}
+                                            </Typography>
                                                     <Box sx={{ mt: 0.5 }}>{renderEventDetails(ev)}</Box>
                                                 </TimelineContent>
                                             </TimelineItem>

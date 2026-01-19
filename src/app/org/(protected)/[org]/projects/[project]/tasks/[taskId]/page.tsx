@@ -69,7 +69,7 @@ import TaskComments from '@/features/tasks/TaskComments';
 import type { TaskComment } from '@/features/tasks/TaskComments';
 import type { ParsedWorkItem } from '@/app/workspace/components/T2/T2EstimateParser';
 import { T2NcwGenerator } from '@/app/workspace/components/T2/T2NcwGenerator';
-import { getPriorityIcon, normalizePriority } from '@/utils/priorityIcons';
+import { getPriorityIcon, getPriorityLabelRu, normalizePriority } from '@/utils/priorityIcons';
 import TaskGeoLocation from '@/app/workspace/components/TaskGeoLocation';
 import type { TaskApplication } from '@/app/types/application';
 import { getStatusColor } from '@/utils/statusColors';
@@ -92,7 +92,9 @@ import type { RelatedTaskRef } from '@/app/types/taskTypes';
 import { buildBsAddressFromLocations } from '@/utils/bsLocation';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 import type { PhotoReport } from '@/app/types/taskTypes';
-import { fetchUserContext } from '@/app/utils/userContext';
+import { fetchUserContext, resolveRoleFromContext } from '@/app/utils/userContext';
+import type { EffectiveOrgRole } from '@/app/types/roles';
+import { MANAGER_ROLES } from '@/app/types/roles';
 
 type TaskFile = {
     url: string;
@@ -328,6 +330,7 @@ export default function TaskDetailsPage() {
         null
     );
     const [currentUserId, setCurrentUserId] = React.useState('');
+    const [userRole, setUserRole] = React.useState<EffectiveOrgRole | null>(null);
 
     const [orgName, setOrgName] = React.useState<string | null>(null);
     const [projectOperator, setProjectOperator] = React.useState<string | null>(null);
@@ -600,8 +603,10 @@ export default function TaskDetailsPage() {
                     (ctx?.user as { id?: string } | undefined)?.id ||
                     '';
                 setCurrentUserId(clerkId);
+                setUserRole(resolveRoleFromContext(ctx));
             } catch {
                 setCurrentUserId('');
+                setUserRole(null);
             }
         };
         void fetchUser();
@@ -1420,6 +1425,79 @@ export default function TaskDetailsPage() {
         return '—';
     };
 
+    const isManager = Boolean(userRole && MANAGER_ROLES.includes(userRole));
+    const statusKeys = new Set(['status', 'publicStatus', 'publicModerationStatus']);
+    const dateKeys = new Set([
+        'createdAt',
+        'updatedAt',
+        'dueDate',
+        'orderDate',
+        'orderSignDate',
+        'workCompletionDate',
+    ]);
+    const fieldLabels: Record<string, string> = {
+        taskName: 'Задача',
+        bsNumber: 'БС',
+        status: 'Статус',
+        priority: 'Приоритет',
+        executorName: 'Исполнитель',
+        executorEmail: 'Почта',
+        executorId: 'Исполнитель',
+        taskDescription: 'Описание',
+        publicDescription: 'Информация для подрядчика',
+        dueDate: 'Срок',
+        totalCost: 'Стоимость',
+        budget: 'Плановый бюджет',
+        contractorPayment: 'Оплата подрядчику',
+        taskType: 'Тип задачи',
+        visibility: 'Видимость',
+        publicStatus: 'Публичный статус',
+        publicModerationStatus: 'Статус модерации',
+        publicModerationComment: 'Комментарий модерации',
+        orderNumber: 'Номер заказа',
+        orderDate: 'Дата заказа',
+        orderSignDate: 'Дата подписания',
+        orderUrl: 'Ссылка на заказ',
+        bsAddress: 'Адрес',
+        workCompletionDate: 'Дата завершения',
+        applicationCount: 'Отклики',
+        allowInstantClaim: 'Мгновенный отклик',
+        currency: 'Валюта',
+        authorName: 'Автор',
+        authorEmail: 'Почта автора',
+        initiatorName: 'Инициатор',
+        initiatorEmail: 'Почта инициатора',
+        createdAt: 'Создана',
+        updatedAt: 'Обновлена',
+    };
+
+    const getDetailLabel = (key: string) => fieldLabels[key] ?? 'Поле';
+
+    const formatEventValue = (key: string, value: unknown): string => {
+        if (typeof value === 'boolean') return value ? 'Да' : 'Нет';
+        if (typeof value === 'string' && dateKeys.has(key)) return formatDateTime(value);
+        if (typeof value === 'string' && statusKeys.has(key)) {
+            const label = getStatusLabel(normalizeStatusTitle(value));
+            return label || value;
+        }
+        if (typeof value === 'string' && key === 'priority') {
+            const label = getPriorityLabelRu(value);
+            return label || value;
+        }
+        return asText(value);
+    };
+
+    const getEventAuthorInfo = (ev: TaskEvent) => {
+        const detailAuthorId =
+            ev.details && typeof ev.details.authorId === 'string' ? ev.details.authorId : undefined;
+        const detailAuthorName =
+            ev.details && typeof ev.details.authorName === 'string' ? ev.details.authorName : undefined;
+        return {
+            id: ev.authorId || detailAuthorId,
+            name: ev.author || detailAuthorName || '—',
+        };
+    };
+
     const renderEventDetails = (ev: TaskEvent): React.ReactNode => {
         const d: TaskEventDetails = ev.details || {};
 
@@ -1432,16 +1510,16 @@ export default function TaskDetailsPage() {
             return (
                 <>
                     <Typography variant="caption" display="block">
-                        Задача: {taskNameStr}
+                        {getDetailLabel('taskName')}: {formatEventValue('taskName', taskNameStr)}
                     </Typography>
                     <Typography variant="caption" display="block">
-                        BS: {bsNumberStr}
+                        {getDetailLabel('bsNumber')}: {formatEventValue('bsNumber', bsNumberStr)}
                     </Typography>
                     <Typography variant="caption" display="block">
-                        Статус: {statusStr}
+                        {getDetailLabel('status')}: {formatEventValue('status', statusStr)}
                     </Typography>
                     <Typography variant="caption" display="block">
-                        Приоритет: {priorityStr}
+                        {getDetailLabel('priority')}: {formatEventValue('priority', priorityStr)}
                     </Typography>
                 </>
             );
@@ -1458,17 +1536,23 @@ export default function TaskDetailsPage() {
                     'to' in (maybeStatus as Record<string, unknown>))
             ) {
                 const st = maybeStatus as { from?: unknown; to?: unknown };
-                statusLine = `Статус: ${asText(st.from)} → ${asText(st.to)}`;
+                statusLine = `${getDetailLabel('status')}: ${formatEventValue(
+                    'status',
+                    st.from
+                )} → ${formatEventValue('status', st.to)}`;
             }
 
             return (
                 <>
                     <Typography variant="caption" display="block">
-                        Исполнитель: {executorStr}
+                        {getDetailLabel('executorName')}: {formatEventValue(
+                            'executorName',
+                            executorStr
+                        )}
                     </Typography>
                     {executorEmailStr !== '—' && (
                         <Typography variant="caption" display="block">
-                            Email: {executorEmailStr}
+                            {getDetailLabel('executorEmail')}: {executorEmailStr}
                         </Typography>
                     )}
                     {statusLine && (
@@ -1479,6 +1563,13 @@ export default function TaskDetailsPage() {
                 </>
             );
         } else if (ev.action === 'updated') {
+            if (!isManager) {
+                return (
+                    <Typography variant="caption" display="block">
+                        Детали изменений доступны менеджеру
+                    </Typography>
+                );
+            }
             // твоя логика updated как была
             if (isExecutorRemovedEvent(ev)) {
                 const st = d.status;
@@ -1489,13 +1580,16 @@ export default function TaskDetailsPage() {
                     ('from' in (st as Record<string, unknown>) || 'to' in (st as Record<string, unknown>))
                 ) {
                     const ch = st as Change;
-                    statusLine = `Статус: ${asText(ch.from)} → ${asText(ch.to)}`;
+                    statusLine = `${getDetailLabel('status')}: ${formatEventValue(
+                        'status',
+                        ch.from
+                    )} → ${formatEventValue('status', ch.to)}`;
                 }
 
                 return (
                     <>
                         <Typography variant="caption" display="block">
-                            Исполнитель: —
+                            {getDetailLabel('executorName')}: —
                         </Typography>
                         {statusLine && (
                             <Typography variant="caption" display="block">
@@ -1510,13 +1604,14 @@ export default function TaskDetailsPage() {
                 if (isChange(value)) {
                     return (
                         <Typography key={key} variant="caption" display="block">
-                            {key}: {asText(value.from)} → {asText(value.to)}
+                            {getDetailLabel(key)}: {formatEventValue(key, value.from)} →{' '}
+                            {formatEventValue(key, value.to)}
                         </Typography>
                     );
                 }
                 return (
                     <Typography key={key} variant="caption" display="block">
-                        {key}: {asText(value)}
+                        {getDetailLabel(key)}: {formatEventValue(key, value)}
                     </Typography>
                 );
             });
@@ -1525,20 +1620,9 @@ export default function TaskDetailsPage() {
         // fallback
         return Object.entries(d).map(([key, value]) => (
             <Typography key={key} variant="caption" display="block">
-                {key}: {value === null || typeof value === 'undefined' ? '—' : String(value)}
+                {getDetailLabel(key)}: {formatEventValue(key, value)}
             </Typography>
         ));
-    };
-
-    const getEventAuthorLine = (ev: TaskEvent): string => {
-        const detailEmail =
-            ev.details && typeof ev.details.authorEmail === 'string'
-                ? ev.details.authorEmail
-                : undefined;
-        const email = ev.authorEmail || detailEmail;
-        if (email && ev.author) return `${ev.author} (${email})`;
-        if (email) return email;
-        return ev.author;
     };
 
     const renderWorkItemsTable = (maxHeight?: number | string) => {
@@ -1948,7 +2032,7 @@ export default function TaskDetailsPage() {
                                                         fontSize: 'inherit',
                                                         fontWeight: 'inherit',
                                                         lineHeight: 'inherit',
-                                                        color: 'inherit',
+                                                        color: 'primary.main',
                                                     }}
                                                 >
                                                     {task.authorName && task.authorEmail
@@ -1979,7 +2063,7 @@ export default function TaskDetailsPage() {
                                                         fontSize: 'inherit',
                                                         fontWeight: 'inherit',
                                                         lineHeight: 'inherit',
-                                                        color: 'inherit',
+                                                        color: 'primary.main',
                                                     }}
                                                 >
                                                     {task.executorName || task.executorEmail}
@@ -2020,7 +2104,7 @@ export default function TaskDetailsPage() {
                                         </Typography>
                                         <Typography variant="body1">
                                             <strong>Обновлена:</strong>{' '}
-                                            {task.updatedAt ? formatDate(task.updatedAt) : '—'}
+                                            {task.updatedAt ? formatDateTime(task.updatedAt) : '—'}
                                         </Typography>
                                     </Box>
                                 </Stack>
@@ -2817,7 +2901,29 @@ export default function TaskDetailsPage() {
                                                                 color="text.secondary"
                                                             >
                                                                 Автор:{' '}
-                                                                {getEventAuthorLine(ev)}
+                                                                {(() => {
+                                                                    const author = getEventAuthorInfo(ev);
+                                                                    return author.id ? (
+                                                                        <Button
+                                                                            variant="text"
+                                                                            size="small"
+                                                                            onClick={() => openProfileDialog(author.id)}
+                                                                            sx={{
+                                                                                textTransform: 'none',
+                                                                                px: 0,
+                                                                                minWidth: 0,
+                                                                                fontSize: 'inherit',
+                                                                                fontWeight: 'inherit',
+                                                                                lineHeight: 'inherit',
+                                                                                color: 'primary.main',
+                                                                            }}
+                                                                        >
+                                                                            {author.name}
+                                                                        </Button>
+                                                                    ) : (
+                                                                        author.name
+                                                                    );
+                                                                })()}
                                                             </Typography>
                                                             <Box sx={{ mt: 0.5 }}>
                                                                 {renderEventDetails(ev)}
