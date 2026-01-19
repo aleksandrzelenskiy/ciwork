@@ -739,6 +739,7 @@ export default function TaskDetailPage() {
                 const updated = data.task as Task;
                 return prev ? { ...prev, ...updated } : updated;
             });
+            await loadTask();
             setPendingDecision(null);
         } catch (e) {
             setDecisionError(e instanceof Error ? e.message : 'Неизвестная ошибка');
@@ -1165,20 +1166,32 @@ export default function TaskDetailPage() {
                                     <strong>Тип задачи:</strong> {task.taskType || '—'}
                                 </Typography>
 
-                                {(task.executorName || task.executorEmail) && (
+                                {(task.authorName || task.authorEmail) && (
                                     <Typography variant="body1">
-                                        <strong>Исполнитель:</strong>{' '}
-                                        {task.executorId ? (
+                                        <strong>Автор:</strong>{' '}
+                                        {task.authorId ? (
                                             <Button
                                                 variant="text"
                                                 size="small"
-                                                onClick={() => openProfileDialog(task.executorId)}
-                                                sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                                onClick={() => openProfileDialog(task.authorId)}
+                                                sx={{
+                                                    textTransform: 'none',
+                                                    px: 0,
+                                                    minWidth: 0,
+                                                    fontSize: 'inherit',
+                                                    fontWeight: 'inherit',
+                                                    lineHeight: 'inherit',
+                                                    color: 'inherit',
+                                                }}
                                             >
-                                                {task.executorName || task.executorEmail}
+                                                {task.authorName && task.authorEmail
+                                                    ? `${task.authorName} (${task.authorEmail})`
+                                                    : task.authorName || task.authorEmail}
                                             </Button>
                                         ) : (
-                                            task.executorName || task.executorEmail
+                                            task.authorName && task.authorEmail
+                                                ? `${task.authorName} (${task.authorEmail})`
+                                                : task.authorName || task.authorEmail
                                         )}
                                     </Typography>
                                 )}
