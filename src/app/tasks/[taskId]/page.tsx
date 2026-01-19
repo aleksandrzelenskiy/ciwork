@@ -537,9 +537,13 @@ export default function TaskDetailPage() {
     const getEventAuthorLine = (ev: TaskEvent): string => {
         const detailEmail =
             ev.details && typeof (ev.details as TaskEventDetails).authorEmail === 'string'
-                ? (ev.details as TaskEventDetails).authorEmail
+                ? String((ev.details as TaskEventDetails).authorEmail)
                 : undefined;
-        const email = (ev as { authorEmail?: string }).authorEmail || detailEmail;
+        const authorEmail =
+            typeof (ev as { authorEmail?: unknown }).authorEmail === 'string'
+                ? (ev as { authorEmail?: string }).authorEmail
+                : undefined;
+        const email = authorEmail || detailEmail;
         if (email && ev.author) return `${ev.author} (${email})`;
         if (email) return email;
         return ev.author;
