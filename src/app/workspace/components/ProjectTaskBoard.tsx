@@ -55,6 +55,7 @@ type Task = {
     bsLatitude?: number;
     bsLongitude?: number;
     totalCost?: number;
+    contractorPayment?: number;
     workItems?: Array<{
         workType?: string;
         quantity?: number;
@@ -412,6 +413,7 @@ export default function ProjectTaskBoard({
                         bsLatitude: selectedTask.bsLatitude,
                         bsLongitude: selectedTask.bsLongitude,
                         totalCost: selectedTask.totalCost,
+                        contractorPayment: selectedTask.contractorPayment,
                         priority: normalizePriority(selectedTask.priority || 'medium') || 'medium',
                         executorId: selectedTask.executorId,
                         executorName: selectedTask.executorName,

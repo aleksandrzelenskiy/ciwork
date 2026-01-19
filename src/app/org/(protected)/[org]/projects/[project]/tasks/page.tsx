@@ -605,10 +605,10 @@ export default function ProjectTasksPage() {
                                             '&:hover': { textDecoration: 'underline' },
                                         }}
                                     >
-                                        {orgInfo?.name ?? orgSlug}
+                                        {orgInfo?.name ?? '—'}
                                     </Box>
                                 ) : (
-                                    orgInfo?.name ?? orgSlug
+                                    orgInfo?.name ?? '—'
                                 )}
                             </Typography>
                             {managerDisplayName && (
@@ -623,12 +623,25 @@ export default function ProjectTasksPage() {
                                             variant="text"
                                             size="small"
                                             onClick={() => openProfileDialog(managerClerkId)}
-                                            sx={{ textTransform: 'none', px: 0, minWidth: 0, fontWeight: 600 }}
+                                            sx={{
+                                                textTransform: 'none',
+                                                px: 0,
+                                                minWidth: 0,
+                                                fontWeight: 600,
+                                                fontSize: { xs: '1.05rem', md: '1.15rem' },
+                                            }}
                                         >
                                             {managerDisplayName}
                                         </Button>
                                     ) : (
-                                        <Box component="span" sx={{ color: textPrimary, fontWeight: 600 }}>
+                                        <Box
+                                            component="span"
+                                            sx={{
+                                                color: textPrimary,
+                                                fontWeight: 600,
+                                                fontSize: { xs: '1.05rem', md: '1.15rem' },
+                                            }}
+                                        >
                                             {managerDisplayName}
                                         </Box>
                                     )}

@@ -81,6 +81,11 @@ type RelatedTaskOption = {
     bsNumber?: string;
 };
 
+type InitiatorOption = {
+    name: string;
+    email: string;
+};
+
 export type TaskForEdit = {
     _id: string;
     taskId: string;
@@ -441,6 +446,8 @@ export default function WorkspaceTaskDialog({
     const [initiatorName, setInitiatorName] = React.useState('');
     const [initiatorEmail, setInitiatorEmail] = React.useState('');
     const [showInitiatorFields, setShowInitiatorFields] = React.useState(false);
+    const [initiatorOptions, setInitiatorOptions] = React.useState<InitiatorOption[]>([]);
+    const [initiatorOptionsLoading, setInitiatorOptionsLoading] = React.useState(false);
 
     const [existingAttachments, setExistingAttachments] = React.useState<
         Array<{ key: string; name: string; url?: string; size?: number }>
@@ -508,25 +515,34 @@ export default function WorkspaceTaskDialog({
         }
     }, [isT2Operator, estimateDialogOpen]);
 
-    const loadBsOptions = React.useCallback(
-        async (term: string) => {
-            setBsOptionsLoading(true);
-            setBsOptionsError(null);
+    const fetchBsOptions = React.useCallback(
+        async (term: string): Promise<BsOption[]> => {
+            const normalized = term.trim();
+            if (!normalized) return [];
             try {
                 const qs = new URLSearchParams();
-                if (term) qs.set('q', term);
+                qs.set('q', normalized);
                 if (projectMeta?.regionCode) qs.set('region', projectMeta.regionCode);
                 if (projectMeta?.operator) qs.set('operator', projectMeta.operator);
                 const query = qs.toString();
                 const url = `/api/objects${query ? `?${query}` : ''}`;
                 const res = await fetch(url, { method: 'GET', cache: 'no-store' });
-                const body = await res.json();
-                if (!res.ok) {
-                    setBsOptionsError(extractErrorMessage(body, res.statusText));
-                    setBsOptions([]);
-                    return;
-                }
-                const arr = (body?.objects ?? []) as BsOption[];
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok) return [];
+                return (body?.objects ?? []) as BsOption[];
+            } catch {
+                return [];
+            }
+        },
+        [projectMeta?.regionCode, projectMeta?.operator]
+    );
+
+    const loadBsOptions = React.useCallback(
+        async (term: string) => {
+            setBsOptionsLoading(true);
+            setBsOptionsError(null);
+            try {
+                const arr = await fetchBsOptions(term);
                 setBsOptions(arr);
             } catch (e: unknown) {
                 setBsOptionsError(e instanceof Error ? e.message : 'Failed to load objects');
@@ -535,7 +551,58 @@ export default function WorkspaceTaskDialog({
                 setBsOptionsLoading(false);
             }
         },
-        [projectMeta?.regionCode, projectMeta?.operator]
+        [fetchBsOptions]
+    );
+
+    const autoFillBsEntry = React.useCallback(
+        async (index: number, rawNumber: string) => {
+            const normalizedNumber = rawNumber.trim();
+            if (!normalizedNumber) return;
+            const options = await fetchBsOptions(normalizedNumber);
+            if (!options.length) return;
+
+            const target = getDisplayBsName(normalizedNumber).toLowerCase();
+            const exact = options.find(
+                (opt) => getDisplayBsName(opt.name).toLowerCase() === target
+            );
+            const chosen = exact || (options.length === 1 ? options[0] : null);
+            if (!chosen) return;
+
+            setBsEntries((prev) => {
+                const entry = prev[index];
+                if (!entry || entry.selectedBsOption) return prev;
+                const currentTarget = getDisplayBsName(entry.bsNumber || '').toLowerCase();
+                if (!currentTarget || currentTarget !== target) return prev;
+
+                const displayName = getDisplayBsName(chosen.name);
+                const lat = typeof chosen.lat === 'number' ? String(chosen.lat).replace(',', '.') : '';
+                const lon = typeof chosen.lon === 'number' ? String(chosen.lon).replace(',', '.') : '';
+                const normalizedAddress = normalizeAddressFromDb(displayName, chosen.address);
+
+                return prev.map((item, idx) => {
+                    if (idx !== index) return item;
+                    return {
+                        ...item,
+                        bsNumber: displayName,
+                        bsInput: displayName,
+                        selectedBsOption: chosen,
+                        bsAddress: item.bsAddress.trim() ? item.bsAddress : normalizedAddress,
+                        bsLatitude: item.bsLatitude.trim() ? item.bsLatitude : lat,
+                        bsLongitude: item.bsLongitude.trim() ? item.bsLongitude : lon,
+                    };
+                });
+            });
+        },
+        [fetchBsOptions]
+    );
+
+    const autoFillParsedBsNumbers = React.useCallback(
+        async (numbers: string[]) => {
+            for (const [index, number] of numbers.entries()) {
+                await autoFillBsEntry(index, number);
+            }
+        },
+        [autoFillBsEntry]
     );
 
     const loadRelatedTasks = React.useCallback(
@@ -802,6 +869,74 @@ export default function WorkspaceTaskDialog({
     }, [open, orgSlug, apiPath]);
 
     React.useEffect(() => {
+        if (!open || !orgSlug || !projectRef) return;
+        let aborted = false;
+
+        async function loadInitiators(): Promise<void> {
+            setInitiatorOptionsLoading(true);
+            try {
+                const res = await fetch(
+                    apiPath(`/projects/${encodeURIComponent(projectRef)}/tasks?limit=100&sort=-createdAt`),
+                    { method: 'GET', cache: 'no-store' }
+                );
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok || !body?.items) {
+                    if (!aborted) setInitiatorOptions([]);
+                    return;
+                }
+
+                const items = Array.isArray(body.items) ? body.items : [];
+                const map = new globalThis.Map<string, InitiatorOption>();
+
+                items.forEach((item: { initiatorName?: string; initiatorEmail?: string }) => {
+                    const name = (item?.initiatorName ?? '').trim();
+                    const email = (item?.initiatorEmail ?? '').trim();
+                    if (!name && !email) return;
+                    const key = (email || name).toLowerCase();
+                    if (!map.has(key)) {
+                        map.set(key, { name: name || email, email });
+                    }
+                });
+
+                if (!aborted) {
+                    setInitiatorOptions(Array.from(map.values()));
+                }
+            } catch {
+                if (!aborted) setInitiatorOptions([]);
+            } finally {
+                if (!aborted) setInitiatorOptionsLoading(false);
+            }
+        }
+
+        void loadInitiators();
+        return () => {
+            aborted = true;
+        };
+    }, [open, orgSlug, projectRef, apiPath]);
+
+    React.useEffect(() => {
+        const currentName = initiatorName.trim();
+        const currentEmail = initiatorEmail.trim();
+        if (!currentName && !currentEmail) return;
+        setInitiatorOptions((prev) => {
+            const key = (currentEmail || currentName).toLowerCase();
+            if (prev.some((opt) => (opt.email || opt.name).toLowerCase() === key)) return prev;
+            return [...prev, { name: currentName || currentEmail, email: currentEmail }];
+        });
+    }, [initiatorName, initiatorEmail]);
+
+    const selectedInitiator = React.useMemo(() => {
+        const email = initiatorEmail.trim().toLowerCase();
+        const name = initiatorName.trim().toLowerCase();
+        if (!email && !name) return null;
+        return (
+            initiatorOptions.find((opt) => opt.email.toLowerCase() === email && email) ||
+            initiatorOptions.find((opt) => opt.name.toLowerCase() === name && name) ||
+            null
+        );
+    }, [initiatorOptions, initiatorEmail, initiatorName]);
+
+    React.useEffect(() => {
         if (!open) return;
         setRelatedInput('');
         void loadRelatedTasks('');
@@ -928,6 +1063,7 @@ export default function WorkspaceTaskDialog({
 
                 // подгружаем объекты по первой БС
                 void loadBsOptions(numbersToUse[0]);
+                void autoFillParsedBsNumbers(numbersToUse);
             } else {
                 // одна БС → старая логика, но с нормализованным номером
                 const single = numbersToUse[0] ?? '';
@@ -962,6 +1098,7 @@ export default function WorkspaceTaskDialog({
 
                 if (single) {
                     void loadBsOptions(single);
+                    void autoFillParsedBsNumbers([single]);
                 }
             }
 
@@ -975,8 +1112,7 @@ export default function WorkspaceTaskDialog({
 
             // 3) подставить имя задачи, если пустое
             if (!taskName && numbersToUse.length) {
-                const titleBs = numbersToUse.join('-');
-                setTaskName(`Работы по заказу T2 для БС ${titleBs}`);
+                setTaskName(`Работы по заказу T2`);
             }
 
             // 4) сохранить файл сметы отдельно, чтобы загрузить его как документ при сохранении задачи
@@ -989,7 +1125,7 @@ export default function WorkspaceTaskDialog({
                 setEstimateFile(null);
             }
         },
-        [taskName, loadBsOptions]
+        [taskName, loadBsOptions, autoFillParsedBsNumbers]
     );
 
 
@@ -1959,6 +2095,61 @@ export default function WorkspaceTaskDialog({
                                 </Link>
                             ) : (
                                 <Stack spacing={1.5}>
+                                    <Autocomplete<InitiatorOption>
+                                        options={initiatorOptions}
+                                        value={selectedInitiator}
+                                        onChange={(_e, val, reason) => {
+                                            if (reason === 'clear') {
+                                                setInitiatorName('');
+                                                setInitiatorEmail('');
+                                                return;
+                                            }
+                                            if (!val) return;
+                                            setInitiatorName(val.name || '');
+                                            setInitiatorEmail(val.email || '');
+                                        }}
+                                        getOptionLabel={(opt) => {
+                                            if (!opt) return '';
+                                            return opt.email
+                                                ? `${opt.name || opt.email} (${opt.email})`
+                                                : opt.name;
+                                        }}
+                                        loading={initiatorOptionsLoading}
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Инициатор (подсказка)"
+                                                placeholder="Выберите ранее указанного инициатора"
+                                                fullWidth
+                                                sx={glassInputSx}
+                                                InputProps={{
+                                                    ...params.InputProps,
+                                                    endAdornment: (
+                                                        <>
+                                                            {initiatorOptionsLoading ? (
+                                                                <CircularProgress size={18} sx={{ mr: 1 }} />
+                                                            ) : null}
+                                                            {params.InputProps.endAdornment}
+                                                        </>
+                                                    ),
+                                                }}
+                                            />
+                                        )}
+                                        renderOption={(props, option) => {
+                                            const { key, ...optionProps } = props;
+                                            return (
+                                                <li {...optionProps} key={key}>
+                                                    <ListItemText
+                                                        primary={option.name || option.email}
+                                                        secondary={option.email || undefined}
+                                                    />
+                                                </li>
+                                            );
+                                        }}
+                                        isOptionEqualToValue={(opt, val) =>
+                                            opt.email === val.email && opt.name === val.name
+                                        }
+                                    />
                                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                                         <TextField
                                             label="Инициатор (имя)"

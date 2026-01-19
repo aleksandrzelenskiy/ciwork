@@ -78,6 +78,7 @@ type Task = {
     createdAt?: string;
     bsNumber?: string;
     totalCost?: number;
+    contractorPayment?: number;
     priority?: Priority | string;
     executorId?: string;
     executorName?: string;
@@ -863,6 +864,7 @@ const ProjectTaskListInner = (
                             bsLatitude: selectedTask.bsLatitude,
                             bsLongitude: selectedTask.bsLongitude,
                             totalCost: selectedTask.totalCost,
+                            contractorPayment: selectedTask.contractorPayment,
                             priority: (normalizePriority(selectedTask.priority as string) ?? 'medium') as Pri,
                             executorId: selectedTask.executorId,
                             executorName: selectedTask.executorName,
