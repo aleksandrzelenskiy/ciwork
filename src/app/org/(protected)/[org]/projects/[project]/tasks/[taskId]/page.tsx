@@ -92,6 +92,7 @@ import type { RelatedTaskRef } from '@/app/types/taskTypes';
 import { buildBsAddressFromLocations } from '@/utils/bsLocation';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 import type { PhotoReport } from '@/app/types/taskTypes';
+import { fetchUserContext } from '@/app/utils/userContext';
 
 type TaskFile = {
     url: string;
@@ -326,6 +327,7 @@ export default function TaskDetailsPage() {
     const [profileClerkUserId, setProfileClerkUserId] = React.useState<string | null>(
         null
     );
+    const [currentUserId, setCurrentUserId] = React.useState('');
 
     const [orgName, setOrgName] = React.useState<string | null>(null);
     const [projectOperator, setProjectOperator] = React.useState<string | null>(null);
@@ -587,6 +589,23 @@ export default function TaskDetailsPage() {
     React.useEffect(() => {
         void load();
     }, [load]);
+
+    React.useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const ctx = await fetchUserContext();
+                const clerkId =
+                    (ctx?.user as { clerkUserId?: string; id?: string } | undefined)
+                        ?.clerkUserId ||
+                    (ctx?.user as { id?: string } | undefined)?.id ||
+                    '';
+                setCurrentUserId(clerkId);
+            } catch {
+                setCurrentUserId('');
+            }
+        };
+        void fetchUser();
+    }, []);
 
     React.useEffect(() => {
         void loadOrg();
@@ -1913,7 +1932,8 @@ export default function TaskDetailsPage() {
                                         <strong>Тип задачи:</strong> {task.taskType || '—'}
                                     </Typography>
 
-                                    {(task.authorName || task.authorEmail) && (
+                                    {(task.authorName || task.authorEmail) &&
+                                        (!task.authorId || task.authorId !== currentUserId) && (
                                         <Typography variant="body1">
                                             <strong>Автор:</strong>{' '}
                                             {task.authorId ? (
