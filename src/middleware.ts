@@ -2,7 +2,36 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const isPublicRoute = createRouteMatcher([
+const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const normalizedBasePath = rawBasePath.replace(/\/+$/, "");
+const BASE_PATH = normalizedBasePath
+    ? normalizedBasePath.startsWith("/")
+        ? normalizedBasePath
+        : `/${normalizedBasePath}`
+    : "";
+
+const withBasePath = (path: string) => {
+    if (!BASE_PATH) return path;
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    if (normalizedPath === BASE_PATH || normalizedPath.startsWith(`${BASE_PATH}/`)) {
+        return normalizedPath;
+    }
+    return `${BASE_PATH}${normalizedPath}`;
+};
+
+const addBasePath = (routes: string[]) => {
+    if (!BASE_PATH) return routes;
+    return Array.from(
+        new Set(
+            routes.flatMap((route) => {
+                const normalizedRoute = route.startsWith("/") ? route : `/${route}`;
+                return [normalizedRoute, withBasePath(normalizedRoute)];
+            })
+        )
+    );
+};
+
+const isPublicRoute = createRouteMatcher(addBasePath([
     // "/" чтобы любые входы без авторизации редиректились на sign-in
     "/sign-in(.*)",
     "/sign-up(.*)",
@@ -10,10 +39,10 @@ const isPublicRoute = createRouteMatcher([
     "/api/current-user(.*)",
     "/api/socket(.*)",
     "/api/webhooks(.*)",
-]);
+]));
 
-const isReportPageRoute = createRouteMatcher(["/reports(.*)"]);
-const isReportApiRoute = createRouteMatcher(["/api/reports(.*)"]);
+const isReportPageRoute = createRouteMatcher(addBasePath(["/reports(.*)"]));
+const isReportApiRoute = createRouteMatcher(addBasePath(["/api/reports(.*)"]));
 
 const hasInitiatorToken = (request: NextRequest) => {
     const { searchParams } = new URL(request.url);
@@ -59,8 +88,8 @@ export default clerkMiddleware(
         return NextResponse.next();
     },
     {
-        signInUrl: "/sign-in",
-        signUpUrl: "/sign-up",
+        signInUrl: withBasePath("/sign-in"),
+        signUpUrl: withBasePath("/sign-up"),
     }
 );
 

@@ -73,6 +73,8 @@ const getStatusLabel = (status: UploadStatus) => {
     return 'Готово к отправке';
 };
 
+const MAX_PREVIEW_ITEMS = 12;
+
 export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const {
         open,
@@ -269,14 +271,22 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         maxSize: 15 * 1024 * 1024,
         disabled: uploading || readOnly,
         onDrop: (acceptedFiles, fileRejections) => {
-            const mapped = acceptedFiles.map((file) => ({
-                id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
-                file,
-                preview: URL.createObjectURL(file),
-                progress: 0,
-                status: 'ready' as const,
-            }));
-            setItems((prev) => [...prev, ...mapped]);
+            setItems((prev) => {
+                let previewCount = prev.reduce((count, item) => (item.preview ? count + 1 : count), 0);
+                const mapped = acceptedFiles.map((file) => {
+                    const canPreview = previewCount < MAX_PREVIEW_ITEMS;
+                    const preview = canPreview ? URL.createObjectURL(file) : '';
+                    if (canPreview) previewCount += 1;
+                    return {
+                        id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+                        file,
+                        preview,
+                        progress: 0,
+                        status: 'ready' as const,
+                    };
+                });
+                return [...prev, ...mapped];
+            });
             if (fileRejections.length > 0) {
                 const firstError = fileRejections[0]?.errors?.[0]?.message;
                 setUploadError(firstError || 'Некоторые файлы отклонены');
@@ -293,7 +303,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const handleRemoveItem = (id: string) => {
         setItems((prev) => {
             const target = prev.find((item) => item.id === id);
-            if (target) URL.revokeObjectURL(target.preview);
+            if (target?.preview) URL.revokeObjectURL(target.preview);
             return prev.filter((item) => item.id !== id);
         });
     };
@@ -303,7 +313,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         reason?: 'backdropClick' | 'escapeKeyDown'
     ) => {
         if (uploading || submitLoading) return;
-        if (reason === 'backdropClick') return;
+        if (reason) return;
         onClose();
     };
 
@@ -536,7 +546,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             }));
             setFolderAlert(`Фото в папке ${activeBase} успешно загружены`);
             setItems((prev) => {
-                prev.forEach((item) => URL.revokeObjectURL(item.preview));
+                prev.forEach((item) => {
+                    if (item.preview) URL.revokeObjectURL(item.preview);
+                });
                 return [];
             });
             setView('folders');
@@ -650,6 +662,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         <Dialog
             open={open && !autoClosed}
             onClose={handleDialogClose}
+            disableEscapeKeyDown
             fullWidth
             maxWidth="md"
             fullScreen={isMobile}
@@ -692,9 +705,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 </IconButton>
             </DialogTitle>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {view === 'folders' ? (
-                    <>
-                        <Typography variant="body2" color="text.secondary">
+                        {view === 'folders' ? (
+                            <>
+                                <Typography variant="body2" color="text.secondary">
                             {readOnly
                                 ? 'Просмотр фотоотчета по папкам БС.'
                                 : 'Загрузите фото по каждой БС, затем отправьте отчет менеджеру.'}
@@ -888,14 +901,33 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                         }}
                                     >
                                         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
-                                            <Image
-                                                src={item.preview}
-                                                alt={item.file.name}
-                                                width={64}
-                                                height={64}
-                                                style={{ objectFit: 'cover', borderRadius: 14 }}
-                                                unoptimized
-                                            />
+                                            {item.preview ? (
+                                                <Image
+                                                    src={item.preview}
+                                                    alt={item.file.name}
+                                                    width={64}
+                                                    height={64}
+                                                    style={{ objectFit: 'cover', borderRadius: 14 }}
+                                                    unoptimized
+                                                />
+                                            ) : (
+                                                <Box
+                                                    sx={{
+                                                        width: 64,
+                                                        height: 64,
+                                                        borderRadius: 3,
+                                                        bgcolor: 'rgba(15,23,42,0.08)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: 12,
+                                                        fontWeight: 600,
+                                                        color: 'rgba(15,23,42,0.6)',
+                                                    }}
+                                                >
+                                                    Фото
+                                                </Box>
+                                            )}
                                             <Box sx={{ minWidth: 0, flex: 1 }}>
                                                 <Typography sx={{ wordBreak: 'break-word', fontWeight: 600 }}>
                                                     {item.file.name}

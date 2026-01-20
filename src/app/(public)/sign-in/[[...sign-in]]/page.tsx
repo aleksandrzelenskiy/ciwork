@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, type CSSProperties, type FormEvent } from 'react';
-import { useSignIn } from '@clerk/nextjs';
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react';
+import { useSignIn, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -21,6 +21,7 @@ import { withBasePath } from '@/utils/basePath';
 
 export default function Page() {
     const { isLoaded, signIn, setActive } = useSignIn();
+    const { isLoaded: isUserLoaded, isSignedIn } = useUser();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [email, setEmail] = useState('');
@@ -46,6 +47,32 @@ export default function Page() {
         '--auth-card-blur': 'blur(28px) saturate(165%)',
     } as CSSProperties;
 
+    const resolveRedirectTarget = (redirectUrl: string | null) => {
+        if (!redirectUrl) {
+            return withBasePath('/');
+        }
+        if (redirectUrl.startsWith('/')) {
+            return withBasePath(redirectUrl);
+        }
+        try {
+            const url = new URL(redirectUrl, window.location.origin);
+            if (url.origin === window.location.origin) {
+                return withBasePath(`${url.pathname}${url.search}${url.hash}`);
+            }
+        } catch {
+            // ignore malformed redirectUrl
+        }
+        return withBasePath('/');
+    };
+
+    useEffect(() => {
+        if (!isUserLoaded || !isSignedIn) {
+            return;
+        }
+        const redirectUrl = searchParams?.get('redirect_url') ?? null;
+        router.replace(resolveRedirectTarget(redirectUrl));
+    }, [isUserLoaded, isSignedIn, router, searchParams]);
+
     const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!isLoaded) {
@@ -63,12 +90,8 @@ export default function Page() {
 
             if (result.status === 'complete') {
                 await setActive({ session: result.createdSessionId });
-                const redirectUrl = searchParams?.get('redirect_url');
-                const targetUrl =
-                    redirectUrl && redirectUrl.startsWith('/')
-                        ? withBasePath(redirectUrl)
-                        : redirectUrl || withBasePath('/');
-                router.push(targetUrl);
+                const redirectUrl = searchParams?.get('redirect_url') ?? null;
+                router.push(resolveRedirectTarget(redirectUrl));
                 return;
             }
 
