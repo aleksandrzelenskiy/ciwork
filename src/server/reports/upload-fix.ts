@@ -215,11 +215,12 @@ export const handleFixUpload = async (
 
                 if (filteredRecipients.length > 0) {
                     const bsInfo = task.bsNumber ? ` (БС ${task.bsNumber})` : '';
-                    const baseInfo = payload.baseId ? ` БС ${payload.baseId}` : '';
+                    const baseId = payload?.baseId ?? '';
+                    const baseInfo = baseId ? ` БС ${baseId}` : '';
                     const taskTitle = task.taskName || task.taskId;
                     const link = `/reports/${encodeURIComponent(
-                        payload.taskId
-                    )}/${encodeURIComponent(payload.baseId)}`;
+                        payload?.taskId ?? task.taskId
+                    )}/${encodeURIComponent(baseId)}`;
 
                     await Promise.all(
                         filteredRecipients.map((recipient) =>
@@ -234,7 +235,7 @@ export const handleFixUpload = async (
                                 senderEmail: actorEmail,
                                 metadata: {
                                     taskId: task.taskId,
-                                    baseId: payload.baseId,
+                                    baseId,
                                     status: 'Fixed',
                                     fixedFilesCount: uploadedUrls.length,
                                 },
@@ -254,7 +255,8 @@ export const handleFixUpload = async (
                         payload.taskId
                     )}/${encodeURIComponent(payload.baseId)}?token=${encodeURIComponent(token)}`;
                     const bsInfo = task.bsNumber ? ` (БС ${task.bsNumber})` : '';
-                    const baseInfo = payload.baseId ? ` БС ${payload.baseId}` : '';
+                    const baseId = payload?.baseId ?? '';
+                    const baseInfo = baseId ? ` БС ${baseId}` : '';
                     const taskTitle = task.taskName || task.taskId;
                     const subject = `Исправления по фотоотчету${bsInfo}`;
                     const text = `${actorName} загрузил исправления по фотоотчету по задаче «${taskTitle}»${baseInfo}.`;
