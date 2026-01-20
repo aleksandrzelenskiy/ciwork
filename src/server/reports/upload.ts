@@ -2,13 +2,15 @@ import 'server-only';
 
 import { currentUser } from '@clerk/nextjs/server';
 import TaskModel from '@/server/models/TaskModel';
-import { uploadBuffer } from '@/utils/s3';
-import { assertWritableStorage, recordStorageBytes } from '@/utils/storageUsage';
+import { deleteTaskFile, uploadBuffer } from '@/utils/s3';
+import { adjustStorageBytes, assertWritableStorage, recordStorageBytes } from '@/utils/storageUsage';
 import { appendReportFiles, upsertReport } from '@/server-actions/reportService';
 import {
     buildReportKey,
     extractUploadPayload,
     type UploadPayload,
+    isSupportedImage,
+    validateUploadFiles,
     prepareImageBuffer,
     resolveStorageScope,
 } from '@/app/api/reports/_shared';
@@ -24,6 +26,8 @@ export const handleReportUpload = async (
     user: Awaited<ReturnType<typeof currentUser>>
 ) => {
     let payload: UploadPayload | null = null;
+    const uploadedUrls: string[] = [];
+    let totalBytes = 0;
     try {
         if (!user) {
             return { ok: false, error: 'User is not authenticated', status: 401 } as const;
@@ -36,9 +40,13 @@ export const handleReportUpload = async (
         if (payload.files.length === 0) {
             return { ok: false, error: 'No files uploaded', status: 400 } as const;
         }
-        const invalidFiles = payload.files.filter((file) => !file.type.startsWith('image/'));
+        const invalidFiles = payload.files.filter((file) => !isSupportedImage(file));
         if (invalidFiles.length > 0) {
             return { ok: false, error: 'Unsupported file type', status: 400 } as const;
+        }
+        const validation = validateUploadFiles(payload.files);
+        if (!validation.ok) {
+            return { ok: false, error: validation.error, status: validation.status } as const;
         }
 
         const task = await TaskModel.findOne({ taskId: payload.taskId }).lean();
@@ -64,8 +72,6 @@ export const handleReportUpload = async (
         }
 
         const scope = await resolveStorageScope(task);
-        const uploadedUrls: string[] = [];
-        let totalBytes = 0;
 
         for (const file of payload.files) {
             const prepared = await prepareImageBuffer(file, {
@@ -124,10 +130,22 @@ export const handleReportUpload = async (
             },
         } as const;
     } catch (error) {
+        if (uploadedUrls.length > 0) {
+            await Promise.allSettled(uploadedUrls.map((url) => deleteTaskFile(url)));
+        }
+        const rollbackTaskId = payload?.taskId;
+        if (rollbackTaskId && totalBytes > 0) {
+            const taskRecord = await TaskModel.findOne({ taskId: rollbackTaskId })
+                .select('orgId')
+                .lean();
+            if (taskRecord?.orgId) {
+                await adjustStorageBytes(taskRecord.orgId, -Math.abs(totalBytes));
+            }
+        }
         console.error('Report upload failed', {
             error,
-            taskId: payload?.taskId,
-            baseId: payload?.baseId,
+            taskId: payload?.taskId ?? null,
+            baseId: payload?.baseId ?? null,
             filesCount: payload?.files.length,
             userId: user?.id,
         });

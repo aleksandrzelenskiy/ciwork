@@ -13,6 +13,59 @@ export type UploadPayload = {
     files: File[];
 };
 
+export const MAX_REPORT_FILE_SIZE_BYTES = 15 * 1024 * 1024;
+export const MAX_REPORT_BATCH_FILES = 5;
+export const MAX_REPORT_BATCH_BYTES = 20 * 1024 * 1024;
+
+const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+    'jpg',
+    'jpeg',
+    'png',
+    'webp',
+    'heic',
+    'heif',
+]);
+
+export const isSupportedImage = (file: File) => {
+    if (file.type?.startsWith('image/')) return true;
+    const ext = file.name?.split('.').pop()?.toLowerCase() || '';
+    return SUPPORTED_IMAGE_EXTENSIONS.has(ext);
+};
+
+export const validateUploadFiles = (files: File[]) => {
+    if (files.length > MAX_REPORT_BATCH_FILES) {
+        return {
+            ok: false,
+            error: `Слишком много файлов за раз. Максимум: ${MAX_REPORT_BATCH_FILES}.`,
+            status: 400,
+        } as const;
+    }
+    let totalBytes = 0;
+    for (const file of files) {
+        const size = Math.max(0, file.size || 0);
+        if (size > MAX_REPORT_FILE_SIZE_BYTES) {
+            return {
+                ok: false,
+                error: `Файл "${file.name}" превышает ${Math.round(
+                    MAX_REPORT_FILE_SIZE_BYTES / (1024 * 1024)
+                )} МБ.`,
+                status: 413,
+            } as const;
+        }
+        totalBytes += size;
+    }
+    if (totalBytes > MAX_REPORT_BATCH_BYTES) {
+        return {
+            ok: false,
+            error: `Суммарный размер партии превышает ${Math.round(
+                MAX_REPORT_BATCH_BYTES / (1024 * 1024)
+            )} МБ.`,
+            status: 413,
+        } as const;
+    }
+    return { ok: true } as const;
+};
+
 export const normalizeTaskId = (value: string) => value.trim().toUpperCase();
 
 export const extractUploadPayload = async (request: Request): Promise<UploadPayload> => {
@@ -388,11 +441,15 @@ export const prepareImageBuffer = async (file: File, overlayContext?: OverlayCon
             };
         } catch (fallbackError) {
             console.warn('Failed to convert image to JPEG.', fallbackError);
+            const fallbackExt = ext || (isHeic ? 'heic' : 'bin');
+            const fallbackFilename = `${uuidv4()}.${fallbackExt}`;
+            const fallbackType =
+                file.type || (isHeic ? 'image/heic' : 'application/octet-stream');
             return {
                 buffer: sourceBuffer,
-                filename: nameBase,
+                filename: fallbackFilename,
                 size: sourceBuffer.length,
-                contentType: isHeic ? 'image/jpeg' : file.type || 'application/octet-stream',
+                contentType: fallbackType,
             };
         }
     }

@@ -74,6 +74,9 @@ const getStatusLabel = (status: UploadStatus) => {
 };
 
 const MAX_PREVIEW_ITEMS = 12;
+const MAX_FILE_SIZE_MB = 15;
+const MAX_BATCH_FILES = 5;
+const MAX_BATCH_MB = 20;
 
 export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const {
@@ -171,10 +174,12 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             setExistingLoading(true);
             setExistingError(null);
             try {
-                const res = await fetch(
-                    `/api/reports/${encodeURIComponent(taskId)}/${encodeURIComponent(baseId)}`,
-                    { cache: 'no-store' }
-                );
+            const res = await fetch(
+                withBasePath(
+                    `/api/reports/${encodeURIComponent(taskId)}/${encodeURIComponent(baseId)}`
+                ),
+                { cache: 'no-store' }
+            );
                 if (res.status === 404) {
                     setExistingFilesByBase((prev) => ({ ...prev, [baseId]: [] }));
                     setFolderState((prev) => ({
@@ -268,7 +273,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         accept: { 'image/*': [] },
         multiple: true,
-        maxSize: 15 * 1024 * 1024,
+        maxSize: MAX_FILE_SIZE_MB * 1024 * 1024,
         disabled: uploading || readOnly,
         onDrop: (acceptedFiles, fileRejections) => {
             setItems((prev) => {
@@ -359,8 +364,8 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setUploadError(null);
 
         const targets = items.filter((item) => item.status !== 'done');
-        const maxBatchBytes = 20 * 1024 * 1024;
-        const maxBatchFiles = 5;
+        const maxBatchBytes = MAX_BATCH_MB * 1024 * 1024;
+        const maxBatchFiles = MAX_BATCH_FILES;
         const batches: UploadItem[][] = [];
         let currentBatch: UploadItem[] = [];
         let currentBytes = 0;
@@ -502,7 +507,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                     resolve({ ok: false, urls: [], error: 'Загрузка отменена' });
                 };
 
-                xhr.open('POST', '/api/reports/upload', true);
+                xhr.open('POST', withBasePath('/api/reports/upload'), true);
                 xhr.send(formData);
             });
         };
@@ -583,7 +588,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setDeleteError(null);
         try {
             const res = await fetch(
-                `/api/reports/${encodeURIComponent(taskId)}/${encodeURIComponent(deleteTarget.baseId)}/files`,
+                withBasePath(
+                    `/api/reports/${encodeURIComponent(taskId)}/${encodeURIComponent(deleteTarget.baseId)}/files`
+                ),
                 {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
@@ -657,6 +664,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     };
 
     const existingFiles = activeBase ? existingFilesByBase[activeBase] ?? [] : [];
+    const totalSelectedBytes = items.reduce((sum, item) => sum + (item.file.size || 0), 0);
 
     return (
         <Dialog
@@ -814,7 +822,8 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                     Перетащите фото или нажмите, чтобы выбрать
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    До 15 МБ каждое. Загрузка выполняется после нажатия «Загрузить».
+                                    До {MAX_FILE_SIZE_MB} МБ каждое. Партия до {MAX_BATCH_FILES} файлов или{' '}
+                                    {MAX_BATCH_MB} МБ.
                                 </Typography>
                             </Box>
                         )}
@@ -990,6 +999,11 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                     </Paper>
                                 ))}
                             </Box>
+                        )}
+                        {!readOnly && items.length > 0 && (
+                            <Typography variant="caption" color="text.secondary">
+                                Выбрано: {items.length} · Общий размер: {getReadableSize(totalSelectedBytes)}
+                            </Typography>
                         )}
 
                         {taskName && (

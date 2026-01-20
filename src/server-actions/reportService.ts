@@ -54,24 +54,27 @@ export const upsertReport = async (params: {
         actor,
     } = params;
 
-    const existing = await ReportModel.findOne({ taskId, baseId });
-    if (existing) return existing;
-
-    return new ReportModel({
-        taskId,
-        baseId,
-        taskName: taskName ?? '',
-        orgId,
-        projectId: projectId ?? undefined,
-        createdById: actor.id,
-        createdByName: actor.name,
-        initiatorName: initiatorName ?? undefined,
-        status: 'Pending',
-        files: [],
-        fixedFiles: [],
-        issues: [],
-        events: [],
-    });
+    return ReportModel.findOneAndUpdate(
+        { taskId, baseId },
+        {
+            $setOnInsert: {
+                taskId,
+                baseId,
+                taskName: taskName ?? '',
+                orgId,
+                projectId: projectId ?? undefined,
+                createdById: actor.id,
+                createdByName: actor.name,
+                initiatorName: initiatorName ?? undefined,
+                status: 'Pending',
+                files: [],
+                fixedFiles: [],
+                issues: [],
+                events: [],
+            },
+        },
+        { new: true, upsert: true }
+    ).exec();
 };
 
 export const appendReportFiles = async (params: {
@@ -83,30 +86,35 @@ export const appendReportFiles = async (params: {
 }) => {
     const { report, files, bytesAdded = 0, actor, kind } = params;
     const now = new Date();
-    report.events = ensureEventArray(report.events);
-    report.storageBytes = (report.storageBytes ?? 0) + Math.max(0, bytesAdded);
-    if (kind === 'fix') {
-        report.fixedFiles.push(...files);
-        report.status = 'Fixed';
-        report.events.push({
-            action: 'FIXED_PHOTOS',
-            author: actor.name,
-            authorId: actor.id,
-            date: now,
-            details: { newFiles: files.length },
-        });
-    } else {
-        report.files.push(...files);
-        report.status = 'Pending';
-        report.events.push({
-            action: report.events.length ? 'REPORT_UPDATED' : 'REPORT_CREATED',
-            author: actor.name,
-            authorId: actor.id,
-            date: now,
-            details: { newFiles: files.length },
-        });
-    }
-    await report.save();
+    const event =
+        kind === 'fix'
+            ? {
+                  action: 'FIXED_PHOTOS',
+                  author: actor.name,
+                  authorId: actor.id,
+                  date: now,
+                  details: { newFiles: files.length },
+              }
+            : {
+                  action: report.events?.length ? 'REPORT_UPDATED' : 'REPORT_CREATED',
+                  author: actor.name,
+                  authorId: actor.id,
+                  date: now,
+                  details: { newFiles: files.length },
+              };
+    const update =
+        kind === 'fix'
+            ? {
+                  $push: { fixedFiles: { $each: files }, events: event },
+                  $inc: { storageBytes: Math.max(0, bytesAdded) },
+                  $set: { status: 'Fixed' },
+              }
+            : {
+                  $push: { files: { $each: files }, events: event },
+                  $inc: { storageBytes: Math.max(0, bytesAdded) },
+                  $set: { status: 'Pending' },
+              };
+    await ReportModel.updateOne({ _id: report._id }, update).exec();
     return report;
 };
 

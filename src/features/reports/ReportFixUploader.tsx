@@ -8,6 +8,7 @@ import {
     DialogContent,
     DialogTitle,
     IconButton,
+    LinearProgress,
     Stack,
     Typography,
 } from '@mui/material';
@@ -23,6 +24,10 @@ type ReportFixUploaderProps = {
     onUploaded: () => void;
 };
 
+const MAX_FILE_SIZE_MB = 15;
+const MAX_BATCH_FILES = 5;
+const MAX_BATCH_MB = 20;
+
 export default function ReportFixUploader({
     open,
     onClose,
@@ -33,6 +38,7 @@ export default function ReportFixUploader({
     const [files, setFiles] = React.useState<File[]>([]);
     const [previews, setPreviews] = React.useState<{ name: string; url: string }[]>([]);
     const [uploading, setUploading] = React.useState(false);
+    const [uploadProgress, setUploadProgress] = React.useState<{ done: number; total: number } | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
@@ -40,6 +46,7 @@ export default function ReportFixUploader({
             setFiles([]);
             setError(null);
             setUploading(false);
+            setUploadProgress(null);
         }
     }, [open]);
 
@@ -61,8 +68,16 @@ export default function ReportFixUploader({
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         accept: { 'image/*': [] },
         multiple: true,
+        maxSize: MAX_FILE_SIZE_MB * 1024 * 1024,
         onDrop: (acceptedFiles) => {
             setFiles((prev) => [...prev, ...acceptedFiles]);
+            if (acceptedFiles.length > 0) {
+                setError(null);
+            }
+        },
+        onDropRejected: (rejections) => {
+            const firstError = rejections[0]?.errors?.[0]?.message;
+            setError(firstError || 'Файлы не приняты');
         },
     });
 
@@ -75,6 +90,7 @@ export default function ReportFixUploader({
         if (uploading) return;
         setFiles([]);
         setError(null);
+        setUploadProgress(null);
         onClose();
     };
 
@@ -85,25 +101,60 @@ export default function ReportFixUploader({
         }
         setUploading(true);
         setError(null);
+        setUploadProgress({ done: 0, total: files.length });
 
         try {
-            const formData = new FormData();
-            formData.append('taskId', taskId);
-            formData.append('baseId', baseId);
-            files.forEach((file) => formData.append('files', file));
+            const maxBatchBytes = MAX_BATCH_MB * 1024 * 1024;
+            const maxBatchFiles = MAX_BATCH_FILES;
+            const batches: File[][] = [];
+            let currentBatch: File[] = [];
+            let currentBytes = 0;
 
-            const res = await fetch(withBasePath('/api/reports/upload-fix'), {
-                method: 'POST',
-                body: formData,
+            files.forEach((file) => {
+                const size = Math.max(1, file.size);
+                const wouldExceed =
+                    currentBatch.length > 0 &&
+                    (currentBatch.length >= maxBatchFiles || currentBytes + size > maxBatchBytes);
+                if (wouldExceed) {
+                    batches.push(currentBatch);
+                    currentBatch = [];
+                    currentBytes = 0;
+                }
+                currentBatch.push(file);
+                currentBytes += size;
+                if (currentBatch.length >= maxBatchFiles) {
+                    batches.push(currentBatch);
+                    currentBatch = [];
+                    currentBytes = 0;
+                }
             });
-            const payload = (await res.json().catch(() => ({}))) as { error?: string; readOnly?: boolean };
-            if (!res.ok) {
-                setError(
-                    payload.readOnly
-                        ? payload.error || 'Хранилище доступно только для чтения'
-                        : payload.error || 'Не удалось загрузить исправления'
-                );
-                return;
+            if (currentBatch.length > 0) {
+                batches.push(currentBatch);
+            }
+
+            let uploadedCount = 0;
+            for (const batch of batches) {
+                const formData = new FormData();
+                formData.append('taskId', taskId);
+                formData.append('baseId', baseId);
+                batch.forEach((file) => formData.append('files', file));
+
+                const res = await fetch(withBasePath('/api/reports/upload-fix'), {
+                    method: 'POST',
+                    body: formData,
+                });
+                const payload = (await res.json().catch(() => ({}))) as { error?: string; readOnly?: boolean };
+                if (!res.ok) {
+                    setError(
+                        payload.readOnly
+                            ? payload.error || 'Хранилище доступно только для чтения'
+                            : payload.error || 'Не удалось загрузить исправления'
+                    );
+                    return;
+                }
+                uploadedCount += batch.length;
+                setUploadProgress({ done: uploadedCount, total: files.length });
+                setFiles((prev) => prev.filter((file) => !batch.includes(file)));
             }
             onUploaded();
             handleClose();
@@ -111,6 +162,7 @@ export default function ReportFixUploader({
             setError(err instanceof Error ? err.message : 'Ошибка загрузки');
         } finally {
             setUploading(false);
+            setUploadProgress(null);
         }
     };
 
@@ -147,7 +199,22 @@ export default function ReportFixUploader({
                         <Typography variant="caption" color="text.secondary">
                             Добавлено файлов: {files.length}
                         </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            До {MAX_FILE_SIZE_MB} МБ каждое. Партия до {MAX_BATCH_FILES} файлов или {MAX_BATCH_MB} МБ.
+                        </Typography>
                     </Stack>
+                    {uploadProgress && (
+                        <Box>
+                            <Typography variant="caption" color="text.secondary">
+                                Загружено: {uploadProgress.done}/{uploadProgress.total}
+                            </Typography>
+                            <LinearProgress
+                                variant="determinate"
+                                value={Math.round((uploadProgress.done / uploadProgress.total) * 100)}
+                                sx={{ mt: 1, borderRadius: 999 }}
+                            />
+                        </Box>
+                    )}
                     {previews.length > 0 && (
                         <Stack spacing={1}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
