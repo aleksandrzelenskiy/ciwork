@@ -58,6 +58,7 @@ type PhotoReportUploaderProps = {
     bsLocations?: BaseLocation[];
     photoReports?: PhotoReport[];
     initialBaseId?: string;
+    onUploaded?: () => void;
     onSubmitted?: () => void;
     readOnly?: boolean;
 };
@@ -81,6 +82,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         bsLocations = [],
         photoReports = [],
         initialBaseId,
+        onUploaded,
         onSubmitted,
         readOnly = false,
     } = props;
@@ -347,125 +349,169 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setUploadError(null);
 
         const targets = items.filter((item) => item.status !== 'done');
+        const maxBatchBytes = 20 * 1024 * 1024;
+        const maxBatchFiles = 5;
+        const batches: UploadItem[][] = [];
+        let currentBatch: UploadItem[] = [];
+        let currentBytes = 0;
+
         targets.forEach((item) => {
-            updateItem(item.id, { status: 'uploading', progress: 0, error: undefined });
+            const size = Math.max(1, item.file.size);
+            const wouldExceed =
+                currentBatch.length > 0 &&
+                (currentBatch.length >= maxBatchFiles || currentBytes + size > maxBatchBytes);
+            if (wouldExceed) {
+                batches.push(currentBatch);
+                currentBatch = [];
+                currentBytes = 0;
+            }
+            currentBatch.push(item);
+            currentBytes += size;
+            if (currentBatch.length >= maxBatchFiles) {
+                batches.push(currentBatch);
+                currentBatch = [];
+                currentBytes = 0;
+            }
         });
+        if (currentBatch.length > 0) {
+            batches.push(currentBatch);
+        }
 
-        const ranges = targets.reduce<{ id: string; start: number; end: number; size: number }[]>(
-            (acc, item) => {
-                const start = acc.length === 0 ? 0 : acc[acc.length - 1].end;
-                const safeSize = Math.max(1, item.file.size);
-                const end = start + safeSize;
-                acc.push({ id: item.id, start, end, size: safeSize });
-                return acc;
-            },
-            []
-        );
-        const totalSize = ranges.length > 0 ? ranges[ranges.length - 1].end : 0;
+        const uploadBatch = async (batch: UploadItem[]) => {
+            batch.forEach((item) => {
+                updateItem(item.id, { status: 'uploading', progress: 0, error: undefined });
+            });
 
-        const formData = new FormData();
-        formData.append('baseId', activeBase);
-        formData.append('taskId', taskId);
-        targets.forEach((item) => {
-            formData.append('files', item.file);
-        });
+            const ranges = batch.reduce<{ id: string; start: number; end: number; size: number }[]>(
+                (acc, item) => {
+                    const start = acc.length === 0 ? 0 : acc[acc.length - 1].end;
+                    const safeSize = Math.max(1, item.file.size);
+                    const end = start + safeSize;
+                    acc.push({ id: item.id, start, end, size: safeSize });
+                    return acc;
+                },
+                []
+            );
+            const totalSize = ranges.length > 0 ? ranges[ranges.length - 1].end : 0;
 
-        let uploadOk = false;
-        let uploadedUrls: string[] = [];
-        await new Promise<void>((resolve) => {
-            const xhr = new XMLHttpRequest();
-            xhrRef.current = xhr;
+            const formData = new FormData();
+            formData.append('baseId', activeBase);
+            formData.append('taskId', taskId);
+            batch.forEach((item) => {
+                formData.append('files', item.file);
+            });
 
-            xhr.upload.onprogress = (event) => {
-                if (!event.lengthComputable || totalSize === 0) return;
-                const loaded = event.loaded;
-                setItems((prev) =>
-                    prev.map((item) => {
-                        const range = ranges.find((r) => r.id === item.id);
-                        if (!range) return item;
-                        const progressRaw = (loaded - range.start) / range.size;
-                        const progress = Math.max(0, Math.min(1, progressRaw));
-                        return {
-                            ...item,
-                            status: item.status === 'canceled' ? item.status : 'uploading',
-                            progress: Math.round(progress * 100),
-                        };
-                    })
-                );
-            };
+            return new Promise<{ ok: boolean; urls: string[]; error?: string }>((resolve) => {
+                const xhr = new XMLHttpRequest();
+                xhrRef.current = xhr;
 
-            xhr.onload = () => {
-                const success = xhr.status >= 200 && xhr.status < 300;
-                uploadOk = success;
-                if (success) {
-                    try {
-                        const payload = JSON.parse(xhr.responseText || '{}') as { urls?: string[] };
-                        uploadedUrls = Array.isArray(payload.urls) ? payload.urls : [];
-                    } catch {
-                        uploadedUrls = [];
-                    }
-                }
-                setItems((prev) =>
-                    prev.map((item) => {
-                        const isTarget = targets.some((target) => target.id === item.id);
-                        if (!isTarget) return item;
-                        return {
-                            ...item,
-                            status: success ? 'done' : 'error',
-                            progress: success ? 100 : item.progress,
-                            error: success ? undefined : 'Ошибка загрузки',
-                        };
-                    })
-                );
-                if (!success) {
-                    const responseError = (() => {
-                        try {
-                            const payload = JSON.parse(xhr.responseText || '{}') as {
-                                error?: string;
-                                readOnly?: boolean;
+                xhr.upload.onprogress = (event) => {
+                    if (!event.lengthComputable || totalSize === 0) return;
+                    const loaded = event.loaded;
+                    setItems((prev) =>
+                        prev.map((item) => {
+                            const range = ranges.find((r) => r.id === item.id);
+                            if (!range) return item;
+                            const progressRaw = (loaded - range.start) / range.size;
+                            const progress = Math.max(0, Math.min(1, progressRaw));
+                            return {
+                                ...item,
+                                status: item.status === 'canceled' ? item.status : 'uploading',
+                                progress: Math.round(progress * 100),
                             };
-                            if (payload.readOnly) {
-                                return payload.error || 'Хранилище доступно только для чтения';
-                            }
-                            return payload.error;
+                        })
+                    );
+                };
+
+                xhr.onload = () => {
+                    const success = xhr.status >= 200 && xhr.status < 300;
+                    let urls: string[] = [];
+                    if (success) {
+                        try {
+                            const payload = JSON.parse(xhr.responseText || '{}') as { urls?: string[] };
+                            urls = Array.isArray(payload.urls) ? payload.urls : [];
                         } catch {
-                            return undefined;
+                            urls = [];
                         }
-                    })();
-                    setUploadError(responseError || 'Ошибка загрузки');
-                }
-                xhrRef.current = null;
-                resolve();
-            };
+                    }
+                    setItems((prev) =>
+                        prev.map((item) => {
+                            const isTarget = batch.some((target) => target.id === item.id);
+                            if (!isTarget) return item;
+                            return {
+                                ...item,
+                                status: success ? 'done' : 'error',
+                                progress: success ? 100 : item.progress,
+                                error: success ? undefined : 'Ошибка загрузки',
+                            };
+                        })
+                    );
+                    if (!success) {
+                        const responseError = (() => {
+                            try {
+                                const payload = JSON.parse(xhr.responseText || '{}') as {
+                                    error?: string;
+                                    readOnly?: boolean;
+                                };
+                                if (payload.readOnly) {
+                                    return payload.error || 'Хранилище доступно только для чтения';
+                                }
+                                return payload.error;
+                            } catch {
+                                return undefined;
+                            }
+                        })();
+                        resolve({ ok: false, urls: [], error: responseError || 'Ошибка загрузки' });
+                    } else {
+                        resolve({ ok: true, urls });
+                    }
+                    xhrRef.current = null;
+                };
 
-            xhr.onerror = () => {
-                setItems((prev) =>
-                    prev.map((item) =>
-                        targets.some((target) => target.id === item.id)
-                            ? { ...item, status: 'error', error: 'Сбой сети' }
-                            : item
-                    )
-                );
-                setUploadError('Сбой сети');
-                xhrRef.current = null;
-                resolve();
-            };
+                xhr.onerror = () => {
+                    setItems((prev) =>
+                        prev.map((item) =>
+                            batch.some((target) => target.id === item.id)
+                                ? { ...item, status: 'error', error: 'Сбой сети' }
+                                : item
+                        )
+                    );
+                    xhrRef.current = null;
+                    resolve({ ok: false, urls: [], error: 'Сбой сети' });
+                };
 
-            xhr.onabort = () => {
-                setItems((prev) =>
-                    prev.map((item) =>
-                        targets.some((target) => target.id === item.id)
-                            ? { ...item, status: 'canceled', error: 'Отменено' }
-                            : item
-                    )
-                );
-                xhrRef.current = null;
-                resolve();
-            };
+                xhr.onabort = () => {
+                    setItems((prev) =>
+                        prev.map((item) =>
+                            batch.some((target) => target.id === item.id)
+                                ? { ...item, status: 'canceled', error: 'Отменено' }
+                                : item
+                        )
+                    );
+                    xhrRef.current = null;
+                    resolve({ ok: false, urls: [], error: 'Загрузка отменена' });
+                };
 
-            xhr.open('POST', '/api/reports/upload', true);
-            xhr.send(formData);
-        });
+                xhr.open('POST', '/api/reports/upload', true);
+                xhr.send(formData);
+            });
+        };
+
+        let uploadOk = true;
+        let uploadedUrls: string[] = [];
+        for (const batch of batches) {
+            if (cancelRef.current) {
+                uploadOk = false;
+                break;
+            }
+            const result = await uploadBatch(batch);
+            if (!result.ok) {
+                uploadOk = false;
+                setUploadError(result.error || 'Ошибка загрузки');
+                break;
+            }
+            uploadedUrls = [...uploadedUrls, ...result.urls];
+        }
 
         if (cancelRef.current) {
             setUploading(false);
@@ -494,6 +540,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 return [];
             });
             setView('folders');
+            onUploaded?.();
         }
     };
 

@@ -1793,6 +1793,10 @@ export default function TaskDetailPage() {
                 taskName={task.taskName}
                 bsLocations={task.bsLocation}
                 photoReports={task.photoReports}
+                onUploaded={() => {
+                    void loadTask();
+                    void refreshReportSummaries();
+                }}
                 onSubmitted={() => {
                     void loadTask();
                     void refreshReportSummaries();

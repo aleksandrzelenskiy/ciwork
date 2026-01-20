@@ -364,6 +364,10 @@ export default function PhotoReportPage() {
                 taskName={report.taskName}
                 bsLocations={editLocations}
                 photoReports={editPhotoReports}
+                onUploaded={() => {
+                    void fetchReport();
+                    void refreshReportSummaries();
+                }}
                 onSubmitted={() => {
                     void fetchReport();
                     void refreshReportSummaries();
