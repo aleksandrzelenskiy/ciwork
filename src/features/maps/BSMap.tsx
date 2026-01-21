@@ -440,6 +440,15 @@ export default function BSMap(): React.ReactElement {
         [handleFullscreenEnter, handleFullscreenExit]
     );
 
+    const typeSelectorRef = React.useCallback(
+        (instance: { options?: { set: (key: string, value: unknown) => void } } | null) => {
+            if (instance?.options?.set) {
+                instance.options.set('position', { right: 16, top: 140 });
+            }
+        },
+        []
+    );
+
     const handleExternalClick = React.useCallback(
         (event: MouseEvent) => {
             const target = event.target as HTMLElement | null;
@@ -864,7 +873,7 @@ export default function BSMap(): React.ReactElement {
                     >
                         <FullscreenControl options={{ position: { right: 16, top: 16 } }} />
                         <ZoomControl options={{ position: { right: 16, top: 80 } }} />
-                        <TypeSelector options={{ position: { right: 16, top: 140 } }} />
+                        <TypeSelector instanceRef={typeSelectorRef} />
                         {isIrkutskRegionSelected && (
                             <Polygon
                                 geometry={IRKUTSK_POLYGON_COORDINATES}
