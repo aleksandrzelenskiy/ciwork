@@ -10,6 +10,7 @@ import {
     extractUploadPayload,
     type UploadPayload,
     isSupportedImage,
+    parseBsCoordinates,
     validateUploadFiles,
     prepareImageBuffer,
     resolveStorageScope,
@@ -72,6 +73,17 @@ export const handleReportUpload = async (
         }
 
         const scope = await resolveStorageScope(task);
+        const baseIdNormalized = payload.baseId.trim().toLowerCase();
+        const bsLocationList = Array.isArray(task.bsLocation) ? task.bsLocation : [];
+        const matchedLocation =
+            bsLocationList.find(
+                (loc) =>
+                    typeof loc?.name === 'string' &&
+                    loc.name.trim().toLowerCase() === baseIdNormalized
+            ) ?? (bsLocationList.length === 1 ? bsLocationList[0] : null);
+        const bsCoords = matchedLocation?.coordinates
+            ? parseBsCoordinates(matchedLocation.coordinates)
+            : null;
 
         for (const file of payload.files) {
             const prepared = await prepareImageBuffer(file, {
@@ -79,6 +91,8 @@ export const handleReportUpload = async (
                 taskName: task.taskName ?? null,
                 baseId: payload.baseId,
                 bsNumber: task.bsNumber ?? null,
+                bsLat: bsCoords?.lat ?? null,
+                bsLon: bsCoords?.lon ?? null,
                 executorName: task.executorName ?? buildActorName(user),
                 orgName: scope.orgName ?? null,
                 projectId: task.projectId ? String(task.projectId) : null,

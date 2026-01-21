@@ -161,6 +161,8 @@ type OverlayContext = {
     taskName?: string | null;
     baseId?: string | null;
     bsNumber?: string | null;
+    bsLat?: number | null;
+    bsLon?: number | null;
     executorName?: string | null;
     orgName?: string | null;
     projectId?: string | null;
@@ -310,6 +312,22 @@ const extractOverlayMeta = (buffer: Buffer) => {
     }
 };
 
+export const parseBsCoordinates = (value?: string | null) => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parts = trimmed.split(/[,\s]+/);
+    if (parts.length < 2) return null;
+    const latRaw = Number(parts[0].replace(',', '.'));
+    const lonRaw = Number(parts[1].replace(',', '.'));
+    if (!Number.isFinite(latRaw) || !Number.isFinite(lonRaw)) return null;
+    if (latRaw < -90 || latRaw > 90 || lonRaw < -180 || lonRaw > 180) return null;
+    return {
+        lat: Number(latRaw.toFixed(6)),
+        lon: Number(lonRaw.toFixed(6)),
+    };
+};
+
 const buildOverlaySvg = (params: {
     width: number;
     height: number;
@@ -378,8 +396,8 @@ export const prepareImageBuffer = async (file: File, overlayContext?: OverlayCon
                 `Задача: ${(overlayContext.taskName || '—').trim()}`,
                 `БС: ${overlayContext.baseId || overlayContext.bsNumber || '—'}`,
                 `Координаты: ${
-                    overlayMeta?.lat != null && overlayMeta?.lon != null
-                        ? `${overlayMeta.lat.toFixed(6)}, ${overlayMeta.lon.toFixed(6)}`
+                    typeof overlayContext.bsLat === 'number' && typeof overlayContext.bsLon === 'number'
+                        ? `${overlayContext.bsLat.toFixed(6)}, ${overlayContext.bsLon.toFixed(6)}`
                         : '—'
                 }`,
                 `Исполнитель: ${overlayContext.executorName || '—'}`,
