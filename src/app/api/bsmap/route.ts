@@ -8,8 +8,6 @@ import { Types } from 'mongoose';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-const MIN_QUERY_LENGTH = 3;
-const DEFAULT_LIMIT = 1000;
 
 const OPERATOR_COLLECTIONS = Object.fromEntries(
     OPERATORS.map((operator) => [
@@ -25,30 +23,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         const operator =
             normalizeOperatorCode(operatorParam) ??
             (OPERATORS[0]?.value as OperatorCode);
-        const rawQuery = searchParams.get('q')?.trim() ?? '';
-        const region = searchParams.get('region')?.trim() ?? '';
-        const limitParam = Number.parseInt(searchParams.get('limit') ?? '', 10);
-        const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, DEFAULT_LIMIT) : DEFAULT_LIMIT;
         const { collection } = OPERATOR_COLLECTIONS[operator];
-
-        if (rawQuery.length < MIN_QUERY_LENGTH) {
-            return NextResponse.json({ operator, stations: [] });
-        }
 
         await dbConnect();
         const Model = getBsCoordinateModel(collection);
-        const queryRegex = new RegExp(escapeRegExp(rawQuery), 'i');
-        const filter: Record<string, unknown> = {
-            $or: [{ name: queryRegex }, { address: queryRegex }],
-        };
-        if (region && region !== 'ALL') {
-            filter.region = region;
-        }
         const stations = await Model.find(
-            filter,
+            {},
             { op: 1, name: 1, lat: 1, lon: 1, address: 1, mcc: 1, mnc: 1, region: 1 }
         )
-            .limit(limit)
             .lean()
             .exec();
 
@@ -90,10 +72,6 @@ function resolveStationName(primary: unknown): string | null {
         if (trimmed) return trimmed;
     }
     return null;
-}
-
-function escapeRegExp(value: string): string {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function serializeStation(doc: StationDocument): StationPayload & { _id: string } {

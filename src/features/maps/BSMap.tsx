@@ -143,9 +143,6 @@ type YMapInstance = {
 
 const DEFAULT_CENTER: [number, number] = [56.0, 104.0];
 const DEFAULT_OPERATOR = (OPERATORS[0]?.value ?? '250020') as OperatorCode;
-const MIN_SEARCH_LENGTH = 3;
-const SEARCH_DEBOUNCE_MS = 350;
-const SEARCH_LIMIT = 1000;
 const ACTION_ICON_WRAPPER_STYLE = 'display:flex;align-items:center;gap:12px;margin-top:12px;';
 const ACTION_ICON_STYLE =
     'display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid #d1d5db;background:#fff;color:#1976d2;cursor:pointer;';
@@ -257,9 +254,8 @@ export default function BSMap(): React.ReactElement {
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
     const [searchName, setSearchName] = React.useState('');
-    const [debouncedSearchName, setDebouncedSearchName] = React.useState('');
     const [operator, setOperator] = React.useState<OperatorCode>(DEFAULT_OPERATOR);
-    const [filtersOpen, setFiltersOpen] = React.useState(true);
+    const [filtersOpen, setFiltersOpen] = React.useState(false);
     const [selectedRegionCode, setSelectedRegionCode] = React.useState<string>(ALL_REGIONS_OPTION.code);
     const [isFullscreen, setIsFullscreen] = React.useState(false);
     const [editingStationId, setEditingStationId] = React.useState<string | null>(null);
@@ -281,46 +277,17 @@ export default function BSMap(): React.ReactElement {
     }, [operator]);
 
     React.useEffect(() => {
-        const trimmed = searchName.trim();
-        if (!trimmed || trimmed.length < MIN_SEARCH_LENGTH) {
-            setDebouncedSearchName('');
-            return;
-        }
-        const handler = window.setTimeout(() => {
-            setDebouncedSearchName(trimmed);
-        }, SEARCH_DEBOUNCE_MS);
-        return () => window.clearTimeout(handler);
-    }, [searchName]);
-
-    React.useEffect(() => {
         let cancelled = false;
         const controller = new AbortController();
 
         async function loadStations(): Promise<void> {
             try {
-                if (!debouncedSearchName) {
-                    setStations([]);
-                    setLoading(false);
-                    setError(null);
-                    return;
-                }
                 setLoading(true);
                 setError(null);
-                const regionParam =
-                    selectedRegionCode !== ALL_REGIONS_OPTION.code
-                        ? `&region=${encodeURIComponent(selectedRegionCode)}`
-                        : '';
-                const res = await fetch(
-                    withBasePath(
-                        `/api/bsmap?operator=${encodeURIComponent(operator)}&q=${encodeURIComponent(
-                            debouncedSearchName
-                        )}&limit=${SEARCH_LIMIT}${regionParam}`
-                    ),
-                    {
+                const res = await fetch(`/api/bsmap?operator=${encodeURIComponent(operator)}`, {
                     cache: 'no-store',
                     signal: controller.signal,
-                    }
-                );
+                });
                 const data = (await res.json().catch(() => null)) as
                     | { stations: ApiStation[] }
                     | { error: string }
@@ -358,7 +325,7 @@ export default function BSMap(): React.ReactElement {
             cancelled = true;
             controller.abort();
         };
-    }, [operator, debouncedSearchName, selectedRegionCode]);
+    }, [operator]);
 
     const selectedRegion = REGION_OPTION_MAP[selectedRegionCode] ?? ALL_REGIONS_OPTION;
     const regionLabelByCode = React.useCallback(
@@ -377,7 +344,24 @@ export default function BSMap(): React.ReactElement {
         [regionLabelByCode]
     );
 
-    const filteredStations = stations;
+    const regionFilteredStations = React.useMemo(() => {
+        return stations.filter((station) => {
+            const stationOperator = normalizeOperatorCode(station.op) ?? DEFAULT_OPERATOR;
+            if (stationOperator !== operator) {
+                return false;
+            }
+            if (selectedRegion.code === ALL_REGIONS_OPTION.code) {
+                return true;
+            }
+            return station.region === selectedRegion.code;
+        });
+    }, [stations, selectedRegion, operator]);
+
+    const filteredStations = React.useMemo(() => {
+        const term = searchName.trim();
+        if (!term) return regionFilteredStations;
+        return regionFilteredStations.filter((station) => station.name?.toString().includes(term));
+    }, [regionFilteredStations, searchName]);
 
     const mapCenter = React.useMemo<[number, number]>(() => {
         if (!filteredStations.length) return DEFAULT_CENTER;
@@ -405,8 +389,10 @@ export default function BSMap(): React.ReactElement {
     }, []);
 
     const mapKey = `${mapCenter[0].toFixed(4)}-${mapCenter[1].toFixed(4)}-${filteredStations.length}`;
-    const canSearch = debouncedSearchName.length >= MIN_SEARCH_LENGTH;
-    const noSearchResults = !loading && !error && canSearch && filteredStations.length === 0;
+    const noSearchResults =
+        !loading && !error && Boolean(searchName.trim()) && filteredStations.length === 0;
+    const noStationsAfterFilters =
+        !loading && !error && selectedRegion.code !== ALL_REGIONS_OPTION.code && !regionFilteredStations.length;
     const selectedOperatorLabel = React.useMemo(
         () => getOperatorLabel(operator) ?? '',
         [operator]
@@ -414,10 +400,10 @@ export default function BSMap(): React.ReactElement {
     const isIrkutskRegionSelected = selectedRegion.code === IRKUTSK_REGION_CODE;
     const canCreateStation = selectedRegion.code !== ALL_REGIONS_OPTION.code;
     React.useEffect(() => {
-        if (error || noSearchResults) {
+        if (error || noSearchResults || noStationsAfterFilters) {
             setFiltersOpen(true);
         }
-    }, [error, noSearchResults]);
+    }, [error, noSearchResults, noStationsAfterFilters]);
 
     const handleFullscreenEnter = React.useCallback(() => setIsFullscreen(true), []);
     const handleFullscreenExit = React.useCallback(() => setIsFullscreen(false), []);
@@ -814,12 +800,7 @@ export default function BSMap(): React.ReactElement {
                             type="text"
                             fullWidth
                             size="small"
-                            placeholder={`Введите минимум ${MIN_SEARCH_LENGTH} символа`}
-                            helperText={
-                                searchName.trim().length > 0 && searchName.trim().length < MIN_SEARCH_LENGTH
-                                    ? `Минимум ${MIN_SEARCH_LENGTH} символа для поиска`
-                                    : undefined
-                            }
+                            disabled={loading || !!error || !regionFilteredStations.length}
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
@@ -845,85 +826,89 @@ export default function BSMap(): React.ReactElement {
                                 БС «{searchName.trim()}» для оператора {selectedOperatorLabel} не найдена.
                             </Alert>
                         )}
+                        {noStationsAfterFilters && (
+                            <Alert severity="info" sx={{ mt: 1 }}>
+                                Базовые станции не найдены для выбранных фильтров.
+                            </Alert>
+                        )}
                     </Box>
                 )}
             </Box>
-            <Box sx={{ width: '100%', height: '100%', position: 'relative' }}>
-                <YMaps query={ymapsQuery}>
-                    <Map
-                        key={mapKey}
-                        defaultState={{ center: mapCenter, zoom, controls: ['typeSelector'] }}
-                        width="100%"
-                        height="100%"
-                        options={{
-                            suppressObsoleteBrowserNotifier: true,
-                            suppressMapOpenBlock: true,
-                        }}
-                        instanceRef={mapInstanceRef}
-                    >
-                        <FullscreenControl options={{ position: { right: 16, top: 16 } }} />
-                        <ZoomControl options={{ position: { right: 16, top: 80 } }} />
-                        {isIrkutskRegionSelected && (
-                            <Polygon
-                                geometry={IRKUTSK_POLYGON_COORDINATES}
-                                options={{
-                                    fillColor: '#1976d220',
-                                    strokeColor: '#1976d2',
-                                    strokeWidth: 2,
-                                }}
-                            />
-                        )}
-                        <Clusterer
-                            options={{
-                                preset: OPERATOR_CLUSTER_PRESETS[normalizeOperator(operator)],
-                                groupByCoordinates: false,
-                                gridSize: 80,
-                            }}
-                        >
-                            {filteredStations.map((station) => {
-                                const hintTitle = station.name ? `БС ${station.name}` : 'Базовая станция';
-                                const normalizedOperator = normalizeOperator(station.op);
-                                const iconColor = OPERATOR_COLORS[normalizedOperator] ?? OPERATOR_COLORS.t2;
-                                const label =
-                                    station.name != null && station.name !== ''
-                                        ? String(station.name)
-                                        : station._id.slice(-4);
-
-                                return (
-                                    <Placemark
-                                        key={station._id}
-                                        geometry={[station.lat, station.lon]}
-                                        properties={{
-                                            hintContent: hintTitle,
-                                            balloonContent: buildBalloonContent(station),
-                                            iconCaption: label,
-                                        }}
-                                        options={{
-                                            preset: 'islands#circleIcon',
-                                            iconColor,
-                                            hideIconOnBalloonOpen: false,
-                                        }}
-                                        modules={['geoObject.addon.balloon', 'geoObject.addon.hint']}
-                                    />
-                                );
-                            })}
-                        </Clusterer>
-                    </Map>
-                </YMaps>
-                {loading && canSearch && (
+            <Box sx={{ width: '100%', height: '100%' }}>
+                {loading ? (
                     <Box
                         sx={{
-                            position: 'absolute',
-                            inset: 0,
+                            width: '100%',
+                            height: '100%',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            bgcolor: 'rgba(255,255,255,0.6)',
-                            zIndex: 2,
                         }}
                     >
                         <CircularProgress />
                     </Box>
+                ) : (
+                    <YMaps query={ymapsQuery}>
+                        <Map
+                            key={mapKey}
+                            defaultState={{ center: mapCenter, zoom }}
+                            width="100%"
+                            height="100%"
+                            options={{
+                                suppressObsoleteBrowserNotifier: true,
+                                suppressMapOpenBlock: true,
+                            }}
+                            instanceRef={mapInstanceRef}
+                        >
+                            <FullscreenControl options={{ position: { right: 16, top: 16 } }} />
+                            <ZoomControl options={{ position: { right: 16, top: 80 } }} />
+                            {isIrkutskRegionSelected && (
+                                <Polygon
+                                    geometry={IRKUTSK_POLYGON_COORDINATES}
+                                    options={{
+                                        fillColor: '#1976d220',
+                                        strokeColor: '#1976d2',
+                                        strokeWidth: 2,
+                                    }}
+                                />
+                            )}
+                            <Clusterer
+                                options={{
+                                    preset: OPERATOR_CLUSTER_PRESETS[normalizeOperator(operator)],
+                                    groupByCoordinates: false,
+                                    gridSize: 80,
+                                }}
+                            >
+                                {filteredStations.map((station) => {
+                                    const hintTitle = station.name ? `БС ${station.name}` : 'Базовая станция';
+                                    const normalizedOperator = normalizeOperator(station.op);
+                                    const iconColor = OPERATOR_COLORS[normalizedOperator] ?? OPERATOR_COLORS.t2;
+                                    const label =
+                                        station.name != null && station.name !== ''
+                                            ? String(station.name)
+                                            : station._id.slice(-4);
+
+                                    return (
+                                        <Placemark
+                                            key={station._id}
+                                            geometry={[station.lat, station.lon]}
+                                            properties={{
+                                                hintContent: hintTitle,
+                                                balloonContent: buildBalloonContent(station),
+                                                iconCaption: label,
+                                            }}
+                                            options={{
+                                                preset: 'islands#circleIcon',
+                                                iconColor,
+                                                hideIconOnBalloonOpen: false,
+                                            }}
+                                            modules={['geoObject.addon.balloon', 'geoObject.addon.hint']}
+                                        />
+                                    );
+                                })}
+                            </Clusterer>
+                        </Map>
+                    </YMaps>
                 )}
             </Box>
             <Dialog open={createDialogOpen} onClose={closeCreateDialog} fullWidth maxWidth="xs">
