@@ -3,6 +3,7 @@ import 'server-only';
 import TaskModel from '@/server/models/TaskModel';
 import ReportModel from '@/server/models/ReportModel';
 import UserModel from '@/server/models/UserModel';
+import ProjectModel from '@/server/models/ProjectModel';
 import { createNotification } from '@/server/notifications/service';
 import { sendEmail } from '@/server/email/mailer';
 import { getAggregatedReportStatus } from '@/server-actions/reportService';
@@ -24,6 +25,41 @@ const normalizeBaseIds = (baseIds?: string[]) =>
     Array.isArray(baseIds)
         ? baseIds.map((id) => id.trim()).filter((id) => id.length > 0)
         : [];
+
+const resolveProjectEmailContext = async (projectId?: unknown) => {
+    if (!projectId) {
+        return {
+            projectLabel: '—',
+            managerName: '—',
+            managerEmail: '—',
+        };
+    }
+
+    const project = await ProjectModel.findById(projectId)
+        .select('name key managers')
+        .lean();
+    const projectName = typeof project?.name === 'string' ? project.name.trim() : '';
+    const projectKey = typeof project?.key === 'string' ? project.key.trim() : '';
+    const projectLabel =
+        projectName && projectKey
+            ? `${projectKey} - ${projectName}`
+            : projectName || projectKey || '—';
+
+    const managerEmail = Array.isArray(project?.managers) ? project.managers[0]?.trim() : '';
+    let managerName = '';
+    if (managerEmail) {
+        const managerUser = await UserModel.findOne({ email: managerEmail })
+            .select('name')
+            .lean();
+        managerName = typeof managerUser?.name === 'string' ? managerUser.name.trim() : '';
+    }
+
+    return {
+        projectLabel,
+        managerName: managerName || '—',
+        managerEmail: managerEmail || '—',
+    };
+};
 
 export const submitReport = async (payload: SubmitPayload, actor: ActorContext) => {
     const taskId = payload.taskId?.trim().toUpperCase() || '';
@@ -97,6 +133,8 @@ export const submitReport = async (payload: SubmitPayload, actor: ActorContext) 
         : 'Фотоотчет по задаче';
     const reportMessage = `${actorName} отправил фотоотчет${bsInfo ? ` по${bsInfo}` : ''}. Статус: ${newStatus}.`;
     const baseListLine = baseIds.length > 0 ? `БС: ${baseIds.join(', ')}` : '';
+    const { projectLabel, managerName, managerEmail } =
+        await resolveProjectEmailContext(task.projectId);
 
     const recipientClerkIds = new Set<string>();
     if (typeof task.authorId === 'string' && task.authorId.trim()) {
@@ -176,12 +214,20 @@ export const submitReport = async (payload: SubmitPayload, actor: ActorContext) 
             await sendEmail({
                 to: email,
                 subject: reportTitle,
-                text: [reportMessage, baseListLine, `Ссылка: ${link}`]
+                text: [
+                    reportMessage,
+                    baseListLine,
+                    `Проект: ${projectLabel}`,
+                    `Менеджер проекта: ${managerName} (${managerEmail})`,
+                    `Ссылка: ${link}`,
+                ]
                     .filter(Boolean)
                     .join('\n\n'),
                 html: `
 <p>${reportMessage}</p>
 ${baseListLine ? `<p>${baseListLine}</p>` : ''}
+<p>Проект: ${projectLabel}</p>
+<p>Менеджер проекта: ${managerName} (${managerEmail})</p>
 <p><a href="${link}">Перейти к фотоотчетам</a></p>`,
             });
         } catch (error) {

@@ -6,6 +6,8 @@ import dbConnect from '@/server/db/mongoose';
 import { PriorityLevel, WorkItem } from '@/app/types/taskTypes';
 import { v4 as uuidv4 } from 'uuid';
 import { sendEmail } from '@/server/email/mailer';
+import ProjectModel from '@/server/models/ProjectModel';
+import UserModel from '@/server/models/UserModel';
 import { uploadTaskFile } from '@/utils/s3';
 
 /**
@@ -181,9 +183,36 @@ export async function POST(request: Request) {
     // === Фоновая отправка почты ===
     void (async () => {
       try {
+        let projectLabel = '—';
+        let managerName = '—';
+        let managerEmail = '—';
+        if (newTask.projectId) {
+          const project = await ProjectModel.findById(newTask.projectId)
+              .select('name key managers')
+              .lean();
+          const projectName = typeof project?.name === 'string' ? project.name.trim() : '';
+          const projectKey = typeof project?.key === 'string' ? project.key.trim() : '';
+          projectLabel =
+              projectName && projectKey
+                  ? `${projectKey} - ${projectName}`
+                  : projectName || projectKey || '—';
+          const managerEmailCandidate = Array.isArray(project?.managers)
+              ? project.managers[0]?.trim()
+              : '';
+          if (managerEmailCandidate) {
+            managerEmail = managerEmailCandidate;
+            const managerUser = await UserModel.findOne({ email: managerEmailCandidate })
+                .select('name')
+                .lean();
+            managerName =
+                typeof managerUser?.name === 'string' && managerUser.name.trim()
+                    ? managerUser.name.trim()
+                    : '—';
+          }
+        }
+
         const recipients = [
           newTask.authorEmail,
-          newTask.initiatorEmail,
           newTask.executorEmail,
         ]
             .filter((email): email is string => Boolean(email && email.trim()))
@@ -207,6 +236,8 @@ ID задачи: ${newTask.taskId}
 Базовые станции: ${newTask.bsNumber}
 Автор: ${newTask.authorName}
 Срок выполнения: ${dueDateStr}
+Проект: ${projectLabel}
+Менеджер проекта: ${managerName} (${managerEmail})
 Приоритет: ${priority}
 Описание: ${description}
 Ссылка: ${taskLink}
@@ -219,6 +250,8 @@ ID задачи: ${newTask.taskId}
 <p>Базовые станции: ${newTask.bsNumber}</p>
 <p>Автор: ${newTask.authorName}</p>
 <p>Срок выполнения: ${dueDateStr}</p>
+<p>Проект: ${projectLabel}</p>
+<p>Менеджер проекта: ${managerName} (${managerEmail})</p>
 <p>Приоритет: ${priority}</p>
 <p>Описание: ${description}</p>
 <p><a href="${taskLink}">Перейти к задаче</a></p>

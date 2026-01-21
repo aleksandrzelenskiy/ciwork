@@ -113,6 +113,41 @@ async function resolveStorageScope(task: { orgId?: unknown; projectId?: unknown 
   return scope;
 }
 
+async function resolveProjectEmailContext(projectId?: unknown) {
+  if (!projectId) {
+    return {
+      projectLabel: '—',
+      managerName: '—',
+      managerEmail: '—',
+    };
+  }
+
+  const project = await ProjectModel.findById(projectId)
+      .select('name key managers')
+      .lean();
+  const projectName = typeof project?.name === 'string' ? project.name.trim() : '';
+  const projectKey = typeof project?.key === 'string' ? project.key.trim() : '';
+  const projectLabel =
+      projectName && projectKey
+          ? `${projectKey} - ${projectName}`
+          : projectName || projectKey || '—';
+
+  const managerEmail = Array.isArray(project?.managers) ? project.managers[0]?.trim() : '';
+  let managerName = '';
+  if (managerEmail) {
+    const managerUser = await UserModel.findOne({ email: managerEmail })
+        .select('name email')
+        .lean();
+    managerName = typeof managerUser?.name === 'string' ? managerUser.name.trim() : '';
+  }
+
+  return {
+    projectLabel,
+    managerName: managerName || '—',
+    managerEmail: managerEmail || '—',
+  };
+}
+
 export async function GET(
     _request: NextRequest,
     context: { params: Promise<{ taskId: string }> }
@@ -718,8 +753,10 @@ export async function PATCH(
         }
       }
 
-      const initiatorEmail = updatedTask.initiatorEmail?.trim();
-      const initiatorEmailNormalized = initiatorEmail ? initiatorEmail.toLowerCase() : '';
+      const initiatorEmailNormalized =
+          typeof updatedTask.initiatorEmail === 'string'
+              ? updatedTask.initiatorEmail.trim().toLowerCase()
+              : '';
       const authorEmailNormalized =
           typeof updatedTask.authorEmail === 'string'
               ? updatedTask.authorEmail.trim().toLowerCase()
@@ -728,39 +765,40 @@ export async function PATCH(
           typeof updatedTask.executorEmail === 'string'
               ? updatedTask.executorEmail.trim().toLowerCase()
               : '';
-      const statusNotificationEmails = new Set<string>();
-      if (
-          typeof updatedTask.authorId === 'string' &&
-          updatedTask.authorId.trim() &&
-          updatedTask.authorId !== user.id &&
-          authorEmailNormalized
-      ) {
-        statusNotificationEmails.add(authorEmailNormalized);
-      }
-      if (
-          typeof executorForStatusNotice === 'string' &&
-          executorForStatusNotice.trim() &&
-          executorForStatusNotice !== user.id &&
-          executorEmailNormalized
-      ) {
-        statusNotificationEmails.add(executorEmailNormalized);
-      }
+      const statusNotificationEmails = new Set<string>(
+          [authorEmailNormalized, executorEmailNormalized].filter(Boolean)
+      );
       const shouldNotifyInitiator =
           Boolean(initiatorEmailNormalized) &&
-          !statusNotificationEmails.has(initiatorEmailNormalized) &&
-          !(managerDecision && initiatorEmailNormalized === authorEmailNormalized);
-      if (shouldNotifyInitiator) {
+          !statusNotificationEmails.has(initiatorEmailNormalized);
+      const shouldNotifyInitiatorOnAccept = managerDecision === 'accept';
+      const shouldNotifyInitiatorOnCompletion = updatedTask.status === 'Done';
+
+      if (
+          shouldNotifyInitiator &&
+          (shouldNotifyInitiatorOnAccept || shouldNotifyInitiatorOnCompletion)
+      ) {
         const bsInfo = updatedTask.bsNumber ? ` (БС ${updatedTask.bsNumber})` : '';
-        const subject = `Статус задачи обновлён: ${updatedTask.taskName}${bsInfo}`;
-        const text = `Статус задачи «${updatedTask.taskName}»${bsInfo} изменён с ${formatStatusLabel(
-            previousStatus
-        )} на ${formatStatusLabel(updatedTask.status)}.`;
+        const dueDateLabel = updatedTask.dueDate
+            ? new Date(updatedTask.dueDate).toLocaleString('ru-RU')
+            : '—';
+        const executorDisplayName =
+            updatedTask.executorName?.trim() || authorName || 'Исполнитель';
+        const taskLabel = `${updatedTask.taskName}${bsInfo}`;
+        const { projectLabel, managerName, managerEmail } =
+            await resolveProjectEmailContext(updatedTask.projectId);
+        const subject = shouldNotifyInitiatorOnAccept
+            ? `Исполнитель принял задачу: ${updatedTask.taskName}${bsInfo}`
+            : `Исполнитель завершил задачу: ${updatedTask.taskName}${bsInfo}`;
+        const text = shouldNotifyInitiatorOnAccept
+            ? `Исполнитель ${executorDisplayName} принял в работу задачу ${taskLabel}. Срок выполнения - ${dueDateLabel}.\nПроект: ${projectLabel}\nМенеджер проекта: ${managerName} (${managerEmail})`
+            : `Исполнитель ${executorDisplayName} завершил задачу ${taskLabel}. Срок выполнения - ${dueDateLabel}.\nПроект: ${projectLabel}\nМенеджер проекта: ${managerName} (${managerEmail})`;
         try {
           await sendEmail({
             to: initiatorEmailNormalized,
             subject,
             text,
-            html: `<p>${text}</p>`,
+            html: `<p>${text.replace(/\n/g, '<br />')}</p>`,
           });
         } catch (emailErr) {
           console.error('Failed to send status email to initiator', emailErr);

@@ -27,6 +27,41 @@ const buildActorName = (user: Awaited<ReturnType<typeof currentUser>>) => {
     return name || user.username || user.id;
 };
 
+const resolveProjectEmailContext = async (projectId?: unknown) => {
+    if (!projectId) {
+        return {
+            projectLabel: '—',
+            managerName: '—',
+            managerEmail: '—',
+        };
+    }
+
+    const project = await ProjectModel.findById(projectId)
+        .select('name key managers')
+        .lean();
+    const projectName = typeof project?.name === 'string' ? project.name.trim() : '';
+    const projectKey = typeof project?.key === 'string' ? project.key.trim() : '';
+    const projectLabel =
+        projectName && projectKey
+            ? `${projectKey} - ${projectName}`
+            : projectName || projectKey || '—';
+
+    const managerEmail = Array.isArray(project?.managers) ? project.managers[0]?.trim() : '';
+    let managerName = '';
+    if (managerEmail) {
+        const managerUser = await UserModel.findOne({ email: managerEmail })
+            .select('name')
+            .lean();
+        managerName = typeof managerUser?.name === 'string' ? managerUser.name.trim() : '';
+    }
+
+    return {
+        projectLabel,
+        managerName: managerName || '—',
+        managerEmail: managerEmail || '—',
+    };
+};
+
 export const handleFixUpload = async (
     request: Request,
     user: Awaited<ReturnType<typeof currentUser>> | null
@@ -78,6 +113,7 @@ export const handleFixUpload = async (
         }
 
         const scope = await resolveStorageScope(task);
+        const projectEmailContext = await resolveProjectEmailContext(task.projectId);
         const baseIdNormalized = payload.baseId.trim().toLowerCase();
         const bsLocationList = Array.isArray(task.bsLocation) ? task.bsLocation : [];
         const matchedLocation =
@@ -278,8 +314,8 @@ export const handleFixUpload = async (
                         await sendEmail({
                             to: initiatorEmailNormalized,
                             subject,
-                            text: `${text}\n\nСсылка: ${initiatorLink}`,
-                            html: `<p>${text}</p><p><a href="${initiatorLink}">Перейти к отчету</a></p>`,
+                            text: `${text}\n\nПроект: ${projectEmailContext.projectLabel}\nМенеджер проекта: ${projectEmailContext.managerName} (${projectEmailContext.managerEmail})\n\nСсылка: ${initiatorLink}`,
+                            html: `<p>${text}</p><p>Проект: ${projectEmailContext.projectLabel}</p><p>Менеджер проекта: ${projectEmailContext.managerName} (${projectEmailContext.managerEmail})</p><p><a href="${initiatorLink}">Перейти к отчету</a></p>`,
                         });
                     } catch (error) {
                         console.error('Failed to send fix upload email to initiator', error);
