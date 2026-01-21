@@ -1254,7 +1254,7 @@ export default function TaskDetailPage() {
                                     <strong>Тип задачи:</strong> {task.taskType || '—'}
                                 </Typography>
 
-                                {(task.authorName || task.authorEmail) && (
+                                {task.authorName && (
                                     <Typography variant="body1">
                                         <strong>Автор:</strong>{' '}
                                         {task.authorId ? (
@@ -1272,10 +1272,10 @@ export default function TaskDetailPage() {
                                                     color: 'primary.main',
                                                 }}
                                             >
-                                                {task.authorName || task.authorEmail}
+                                                {task.authorName}
                                             </Button>
                                         ) : (
-                                            task.authorName || task.authorEmail
+                                            task.authorName
                                         )}
                                     </Typography>
                                 )}
@@ -1686,12 +1686,9 @@ export default function TaskDetailPage() {
                         </Accordion>
                     </CardItem>
 
-                    <CardItem sx={{ p: 0, minWidth: 0 }}>
+                    <CardItem sx={{ minWidth: 0 }}>
                         <Accordion disableGutters elevation={0} sx={accordionSx}>
-                            <AccordionSummary
-                                expandIcon={<ExpandMoreIcon />}
-                                sx={{ ...accordionSummarySx, px: cardPadding, pt: cardPadding, pb: 0 }}
-                            >
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
                                 <Typography
                                     variant="subtitle1"
                                     fontWeight={600}
@@ -1709,7 +1706,7 @@ export default function TaskDetailPage() {
                             <AccordionDetails sx={accordionDetailsSx}>
                                 <Divider sx={{ mb: 1.5 }} />
                                 {sortedEvents.length === 0 ? (
-                                    <Typography color="text.secondary" sx={{ px: 2, pb: 1.5 }}>
+                                    <Typography color="text.secondary" sx={{ pb: 1 }}>
                                         История пуста
                                     </Typography>
                                 ) : (
@@ -1717,8 +1714,7 @@ export default function TaskDetailPage() {
                                         sx={{
                                             p: 0,
                                             m: 0,
-                                            px: 2,
-                                            pb: 1.5,
+                                            pb: 1,
                                             '& .MuiTimelineOppositeContent-root': {
                                                 flex: '0 0 110px',
                                                 whiteSpace: 'normal',
