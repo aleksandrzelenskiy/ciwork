@@ -185,22 +185,50 @@ const findTableMappingInRows = (
         let unitIndex: number | null = null;
         let noteIndex: number | null = null;
         let workTypeIndex: number | null = null;
+        const quantityCandidates: Array<{ index: number; isMaterial: boolean }> = [];
+        const unitCandidates: Array<{ index: number; isMaterial: boolean }> = [];
+        let quantityIsMaterial: boolean | null = null;
 
         for (const [key, value] of Object.entries(row)) {
             if (typeof value !== 'string') continue;
             const text = normalizeText(value);
+            const index = getColumnIndexFromKey(key);
+            if (index === null) continue;
+            const isMaterial = text.includes('материал');
 
             if (text.includes('кол-во') || text.includes('количество')) {
-                quantityIndex = getColumnIndexFromKey(key);
+                quantityCandidates.push({ index, isMaterial });
             }
             if (text.includes('ед. изм') || text.includes('ед изм') || text.includes('единиц')) {
-                unitIndex = getColumnIndexFromKey(key);
+                unitCandidates.push({ index, isMaterial });
             }
             if (text.includes('коммент') || text.includes('примеч')) {
-                noteIndex = getColumnIndexFromKey(key);
+                noteIndex = index;
             }
             if (text.includes('вид работ')) {
-                workTypeIndex = getColumnIndexFromKey(key);
+                workTypeIndex = index;
+            }
+        }
+
+        if (quantityCandidates.length > 0) {
+            const preferred = quantityCandidates.filter((c) => !c.isMaterial);
+            const list = preferred.length > 0 ? preferred : quantityCandidates;
+            list.sort((a, b) => a.index - b.index);
+            quantityIndex = list[0].index;
+            quantityIsMaterial = list[0].isMaterial;
+        }
+
+        if (unitCandidates.length > 0) {
+            const preferred = unitCandidates.filter(
+                (c) => quantityIsMaterial === null || c.isMaterial === quantityIsMaterial
+            );
+            const list = preferred.length > 0 ? preferred : unitCandidates;
+            list.sort((a, b) => a.index - b.index);
+            if (quantityIndex !== null) {
+                const after = list.find((c) => c.index >= quantityIndex);
+                unitIndex = after ? after.index : list[0].index;
+            } else {
+                unitIndex = list[0].index;
             }
         }
 
@@ -361,9 +389,10 @@ const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLab
     const parseMainValues = (data: ExcelData) => {
         const tableInfo = findTableMapping(data);
         const totalMatchers = [
-            (text: string) => text.includes('итого с ндс'),
+            (text: string) =>
+                text.startsWith('итого') && !text.includes('ндс') && !text.includes('коэф'),
             (text: string) => text.includes('итого с учетом коэф'),
-            (text: string) => text === 'итого',
+            (text: string) => text.includes('итого с ндс'),
         ];
         const totalVal = (tableInfo
             ? findValueByLabelMatcherInRows(tableInfo.rows, totalMatchers[0], 'number') ??
