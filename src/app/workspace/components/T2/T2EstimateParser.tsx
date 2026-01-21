@@ -277,7 +277,11 @@ const findTableMapping = (
         const mappingInfo = findTableMappingInRows(rows);
         if (!mappingInfo) continue;
 
-        const score = countWorkItems(rows, mappingInfo.mapping);
+        const baseScore = countWorkItems(rows, mappingInfo.mapping);
+        const score =
+            baseScore * 10 +
+            (mappingInfo.mapping.noteIndex !== null ? 5 : 0) +
+            (mappingInfo.mapping.workTypeIndex !== null ? 2 : 0);
         if (!best || score > best.score) {
             best = { ...mappingInfo, score };
         }
@@ -296,23 +300,9 @@ const getRowValueByIndex = (row: ExcelRow, index: number | null): unknown => {
 
 const getRowNote = (row: ExcelRow, noteIndex: number | null, workType?: string): string => {
     if (noteIndex !== null) {
-        const noteCandidates = Object.entries(row)
-            .map(([key, value]) => ({
-                index: getColumnIndexFromKey(key),
-                value,
-            }))
-            .filter(
-                (entry) =>
-                    entry.index !== null &&
-                    (entry.index as number) >= noteIndex &&
-                    typeof entry.value === 'string' &&
-                    entry.value.trim()
-            )
-            .sort((a, b) => (b.value as string).length - (a.value as string).length);
-
-        if (noteCandidates.length > 0) {
-            return String(noteCandidates[0].value);
-        }
+        const value = getRowValueByIndex(row, noteIndex);
+        if (typeof value === 'string' && value.trim()) return value;
+        if (typeof value === 'number' && Number.isFinite(value)) return String(value);
     }
 
     const normalizedWorkType = normalizeText(workType ?? '');
