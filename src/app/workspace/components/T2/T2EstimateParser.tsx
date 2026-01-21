@@ -31,6 +31,8 @@ interface ExcelData {
     [sheetName: string]: Array<Record<string, unknown>>;
 }
 
+type ExcelRow = Record<string, unknown>;
+
 export type ParsedWorkItem = {
     workType: string;
     quantity: number;
@@ -51,6 +53,239 @@ type Props = {
     onClose: () => void;
     onApply: (data: ParsedEstimateResult) => void;
     operatorLabel?: string;
+};
+
+const EXCLUDED_WORK_TYPES = new Set([
+    'сайт',
+    'комплект',
+    'шт.',
+    'м.куб.',
+    'м.кв.',
+    'т.',
+    'оттяжка',
+    'м.п.',
+    'смена',
+    'км.',
+    'талреп',
+    'перекрытие',
+    'шт',
+    'шт. ',
+]);
+
+const normalizeText = (value: unknown): string =>
+    String(value ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+
+const getColumnIndexFromKey = (key: string): number | null => {
+    if (key === '__EMPTY') return 0;
+    const match = /^__EMPTY_(\d+)$/.exec(key);
+    return match ? Number(match[1]) : null;
+};
+
+const toNumber = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string') {
+        const normalized = value.replace(/\s+/g, '').replace(',', '.');
+        const parsed = Number.parseFloat(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+};
+
+const findValueByLabelMatcherInRows = (
+    rows: ExcelRow[],
+    matcher: (text: string) => boolean,
+    prefer: 'number' | 'string' | 'any' = 'any'
+): string | number | null => {
+    for (const row of rows) {
+        for (const [key, value] of Object.entries(row)) {
+            if (typeof value !== 'string') continue;
+            if (!matcher(normalizeText(value))) continue;
+
+            const labelIndex = getColumnIndexFromKey(key);
+            const candidates: Array<string | number> = [];
+
+            if (labelIndex !== null) {
+                const indexedValues = Object.entries(row)
+                    .map(([entryKey, entryValue]) => ({
+                        index: getColumnIndexFromKey(entryKey),
+                        value: entryValue,
+                    }))
+                    .filter((entry) => entry.index !== null && entry.index > labelIndex)
+                    .sort((a, b) => (a.index as number) - (b.index as number));
+
+                for (const entry of indexedValues) {
+                    if (typeof entry.value === 'string' || typeof entry.value === 'number') {
+                        candidates.push(entry.value);
+                    }
+                }
+            } else {
+                for (const entryValue of Object.values(row)) {
+                    if (typeof entryValue === 'string' || typeof entryValue === 'number') {
+                        candidates.push(entryValue);
+                    }
+                }
+            }
+
+            for (const candidate of candidates) {
+                if (prefer === 'number') {
+                    const num = toNumber(candidate);
+                    if (num !== null) return num;
+                } else if (prefer === 'string') {
+                    if (typeof candidate === 'string' && candidate.trim()) return candidate;
+                } else {
+                    return candidate;
+                }
+            }
+        }
+    }
+    return null;
+};
+
+const findValueByLabelMatcher = (
+    data: ExcelData,
+    matcher: (text: string) => boolean,
+    prefer: 'number' | 'string' | 'any' = 'any'
+): string | number | null => {
+    for (const sheet of Object.values(data)) {
+        const value = findValueByLabelMatcherInRows(sheet, matcher, prefer);
+        if (value !== null) return value;
+    }
+    return null;
+};
+
+const findValueByLabelMatchers = (
+    data: ExcelData,
+    matchers: Array<(text: string) => boolean>,
+    prefer: 'number' | 'string' | 'any' = 'any'
+): string | number | null => {
+    for (const matcher of matchers) {
+        const value = findValueByLabelMatcher(data, matcher, prefer);
+        if (value !== null) return value;
+    }
+    return null;
+};
+
+type TableMapping = {
+    headerRowIndex: number;
+    workTypeIndex: number | null;
+    quantityIndex: number | null;
+    unitIndex: number | null;
+    noteIndex: number | null;
+};
+
+const findTableMapping = (
+    data: ExcelData
+): { rows: ExcelRow[]; mapping: TableMapping } | null => {
+    for (const rows of Object.values(data)) {
+        for (let i = 0; i < rows.length; i += 1) {
+            const row = rows[i];
+            let quantityIndex: number | null = null;
+            let unitIndex: number | null = null;
+            let noteIndex: number | null = null;
+            let workTypeIndex: number | null = null;
+
+            for (const [key, value] of Object.entries(row)) {
+                if (typeof value !== 'string') continue;
+                const text = normalizeText(value);
+
+                if (text.includes('кол-во') || text.includes('количество')) {
+                    quantityIndex = getColumnIndexFromKey(key);
+                }
+                if (text.includes('ед. изм') || text.includes('ед изм') || text.includes('единиц')) {
+                    unitIndex = getColumnIndexFromKey(key);
+                }
+                if (text.includes('коммент') || text.includes('примеч')) {
+                    noteIndex = getColumnIndexFromKey(key);
+                }
+                if (text.includes('вид работ')) {
+                    workTypeIndex = getColumnIndexFromKey(key);
+                }
+            }
+
+            if (quantityIndex !== null && unitIndex !== null) {
+                if (workTypeIndex === null && i > 0) {
+                    for (const [key, value] of Object.entries(rows[i - 1])) {
+                        if (typeof value !== 'string') continue;
+                        if (normalizeText(value).includes('вид работ')) {
+                            workTypeIndex = getColumnIndexFromKey(key);
+                            break;
+                        }
+                    }
+                }
+
+                if (noteIndex === null && i > 0) {
+                    for (const [key, value] of Object.entries(rows[i - 1])) {
+                        if (typeof value !== 'string') continue;
+                        const text = normalizeText(value);
+                        if (text.includes('коммент') || text.includes('примеч')) {
+                            noteIndex = getColumnIndexFromKey(key);
+                            break;
+                        }
+                    }
+                }
+
+                if (workTypeIndex === null && quantityIndex > 0) {
+                    workTypeIndex = quantityIndex - 1;
+                }
+
+                return {
+                    rows,
+                    mapping: {
+                        headerRowIndex: i,
+                        workTypeIndex,
+                        quantityIndex,
+                        unitIndex,
+                        noteIndex,
+                    },
+                };
+            }
+        }
+    }
+    return null;
+};
+
+const getRowValueByIndex = (row: ExcelRow, index: number | null): unknown => {
+    if (index === null) return undefined;
+    for (const [key, value] of Object.entries(row)) {
+        if (getColumnIndexFromKey(key) === index) return value;
+    }
+    return undefined;
+};
+
+const getRowNote = (row: ExcelRow, noteIndex: number | null, workType?: string): string => {
+    if (noteIndex !== null) {
+        const noteCandidates = Object.entries(row)
+            .map(([key, value]) => ({
+                index: getColumnIndexFromKey(key),
+                value,
+            }))
+            .filter(
+                (entry) =>
+                    entry.index !== null &&
+                    (entry.index as number) >= noteIndex &&
+                    typeof entry.value === 'string' &&
+                    entry.value.trim()
+            )
+            .sort((a, b) => (b.value as string).length - (a.value as string).length);
+
+        if (noteCandidates.length > 0) {
+            return String(noteCandidates[0].value);
+        }
+    }
+
+    const normalizedWorkType = normalizeText(workType ?? '');
+    const fallback = Object.values(row)
+        .filter((value) => typeof value === 'string')
+        .map((value) => String(value).trim())
+        .filter(
+            (value) =>
+                value.length > 20 && normalizeText(value) !== normalizedWorkType
+        );
+
+    return fallback.length > 0 ? fallback[0] : '';
 };
 
 const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLabel }) => {
@@ -94,38 +329,30 @@ const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLab
         onClose();
     };
 
-    const findValueByLabel = (data: ExcelData, label: string): string | number | null => {
-        for (const sheet of Object.values(data)) {
-            for (const row of sheet) {
-                const labelEntry = Object.entries(row).find(
-                    ([, value]) => value === label
-                );
-
-                if (labelEntry) {
-                    const [labelKey] = labelEntry;
-                    const keys = Object.keys(row);
-                    const labelIndex = keys.indexOf(labelKey);
-
-                    if (labelIndex !== -1 && labelIndex < keys.length - 1) {
-                        const valueKey = keys[labelIndex + 1];
-                        const value = row[valueKey];
-
-                        if (typeof value === 'string' || typeof value === 'number') {
-                            return value;
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    };
-
     const parseMainValues = (data: ExcelData) => {
-        const totalVal = findValueByLabel(data, 'Итого с учетом Коэф.') as number | null;
+        const tableInfo = findTableMapping(data);
+        const totalMatchers = [
+            (text: string) => text.includes('итого с ндс'),
+            (text: string) => text.includes('итого с учетом коэф'),
+            (text: string) => text === 'итого',
+        ];
+        const totalVal = (tableInfo
+            ? findValueByLabelMatcherInRows(tableInfo.rows, totalMatchers[0], 'number') ??
+              findValueByLabelMatcherInRows(tableInfo.rows, totalMatchers[1], 'number') ??
+              findValueByLabelMatcherInRows(tableInfo.rows, totalMatchers[2], 'number')
+            : findValueByLabelMatchers(data, totalMatchers, 'number')) as number | null;
         setTotal(totalVal ?? null);
 
-        const bsNum = findValueByLabel(data, 'Номер БС:') as string | null;
-        const bsAddr = findValueByLabel(data, 'Адрес БС:') as string | null;
+        const bsNum = findValueByLabelMatchers(
+            data,
+            [(text) => text.includes('номер бс'), (text) => text.includes('№ бс')],
+            'string'
+        ) as string | null;
+        const bsAddr = findValueByLabelMatchers(
+            data,
+            [(text) => text.includes('адрес бс')],
+            'string'
+        ) as string | null;
 
         setBsNumber(bsNum ?? null);
         setBsAddress(bsAddr ?? null);
@@ -134,43 +361,47 @@ const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLab
     const getTableData = (): ParsedWorkItem[] => {
         if (!excelData) return [];
 
-        const excludedValues = [
-            'сайт',
-            'комплект',
-            'шт.',
-            'м.куб.',
-            'м.кв.',
-            'т.',
-            'оттяжка',
-            'м.п.',
-            'смена',
-            'км.',
-            'талреп',
-            'перекрытие',
-            'шт',
-            'шт. ',
-        ];
+        const tableInfo = findTableMapping(excelData);
+        const rows = tableInfo ? tableInfo.rows : Object.values(excelData).flat();
+        const mapping = tableInfo?.mapping;
 
-        return Object.values(excelData)
-            .flat()
-            .filter((row) => {
-                const quantity = row['__EMPTY_2'];
-                const empty1Value = String(row['__EMPTY_1']);
+        const startIndex = mapping ? mapping.headerRowIndex + 1 : 0;
+        const items: ParsedWorkItem[] = [];
 
-                return (
-                    row['__EMPTY_1'] &&
-                    typeof quantity === 'number' &&
-                    quantity !== 0 &&
-                    row['__EMPTY_3'] &&
-                    !excludedValues.includes(empty1Value)
-                );
-            })
-            .map((row) => ({
-                workType: String(row['__EMPTY_1']),
-                quantity: Number(row['__EMPTY_2']),
-                unit: String(row['__EMPTY_3']),
-                note: row['__EMPTY_17'] ? String(row['__EMPTY_17']) : '',
-            }));
+        for (let i = startIndex; i < rows.length; i += 1) {
+            const row = rows[i];
+            const workTypeValue = mapping
+                ? getRowValueByIndex(row, mapping.workTypeIndex)
+                : row['__EMPTY_1'];
+            const quantityValue = mapping
+                ? getRowValueByIndex(row, mapping.quantityIndex)
+                : row['__EMPTY_2'];
+            const unitValue = mapping
+                ? getRowValueByIndex(row, mapping.unitIndex)
+                : row['__EMPTY_3'];
+
+            const workType = typeof workTypeValue === 'string' ? workTypeValue.trim() : '';
+            const quantity = toNumber(quantityValue);
+            const unit = unitValue ? String(unitValue).trim() : '';
+
+            if (!workType || quantity === null || quantity === 0 || !unit) continue;
+            if (EXCLUDED_WORK_TYPES.has(normalizeText(workType))) continue;
+
+            const note = mapping
+                ? getRowNote(row, mapping.noteIndex, workType)
+                : row['__EMPTY_17']
+                ? String(row['__EMPTY_17'])
+                : '';
+
+            items.push({
+                workType,
+                quantity,
+                unit,
+                note,
+            });
+        }
+
+        return items;
     };
 
     const onDrop = useCallback(
