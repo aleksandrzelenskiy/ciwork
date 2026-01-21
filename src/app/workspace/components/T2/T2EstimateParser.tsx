@@ -176,75 +176,114 @@ type TableMapping = {
     noteIndex: number | null;
 };
 
-const findTableMapping = (
-    data: ExcelData
+const findTableMappingInRows = (
+    rows: ExcelRow[]
 ): { rows: ExcelRow[]; mapping: TableMapping } | null => {
-    for (const rows of Object.values(data)) {
-        for (let i = 0; i < rows.length; i += 1) {
-            const row = rows[i];
-            let quantityIndex: number | null = null;
-            let unitIndex: number | null = null;
-            let noteIndex: number | null = null;
-            let workTypeIndex: number | null = null;
+    for (let i = 0; i < rows.length; i += 1) {
+        const row = rows[i];
+        let quantityIndex: number | null = null;
+        let unitIndex: number | null = null;
+        let noteIndex: number | null = null;
+        let workTypeIndex: number | null = null;
 
-            for (const [key, value] of Object.entries(row)) {
-                if (typeof value !== 'string') continue;
-                const text = normalizeText(value);
+        for (const [key, value] of Object.entries(row)) {
+            if (typeof value !== 'string') continue;
+            const text = normalizeText(value);
 
-                if (text.includes('кол-во') || text.includes('количество')) {
-                    quantityIndex = getColumnIndexFromKey(key);
-                }
-                if (text.includes('ед. изм') || text.includes('ед изм') || text.includes('единиц')) {
-                    unitIndex = getColumnIndexFromKey(key);
-                }
-                if (text.includes('коммент') || text.includes('примеч')) {
-                    noteIndex = getColumnIndexFromKey(key);
-                }
-                if (text.includes('вид работ')) {
-                    workTypeIndex = getColumnIndexFromKey(key);
+            if (text.includes('кол-во') || text.includes('количество')) {
+                quantityIndex = getColumnIndexFromKey(key);
+            }
+            if (text.includes('ед. изм') || text.includes('ед изм') || text.includes('единиц')) {
+                unitIndex = getColumnIndexFromKey(key);
+            }
+            if (text.includes('коммент') || text.includes('примеч')) {
+                noteIndex = getColumnIndexFromKey(key);
+            }
+            if (text.includes('вид работ')) {
+                workTypeIndex = getColumnIndexFromKey(key);
+            }
+        }
+
+        if (quantityIndex !== null && unitIndex !== null) {
+            if (workTypeIndex === null && i > 0) {
+                for (const [key, value] of Object.entries(rows[i - 1])) {
+                    if (typeof value !== 'string') continue;
+                    if (normalizeText(value).includes('вид работ')) {
+                        workTypeIndex = getColumnIndexFromKey(key);
+                        break;
+                    }
                 }
             }
 
-            if (quantityIndex !== null && unitIndex !== null) {
-                if (workTypeIndex === null && i > 0) {
-                    for (const [key, value] of Object.entries(rows[i - 1])) {
-                        if (typeof value !== 'string') continue;
-                        if (normalizeText(value).includes('вид работ')) {
-                            workTypeIndex = getColumnIndexFromKey(key);
-                            break;
-                        }
+            if (noteIndex === null && i > 0) {
+                for (const [key, value] of Object.entries(rows[i - 1])) {
+                    if (typeof value !== 'string') continue;
+                    const text = normalizeText(value);
+                    if (text.includes('коммент') || text.includes('примеч')) {
+                        noteIndex = getColumnIndexFromKey(key);
+                        break;
                     }
                 }
-
-                if (noteIndex === null && i > 0) {
-                    for (const [key, value] of Object.entries(rows[i - 1])) {
-                        if (typeof value !== 'string') continue;
-                        const text = normalizeText(value);
-                        if (text.includes('коммент') || text.includes('примеч')) {
-                            noteIndex = getColumnIndexFromKey(key);
-                            break;
-                        }
-                    }
-                }
-
-                if (workTypeIndex === null && quantityIndex > 0) {
-                    workTypeIndex = quantityIndex - 1;
-                }
-
-                return {
-                    rows,
-                    mapping: {
-                        headerRowIndex: i,
-                        workTypeIndex,
-                        quantityIndex,
-                        unitIndex,
-                        noteIndex,
-                    },
-                };
             }
+
+            if (workTypeIndex === null && quantityIndex > 0) {
+                workTypeIndex = quantityIndex - 1;
+            }
+
+            return {
+                rows,
+                mapping: {
+                    headerRowIndex: i,
+                    workTypeIndex,
+                    quantityIndex,
+                    unitIndex,
+                    noteIndex,
+                },
+            };
         }
     }
     return null;
+};
+
+const countWorkItems = (
+    rows: ExcelRow[],
+    mapping: TableMapping
+): number => {
+    let count = 0;
+    for (let i = mapping.headerRowIndex + 1; i < rows.length; i += 1) {
+        const row = rows[i];
+        const workTypeValue = getRowValueByIndex(row, mapping.workTypeIndex);
+        const quantityValue = getRowValueByIndex(row, mapping.quantityIndex);
+        const unitValue = getRowValueByIndex(row, mapping.unitIndex);
+
+        const workType = typeof workTypeValue === 'string' ? workTypeValue.trim() : '';
+        const quantity = toNumber(quantityValue);
+        const unit = unitValue ? String(unitValue).trim() : '';
+
+        if (!workType || quantity === null || quantity === 0 || !unit) continue;
+        if (EXCLUDED_WORK_TYPES.has(normalizeText(workType))) continue;
+
+        count += 1;
+    }
+    return count;
+};
+
+const findTableMapping = (
+    data: ExcelData
+): { rows: ExcelRow[]; mapping: TableMapping } | null => {
+    let best: { rows: ExcelRow[]; mapping: TableMapping; score: number } | null = null;
+
+    for (const rows of Object.values(data)) {
+        const mappingInfo = findTableMappingInRows(rows);
+        if (!mappingInfo) continue;
+
+        const score = countWorkItems(rows, mappingInfo.mapping);
+        if (!best || score > best.score) {
+            best = { ...mappingInfo, score };
+        }
+    }
+
+    return best ? { rows: best.rows, mapping: best.mapping } : null;
 };
 
 const getRowValueByIndex = (row: ExcelRow, index: number | null): unknown => {
@@ -399,6 +438,34 @@ const T2EstimateParser: React.FC<Props> = ({ open, onClose, onApply, operatorLab
                 unit,
                 note,
             });
+        }
+
+        if (items.length === 0 && !mapping) {
+            return items;
+        }
+
+        if (items.length === 0 && mapping) {
+            return Object.values(excelData)
+                .flat()
+                .filter((row) => {
+                    const quantity = row['__EMPTY_2'];
+                    const workType = row['__EMPTY_1'];
+                    const unit = row['__EMPTY_3'];
+
+                    return (
+                        typeof workType === 'string' &&
+                        typeof quantity === 'number' &&
+                        quantity !== 0 &&
+                        typeof unit === 'string' &&
+                        !EXCLUDED_WORK_TYPES.has(normalizeText(workType))
+                    );
+                })
+                .map((row) => ({
+                    workType: String(row['__EMPTY_1']),
+                    quantity: Number(row['__EMPTY_2']),
+                    unit: String(row['__EMPTY_3']),
+                    note: row['__EMPTY_17'] ? String(row['__EMPTY_17']) : '',
+                }));
         }
 
         return items;
