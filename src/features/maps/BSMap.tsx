@@ -29,7 +29,6 @@ import {
     FullscreenControl,
     Clusterer,
     Polygon,
-    TypeSelector,
 } from '@pbe/react-yandex-maps';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
@@ -438,15 +437,6 @@ export default function BSMap(): React.ReactElement {
             }
         },
         [handleFullscreenEnter, handleFullscreenExit]
-    );
-
-    const typeSelectorRef = React.useCallback(
-        (instance: { options?: { set: (key: string, value: unknown) => void } } | null) => {
-            if (instance?.options?.set) {
-                instance.options.set('position', { right: 16, top: 140 });
-            }
-        },
-        []
     );
 
     const handleExternalClick = React.useCallback(
@@ -862,7 +852,7 @@ export default function BSMap(): React.ReactElement {
                 <YMaps query={ymapsQuery}>
                     <Map
                         key={mapKey}
-                        defaultState={{ center: mapCenter, zoom }}
+                        defaultState={{ center: mapCenter, zoom, controls: ['typeSelector'] }}
                         width="100%"
                         height="100%"
                         options={{
@@ -873,7 +863,6 @@ export default function BSMap(): React.ReactElement {
                     >
                         <FullscreenControl options={{ position: { right: 16, top: 16 } }} />
                         <ZoomControl options={{ position: { right: 16, top: 80 } }} />
-                        <TypeSelector instanceRef={typeSelectorRef} />
                         {isIrkutskRegionSelected && (
                             <Polygon
                                 geometry={IRKUTSK_POLYGON_COORDINATES}
