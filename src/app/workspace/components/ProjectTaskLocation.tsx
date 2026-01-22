@@ -27,7 +27,6 @@ import {
     Map,
     Placemark,
     Clusterer,
-    ZoomControl,
     FullscreenControl,
     TypeSelector,
 } from '@pbe/react-yandex-maps';
@@ -223,7 +222,7 @@ export default function ProjectTaskLocation({
     const typeSelectorOptions = React.useMemo(
         () =>
             ({
-                position: { right: 16, top: controlsTopOffset + 128 },
+                position: { right: 16, top: controlsTopOffset + 64 },
             } as unknown as IOptionManager),
         [controlsTopOffset]
     );
@@ -901,7 +900,6 @@ export default function ProjectTaskLocation({
                             }}
                         >
                             <FullscreenControl options={{ position: { right: 16, top: controlsTopOffset } }} />
-                            <ZoomControl options={{ position: { right: 16, top: controlsTopOffset + 64 } }} />
                             <TypeSelector options={typeSelectorOptions} />
                             <Clusterer
                                 options={{
