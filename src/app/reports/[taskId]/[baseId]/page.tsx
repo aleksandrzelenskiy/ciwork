@@ -283,6 +283,8 @@ export default function PhotoReportPage() {
                 createdAt={report.createdAt}
                 status={report.status}
                 onOpenProfile={openProfileDialog}
+                relatedBases={reportSummaries}
+                token={token}
             />
 
                 <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems="flex-start">
@@ -321,7 +323,13 @@ export default function PhotoReportPage() {
                             })}
                         >
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                                Фотоотчеты по задаче
+                                Связанные БС
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                Сейчас открыта БС {baseId}. Согласование применяется только к этой БС.
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                Всего БС по задаче: {baseOptions.length}.
                             </Typography>
                             <ReportSummaryList
                                 items={reportSummaries}

@@ -1,6 +1,9 @@
-import { Box, Button, Link, Typography, Stack } from '@mui/material';
+import { Box, Button, Chip, Link, Typography, Stack } from '@mui/material';
 import NextLink from 'next/link';
 import ReportStatusPill from '@/features/reports/ReportStatusPill';
+import type { PhotoReportSummary } from '@/app/types/reportTypes';
+import { getStatusColor } from '@/utils/statusColors';
+import { normalizeStatusTitle } from '@/utils/statusLabels';
 
 type ReportHeaderProps = {
     taskId: string;
@@ -14,6 +17,15 @@ type ReportHeaderProps = {
     createdAt?: string;
     status: string;
     onOpenProfile?: (clerkUserId?: string | null) => void;
+    relatedBases?: PhotoReportSummary[];
+    token?: string;
+};
+
+const buildReportHref = (taskId: string, baseId: string, token?: string) => {
+    const href = `/reports/${encodeURIComponent(taskId)}/${encodeURIComponent(baseId)}`;
+    if (!token) return href;
+    const params = new URLSearchParams({ token });
+    return `${href}?${params.toString()}`;
 };
 
 export default function ReportHeader({
@@ -28,6 +40,8 @@ export default function ReportHeader({
     createdAt,
     status,
     onOpenProfile,
+    relatedBases = [],
+    token,
 }: ReportHeaderProps) {
     const title = `${taskName || taskId}${bsNumber ? ` ${bsNumber}` : ''}`;
 
@@ -84,6 +98,55 @@ export default function ReportHeader({
                 </Box>
                 <ReportStatusPill status={status} />
             </Stack>
+            {relatedBases.length > 1 && (
+                <Stack spacing={1}>
+                    <Typography
+                        variant="caption"
+                        sx={(theme) => ({
+                            color:
+                                theme.palette.mode === 'dark'
+                                    ? 'rgba(226,232,240,0.65)'
+                                    : 'rgba(15,23,42,0.6)',
+                        })}
+                    >
+                        Быстрый переход по БС
+                    </Typography>
+                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                        {relatedBases.map((item) => {
+                            const isActive = item.baseId.toLowerCase() === baseId.toLowerCase();
+                            const normalizedStatus = normalizeStatusTitle(item.status);
+                            const statusColor = getStatusColor(normalizedStatus);
+                            return (
+                                <Chip
+                                    key={item.baseId}
+                                    label={isActive ? `БС ${item.baseId} · текущая` : `БС ${item.baseId}`}
+                                    component={NextLink}
+                                    href={buildReportHref(taskId, item.baseId, token)}
+                                    clickable
+                                    sx={{
+                                        fontWeight: 600,
+                                        borderRadius: 999,
+                                        border: isActive ? '1px solid rgba(59,130,246,0.6)' : '1px solid transparent',
+                                        backgroundColor: isActive
+                                            ? 'rgba(59,130,246,0.18)'
+                                            : statusColor === 'default'
+                                                  ? (theme) =>
+                                                        theme.palette.mode === 'dark'
+                                                            ? 'rgba(148,163,184,0.2)'
+                                                            : 'rgba(15,23,42,0.08)'
+                                                  : statusColor,
+                                        color: isActive
+                                            ? (theme) => theme.palette.text.primary
+                                            : statusColor === 'default'
+                                                  ? (theme) => theme.palette.text.primary
+                                                  : '#fff',
+                                    }}
+                                />
+                            );
+                        })}
+                    </Stack>
+                </Stack>
+            )}
             <Typography
                 variant="body2"
                 sx={(theme) => ({

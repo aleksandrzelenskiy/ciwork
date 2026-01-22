@@ -57,6 +57,14 @@ export default function ReportSummaryList({
                               }
                             : { backgroundColor: statusColor, color: '#fff', fontWeight: 600 };
                     const isActive = activeBaseId?.toLowerCase() === item.baseId.toLowerCase();
+                    const activeChipSx = {
+                        fontWeight: 700,
+                        backgroundColor: (theme: Theme) =>
+                            theme.palette.mode === 'dark'
+                                ? 'rgba(59,130,246,0.28)'
+                                : 'rgba(59,130,246,0.2)',
+                        color: (theme: Theme) => theme.palette.text.primary,
+                    };
                     return (
                         <Button
                             key={item.baseId}
@@ -72,11 +80,11 @@ export default function ReportSummaryList({
                                 py: 1,
                                 ...(isActive
                                     ? {
-                                          borderColor: 'rgba(59,130,246,0.4)',
+                                          borderColor: 'rgba(59,130,246,0.7)',
                                           backgroundColor: (theme: Theme) =>
                                               theme.palette.mode === 'dark'
-                                                  ? 'rgba(59,130,246,0.18)'
-                                                  : 'rgba(59,130,246,0.08)',
+                                                  ? 'rgba(59,130,246,0.26)'
+                                                  : 'rgba(59,130,246,0.18)',
                                       }
                                     : null),
                             }}
@@ -103,7 +111,10 @@ export default function ReportSummaryList({
                                     </Typography>
                                 </Box>
                             </Stack>
-                            <Chip label={getStatusLabel(normalizedStatus)} size="small" sx={statusChipSx} />
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                {isActive && <Chip label="Текущая" size="small" sx={activeChipSx} />}
+                                <Chip label={getStatusLabel(normalizedStatus)} size="small" sx={statusChipSx} />
+                            </Stack>
                         </Button>
                     );
                 })}
