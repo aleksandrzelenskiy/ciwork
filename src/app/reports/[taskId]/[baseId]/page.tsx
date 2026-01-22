@@ -167,13 +167,21 @@ export default function PhotoReportPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'Agreed' }),
         });
-        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        const payload = (await response.json().catch(() => ({}))) as {
+            error?: string;
+            aggregatedStatus?: string | null;
+            allBasesAgreed?: boolean;
+        };
         if (!response.ok) {
             showAlert(payload.error || 'Не удалось согласовать', 'error');
             setApproving(false);
             return;
         }
-        showAlert('Отчет согласован', 'success');
+        if (payload.allBasesAgreed) {
+            showAlert('Все БС согласованы. Фотоотчет закрыт.', 'success');
+        } else {
+            showAlert('БС согласована. Остальные БС еще на проверке.', 'info');
+        }
         setApproveDialogOpen(false);
         await fetchReport();
         setApproving(false);
@@ -392,7 +400,8 @@ export default function PhotoReportPage() {
                 <DialogTitle id="report-approve-title">Подтвердить согласование</DialogTitle>
                 <DialogContent>
                     <DialogContentText id="report-approve-description">
-                        После подтверждения фотоотчет и задача перейдут в статус согласовано.
+                        Согласование применяется к текущей БС. Если все БС по задаче будут согласованы,
+                        фотоотчет и задача перейдут в статус «Согласовано».
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>

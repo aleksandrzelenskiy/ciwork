@@ -199,6 +199,7 @@ export const updateReport = async ({
 
     const oldStatus = report.status;
     const oldIssues = [...report.issues];
+    const aggregatedStatusBefore = await getAggregatedReportStatus(report.taskId);
 
     if (status && status !== oldStatus) {
         report.status = status;
@@ -246,10 +247,8 @@ export const updateReport = async ({
     await report.save();
 
     const relatedTask = await TaskModel.findOne({ taskId: report.taskId });
-    const aggregatedStatus = relatedTask
-        ? await getAggregatedReportStatus(report.taskId)
-        : null;
-    if (relatedTask && aggregatedStatus && relatedTask.status !== aggregatedStatus) {
+    const aggregatedStatusAfter = await getAggregatedReportStatus(report.taskId);
+    if (relatedTask && aggregatedStatusAfter && relatedTask.status !== aggregatedStatusAfter) {
         const allowedPublicStatuses = new Set([
             'open',
             'in_review',
@@ -260,7 +259,7 @@ export const updateReport = async ({
             relatedTask.publicStatus = 'closed';
         }
         const oldTaskStatus = relatedTask.status;
-        relatedTask.status = aggregatedStatus;
+        relatedTask.status = aggregatedStatusAfter;
 
         relatedTask.events = relatedTask.events || [];
         relatedTask.events.push({
@@ -270,7 +269,7 @@ export const updateReport = async ({
             date: new Date(),
             details: {
                 oldStatus: oldTaskStatus,
-                newStatus: aggregatedStatus,
+                newStatus: aggregatedStatusAfter,
                 comment: 'Статус синхронизирован с фотоотчетами',
             },
         });
@@ -280,7 +279,8 @@ export const updateReport = async ({
 
     const statusChanged = Boolean(status && status !== oldStatus);
     const hasIssuesNow = Array.isArray(report.issues) && report.issues.length > 0;
-    const shouldNotifyAgreed = statusChanged && report.status === 'Agreed';
+    const shouldNotifyAgreed =
+        aggregatedStatusAfter === 'Agreed' && aggregatedStatusBefore !== 'Agreed';
     const shouldNotifyIssues =
         !shouldNotifyAgreed &&
         ((statusChanged && report.status === 'Issues') || (issuesChanged && hasIssuesNow));
@@ -306,29 +306,29 @@ export const updateReport = async ({
                 .exec();
 
             const bsInfo = relatedTask.bsNumber ? ` (БС ${relatedTask.bsNumber})` : '';
-            const baseInfo = baseIdDecoded ? ` БС ${baseIdDecoded}` : '';
             const taskTitle = relatedTask.taskName || relatedTask.taskId;
-            const reportLink = `/reports/${encodeURIComponent(
-                taskIdDecoded
-            )}/${encodeURIComponent(baseIdDecoded)}`;
             const issuesLink = `/tasks/${encodeURIComponent(
                 taskIdDecoded.toLowerCase()
             )}?focus=issues`;
-            const link = shouldNotifyIssues ? issuesLink : reportLink;
+            const aggregatedLink = `/reports?highlightTaskId=${encodeURIComponent(
+                taskIdDecoded.toLowerCase()
+            )}`;
+            const link = shouldNotifyIssues ? issuesLink : aggregatedLink;
 
             const metadata = {
                 taskId: relatedTask.taskId,
                 baseId: baseIdDecoded,
                 status: report.status,
                 issuesCount: report.issues?.length ?? 0,
+                aggregatedStatus: aggregatedStatusAfter,
             };
 
             const title = shouldNotifyAgreed
                 ? `Фотоотчет согласован${bsInfo}`
                 : `Замечания по фотоотчету${bsInfo}`;
             const message = shouldNotifyAgreed
-                ? `${actorName} согласовал фотоотчет по задаче «${taskTitle}»${baseInfo}.`
-                : `${actorName} оставил замечания по фотоотчету по задаче «${taskTitle}»${baseInfo}.`;
+                ? `${actorName} согласовал все БС по задаче «${taskTitle}».`
+                : `${actorName} оставил замечания по фотоотчету по задаче «${taskTitle}» БС ${baseIdDecoded}.`;
 
             await Promise.all(
                 recipients.map((recipient) =>
@@ -348,7 +348,14 @@ export const updateReport = async ({
         }
     }
 
-    return { ok: true, data: { message: 'Отчёт успешно обновлён' } } as const;
+    return {
+        ok: true,
+        data: {
+            message: 'Отчёт успешно обновлён',
+            aggregatedStatus: aggregatedStatusAfter,
+            allBasesAgreed: aggregatedStatusAfter === 'Agreed',
+        },
+    } as const;
 };
 
 export const deleteReport = async ({ taskId, baseId }: ReportParams) => {
