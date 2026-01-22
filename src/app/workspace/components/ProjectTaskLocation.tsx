@@ -188,6 +188,7 @@ export default function ProjectTaskLocation({
     const [statusFilter, setStatusFilter] = React.useState<Record<CurrentStatus, boolean>>(() => {
         const base: Record<CurrentStatus, boolean> = {
             'To do': true,
+            Draft: true,
             Assigned: true,
             'At work': true,
             Done: true,
