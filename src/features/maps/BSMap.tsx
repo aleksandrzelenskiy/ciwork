@@ -582,7 +582,7 @@ export default function BSMap(): React.ReactElement {
                     name: nameValue,
                     lat: latNumber,
                     lon: lonNumber,
-                    region: editingStation.region ?? selectedRegionCode || null,
+                    region: (editingStation.region ?? selectedRegionCode) || null,
                     address: editForm.address.trim() || null,
                 }),
             });
