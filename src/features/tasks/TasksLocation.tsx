@@ -136,6 +136,7 @@ export default function TasksLocation(): React.ReactElement {
     const [statusFilter, setStatusFilter] = React.useState<Record<CurrentStatus, boolean>>(() => {
         const base: Record<CurrentStatus, boolean> = {
             'To do': true,
+            Draft: true,
             Assigned: true,
             'At work': true,
             Done: true,
@@ -356,6 +357,7 @@ export default function TasksLocation(): React.ReactElement {
         setSearch('');
         setStatusFilter({
             'To do': true,
+            Draft: true,
             Assigned: true,
             'At work': true,
             Done: true,
