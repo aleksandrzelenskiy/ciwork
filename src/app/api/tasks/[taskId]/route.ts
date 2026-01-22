@@ -780,7 +780,7 @@ export async function PATCH(
       ) {
         const bsInfo = updatedTask.bsNumber ? ` (БС ${updatedTask.bsNumber})` : '';
         const dueDateLabel = updatedTask.dueDate
-            ? new Date(updatedTask.dueDate).toLocaleString('ru-RU')
+            ? new Date(updatedTask.dueDate).toLocaleDateString('ru-RU')
             : '—';
         const executorDisplayName =
             updatedTask.executorName?.trim() || authorName || 'Исполнитель';
