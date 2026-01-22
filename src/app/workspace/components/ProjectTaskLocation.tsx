@@ -539,6 +539,7 @@ export default function ProjectTaskLocation({
         setSearch('');
         setStatusFilter({
             'To do': true,
+            Draft: true,
             Assigned: true,
             'At work': true,
             Done: true,
