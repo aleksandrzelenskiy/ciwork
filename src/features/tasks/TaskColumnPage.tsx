@@ -48,6 +48,7 @@ const statusOrder: CurrentStatus[] = STATUS_ORDER;
 
 type CurrentStatus =
   | 'To do'
+  | 'Draft'
   | 'Assigned'
   | 'At work'
   | 'Done'
