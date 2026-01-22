@@ -664,9 +664,15 @@ export async function PATCH(
     }
 
     // === дата окончания работ ===
+    const shouldAutoSetCompletionDate =
+        updateData.status?.toLowerCase() === 'done' &&
+        previousStatus !== 'Done' &&
+        !updateData.workCompletionDate;
     if (updateData.workCompletionDate) {
       const d = new Date(updateData.workCompletionDate);
       if (!isNaN(d.getTime())) task.workCompletionDate = d;
+    } else if (shouldAutoSetCompletionDate) {
+      task.workCompletionDate = new Date();
     }
 
     // === Excel при Agreed ===
