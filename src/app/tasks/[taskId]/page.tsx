@@ -1221,10 +1221,12 @@ export default function TaskDetailPage() {
                                 <Typography variant="body1">
                                     <strong>Срок:</strong> {task.dueDate ? formatDate(task.dueDate) : '—'}
                                 </Typography>
-                                <Typography variant="body1">
-                                    <strong>Дата завершения:</strong>{' '}
-                                    {task.workCompletionDate ? formatDate(task.workCompletionDate) : '—'}
-                                </Typography>
+                                {task.workCompletionDate && (
+                                    <Typography variant="body1">
+                                        <strong>Дата завершения:</strong>{' '}
+                                        {formatDate(task.workCompletionDate)}
+                                    </Typography>
+                                )}
                                 <Typography
                                     variant="body1"
                                     sx={{
