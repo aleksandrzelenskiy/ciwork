@@ -152,7 +152,6 @@ const EDIT_ICON_SVG =
 const DELETE_ICON_SVG =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zm2-10h8v10H8zm7.5-5-1-1h-5l-1 1H5v2h14V4z"/></svg>';
 type RegionOption = { code: string; label: string };
-const ALL_REGIONS_OPTION: RegionOption = { code: 'ALL', label: 'Все регионы' };
 const RUSSIAN_REGIONS: readonly RegionOption[] = [
     { code: '01', label: 'Республика Адыгея (Адыгея)' },
     { code: '02', label: 'Республика Башкортостан' },
@@ -239,7 +238,7 @@ const RUSSIAN_REGIONS: readonly RegionOption[] = [
     { code: '89', label: 'Ямало-Ненецкий автономный округ' },
     { code: '99', label: 'Иные территории, включая город и космодром Байконур' },
 ] as const;
-const REGION_OPTIONS: readonly RegionOption[] = [ALL_REGIONS_OPTION, ...RUSSIAN_REGIONS];
+const REGION_OPTIONS: readonly RegionOption[] = [...RUSSIAN_REGIONS];
 const REGION_OPTION_MAP: Record<string, RegionOption> = REGION_OPTIONS.reduce(
     (acc, option) => {
         acc[option.code] = option;
@@ -252,12 +251,12 @@ const IRKUTSK_POLYGON_COORDINATES: number[][][] = REGION_BORDERS['38']?.coordina
 
 export default function BSMap(): React.ReactElement {
     const [stations, setStations] = React.useState<BaseStation[]>([]);
-    const [loading, setLoading] = React.useState(true);
+    const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
     const [searchName, setSearchName] = React.useState('');
-    const [operator, setOperator] = React.useState<OperatorCode>(DEFAULT_OPERATOR);
-    const [filtersOpen, setFiltersOpen] = React.useState(false);
-    const [selectedRegionCode, setSelectedRegionCode] = React.useState<string>(ALL_REGIONS_OPTION.code);
+    const [operator, setOperator] = React.useState<OperatorCode | ''>('');
+    const [filtersOpen, setFiltersOpen] = React.useState(true);
+    const [selectedRegionCode, setSelectedRegionCode] = React.useState<string>('');
     const [isFullscreen, setIsFullscreen] = React.useState(false);
     const [editingStationId, setEditingStationId] = React.useState<string | null>(null);
     const [editForm, setEditForm] = React.useState({ name: '', lat: '', lon: '', address: '' });
@@ -270,6 +269,7 @@ export default function BSMap(): React.ReactElement {
     const [createForm, setCreateForm] = React.useState({ name: '', lat: '', lon: '', address: '' });
     const [createDialogLoading, setCreateDialogLoading] = React.useState(false);
     const [createDialogError, setCreateDialogError] = React.useState<string | null>(null);
+    const deferredSearchName = React.useDeferredValue(searchName);
 
     const mapRef = React.useRef<YMapInstance | null>(null);
     const typeSelectorOptions = React.useMemo(
@@ -282,9 +282,15 @@ export default function BSMap(): React.ReactElement {
 
     React.useEffect(() => {
         setSearchName('');
-    }, [operator]);
+    }, [operator, selectedRegionCode]);
 
     React.useEffect(() => {
+        if (!operator || !selectedRegionCode) {
+            setStations([]);
+            setError(null);
+            setLoading(false);
+            return;
+        }
         let cancelled = false;
         const controller = new AbortController();
 
@@ -292,10 +298,13 @@ export default function BSMap(): React.ReactElement {
             try {
                 setLoading(true);
                 setError(null);
-                const res = await fetch(`/api/bsmap?operator=${encodeURIComponent(operator)}`, {
-                    cache: 'no-store',
-                    signal: controller.signal,
-                });
+                const res = await fetch(
+                    `/api/bsmap?operator=${encodeURIComponent(operator)}&region=${encodeURIComponent(selectedRegionCode)}`,
+                    {
+                        cache: 'no-store',
+                        signal: controller.signal,
+                    }
+                );
                 const data = (await res.json().catch(() => null)) as
                     | { stations: ApiStation[] }
                     | { error: string }
@@ -333,9 +342,9 @@ export default function BSMap(): React.ReactElement {
             cancelled = true;
             controller.abort();
         };
-    }, [operator]);
+    }, [operator, selectedRegionCode]);
 
-    const selectedRegion = REGION_OPTION_MAP[selectedRegionCode] ?? ALL_REGIONS_OPTION;
+    const selectedRegion = selectedRegionCode ? REGION_OPTION_MAP[selectedRegionCode] ?? null : null;
     const regionLabelByCode = React.useCallback(
         (code: string | null | undefined) => {
             if (!code) return null;
@@ -352,24 +361,27 @@ export default function BSMap(): React.ReactElement {
         [regionLabelByCode]
     );
 
+    const hasRequiredFilters = Boolean(operator) && Boolean(selectedRegionCode);
     const regionFilteredStations = React.useMemo(() => {
+        if (!hasRequiredFilters) return [];
         return stations.filter((station) => {
-            const stationOperator = normalizeOperatorCode(station.op) ?? DEFAULT_OPERATOR;
-            if (stationOperator !== operator) {
+            const stationOperator = normalizeOperatorCode(station.op);
+            if (stationOperator && stationOperator !== operator) {
                 return false;
             }
-            if (selectedRegion.code === ALL_REGIONS_OPTION.code) {
-                return true;
-            }
-            return station.region === selectedRegion.code;
+            return station.region === selectedRegionCode;
         });
-    }, [stations, selectedRegion, operator]);
+    }, [stations, operator, selectedRegionCode, hasRequiredFilters]);
 
     const filteredStations = React.useMemo(() => {
-        const term = searchName.trim();
+        const term = deferredSearchName.trim().toLowerCase();
         if (!term) return regionFilteredStations;
-        return regionFilteredStations.filter((station) => station.name?.toString().includes(term));
-    }, [regionFilteredStations, searchName]);
+        return regionFilteredStations.filter((station) => {
+            const nameValue = station.name ? station.name.toString().toLowerCase() : '';
+            const addressValue = station.address ? station.address.toLowerCase() : '';
+            return nameValue.includes(term) || addressValue.includes(term);
+        });
+    }, [regionFilteredStations, deferredSearchName]);
 
     const mapCenter = React.useMemo<[number, number]>(() => {
         if (!filteredStations.length) return DEFAULT_CENTER;
@@ -396,17 +408,17 @@ export default function BSMap(): React.ReactElement {
         return apiKey ? { ...base, apikey: apiKey } : base;
     }, []);
 
-    const mapKey = `${mapCenter[0].toFixed(4)}-${mapCenter[1].toFixed(4)}-${filteredStations.length}`;
+    const mapKey = `${mapCenter[0].toFixed(4)}-${mapCenter[1].toFixed(4)}-${filteredStations.length}-${operator}-${selectedRegionCode}`;
     const noSearchResults =
-        !loading && !error && Boolean(searchName.trim()) && filteredStations.length === 0;
+        !loading && !error && hasRequiredFilters && Boolean(searchName.trim()) && filteredStations.length === 0;
     const noStationsAfterFilters =
-        !loading && !error && selectedRegion.code !== ALL_REGIONS_OPTION.code && !regionFilteredStations.length;
+        !loading && !error && hasRequiredFilters && !regionFilteredStations.length;
     const selectedOperatorLabel = React.useMemo(
-        () => getOperatorLabel(operator) ?? '',
+        () => (operator ? getOperatorLabel(operator) ?? '' : ''),
         [operator]
     );
-    const isIrkutskRegionSelected = selectedRegion.code === IRKUTSK_REGION_CODE;
-    const canCreateStation = selectedRegion.code !== ALL_REGIONS_OPTION.code;
+    const isIrkutskRegionSelected = selectedRegionCode === IRKUTSK_REGION_CODE;
+    const canCreateStation = Boolean(operator) && Boolean(selectedRegionCode);
     React.useEffect(() => {
         if (error || noSearchResults || noStationsAfterFilters) {
             setFiltersOpen(true);
@@ -548,7 +560,7 @@ export default function BSMap(): React.ReactElement {
         if (!editingStation) return;
 
         const editingOperator =
-            normalizeOperatorCode(editingStation.op ?? operator) ?? operator;
+            normalizeOperatorCode(editingStation.op ?? operator) ?? DEFAULT_OPERATOR;
         const nameValue = editForm.name.trim() || null;
         const latNumber = Number(editForm.lat);
         const lonNumber = Number(editForm.lon);
@@ -570,7 +582,7 @@ export default function BSMap(): React.ReactElement {
                     name: nameValue,
                     lat: latNumber,
                     lon: lonNumber,
-                    region: editingStation.region ?? selectedRegion.code,
+                    region: editingStation.region ?? selectedRegionCode || null,
                     address: editForm.address.trim() || null,
                 }),
             });
@@ -592,12 +604,12 @@ export default function BSMap(): React.ReactElement {
         } finally {
             setEditDialogLoading(false);
         }
-    }, [closeEditDialog, editForm, editingStation, operator, selectedRegion.code]);
+    }, [closeEditDialog, editForm, editingStation, operator, selectedRegionCode]);
 
     const handleDeleteConfirm = React.useCallback(async () => {
         if (!deletingStation) return;
         const deletingOperator =
-            normalizeOperatorCode(deletingStation.op ?? operator) ?? operator;
+            normalizeOperatorCode(deletingStation.op ?? operator) ?? DEFAULT_OPERATOR;
         setDeleteDialogLoading(true);
         setDeleteDialogError(null);
 
@@ -627,7 +639,11 @@ export default function BSMap(): React.ReactElement {
     }, [closeDeleteDialog, deletingStation, operator]);
 
     const handleCreateSave = React.useCallback(async () => {
-        if (selectedRegion.code === ALL_REGIONS_OPTION.code) {
+        if (!operator) {
+            setCreateDialogError('Выберите оператора');
+            return;
+        }
+        if (!selectedRegionCode) {
             setCreateDialogError('Выберите регион перед добавлением объекта');
             return;
         }
@@ -655,7 +671,7 @@ export default function BSMap(): React.ReactElement {
                     name: createForm.name.trim(),
                     lat: latNumber,
                     lon: lonNumber,
-                    region: selectedRegion.code,
+                    region: selectedRegionCode,
                     address: createForm.address.trim() || null,
                 }),
             });
@@ -675,7 +691,7 @@ export default function BSMap(): React.ReactElement {
         } finally {
             setCreateDialogLoading(false);
         }
-    }, [closeCreateDialog, createForm, operator, selectedRegion.code]);
+    }, [closeCreateDialog, createForm, operator, selectedRegionCode]);
 
     const buildBalloonContent = React.useCallback((station: BaseStation) => {
         const hintTitle = station.name ? `БС №${station.name}` : 'Базовая станция';
@@ -739,7 +755,7 @@ export default function BSMap(): React.ReactElement {
                             <TravelExploreIcon />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title={canCreateStation ? 'Добавить объект' : 'Выберите регион'}>
+                    <Tooltip title={canCreateStation ? 'Добавить объект' : 'Выберите оператора и регион'}>
                         <span>
                             <IconButton
                                 color="primary"
@@ -774,8 +790,18 @@ export default function BSMap(): React.ReactElement {
                                 labelId="operator-select-label"
                                 label="Оператор"
                                 value={operator}
-                                onChange={(event) => setOperator(event.target.value as typeof operator)}
+                                onChange={(event) => setOperator(event.target.value as OperatorCode | '')}
+                                displayEmpty
+                                renderValue={(selected) => {
+                                    const selectedValue = typeof selected === 'string' ? selected : '';
+                                    return selectedValue
+                                        ? getOperatorLabel(selectedValue as OperatorCode) ?? selectedValue
+                                        : 'Выберите оператора';
+                                }}
                             >
+                                <MenuItem value="">
+                                    <em>Выберите оператора</em>
+                                </MenuItem>
                                 {OPERATORS.map((item) => (
                                     <MenuItem key={item.value} value={item.value}>
                                         {item.label}
@@ -786,29 +812,26 @@ export default function BSMap(): React.ReactElement {
                         <Autocomplete
                             options={REGION_OPTIONS}
                             value={selectedRegion}
-                            onChange={(_event, value) =>
-                                setSelectedRegionCode((value ?? ALL_REGIONS_OPTION).code)
-                            }
-                            disableClearable
+                            onChange={(_event, value) => setSelectedRegionCode(value?.code ?? '')}
                             size="small"
                             fullWidth
                             getOptionLabel={(option) =>
-                                option.code === ALL_REGIONS_OPTION.code
-                                    ? option.label
-                                    : `${option.code} — ${option.label}`
+                                `${option.code} — ${option.label}`
                             }
                             isOptionEqualToValue={(option, value) => option.code === value.code}
                             sx={{ mb: 1 }}
-                            renderInput={(params) => <TextField {...params} label="Регион" />}
+                            renderInput={(params) => (
+                                <TextField {...params} label="Регион" placeholder="Выберите регион" />
+                            )}
                         />
                         <TextField
-                            label="Поиск по БС"
+                            label="Поиск по БС или адресу"
                             value={searchName}
                             onChange={(event) => setSearchName(event.target.value)}
                             type="text"
                             fullWidth
                             size="small"
-                            disabled={loading || !!error || !regionFilteredStations.length}
+                            disabled={!hasRequiredFilters || loading || !!error || !regionFilteredStations.length}
                             InputProps={{
                                 startAdornment: (
                                     <InputAdornment position="start">
@@ -933,7 +956,7 @@ export default function BSMap(): React.ReactElement {
                     <TextField
                         margin="dense"
                         label="Регион"
-                        value={formatRegion(selectedRegion.code)}
+                        value={formatRegion(selectedRegionCode || null)}
                         fullWidth
                         disabled
                     />

@@ -16,19 +16,35 @@ const OPERATOR_COLLECTIONS = Object.fromEntries(
     ])
 ) as Record<OperatorCode, { collection: string; label: string }>;
 
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
         const { searchParams } = new URL(request.url);
         const operatorParam = searchParams.get('operator');
+        const regionParam = searchParams.get('region');
+        const searchParam = searchParams.get('q');
         const operator =
             normalizeOperatorCode(operatorParam) ??
             (OPERATORS[0]?.value as OperatorCode);
         const { collection } = OPERATOR_COLLECTIONS[operator];
+        const regionValue = typeof regionParam === 'string' ? regionParam.trim() : '';
+        const searchValue = typeof searchParam === 'string' ? searchParam.trim() : '';
+        const query: Record<string, unknown> = {};
+        if (regionValue) {
+            query.region = regionValue;
+        }
+        if (searchValue) {
+            const safeSearch = escapeRegExp(searchValue);
+            query.$or = [{ name: new RegExp(safeSearch, 'i') }, { address: new RegExp(safeSearch, 'i') }];
+        }
 
         await dbConnect();
         const Model = getBsCoordinateModel(collection);
         const stations = await Model.find(
-            {},
+            query,
             { op: 1, name: 1, lat: 1, lon: 1, address: 1, mcc: 1, mnc: 1, region: 1 }
         )
             .lean()
