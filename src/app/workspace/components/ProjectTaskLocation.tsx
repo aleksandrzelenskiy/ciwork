@@ -222,9 +222,9 @@ export default function ProjectTaskLocation({
     const typeSelectorOptions = React.useMemo(
         () =>
             ({
-                position: { right: 16, bottom: 16 },
+                position: { right: 16, top: controlsTopOffset + 64 },
             } as unknown as IOptionManager),
-        []
+        [controlsTopOffset]
     );
     const params = useParams<{ org?: string; project?: string }>();
     const orgSlug = params?.org;

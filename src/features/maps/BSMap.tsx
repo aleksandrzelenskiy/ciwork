@@ -25,11 +25,12 @@ import {
     YMaps,
     Map,
     Placemark,
-    ZoomControl,
     FullscreenControl,
+    TypeSelector,
     Clusterer,
     Polygon,
 } from '@pbe/react-yandex-maps';
+import type { IOptionManager } from 'yandex-maps';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
@@ -271,6 +272,13 @@ export default function BSMap(): React.ReactElement {
     const [createDialogError, setCreateDialogError] = React.useState<string | null>(null);
 
     const mapRef = React.useRef<YMapInstance | null>(null);
+    const typeSelectorOptions = React.useMemo(
+        () =>
+            ({
+                position: { right: 16, top: 80 },
+            } as unknown as IOptionManager),
+        []
+    );
 
     React.useEffect(() => {
         setSearchName('');
@@ -854,6 +862,7 @@ export default function BSMap(): React.ReactElement {
                             defaultState={{ center: mapCenter, zoom }}
                             width="100%"
                             height="100%"
+                            modules={['control.TypeSelector']}
                             options={{
                                 suppressObsoleteBrowserNotifier: true,
                                 suppressMapOpenBlock: true,
@@ -861,7 +870,7 @@ export default function BSMap(): React.ReactElement {
                             instanceRef={mapInstanceRef}
                         >
                             <FullscreenControl options={{ position: { right: 16, top: 16 } }} />
-                            <ZoomControl options={{ position: { right: 16, top: 80 } }} />
+                            <TypeSelector options={typeSelectorOptions} />
                             {isIrkutskRegionSelected && (
                                 <Polygon
                                     geometry={IRKUTSK_POLYGON_COORDINATES}
