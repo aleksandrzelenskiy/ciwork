@@ -22,7 +22,15 @@ import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { useParams } from 'next/navigation';
-import { YMaps, Map, Placemark, Clusterer, ZoomControl, FullscreenControl } from '@pbe/react-yandex-maps';
+import {
+    YMaps,
+    Map,
+    Placemark,
+    Clusterer,
+    ZoomControl,
+    FullscreenControl,
+    TypeSelector,
+} from '@pbe/react-yandex-maps';
 import type { CurrentStatus, PriorityLevel } from '@/app/types/taskTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
@@ -877,6 +885,7 @@ export default function ProjectTaskLocation({
                             defaultState={{ center: mapCenter, zoom }}
                             width="100%"
                             height="100%"
+                            modules={['control.TypeSelector']}
                             options={{
                                 suppressObsoleteBrowserNotifier: true,
                                 suppressMapOpenBlock: true,
@@ -884,6 +893,7 @@ export default function ProjectTaskLocation({
                         >
                             <FullscreenControl options={{ position: { right: 16, top: controlsTopOffset } }} />
                             <ZoomControl options={{ position: { right: 16, top: controlsTopOffset + 64 } }} />
+                            <TypeSelector options={{ position: { right: 16, top: controlsTopOffset + 128 } }} />
                             <Clusterer
                                 options={{
                                     preset: clusterPreset,
