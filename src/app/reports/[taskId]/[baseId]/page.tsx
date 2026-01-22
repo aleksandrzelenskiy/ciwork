@@ -67,6 +67,7 @@ export default function PhotoReportPage() {
     const [fixDialogOpen, setFixDialogOpen] = React.useState(false);
     const [editDialogOpen, setEditDialogOpen] = React.useState(false);
     const [approveDialogOpen, setApproveDialogOpen] = React.useState(false);
+    const [nextBasesDialogOpen, setNextBasesDialogOpen] = React.useState(false);
     const [approving, setApproving] = React.useState(false);
     const [downloading, setDownloading] = React.useState(false);
     const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
@@ -179,6 +180,9 @@ export default function PhotoReportPage() {
         }
         if (payload.allBasesAgreed) {
             showAlert('Все БС согласованы. Фотоотчет закрыт.', 'success');
+        } else if (baseOptions.length > 1) {
+            showAlert('БС согласована. Остальные БС еще на проверке.', 'info');
+            setNextBasesDialogOpen(true);
         } else {
             showAlert('БС согласована. Остальные БС еще на проверке.', 'info');
         }
@@ -420,6 +424,38 @@ export default function PhotoReportPage() {
                         sx={{ textTransform: 'none' }}
                     >
                         {approving ? 'Согласуем…' : 'Согласовать'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog
+                open={nextBasesDialogOpen}
+                onClose={() => setNextBasesDialogOpen(false)}
+                aria-labelledby="next-bases-title"
+                aria-describedby="next-bases-description"
+            >
+                <DialogTitle id="next-bases-title">Проверить связанные БС</DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="next-bases-description">
+                        В этой задаче есть другие БС. Перейдите к ним, чтобы завершить проверку
+                        работ по задаче.
+                    </DialogContentText>
+                    <Box sx={{ mt: 2 }}>
+                        <ReportSummaryList
+                            items={reportSummaries}
+                            taskId={taskId}
+                            token={token}
+                            mode="list"
+                            activeBaseId={baseId}
+                            emptyText="Нет других фотоотчетов."
+                        />
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={() => setNextBasesDialogOpen(false)}
+                        sx={{ textTransform: 'none' }}
+                    >
+                        Закрыть
                     </Button>
                 </DialogActions>
             </Dialog>

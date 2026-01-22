@@ -57,14 +57,6 @@ export default function ReportSummaryList({
                               }
                             : { backgroundColor: statusColor, color: '#fff', fontWeight: 600 };
                     const isActive = activeBaseId?.toLowerCase() === item.baseId.toLowerCase();
-                    const activeChipSx = {
-                        fontWeight: 700,
-                        backgroundColor: (theme: Theme) =>
-                            theme.palette.mode === 'dark'
-                                ? 'rgba(59,130,246,0.28)'
-                                : 'rgba(59,130,246,0.2)',
-                        color: (theme: Theme) => theme.palette.text.primary,
-                    };
                     return (
                         <Button
                             key={item.baseId}
@@ -111,10 +103,7 @@ export default function ReportSummaryList({
                                     </Typography>
                                 </Box>
                             </Stack>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                {isActive && <Chip label="Текущая" size="small" sx={activeChipSx} />}
-                                <Chip label={getStatusLabel(normalizedStatus)} size="small" sx={statusChipSx} />
-                            </Stack>
+                            <Chip label={getStatusLabel(normalizedStatus)} size="small" sx={statusChipSx} />
                         </Button>
                     );
                 })}
