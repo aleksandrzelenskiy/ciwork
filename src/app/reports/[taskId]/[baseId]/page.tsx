@@ -128,10 +128,23 @@ export default function PhotoReportPage() {
     const canDownload = permissions.canDownload;
     const canEditReport = permissions.canEdit;
 
+    const baseIdsFromTask = React.useMemo(() => {
+        const raw = report?.bsNumber?.trim() ?? '';
+        if (!raw) return [];
+        return raw
+            .split('-')
+            .map((value) => value.trim())
+            .filter(Boolean);
+    }, [report?.bsNumber]);
+
     const baseOptions = React.useMemo(() => {
-        const ids = [baseId, ...reportSummaries.map((item) => item.baseId)].filter(Boolean);
+        const ids = [
+            baseId,
+            ...reportSummaries.map((item) => item.baseId),
+            ...baseIdsFromTask,
+        ].filter(Boolean);
         return Array.from(new Set(ids));
-    }, [baseId, reportSummaries]);
+    }, [baseId, reportSummaries, baseIdsFromTask]);
 
     const editLocations = React.useMemo(
         () => baseOptions.map((id) => ({ name: id })),

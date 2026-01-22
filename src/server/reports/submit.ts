@@ -80,9 +80,7 @@ export const submitReport = async (payload: SubmitPayload, actor: ActorContext) 
     const reports = await ReportModel.find({
         taskId,
         baseId: { $in: baseIds },
-    })
-        .select('baseId files')
-        .lean();
+    }).select('baseId files status events');
 
     const uploadedBases = new Set(
         reports
@@ -100,6 +98,30 @@ export const submitReport = async (payload: SubmitPayload, actor: ActorContext) 
     }
 
     const actorName = task.executorName?.trim() || actor.name || 'Исполнитель';
+    const reviewStatuses = new Set(['Pending', 'Issues', 'Fixed', 'Agreed']);
+    const now = new Date();
+    await Promise.all(
+        reports.map(async (report) => {
+            const currentStatus =
+                typeof report.status === 'string' ? report.status.trim() : '';
+            if (reviewStatuses.has(currentStatus)) return;
+            const oldStatus = report.status;
+            report.status = 'Pending';
+            report.events = Array.isArray(report.events) ? report.events : [];
+            report.events.push({
+                action: 'STATUS_CHANGED',
+                author: actorName,
+                authorId: actor.clerkUserId,
+                date: now,
+                details: {
+                    oldStatus,
+                    newStatus: 'Pending',
+                },
+            });
+            await report.save();
+        })
+    );
+
     const oldStatus = task.status;
     const aggregatedStatus = await getAggregatedReportStatus(taskId);
     const newStatus = aggregatedStatus ?? 'Pending';

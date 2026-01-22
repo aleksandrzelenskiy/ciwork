@@ -27,7 +27,7 @@ const ReportSchema = new Schema<IReport>({
   fixedFiles: { type: [String], default: [] },
   issues: { type: [String], default: [] },
   storageBytes: { type: Number, default: 0 },
-  status: { type: String, default: 'Pending' },
+  status: { type: String, default: 'Draft' },
   createdById: { type: String, required: true },
   createdByName: { type: String, default: 'Unknown' },
   initiatorName: { type: String, default: 'initiator' },

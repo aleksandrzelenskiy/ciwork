@@ -4,6 +4,7 @@ export type PriorityLevel = 'urgent' | 'high' | 'medium' | 'low';
 
 export type CurrentStatus =
     | 'To do'
+    | 'Draft'
     | 'Assigned'
     | 'At work'
     | 'Done'

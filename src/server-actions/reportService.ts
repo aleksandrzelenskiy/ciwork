@@ -7,18 +7,23 @@ type Actor = {
     name: string;
 };
 
-type ReportStatus = 'Pending' | 'Issues' | 'Fixed' | 'Agreed';
+type ReviewStatus = 'Pending' | 'Issues' | 'Fixed' | 'Agreed';
+type ReportStatus = ReviewStatus | 'Draft';
 
 const ensureEventArray = (events?: IEvent[]) => (Array.isArray(events) ? events : []);
-const REPORT_STATUS_PRIORITY: ReportStatus[] = ['Issues', 'Pending', 'Fixed', 'Agreed'];
+const REPORT_STATUS_PRIORITY: ReviewStatus[] = ['Issues', 'Pending', 'Fixed', 'Agreed'];
+const REVIEW_STATUSES = new Set<ReviewStatus>(REPORT_STATUS_PRIORITY);
 
-const normalizeReportStatus = (status?: string): ReportStatus | null => {
+export const isReviewStatus = (status?: string): status is ReviewStatus => {
+    if (!status) return false;
+    const trimmed = status.trim();
+    return REVIEW_STATUSES.has(trimmed as ReviewStatus);
+};
+
+const normalizeReportStatus = (status?: string): ReviewStatus | null => {
     if (!status) return null;
     const trimmed = status.trim();
-    if (trimmed === 'Pending' || trimmed === 'Issues' || trimmed === 'Fixed' || trimmed === 'Agreed') {
-        return trimmed;
-    }
-    return null;
+    return isReviewStatus(trimmed) ? (trimmed as ReviewStatus) : null;
 };
 
 const resolveAggregatedReportStatus = (statuses: Array<string | null | undefined>) => {
@@ -66,7 +71,7 @@ export const upsertReport = async (params: {
                 createdById: actor.id,
                 createdByName: actor.name,
                 initiatorName: initiatorName ?? undefined,
-                status: 'Pending',
+                status: 'Draft',
                 files: [],
                 fixedFiles: [],
                 issues: [],
@@ -102,17 +107,23 @@ export const appendReportFiles = async (params: {
                   date: now,
                   details: { newFiles: files.length },
               };
+    const nextStatus: ReportStatus =
+        kind === 'fix'
+            ? 'Fixed'
+            : isReviewStatus(report.status)
+              ? report.status
+              : 'Draft';
     const update =
         kind === 'fix'
             ? {
                   $push: { fixedFiles: { $each: files }, events: event },
                   $inc: { storageBytes: Math.max(0, bytesAdded) },
-                  $set: { status: 'Fixed' },
+                  $set: { status: nextStatus },
               }
             : {
                   $push: { files: { $each: files }, events: event },
                   $inc: { storageBytes: Math.max(0, bytesAdded) },
-                  $set: { status: 'Pending' },
+                  $set: { status: nextStatus },
               };
     await ReportModel.updateOne({ _id: report._id }, update).exec();
     return report;

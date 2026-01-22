@@ -2,6 +2,7 @@ import type { CurrentStatus } from '@/app/types/taskTypes';
 
 export const STATUS_ORDER: CurrentStatus[] = [
     'To do',
+    'Draft',
     'Assigned',
     'At work',
     'Done',
@@ -13,6 +14,7 @@ export const STATUS_ORDER: CurrentStatus[] = [
 
 export const STATUS_LABELS_RU: Record<CurrentStatus, string> = {
     'To do': 'К выполнению',
+    Draft: 'Черновик',
     Assigned: 'Назначена',
     'At work': 'В работе',
     Done: 'Выполнено',
@@ -27,6 +29,8 @@ const TITLE_CASE_MAP: Record<string, CurrentStatus> = {
     TODO: 'To do',
     'TO-DO': 'To do',
     'К ВЫПОЛНЕНИЮ': 'To do',
+    DRAFT: 'Draft',
+    'ЧЕРНОВИК': 'Draft',
     ASSIGNED: 'Assigned',
     'НАЗНАЧЕНА': 'Assigned',
     'IN PROGRESS': 'At work',
