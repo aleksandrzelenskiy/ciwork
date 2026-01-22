@@ -31,6 +31,7 @@ import {
     FullscreenControl,
     TypeSelector,
 } from '@pbe/react-yandex-maps';
+import type { IOptionManager } from 'yandex-maps';
 import type { CurrentStatus, PriorityLevel } from '@/app/types/taskTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
@@ -218,6 +219,14 @@ export default function ProjectTaskLocation({
     const filterButtonBorder = alpha(accentBase, isDark ? 0.18 : 0.12);
     const filterButtonColor = isDark ? '#0b1220' : '#0f172a';
     const controlsTopOffset = 28;
+    // TypeSelector typings expect IOptionManager; cast to allow position options.
+    const typeSelectorOptions = React.useMemo(
+        () =>
+            ({
+                position: { right: 16, top: controlsTopOffset + 128 },
+            } as unknown as IOptionManager),
+        [controlsTopOffset]
+    );
     const params = useParams<{ org?: string; project?: string }>();
     const orgSlug = params?.org;
     const projectSlug = params?.project;
@@ -893,7 +902,7 @@ export default function ProjectTaskLocation({
                         >
                             <FullscreenControl options={{ position: { right: 16, top: controlsTopOffset } }} />
                             <ZoomControl options={{ position: { right: 16, top: controlsTopOffset + 64 } }} />
-                            <TypeSelector options={{ position: { right: 16, top: controlsTopOffset + 128 } }} />
+                            <TypeSelector options={typeSelectorOptions} />
                             <Clusterer
                                 options={{
                                     preset: clusterPreset,
