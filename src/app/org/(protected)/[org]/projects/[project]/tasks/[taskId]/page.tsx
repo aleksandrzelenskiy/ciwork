@@ -313,6 +313,7 @@ export default function TaskDetailsPage() {
     const [editOpen, setEditOpen] = React.useState(false);
     const [deleteOpen, setDeleteOpen] = React.useState(false);
     const [deleting, setDeleting] = React.useState(false);
+    const [deleteReports, setDeleteReports] = React.useState(true);
     const [deleteDocumentOpen, setDeleteDocumentOpen] = React.useState(false);
     const [documentToDelete, setDocumentToDelete] = React.useState<string | null>(null);
     const [documentToDeleteType, setDocumentToDeleteType] = React.useState<
@@ -847,10 +848,13 @@ export default function TaskDetailsPage() {
         if (!org || !project || !taskId) return;
         setDeleting(true);
         try {
+            const query = new URLSearchParams({
+                deleteReports: deleteReports ? 'true' : 'false',
+            });
             const res = await fetch(
                 `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
                     project
-                )}/tasks/${encodeURIComponent(taskId)}`,
+                )}/tasks/${encodeURIComponent(taskId)}?${query.toString()}`,
                 { method: 'DELETE' }
             );
             if (!res.ok) {
@@ -1886,7 +1890,11 @@ export default function TaskDetailsPage() {
                             <Tooltip title="Удалить">
                                 <span>
                                     <IconButton
-                                        onClick={() => task && setDeleteOpen(true)}
+                                        onClick={() => {
+                                            if (!task) return;
+                                            setDeleteReports(true);
+                                            setDeleteOpen(true);
+                                        }}
                                         disabled={loading || !task}
                                         sx={getIconButtonSx({ disabled: loading || !task })}
                                     >
@@ -3369,6 +3377,17 @@ export default function TaskDetailsPage() {
                     <Typography>
                         Это действие нельзя будет отменить. Задача будет удалена из проекта.
                     </Typography>
+                    <FormControlLabel
+                        sx={{ mt: 1 }}
+                        control={
+                            <Checkbox
+                                checked={deleteReports}
+                                onChange={(event) => setDeleteReports(event.target.checked)}
+                                disabled={deleting}
+                            />
+                        }
+                        label="Удалить связанные с задачей фотоотчеты"
+                    />
                 </DialogContent>
                 <DialogActions>
                     <Button

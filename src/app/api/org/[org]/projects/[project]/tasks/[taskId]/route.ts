@@ -25,11 +25,12 @@ import {
     sanitizeBsLocationAddresses,
 } from '@/utils/bsLocation';
 import { splitAttachmentsAndDocuments } from '@/utils/taskFiles';
-import { deleteTaskFolder } from '@/utils/s3';
+import { deleteTaskFile, deleteTaskFolder } from '@/utils/s3';
 import TaskDeletionLog from '@/server/models/TaskDeletionLog';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { addReverseRelations, removeReverseRelations } from '@/app/utils/relatedTasksSync';
 import ReportModel from '@/server/models/ReportModel';
+import { deleteReport } from '@/server/reports/base';
 
 
 export const runtime = 'nodejs';
@@ -313,7 +314,7 @@ function buildTaskQuery(
 
 // DELETE /tasks/[taskId]
 export async function DELETE(
-    _req: NextRequest,
+    req: NextRequest,
     ctx: { params: Promise<{ org: string; project: string; taskId: string }> }
 ) {
     try {
@@ -323,6 +324,11 @@ export async function DELETE(
         if (!email) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
         const { org: orgSlug, project: projectRef, taskId } = await ctx.params;
+        const url = new URL(req.url);
+        const deleteReportsParam = url.searchParams.get('deleteReports');
+        const deleteReports =
+            deleteReportsParam === null ||
+            !['false', '0', 'no'].includes(deleteReportsParam.toLowerCase());
 
         const ensured = await requireOrgProject(orgSlug, projectRef);
         if (!ensured.ok) {
@@ -333,7 +339,20 @@ export async function DELETE(
         const query = buildTaskQuery(orgId, projectId, taskId);
 
         const deletedTask = await TaskModel.findOneAndDelete(query)
-            .select('taskId orgId projectId taskName bsNumber')
+            .select(
+                [
+                    'taskId',
+                    'orgId',
+                    'projectId',
+                    'taskName',
+                    'bsNumber',
+                    'attachments',
+                    'documents',
+                    'orderUrl',
+                    'ncwUrl',
+                    'closingDocumentsUrl',
+                ].join(' ')
+            )
             .lean();
 
         if (!deletedTask) {
@@ -344,7 +363,42 @@ export async function DELETE(
             typeof deletedTask.taskId === 'string' && deletedTask.taskId.trim()
                 ? deletedTask.taskId
                 : taskId;
-        await deleteTaskFolder(taskIdForCleanup, orgSlug, projectRef);
+        if (deleteReports) {
+            const reportEntries = await ReportModel.find({ taskId: taskIdForCleanup })
+                .select('baseId')
+                .lean();
+
+            for (const report of reportEntries) {
+                const baseId =
+                    typeof report?.baseId === 'string' ? report.baseId.trim() : '';
+                if (!baseId) continue;
+                const result = await deleteReport({ taskId: taskIdForCleanup, baseId });
+                if (!result.ok) {
+                    console.warn('Failed to delete report on task removal:', result.error);
+                }
+            }
+
+            await deleteTaskFolder(taskIdForCleanup, orgSlug, projectRef);
+        } else {
+            const taskFiles = new Set<string>();
+            if (Array.isArray(deletedTask.attachments)) {
+                for (const url of deletedTask.attachments) {
+                    if (url.trim()) taskFiles.add(url);
+                }
+            }
+            if (Array.isArray(deletedTask.documents)) {
+                for (const url of deletedTask.documents) {
+                    if (url.trim()) taskFiles.add(url);
+                }
+            }
+            if (deletedTask.orderUrl) taskFiles.add(deletedTask.orderUrl);
+            if (deletedTask.ncwUrl) taskFiles.add(deletedTask.ncwUrl);
+            if (deletedTask.closingDocumentsUrl) taskFiles.add(deletedTask.closingDocumentsUrl);
+
+            await Promise.all(
+                Array.from(taskFiles).map((fileUrl) => deleteTaskFile(fileUrl))
+            );
+        }
 
         await TaskDeletionLog.create({
             orgId: deletedTask.orgId,

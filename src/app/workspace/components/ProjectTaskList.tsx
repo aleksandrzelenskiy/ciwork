@@ -335,9 +335,11 @@ const ProjectTaskListInner = (
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [deleteReports, setDeleteReports] = useState(true);
 
     const askDelete = () => {
         setDeleteError(null);
+        setDeleteReports(true);
         setDeleteOpen(true);
     };
     const handleCancelDelete = () => setDeleteOpen(false);
@@ -347,9 +349,12 @@ const ProjectTaskListInner = (
             setDeleteLoading(true);
             setDeleteError(null);
             const projectRef = selectedTask.projectKey || project;
+            const params = new URLSearchParams({
+                deleteReports: deleteReports ? 'true' : 'false',
+            });
             const url = `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
                 projectRef
-            )}/tasks/${encodeURIComponent(selectedTask.taskId)}`;
+            )}/tasks/${encodeURIComponent(selectedTask.taskId)}?${params.toString()}`;
             const res = await fetch(url, { method: 'DELETE' });
             if (!res.ok) {
                 const data: unknown = await res.json().catch(() => ({}));
@@ -833,6 +838,17 @@ const ProjectTaskListInner = (
                             Это действие нельзя отменить. Будет удалена задача
                             {selectedTask ? ` «${selectedTask.taskName}»` : ''}.
                         </DialogContentText>
+                        <FormControlLabel
+                            sx={{ mt: 1 }}
+                            control={
+                                <Checkbox
+                                    checked={deleteReports}
+                                    onChange={(event) => setDeleteReports(event.target.checked)}
+                                    disabled={deleteLoading}
+                                />
+                            }
+                            label="Удалить связанные с задачей фотоотчеты"
+                        />
                         {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
                     </DialogContent>
                     <DialogActions>

@@ -17,6 +17,8 @@ import {
     DialogActions,
     Button,
     Alert,
+    Checkbox,
+    FormControlLabel,
 } from '@mui/material';
 import Tooltip from '@mui/material/Tooltip';
 import TaskOutlinedIcon from '@mui/icons-material/TaskOutlined';
@@ -243,6 +245,7 @@ export default function ProjectTaskBoard({
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [deleteReports, setDeleteReports] = useState(true);
 
     // ЛКМ - переход на страницу задачи
     const openTaskPage = (task: Task) => {
@@ -283,6 +286,7 @@ export default function ProjectTaskBoard({
     const onDeleteTask = () => {
         if (!menuTask) return;
         setDeleteError(null);
+        setDeleteReports(true);
         setDeleteOpen(true);
     };
 
@@ -293,9 +297,12 @@ export default function ProjectTaskBoard({
             setDeleteLoading(true);
             setDeleteError(null);
             const projectRef = menuTask.projectKey || project;
+            const params = new URLSearchParams({
+                deleteReports: deleteReports ? 'true' : 'false',
+            });
             const url = `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
                 projectRef
-            )}/tasks/${encodeURIComponent(menuTask.taskId)}`;
+            )}/tasks/${encodeURIComponent(menuTask.taskId)}?${params.toString()}`;
             const res = await fetch(url, { method: 'DELETE' });
             if (!res.ok) {
                 const data: unknown = await res.json().catch(() => ({}));
@@ -382,6 +389,17 @@ export default function ProjectTaskBoard({
                         Это действие нельзя отменить. Будет удалена задача
                         {menuTask ? ` «${menuTask.taskName}»` : ''}.
                     </DialogContentText>
+                    <FormControlLabel
+                        sx={{ mt: 1 }}
+                        control={
+                            <Checkbox
+                                checked={deleteReports}
+                                onChange={(event) => setDeleteReports(event.target.checked)}
+                                disabled={deleteLoading}
+                            />
+                        }
+                        label="Удалить связанные с задачей фотоотчеты"
+                    />
                     {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
                 </DialogContent>
                 <DialogActions>
