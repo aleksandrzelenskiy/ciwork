@@ -256,6 +256,9 @@ export default function Page() {
                                         Пароли не совпадают.
                                     </Typography>
                                 ) : null}
+                                <div className="mt-1">
+                                    <div id="clerk-captcha" />
+                                </div>
                                 {error ? (
                                     <Typography className="text-sm text-rose-600">
                                         {error}
