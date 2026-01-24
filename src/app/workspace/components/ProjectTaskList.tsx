@@ -463,23 +463,23 @@ const ProjectTaskListInner = (
                             </TableRow>
                         )}
 
-                        {pageSlice.map((t) => {
-                            const statusTitle = t._statusTitle;
-                            const safePriority = (normalizePriority(t.priority as string) ?? 'medium') as Pri;
-                            const execLabel = t.executorName || t.executorEmail || '';
-                            const execSub = t.executorName && t.executorEmail ? t.executorEmail : '';
-                            const execEmailKey = (t.executorEmail || '').trim().toLowerCase();
+                        {pageSlice.map((taskItem) => {
+                            const statusTitle = taskItem._statusTitle;
+                            const safePriority = (normalizePriority(taskItem.priority as string) ?? 'medium') as Pri;
+                            const execLabel = taskItem.executorName || taskItem.executorEmail || '';
+                            const execSub = taskItem.executorName && taskItem.executorEmail ? taskItem.executorEmail : '';
+                            const execEmailKey = (taskItem.executorEmail || '').trim().toLowerCase();
                             const execProfile = execEmailKey ? userProfiles[execEmailKey] : undefined;
 
                             return (
                                 <TableRow
-                                    key={t._id}
-                                    data-task-id={t._id}
+                                    key={taskItem._id}
+                                    data-task-id={taskItem._id}
                                     onClick={(e) => {
                                         if (e.button !== 0) return;
-                                        openTaskPage(t);
+                                        openTaskPage(taskItem);
                                     }}
-                                    onContextMenuCapture={(e) => handleContextMenu(e, t)}
+                                    onContextMenuCapture={(e) => handleContextMenu(e, taskItem)}
                                     sx={{
                                         transition: 'background-color .15s ease',
                                         cursor: 'pointer', // теперь логичнее pointer
@@ -492,18 +492,18 @@ const ProjectTaskListInner = (
                                     }}
                                 >
                                     {columnVisibility.taskId && (
-                                        <TableCell align="center">{t.taskId}</TableCell>
+                                        <TableCell align="center">{taskItem.taskId}</TableCell>
                                     )}
 
                                     {columnVisibility.task && (
                                         <TableCell>
                                             <Stack spacing={0.5}>
                                                 <Typography>
-                                                    {t.taskName}
-                                                    {t.bsNumber ? ` ${t.bsNumber}` : ''}
+                                                    {taskItem.taskName}
+                                                    {taskItem.bsNumber ? ` ${taskItem.bsNumber}` : ''}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
-                                                    {t('task.fields.createdAt', 'Создана')}: {formatDate(t.createdAt, locale)}
+                                                    {t('task.fields.createdAt', 'Создана')}: {formatDate(taskItem.createdAt, locale)}
                                                 </Typography>
                                             </Stack>
                                         </TableCell>
@@ -545,39 +545,39 @@ const ProjectTaskListInner = (
 
                                     {columnVisibility.executor && (
                                         <TableCell>
-                                        {execLabel ? (
-                                            <Stack direction="row" spacing={1} alignItems="center">
-                                                <Avatar
-                                                    src={execProfile?.profilePic}
-                                                    sx={{ width: 32, height: 32 }}
-                                                >
-                                                    {getInitials(t.executorName || t.executorEmail)}
-                                                </Avatar>
-                                                <Box>
-                                                    {execProfile?.clerkUserId || t.executorId ? (
-                                                        <Button
-                                                            variant="text"
-                                                            size="small"
-                                                            onClick={(event) => {
-                                                                event.stopPropagation();
-                                                                openProfileDialog(
-                                                                    execProfile?.clerkUserId || t.executorId
-                                                                );
-                                                            }}
-                                                            sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
-                                                        >
-                                                            {execLabel}
-                                                        </Button>
-                                                    ) : (
-                                                        <Typography variant="body2">{execLabel}</Typography>
-                                                    )}
-                                                    {execSub && (
-                                                        <Typography variant="caption" color="text.secondary">
-                                                            {execSub}
-                                                        </Typography>
-                                                    )}
-                                                </Box>
-                                            </Stack>
+                                            {execLabel ? (
+                                                <Stack direction="row" spacing={1} alignItems="center">
+                                                    <Avatar
+                                                        src={execProfile?.profilePic}
+                                                        sx={{ width: 32, height: 32 }}
+                                                    >
+                                                        {getInitials(taskItem.executorName || taskItem.executorEmail)}
+                                                    </Avatar>
+                                                    <Box>
+                                                        {execProfile?.clerkUserId || taskItem.executorId ? (
+                                                            <Button
+                                                                variant="text"
+                                                                size="small"
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    openProfileDialog(
+                                                                        execProfile?.clerkUserId || taskItem.executorId
+                                                                    );
+                                                                }}
+                                                                sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
+                                                            >
+                                                                {execLabel}
+                                                            </Button>
+                                                        ) : (
+                                                            <Typography variant="body2">{execLabel}</Typography>
+                                                        )}
+                                                        {execSub && (
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {execSub}
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                </Stack>
                                             ) : (
                                                 <Typography variant="body2" color="text.secondary">
                                                     —
@@ -587,24 +587,24 @@ const ProjectTaskListInner = (
                                     )}
 
                                     {columnVisibility.due && (
-                                        <TableCell align="center">{formatDate(t.dueDate, locale)}</TableCell>
+                                        <TableCell align="center">{formatDate(taskItem.dueDate, locale)}</TableCell>
                                     )}
                                     {columnVisibility.order && (
                                         <TableCell align="center">
-                                            {t.orderUrl ? (
+                                            {taskItem.orderUrl ? (
                                                 <Tooltip
                                                     title={t('task.order.tooltip', 'Заказ {orderNumber} от {date}', {
-                                                        orderNumber: t.orderNumber || '—',
-                                                        date: formatDate(t.orderDate, locale),
+                                                        orderNumber: taskItem.orderNumber || '—',
+                                                        date: formatDate(taskItem.orderDate, locale),
                                                     })}
                                                 >
                                                     <IconButton
                                                         size="small"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            if (t.orderUrl && typeof window !== 'undefined') {
+                                                            if (taskItem.orderUrl && typeof window !== 'undefined') {
                                                                 window.open(
-                                                                    t.orderUrl,
+                                                                    taskItem.orderUrl,
                                                                     '_blank',
                                                                     'noopener,noreferrer'
                                                                 );
