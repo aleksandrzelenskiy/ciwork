@@ -2,7 +2,7 @@
 'use client';
 
 import { ClerkProvider } from '@clerk/nextjs';
-import { ruRU, enUS } from '@clerk/localizations';
+import enUS, { ruRU } from '@clerk/localizations';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import type { ReactNode } from 'react';
 import ClientApp from './ClientApp';
