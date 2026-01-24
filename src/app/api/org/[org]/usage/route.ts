@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import { requireOrgRole } from '@/server/org/permissions';
+import BillingUsageModel from '@/server/models/BillingUsageModel';
+import TaskModel from '@/server/models/TaskModel';
 import { getBillingPeriod, getUsageSnapshot, loadPlanForOrg } from '@/utils/billingLimits';
 
 export const runtime = 'nodejs';
@@ -41,15 +43,36 @@ export async function GET(
         const tasksPeriod = getBillingPeriod(now);
         const publicPeriod = getBillingPeriod(now);
 
-        const [{ limits }, tasksUsage, publicUsage] = await Promise.all([
+        const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+        const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+
+        const [{ limits }, tasksUsage, publicUsage, tasksCount] = await Promise.all([
             loadPlanForOrg(org._id),
             getUsageSnapshot(org._id, tasksPeriod),
             getUsageSnapshot(org._id, publicPeriod),
+            TaskModel.countDocuments({ orgId: org._id, createdAt: { $gte: monthStart, $lt: monthEnd } }),
         ]);
+
+        const snapshotTasksUsed = tasksUsage?.tasksUsed ?? 0;
+        const resolvedTasksUsed = Math.max(snapshotTasksUsed, tasksCount);
+        if (!tasksUsage || resolvedTasksUsed !== snapshotTasksUsed) {
+            await BillingUsageModel.findOneAndUpdate(
+                { orgId: org._id, period: tasksPeriod },
+                {
+                    $set: { tasksUsed: resolvedTasksUsed, updatedAt: new Date() },
+                    $setOnInsert: {
+                        projectsUsed: 0,
+                        publicationsUsed: 0,
+                        seatsUsed: 0,
+                    },
+                },
+                { upsert: true }
+            );
+        }
 
         return NextResponse.json({
             usage: {
-                tasksUsed: tasksUsage?.tasksUsed ?? 0,
+                tasksUsed: resolvedTasksUsed,
                 publicTasksUsed: publicUsage?.publicationsUsed ?? 0,
                 tasksLimit: limits.tasksMonth,
                 publicTasksLimit: limits.publications,
