@@ -4,6 +4,7 @@ import ReportStatusPill from '@/features/reports/ReportStatusPill';
 import type { PhotoReportSummary } from '@/app/types/reportTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { normalizeStatusTitle } from '@/utils/statusLabels';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportHeaderProps = {
     taskId: string;
@@ -43,6 +44,7 @@ export default function ReportHeader({
     relatedBases = [],
     token,
 }: ReportHeaderProps) {
+    const { t } = useI18n();
     const title = `${taskName || taskId}${bsNumber ? ` ${bsNumber}` : ''}`;
 
     return (
@@ -57,7 +59,7 @@ export default function ReportHeader({
                             : 'rgba(15,23,42,0.55)',
                 })}
             >
-                Фотоотчет
+                {t('reports.header.title', 'Фотоотчет')}
             </Typography>
             <Stack
                 direction={{ xs: 'column', md: 'row' }}
@@ -78,7 +80,7 @@ export default function ReportHeader({
                                     : 'rgba(15,23,42,0.6)',
                         })}
                     >
-                        Задача{' '}
+                        {t('reports.header.task', 'Задача')}{' '}
                         {orgSlug && projectKey ? (
                             <Link
                                 component={NextLink}
@@ -93,7 +95,7 @@ export default function ReportHeader({
                         ) : (
                             taskId
                         )}{' '}
-                        · БС {baseId}
+                        · {t('reports.base', 'БС {baseId}', { baseId })}
                     </Typography>
                 </Box>
                 <ReportStatusPill status={status} />
@@ -109,7 +111,7 @@ export default function ReportHeader({
                                     : 'rgba(15,23,42,0.6)',
                         })}
                     >
-                        Быстрый переход по БС
+                        {t('reports.header.quickNav', 'Быстрый переход по БС')}
                     </Typography>
                     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
                         {relatedBases.map((item) => {
@@ -119,7 +121,11 @@ export default function ReportHeader({
                             return (
                                 <Chip
                                     key={item.baseId}
-                                    label={isActive ? `БС ${item.baseId} · текущая` : `БС ${item.baseId}`}
+                                    label={
+                                        isActive
+                                            ? t('reports.header.baseActive', 'БС {baseId} · текущая', { baseId: item.baseId })
+                                            : t('reports.base', 'БС {baseId}', { baseId: item.baseId })
+                                    }
                                     component={NextLink}
                                     href={buildReportHref(taskId, item.baseId, token)}
                                     clickable
@@ -156,7 +162,7 @@ export default function ReportHeader({
                             : 'rgba(15,23,42,0.65)',
                 })}
             >
-                Создан {createdAt || '—'} ·{' '}
+                {t('reports.header.createdAt', 'Создан {date} ·', { date: createdAt || '—' })}{' '}
                 {createdById && onOpenProfile ? (
                     <Button
                         variant="text"
@@ -164,10 +170,10 @@ export default function ReportHeader({
                         onClick={() => onOpenProfile(createdById)}
                         sx={{ textTransform: 'none', px: 0, minWidth: 0 }}
                     >
-                        {createdByName || 'Исполнитель'}
+                        {createdByName || t('reports.header.executor', 'Исполнитель')}
                     </Button>
                 ) : (
-                    createdByName || 'Исполнитель'
+                    createdByName || t('reports.header.executor', 'Исполнитель')
                 )}
             </Typography>
         </Stack>

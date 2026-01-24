@@ -2,6 +2,7 @@ import { Box, Typography } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import 'react-photo-view/dist/react-photo-view.css';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportGalleryProps = {
     title: string;
@@ -9,6 +10,7 @@ type ReportGalleryProps = {
 };
 
 export default function ReportGallery({ title, photos }: ReportGalleryProps) {
+    const { t } = useI18n();
     if (!photos.length) {
         return (
             <Box
@@ -29,7 +31,7 @@ export default function ReportGallery({ title, photos }: ReportGalleryProps) {
                     {title}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                    Пока нет загруженных фото.
+                    {t('reports.gallery.empty', 'Пока нет загруженных фото.')}
                 </Typography>
             </Box>
         );
@@ -65,7 +67,7 @@ export default function ReportGallery({ title, photos }: ReportGalleryProps) {
                                 <Box
                                     component="img"
                                     src={photo}
-                                    alt={`Photo ${idx + 1}`}
+                                    alt={t('reports.gallery.photoAlt', 'Фото {index}', { index: idx + 1 })}
                                     sx={(theme) => ({
                                         width: '100%',
                                         aspectRatio: '1 / 1',

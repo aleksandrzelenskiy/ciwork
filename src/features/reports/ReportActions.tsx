@@ -2,6 +2,7 @@ import { Box, Button, Stack } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportActionsProps = {
     status: string;
@@ -22,6 +23,7 @@ export default function ReportActions({
     onUploadFix,
     onEdit,
 }: ReportActionsProps) {
+    const { t } = useI18n();
     const showApprove = canApprove && status !== 'Agreed';
     const showFixUpload = canUploadFix && (status === 'Issues' || status === 'Fixed');
     const showEdit = canEdit && status !== 'Agreed';
@@ -49,7 +51,7 @@ export default function ReportActions({
                         onClick={onEdit}
                         sx={{ textTransform: 'none', borderRadius: 999 }}
                     >
-                        Редактировать
+                        {t('reports.actions.edit', 'Редактировать')}
                     </Button>
                 )}
                 {showApprove && (
@@ -60,7 +62,7 @@ export default function ReportActions({
                         onClick={onApprove}
                         sx={{ textTransform: 'none', borderRadius: 999 }}
                     >
-                        Согласовать
+                        {t('reports.actions.approve', 'Согласовать')}
                     </Button>
                 )}
                 {showFixUpload && (
@@ -70,7 +72,7 @@ export default function ReportActions({
                         onClick={onUploadFix}
                         sx={{ textTransform: 'none', borderRadius: 999 }}
                     >
-                        Загрузить исправления
+                        {t('reports.actions.uploadFix', 'Загрузить исправления')}
                     </Button>
                 )}
             </Stack>

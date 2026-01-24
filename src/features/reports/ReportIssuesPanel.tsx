@@ -3,6 +3,7 @@ import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOu
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useEffect, useState } from 'react';
 import { normalizeStatusTitle } from '@/utils/statusLabels';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportIssuesPanelProps = {
     issues: string[];
@@ -17,6 +18,7 @@ export default function ReportIssuesPanel({
     onSave,
     status,
 }: ReportIssuesPanelProps) {
+    const { t } = useI18n();
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState<string[]>(issues.length ? issues : ['']);
     const [saving, setSaving] = useState(false);
@@ -86,12 +88,14 @@ export default function ReportIssuesPanel({
         >
             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
                 <Typography variant="subtitle1" fontWeight={600}>
-                    Замечания
+                    {t('reports.issues.title', 'Замечания')}
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
                     {canEditIssues && !editing && (
                         <Button size="small" variant="text" onClick={handleStartEdit}>
-                            {issues.length ? 'Редактировать' : 'Добавить'}
+                            {issues.length
+                                ? t('reports.issues.edit', 'Редактировать')
+                                : t('reports.issues.add', 'Добавить')}
                         </Button>
                     )}
                 </Stack>
@@ -107,7 +111,7 @@ export default function ReportIssuesPanel({
                         ))
                     ) : (
                         <Typography variant="body2" color="text.secondary">
-                            Замечаний нет.
+                            {t('reports.issues.empty', 'Замечаний нет.')}
                         </Typography>
                     )}
                 </Stack>
@@ -120,16 +124,16 @@ export default function ReportIssuesPanel({
                             <TextField
                                 value={issue}
                                 onChange={(event) => handleChange(idx, event.target.value)}
-                                label={`Замечание ${idx + 1}`}
+                                label={t('reports.issues.item', 'Замечание {index}', { index: idx + 1 })}
                                 size="small"
                                 fullWidth
                             />
-                            <Tooltip title="Удалить замечание">
+                            <Tooltip title={t('reports.issues.remove', 'Удалить замечание')}>
                                 <span>
                                     <IconButton
                                         size="small"
                                         onClick={() => handleRemove(idx)}
-                                        aria-label="Удалить замечание"
+                                        aria-label={t('reports.issues.remove', 'Удалить замечание')}
                                         disabled={saving}
                                     >
                                         <DeleteOutlineIcon fontSize="small" />
@@ -139,11 +143,11 @@ export default function ReportIssuesPanel({
                         </Stack>
                     ))}
                     <Stack direction="row" spacing={1}>
-                        <Tooltip title="Добавить замечание">
+                        <Tooltip title={t('reports.issues.add', 'Добавить замечание')}>
                             <span>
                                 <IconButton
                                     onClick={handleAdd}
-                                    aria-label="Добавить замечание"
+                                    aria-label={t('reports.issues.add', 'Добавить замечание')}
                                     disabled={saving}
                                 >
                                     <AddCircleOutlineOutlinedIcon />
@@ -151,10 +155,10 @@ export default function ReportIssuesPanel({
                             </span>
                         </Tooltip>
                         <Button variant="contained" onClick={handleSave} disabled={saving}>
-                            {saving ? 'Сохраняем…' : 'Сохранить'}
+                            {saving ? t('reports.issues.saving', 'Сохраняем…') : t('common.save', 'Сохранить')}
                         </Button>
                         <Button variant="text" onClick={handleCancel} disabled={saving}>
-                            Отмена
+                            {t('common.cancel', 'Отмена')}
                         </Button>
                     </Stack>
                 </Stack>

@@ -30,6 +30,7 @@ import { BaseStatus, ReportClient, ApiResponse } from '@/app/types/reportTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const getTaskStatus = (baseStatuses: BaseStatus[] = []) => {
   const nonAgreedStatus = baseStatuses.find(
@@ -44,6 +45,7 @@ const resolveStatusColor = (status: string) => {
 };
 
 export default function ReportListPage() {
+  const { t } = useI18n();
   const [reports, setReports] = React.useState<ReportClient[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -74,18 +76,18 @@ export default function ReportListPage() {
         );
         const data: ApiResponse = await response.json();
         if (!response.ok) {
-          setError(data.error || 'Не удалось загрузить фотоотчеты');
+          setError(data.error || t('reports.list.error.load', 'Не удалось загрузить фотоотчеты'));
           return;
         }
         setReports(Array.isArray(data.reports) ? data.reports : []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Не удалось загрузить фотоотчеты');
+        setError(err instanceof Error ? err.message : t('reports.list.error.load', 'Не удалось загрузить фотоотчеты'));
       } finally {
         setLoading(false);
       }
     };
     void fetchReports();
-  }, [token]);
+  }, [token, t]);
 
   React.useEffect(() => {
     if (!highlightActive || loading) return;
@@ -140,7 +142,7 @@ export default function ReportListPage() {
         ).then(async (response) => {
           const data = (await response.json().catch(() => ({}))) as { error?: string };
           if (!response.ok) {
-            throw new Error(data.error || 'Не удалось удалить отчёт');
+            throw new Error(data.error || t('reports.list.error.delete', 'Не удалось удалить отчёт'));
           }
         })
       );
@@ -149,7 +151,7 @@ export default function ReportListPage() {
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось удалить отчёт');
+      setError(err instanceof Error ? err.message : t('reports.list.error.delete', 'Не удалось удалить отчёт'));
     } finally {
       setDeleteLoading(false);
     }
@@ -163,7 +165,7 @@ export default function ReportListPage() {
         `/api/reports/${encodeURIComponent(taskId)}/download${tokenParam}`
       );
       if (!response.ok) {
-        setError('Не удалось скачать отчет');
+        setError(t('reports.error.download', 'Не удалось скачать отчет'));
         return;
       }
       const blob = await response.blob();
@@ -176,7 +178,7 @@ export default function ReportListPage() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось скачать отчет');
+      setError(err instanceof Error ? err.message : t('reports.error.download', 'Не удалось скачать отчет'));
     } finally {
       setDownloadingTaskId(null);
     }
@@ -225,14 +227,14 @@ export default function ReportListPage() {
       )}
       <Stack spacing={2} sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight={700}>
-          Фотоотчеты
+          {t('reports.list.title', 'Фотоотчеты')}
         </Typography>
         <Typography color="text.secondary">
-          Просматривайте отчеты по задачам и согласовывайте результаты работ.
+          {t('reports.list.subtitle', 'Просматривайте отчеты по задачам и согласовывайте результаты работ.')}
         </Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <TextField
-            label="Поиск по задаче"
+            label={t('reports.list.search', 'Поиск по задаче')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             size="small"
@@ -244,18 +246,20 @@ export default function ReportListPage() {
             size="small"
             sx={{ maxWidth: 220 }}
           >
-            <MenuItem value="all">Все статусы</MenuItem>
-            <MenuItem value="Pending">На проверке</MenuItem>
-            <MenuItem value="Issues">Есть замечания</MenuItem>
-            <MenuItem value="Fixed">Исправлено</MenuItem>
-            <MenuItem value="Agreed">Согласовано</MenuItem>
+            <MenuItem value="all">{t('reports.list.filters.all', 'Все статусы')}</MenuItem>
+            <MenuItem value="Pending">{t('reports.status.pending', 'На проверке')}</MenuItem>
+            <MenuItem value="Issues">{t('reports.status.issues', 'Есть замечания')}</MenuItem>
+            <MenuItem value="Fixed">{t('reports.status.fixed', 'Исправлено')}</MenuItem>
+            <MenuItem value="Agreed">{t('reports.status.agreed', 'Согласовано')}</MenuItem>
           </Select>
         </Stack>
       </Stack>
 
       <Stack spacing={2}>
         {filtered.length === 0 && (
-          <Typography color="text.secondary">Нет отчетов по выбранным фильтрам.</Typography>
+          <Typography color="text.secondary">
+            {t('reports.list.empty', 'Нет отчетов по выбранным фильтрам.')}
+          </Typography>
         )}
         {filtered.map((report) => {
           const title = report.taskName || report.taskId;
@@ -297,11 +301,13 @@ export default function ReportListPage() {
                     </Typography>
                     {(report.projectKey || report.projectId) && (
                       <Typography variant="body2" color="text.secondary">
-                        Проект: {report.projectKey || report.projectId}
+                        {t('reports.list.project', 'Проект: {project}', {
+                          project: report.projectKey || report.projectId,
+                        })}
                       </Typography>
                     )}
                     <Typography variant="body2" color="text.secondary">
-                      Задача{' '}
+                      {t('reports.header.task', 'Задача')}{' '}
                       {report.orgSlug && report.projectKey ? (
                         <Link
                           component={NextLink}
@@ -320,7 +326,7 @@ export default function ReportListPage() {
                     </Typography>
                     {report.createdByName && (
                       <Typography variant="body2" color="text.secondary">
-                        Автор:{' '}
+                        {t('reports.list.author', 'Автор:')}{' '}
                         {report.createdById ? (
                           <Button
                             variant="text"
@@ -338,12 +344,12 @@ export default function ReportListPage() {
                   </Box>
                   <Stack direction="row" spacing={1} alignItems="center">
                     {status === 'Agreed' && (
-                      <Tooltip title="Скачать отчет">
+                      <Tooltip title={t('reports.download', 'Скачать отчет')}>
                         <span>
                           <IconButton
                             size="small"
                             onClick={() => handleDownloadTaskReports(report.taskId)}
-                            aria-label="Скачать отчет"
+                            aria-label={t('reports.download', 'Скачать отчет')}
                             disabled={downloadingTaskId === report.taskId}
                           >
                             <CloudDownloadIcon fontSize="small" />
@@ -355,7 +361,7 @@ export default function ReportListPage() {
                       <IconButton
                         size="small"
                         onClick={() => handleOpenDeleteDialog(report)}
-                        aria-label="Удалить отчет"
+                        aria-label={t('reports.list.deleteAction', 'Удалить отчет')}
                       >
                         <DeleteOutlineIcon fontSize="small" />
                       </IconButton>
@@ -388,7 +394,7 @@ export default function ReportListPage() {
                       >
                         <Chip
                           icon={<FolderIcon sx={{ color: resolveStatusColor(base.status) }} />}
-                          label={`БС ${base.baseId}`}
+                          label={t('reports.base', 'БС {baseId}', { baseId: base.baseId })}
                           component={NextLink}
                           href={`/reports/${report.taskId}/${base.baseId}${tokenParam}`}
                           clickable
@@ -413,15 +419,15 @@ export default function ReportListPage() {
       </Stack>
 
       <Dialog open={deleteDialogOpen} onClose={handleCloseDeleteDialog}>
-        <DialogTitle>Удалить фотоотчёт?</DialogTitle>
+        <DialogTitle>{t('reports.list.deleteTitle', 'Удалить фотоотчёт?')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary">
-            Отчёт и все файлы в хранилище будут удалены без возможности восстановления.
+            {t('reports.list.deleteDescription', 'Отчёт и все файлы в хранилище будут удалены без возможности восстановления.')}
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDeleteDialog} disabled={deleteLoading}>
-            Отмена
+            {t('common.cancel', 'Отмена')}
           </Button>
           <Button
             color="error"
@@ -429,7 +435,7 @@ export default function ReportListPage() {
             onClick={handleConfirmDelete}
             disabled={deleteLoading}
           >
-            Удалить
+            {t('reports.list.deleteConfirm', 'Удалить')}
           </Button>
         </DialogActions>
       </Dialog>

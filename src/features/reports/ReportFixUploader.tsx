@@ -15,6 +15,7 @@ import {
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useDropzone } from 'react-dropzone';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportFixUploaderProps = {
     open: boolean;
@@ -35,6 +36,7 @@ export default function ReportFixUploader({
     baseId,
     onUploaded,
 }: ReportFixUploaderProps) {
+    const { t } = useI18n();
     const [files, setFiles] = React.useState<File[]>([]);
     const [previews, setPreviews] = React.useState<{ name: string; url: string }[]>([]);
     const [uploading, setUploading] = React.useState(false);
@@ -77,7 +79,7 @@ export default function ReportFixUploader({
         },
         onDropRejected: (rejections) => {
             const firstError = rejections[0]?.errors?.[0]?.message;
-            setError(firstError || 'Файлы не приняты');
+            setError(firstError || t('reports.fixUploader.error.rejected', 'Файлы не приняты'));
         },
     });
 
@@ -96,7 +98,7 @@ export default function ReportFixUploader({
 
     const handleUpload = async () => {
         if (!files.length) {
-            setError('Добавьте фотографии исправлений');
+            setError(t('reports.fixUploader.error.noFiles', 'Добавьте фотографии исправлений'));
             return;
         }
         setUploading(true);
@@ -147,8 +149,8 @@ export default function ReportFixUploader({
                 if (!res.ok) {
                     setError(
                         payload.readOnly
-                            ? payload.error || 'Хранилище доступно только для чтения'
-                            : payload.error || 'Не удалось загрузить исправления'
+                            ? payload.error || t('reports.fixUploader.error.readOnly', 'Хранилище доступно только для чтения')
+                            : payload.error || t('reports.fixUploader.error.uploadFailed', 'Не удалось загрузить исправления')
                     );
                     return;
                 }
@@ -159,7 +161,7 @@ export default function ReportFixUploader({
             onUploaded();
             handleClose();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Ошибка загрузки');
+            setError(err instanceof Error ? err.message : t('reports.fixUploader.error.uploadError', 'Ошибка загрузки'));
         } finally {
             setUploading(false);
             setUploadProgress(null);
@@ -168,11 +170,11 @@ export default function ReportFixUploader({
 
     return (
         <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-            <DialogTitle>Исправления</DialogTitle>
+            <DialogTitle>{t('reports.fixUploader.title', 'Исправления')}</DialogTitle>
             <DialogContent>
                 <Stack spacing={2}>
                     <Typography variant="body2" color="text.secondary">
-                        Добавьте фото, подтверждающие устранение замечаний.
+                        {t('reports.fixUploader.subtitle', 'Добавьте фото, подтверждающие устранение замечаний.')}
                     </Typography>
                     <Stack
                         {...getRootProps()}
@@ -194,19 +196,26 @@ export default function ReportFixUploader({
                     >
                         <input {...getInputProps()} />
                         <Typography variant="body1">
-                            Перетащите фото сюда или нажмите для выбора
+                            {t('reports.fixUploader.dropzone', 'Перетащите фото сюда или нажмите для выбора')}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                            Добавлено файлов: {files.length}
+                            {t('reports.fixUploader.filesCount', 'Добавлено файлов: {count}', { count: files.length })}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                            До {MAX_FILE_SIZE_MB} МБ каждое. Партия до {MAX_BATCH_FILES} файлов или {MAX_BATCH_MB} МБ.
+                            {t('reports.fixUploader.limits', 'До {fileSize} МБ каждое. Партия до {files} файлов или {batchSize} МБ.', {
+                                fileSize: MAX_FILE_SIZE_MB,
+                                files: MAX_BATCH_FILES,
+                                batchSize: MAX_BATCH_MB,
+                            })}
                         </Typography>
                     </Stack>
                     {uploadProgress && (
                         <Box>
                             <Typography variant="caption" color="text.secondary">
-                                Загружено: {uploadProgress.done}/{uploadProgress.total}
+                                {t('reports.fixUploader.progress', 'Загружено: {done}/{total}', {
+                                    done: uploadProgress.done,
+                                    total: uploadProgress.total,
+                                })}
                             </Typography>
                             <LinearProgress
                                 variant="determinate"
@@ -218,7 +227,7 @@ export default function ReportFixUploader({
                     {previews.length > 0 && (
                         <Stack spacing={1}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                Добавленные фото
+                                {t('reports.fixUploader.previewTitle', 'Добавленные фото')}
                             </Typography>
                             <Box
                                 sx={{
@@ -254,7 +263,7 @@ export default function ReportFixUploader({
                                         />
                                         <IconButton
                                             size="small"
-                                            aria-label={`Удалить ${preview.name}`}
+                                            aria-label={t('reports.fixUploader.remove', 'Удалить {name}', { name: preview.name })}
                                             onClick={() => handleRemoveFile(index)}
                                             disabled={uploading}
                                             sx={(theme) => ({
@@ -286,10 +295,10 @@ export default function ReportFixUploader({
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose} disabled={uploading}>
-                    Отмена
+                    {t('common.cancel', 'Отмена')}
                 </Button>
                 <Button variant="contained" onClick={handleUpload} disabled={uploading}>
-                    {uploading ? 'Загрузка...' : 'Загрузить'}
+                    {uploading ? t('reports.fixUploader.uploading', 'Загрузка...') : t('reports.fixUploader.upload', 'Загрузить')}
                 </Button>
             </DialogActions>
         </Dialog>

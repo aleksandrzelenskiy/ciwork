@@ -6,6 +6,7 @@ import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import type { PhotoReportSummary } from '@/app/types/reportTypes';
 import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportSummaryListProps = {
     items: PhotoReportSummary[];
@@ -29,12 +30,14 @@ export default function ReportSummaryList({
     token,
     mode = 'pill',
     activeBaseId,
-    emptyText = 'Нет фотоотчетов.',
+    emptyText,
 }: ReportSummaryListProps) {
+    const { t } = useI18n();
+    const resolvedEmptyText = emptyText ?? t('reports.summary.empty', 'Нет фотоотчетов.');
     if (!items.length) {
         return (
             <Typography variant="body2" color="text.secondary">
-                {emptyText}
+                {resolvedEmptyText}
             </Typography>
         );
     }
@@ -96,10 +99,13 @@ export default function ReportSummaryList({
                                 />
                                 <Box>
                                     <Typography variant="body2" fontWeight={600}>
-                                        БС {item.baseId}
+                                        {t('reports.base', 'БС {baseId}', { baseId: item.baseId })}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                        Основные: {item.filesCount} · Исправления: {item.fixedCount}
+                                        {t('reports.summary.counts', 'Основные: {main} · Исправления: {fixed}', {
+                                            main: item.filesCount,
+                                            fixed: item.fixedCount,
+                                        })}
                                     </Typography>
                                 </Box>
                             </Stack>
@@ -162,10 +168,13 @@ export default function ReportSummaryList({
                         <FolderOutlinedIcon fontSize="small" />
                         <Box>
                             <Typography variant="body2" fontWeight={600}>
-                                БС {item.baseId}
+                                {t('reports.base', 'БС {baseId}', { baseId: item.baseId })}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                                Основные: {item.filesCount} · Исправления: {item.fixedCount}
+                                {t('reports.summary.counts', 'Основные: {main} · Исправления: {fixed}', {
+                                    main: item.filesCount,
+                                    fixed: item.fixedCount,
+                                })}
                             </Typography>
                         </Box>
                         <Chip

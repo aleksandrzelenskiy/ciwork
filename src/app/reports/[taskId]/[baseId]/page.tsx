@@ -33,6 +33,7 @@ import ReportSummaryList from '@/features/reports/ReportSummaryList';
 import { getPhotoReportPermissions, type PhotoReportRole } from '@/utils/photoReportState';
 import { UI_RADIUS } from '@/config/uiTokens';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportPayload = {
     taskId: string;
@@ -52,6 +53,7 @@ type ReportPayload = {
 };
 
 export default function PhotoReportPage() {
+    const { t } = useI18n();
     const { taskId, baseId } = useParams() as { taskId: string; baseId: string };
     const searchParams = useSearchParams();
     const token = searchParams?.get('token')?.trim() || '';
@@ -98,7 +100,7 @@ export default function PhotoReportPage() {
             const response = await fetch(`/api/reports/${taskId}/${baseId}${tokenParam}`);
             const data = (await response.json().catch(() => null)) as (ReportPayload & { error?: string }) | null;
             if (!response.ok || !data || data.error) {
-                setError(data?.error || 'Не удалось загрузить отчет');
+                setError(data?.error || t('reports.error.load', 'Не удалось загрузить отчет'));
                 return;
             }
             setReport({
@@ -107,11 +109,11 @@ export default function PhotoReportPage() {
             });
             setError(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Не удалось загрузить отчет');
+            setError(err instanceof Error ? err.message : t('reports.error.load', 'Не удалось загрузить отчет'));
         } finally {
             setLoading(false);
         }
-    }, [taskId, baseId, tokenParam]);
+    }, [taskId, baseId, tokenParam, t]);
 
     React.useEffect(() => {
         void fetchReport();
@@ -187,17 +189,17 @@ export default function PhotoReportPage() {
             allBasesAgreed?: boolean;
         };
         if (!response.ok) {
-            showAlert(payload.error || 'Не удалось согласовать', 'error');
+            showAlert(payload.error || t('reports.error.approve', 'Не удалось согласовать'), 'error');
             setApproving(false);
             return;
         }
         if (payload.allBasesAgreed) {
-            showAlert('Все БС согласованы. Фотоотчет закрыт.', 'success');
+            showAlert(t('reports.approve.allAgreed', 'Все БС согласованы. Фотоотчет закрыт.'), 'success');
         } else if (baseOptions.length > 1) {
-            showAlert('БС согласована. Остальные БС еще на проверке.', 'info');
+            showAlert(t('reports.approve.baseAgreedPending', 'БС согласована. Остальные БС еще на проверке.'), 'info');
             setNextBasesDialogOpen(true);
         } else {
-            showAlert('БС согласована. Остальные БС еще на проверке.', 'info');
+            showAlert(t('reports.approve.baseAgreedPending', 'БС согласована. Остальные БС еще на проверке.'), 'info');
         }
         setApproveDialogOpen(false);
         await fetchReport();
@@ -215,10 +217,15 @@ export default function PhotoReportPage() {
         });
         const payload = (await response.json().catch(() => ({}))) as { error?: string };
         if (!response.ok) {
-            showAlert(payload.error || 'Не удалось сохранить замечания', 'error');
+            showAlert(payload.error || t('reports.error.saveIssues', 'Не удалось сохранить замечания'), 'error');
             return;
         }
-        showAlert(issues.length ? 'Замечания сохранены' : 'Замечания сняты', 'success');
+        showAlert(
+            issues.length
+                ? t('reports.issues.saved', 'Замечания сохранены')
+                : t('reports.issues.cleared', 'Замечания сняты'),
+            'success',
+        );
         await fetchReport();
     };
 
@@ -228,7 +235,7 @@ export default function PhotoReportPage() {
         try {
             const response = await fetch(`/api/reports/${taskId}/${baseId}/download${tokenParam}`);
             if (!response.ok) {
-                showAlert('Не удалось скачать отчет', 'error');
+                showAlert(t('reports.error.download', 'Не удалось скачать отчет'), 'error');
                 return;
             }
             const blob = await response.blob();
@@ -241,7 +248,7 @@ export default function PhotoReportPage() {
             link.remove();
             window.URL.revokeObjectURL(url);
         } catch {
-            showAlert('Не удалось скачать отчет', 'error');
+            showAlert(t('reports.error.download', 'Не удалось скачать отчет'), 'error');
         } finally {
             setDownloading(false);
         }
@@ -258,7 +265,7 @@ export default function PhotoReportPage() {
     if (error || !report) {
         return (
             <Box display="flex" justifyContent="center" mt={6}>
-                <Alert severity="error">{error || 'Отчет не найден'}</Alert>
+                <Alert severity="error">{error || t('reports.error.notFound', 'Отчет не найден')}</Alert>
             </Box>
         );
     }
@@ -292,7 +299,7 @@ export default function PhotoReportPage() {
                 startIcon={<ArrowBackIcon />}
                 sx={{ textTransform: 'none', mb: 3 }}
             >
-                Все фотоотчеты
+                {t('reports.all', 'Все фотоотчеты')}
             </Button>
 
             <Stack spacing={3}>
@@ -314,8 +321,8 @@ export default function PhotoReportPage() {
 
                 <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems="flex-start">
                     <Stack spacing={3} sx={{ flex: 1 }}>
-                        <ReportGallery title="Основные фото" photos={report.files} />
-                        <ReportGallery title="Исправления" photos={report.fixedFiles} />
+                        <ReportGallery title={t('reports.gallery.main', 'Основные фото')} photos={report.files} />
+                        <ReportGallery title={t('reports.gallery.fixed', 'Исправления')} photos={report.fixedFiles} />
                     </Stack>
                     <Stack spacing={3} sx={{ width: { xs: '100%', lg: 360 }, flexShrink: 0 }}>
                         <ReportIssuesPanel
@@ -348,13 +355,13 @@ export default function PhotoReportPage() {
                             })}
                         >
                             <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                                Связанные БС
+                                {t('reports.relatedBases.title', 'Связанные БС')}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                                Сейчас открыта БС {baseId}. Согласование применяется только к этой БС.
+                                {t('reports.relatedBases.current', 'Сейчас открыта БС {baseId}. Согласование применяется только к этой БС.', { baseId })}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                                Всего БС по задаче: {baseOptions.length}.
+                                {t('reports.relatedBases.total', 'Всего БС по задаче: {count}.', { count: baseOptions.length })}
                             </Typography>
                             <ReportSummaryList
                                 items={reportSummaries}
@@ -362,7 +369,7 @@ export default function PhotoReportPage() {
                                 token={token}
                                 mode="list"
                                 activeBaseId={baseId}
-                                emptyText="Нет фотоотчетов по этой задаче."
+                                emptyText={t('reports.relatedBases.empty', 'Нет фотоотчетов по этой задаче.')}
                             />
                         </Box>
                         {canDownload && (
@@ -373,7 +380,9 @@ export default function PhotoReportPage() {
                                 startIcon={<CloudDownloadIcon />}
                                 sx={{ borderRadius: UI_RADIUS.pill, textTransform: 'none' }}
                             >
-                                {downloading ? 'Скачиваем…' : 'Скачать отчет'}
+                                {downloading
+                                    ? t('reports.download.loading', 'Скачиваем…')
+                                    : t('reports.download', 'Скачать отчет')}
                             </Button>
                         )}
                     </Stack>
@@ -414,11 +423,15 @@ export default function PhotoReportPage() {
                 aria-labelledby="report-approve-title"
                 aria-describedby="report-approve-description"
             >
-                <DialogTitle id="report-approve-title">Подтвердить согласование</DialogTitle>
+                <DialogTitle id="report-approve-title">
+                    {t('reports.approve.title', 'Подтвердить согласование')}
+                </DialogTitle>
                 <DialogContent>
                     <DialogContentText id="report-approve-description">
-                        Согласование применяется к текущей БС. Если все БС по задаче будут согласованы,
-                        фотоотчет и задача перейдут в статус «Согласовано».
+                        {t(
+                            'reports.approve.description',
+                            'Согласование применяется к текущей БС. Если все БС по задаче будут согласованы, фотоотчет и задача перейдут в статус «Согласовано».'
+                        )}
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
@@ -427,7 +440,7 @@ export default function PhotoReportPage() {
                         disabled={approving}
                         sx={{ textTransform: 'none' }}
                     >
-                        Отмена
+                        {t('common.cancel', 'Отмена')}
                     </Button>
                     <Button
                         onClick={handleApprove}
@@ -436,7 +449,9 @@ export default function PhotoReportPage() {
                         disabled={approving}
                         sx={{ textTransform: 'none' }}
                     >
-                        {approving ? 'Согласуем…' : 'Согласовать'}
+                        {approving
+                            ? t('reports.approve.loading', 'Согласуем…')
+                            : t('reports.approve.action', 'Согласовать')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -446,11 +461,15 @@ export default function PhotoReportPage() {
                 aria-labelledby="next-bases-title"
                 aria-describedby="next-bases-description"
             >
-                <DialogTitle id="next-bases-title">Проверить связанные БС</DialogTitle>
+                <DialogTitle id="next-bases-title">
+                    {t('reports.nextBases.title', 'Проверить связанные БС')}
+                </DialogTitle>
                 <DialogContent>
                     <DialogContentText id="next-bases-description">
-                        В этой задаче есть другие БС. Перейдите к ним, чтобы завершить проверку
-                        работ по задаче.
+                        {t(
+                            'reports.nextBases.description',
+                            'В этой задаче есть другие БС. Перейдите к ним, чтобы завершить проверку работ по задаче.'
+                        )}
                     </DialogContentText>
                     <Box sx={{ mt: 2 }}>
                         <ReportSummaryList
@@ -459,7 +478,7 @@ export default function PhotoReportPage() {
                             token={token}
                             mode="list"
                             activeBaseId={baseId}
-                            emptyText="Нет других фотоотчетов."
+                            emptyText={t('reports.nextBases.empty', 'Нет других фотоотчетов.')}
                         />
                     </Box>
                 </DialogContent>
@@ -468,7 +487,7 @@ export default function PhotoReportPage() {
                         onClick={() => setNextBasesDialogOpen(false)}
                         sx={{ textTransform: 'none' }}
                     >
-                        Закрыть
+                        {t('common.close', 'Закрыть')}
                     </Button>
                 </DialogActions>
             </Dialog>
