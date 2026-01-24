@@ -46,6 +46,9 @@ import T2EstimateParser, {
     ParsedEstimateResult,
     ParsedWorkItem,
 } from '@/app/workspace/components/T2/T2EstimateParser';
+import BeIdParser, {
+    ParsedBeIdResult,
+} from '@/app/workspace/components/Be/BeIdParser';
 import {
     extractBsNumbersFromString,
     DEFAULT_BS_PREFIXES,
@@ -409,6 +412,7 @@ export default function WorkspaceTaskDialog({
     );
 
     const [estimateDialogOpen, setEstimateDialogOpen] = React.useState(false);
+    const [beIdDialogOpen, setBeIdDialogOpen] = React.useState(false);
 
     const [saving, setSaving] = React.useState(false);
 
@@ -437,6 +441,7 @@ export default function WorkspaceTaskDialog({
 
     const [projectMeta, setProjectMeta] = React.useState<{ regionCode?: string; operator?: string } | null>(null);
     const isT2Operator = React.useMemo(() => projectMeta?.operator === '250020', [projectMeta?.operator]);
+    const isBeelineOperator = React.useMemo(() => projectMeta?.operator === '250099', [projectMeta?.operator]);
 
     const [members, setMembers] = React.useState<MemberOption[]>([]);
     const [membersLoading, setMembersLoading] = React.useState(false);
@@ -514,6 +519,12 @@ export default function WorkspaceTaskDialog({
             setEstimateDialogOpen(false);
         }
     }, [isT2Operator, estimateDialogOpen]);
+
+    React.useEffect(() => {
+        if (!isBeelineOperator && beIdDialogOpen) {
+            setBeIdDialogOpen(false);
+        }
+    }, [isBeelineOperator, beIdDialogOpen]);
 
     const fetchBsOptions = React.useCallback(
         async (term: string): Promise<BsOption[]> => {
@@ -1025,9 +1036,14 @@ export default function WorkspaceTaskDialog({
     }, []);
 
     const handleOpenEstimateDialog = React.useCallback(() => {
-        if (!isT2Operator) return;
-        setEstimateDialogOpen(true);
-    }, [isT2Operator]);
+        if (isT2Operator) {
+            setEstimateDialogOpen(true);
+            return;
+        }
+        if (isBeelineOperator) {
+            setBeIdDialogOpen(true);
+        }
+    }, [isT2Operator, isBeelineOperator]);
 
     const handleEstimateApply = React.useCallback(
         (data: ParsedEstimateResult) => {
@@ -1126,6 +1142,68 @@ export default function WorkspaceTaskDialog({
             }
         },
         [taskName, loadBsOptions, autoFillParsedBsNumbers]
+    );
+
+    const handleBeIdApply = React.useCallback(
+        (data: ParsedBeIdResult) => {
+            const { bsNumber, bsAddress, bsLatitude, bsLongitude, taskDescription, sourceFile } = data;
+
+            const latValue =
+                typeof bsLatitude === 'number' ? formatDecimalCoord(bsLatitude) : '';
+            const lonValue =
+                typeof bsLongitude === 'number' ? formatDecimalCoord(bsLongitude) : '';
+
+            if (bsNumber || bsAddress || latValue || lonValue) {
+                setBsEntries((prev) => {
+                    if (!prev.length) {
+                        return [
+                            {
+                                id: 'bs-main',
+                                bsNumber: bsNumber || '',
+                                bsInput: bsNumber || '',
+                                bsAddress: bsAddress || '',
+                                bsLatitude: latValue,
+                                bsLongitude: lonValue,
+                                selectedBsOption: null,
+                            },
+                        ];
+                    }
+
+                    const next = [...prev];
+                    const first = next[0];
+
+                    next[0] = {
+                        ...first,
+                        bsNumber: bsNumber || first.bsNumber,
+                        bsInput: bsNumber || first.bsInput,
+                        bsAddress: bsAddress || first.bsAddress,
+                        bsLatitude: latValue || first.bsLatitude,
+                        bsLongitude: lonValue || first.bsLongitude,
+                    };
+
+                    return next;
+                });
+
+                if (bsNumber) {
+                    void loadBsOptions(bsNumber);
+                    void autoFillParsedBsNumbers([bsNumber]);
+                }
+            }
+
+            if (taskDescription) {
+                setTaskDescription(taskDescription);
+            }
+
+            if (sourceFile) {
+                setEstimateFile((prev) => {
+                    const sameFile = prev && prev.name === sourceFile.name && prev.size === sourceFile.size;
+                    return sameFile ? prev : sourceFile;
+                });
+            } else {
+                setEstimateFile(null);
+            }
+        },
+        [loadBsOptions, autoFillParsedBsNumbers]
     );
 
 
@@ -1679,7 +1757,7 @@ export default function WorkspaceTaskDialog({
                             <Stack spacing={1.5}>
                                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                                     <Typography variant="subtitle2">Основная информация</Typography>
-                                    {isT2Operator && (
+                                    {(isT2Operator || isBeelineOperator) && (
                                         <Button
                                             size="small"
                                             variant="outlined"
@@ -2576,6 +2654,15 @@ export default function WorkspaceTaskDialog({
                         onClose={() => setEstimateDialogOpen(false)}
                         onApply={handleEstimateApply}
                         operatorLabel="Т2"
+                    />
+                )}
+
+                {isBeelineOperator && (
+                    <BeIdParser
+                        open={beIdDialogOpen}
+                        onClose={() => setBeIdDialogOpen(false)}
+                        onApply={handleBeIdApply}
+                        operatorLabel="Билайн"
                     />
                 )}
 
