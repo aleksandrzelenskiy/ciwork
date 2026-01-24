@@ -19,6 +19,16 @@ const withBasePath = (path: string) => {
     return `${BASE_PATH}${normalizedPath}`;
 };
 
+const stripBasePath = (pathname: string) => {
+    if (!BASE_PATH) return pathname;
+    if (pathname === BASE_PATH) return "/";
+    if (pathname.startsWith(`${BASE_PATH}/`)) {
+        const stripped = pathname.slice(BASE_PATH.length);
+        return stripped.length ? stripped : "/";
+    }
+    return pathname;
+};
+
 const addBasePath = (routes: string[]) => {
     if (!BASE_PATH) return routes;
     return Array.from(
@@ -85,6 +95,51 @@ export default clerkMiddleware(
 
         // 4) Всё остальное — строго под авторизацию => редирект на /sign-in
         await auth.protect();
+
+        const { pathname, origin } = request.nextUrl;
+        const cleanPath = stripBasePath(pathname);
+        const isApiRoute = cleanPath.startsWith("/api");
+
+        if (!isApiRoute) {
+            try {
+                const currentUserUrl = new URL(withBasePath("/api/current-user"), origin);
+                const res = await fetch(currentUserUrl, {
+                    headers: {
+                        cookie: request.headers.get("cookie") || "",
+                    },
+                });
+                if (res.ok) {
+                    const payload = (await res.json().catch(() => null)) as
+                        | {
+                              profileType?: string | null;
+                              memberships?: Array<{ status?: string }>;
+                          }
+                        | null;
+                    const profileType = payload?.profileType ?? null;
+                    const memberships = Array.isArray(payload?.memberships) ? payload?.memberships ?? [] : [];
+                    const hasActiveMembership = memberships.some((membership) => membership.status === "active");
+                    const hasRequestedMembership = memberships.some((membership) => membership.status === "requested");
+
+                    if (profileType === "employer" && !hasActiveMembership) {
+                        const isOrgNewRoute = cleanPath === "/org/new";
+                        const isOrgJoinRoute = /^\/org\/[^/]+\/join(\/|$)/.test(cleanPath);
+                        const isOnboardingRoute = cleanPath === "/onboarding";
+                        const isHomeRoute = cleanPath === "/";
+                        const isProfileRoute = cleanPath === "/profile";
+                        const isSettingsRoute = cleanPath === "/settings";
+
+                        const allowHome = hasRequestedMembership && isHomeRoute;
+                        if (!isOrgNewRoute && !isOrgJoinRoute && !isOnboardingRoute && !allowHome && !isProfileRoute && !isSettingsRoute) {
+                            const redirectUrl = new URL(withBasePath("/org/new"), origin);
+                            return NextResponse.redirect(redirectUrl);
+                        }
+                    }
+                }
+            } catch {
+                // Если проверка не удалась — просто продолжаем.
+            }
+        }
+
         return NextResponse.next();
     },
     {

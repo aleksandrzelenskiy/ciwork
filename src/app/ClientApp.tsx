@@ -56,6 +56,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   const [profileSetupCompleted, setProfileSetupCompleted] = useState<boolean | null>(null);
   const [profileType, setProfileType] = useState<ProfileType | null>(null);
+  const [hasActiveMembership, setHasActiveMembership] = useState(false);
   const [walletAnchor, setWalletAnchor] = useState<null | HTMLElement>(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
@@ -83,6 +84,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const isOnboardingRoute = pathname === '/onboarding';
+  const isEmployerNoOrg = profileType === 'employer' && !hasActiveMembership;
 
   const getTransactionDescription = (source: string) => {
     switch (source) {
@@ -120,6 +122,9 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
 
         setProfileSetupCompleted(normalizedSetupCompleted);
         setProfileType(resolvedProfileType ?? null);
+        setHasActiveMembership(
+          (data.memberships ?? []).some((membership) => membership.status === 'active')
+        );
         const resolvedLocale = typeof data.locale === 'string'
           ? data.locale
           : typeof data.user?.locale === 'string'
@@ -140,6 +145,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
       } else {
         setProfileSetupCompleted(null);
         setProfileType(null);
+        setHasActiveMembership(false);
       }
     };
 
@@ -549,7 +555,9 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                           <DarkModeIcon fontSize='small' />
                         )}
                       </IconButton>
-                      <MessengerTrigger buttonSx={toolbarIconButtonSx} />
+                      {!isEmployerNoOrg ? (
+                        <MessengerTrigger buttonSx={toolbarIconButtonSx} />
+                      ) : null}
                       {isContractor ? (
                         <IconButton
                           color='inherit'
@@ -560,7 +568,9 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                           <AccountBalanceWalletIcon fontSize='small' />
                         </IconButton>
                       ) : null}
-                      <NotificationBell buttonSx={toolbarIconButtonSx} />
+                      {!isEmployerNoOrg ? (
+                        <NotificationBell buttonSx={toolbarIconButtonSx} />
+                      ) : null}
                     </Box>
                   </Toolbar>
                 </AppBar>

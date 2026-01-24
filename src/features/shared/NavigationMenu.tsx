@@ -322,13 +322,10 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
         userContextLoading ||
         (isEmployerView && managerNavLoading) ||
         !profileType;
-    const hasRequestedMembership = (userContext?.memberships ?? []).some(
-        (membership) => membership.status === 'requested'
-    );
     const hasActiveMembership = (userContext?.memberships ?? []).some(
         (membership) => membership.status === 'active'
     );
-    const isPendingAccess = isEmployer && hasRequestedMembership && !hasActiveMembership;
+    const isEmployerNoOrg = isEmployer && !hasActiveMembership;
     const managerOrgPath = isEmployerView
         ? managerOrgSlug
             ? `/org/${encodeURIComponent(managerOrgSlug)}`
@@ -400,6 +397,15 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
             ...item,
             label: item.labelKey ? t(item.labelKey, item.label) : t(item.label, item.label),
         }));
+        if (isEmployerNoOrg && managerOrgPath) {
+            return [
+                {
+                    label: t('nav.organization', 'ОРГАНИЗАЦИЯ'),
+                    path: managerOrgPath,
+                    icon: <BusinessIcon sx={{ fontSize: 20 }} />,
+                },
+            ];
+        }
         if (isSuperAdminUser) {
             items.push({
                 label: t('nav.admin', 'АДМИН'),
@@ -470,6 +476,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
         isSuperAdminUser,
         geoLabel,
         t,
+        isEmployerNoOrg,
     ]);
 
 
@@ -666,8 +673,10 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                     const isExpanded =
                         hasChildren &&
                         ((expandedItems[item.label] ?? false) || childActive);
+                    const isOrgItem = item.path === '/org/new' || item.path.startsWith('/org/');
+                    const isDisabled = isEmployerNoOrg && !isOrgItem;
                     const handleItemClick = () => {
-                        if (isPendingAccess) return;
+                        if (isDisabled) return;
                         if (!hasChildren) {
                             onNavigateAction(item.path);
                             return;
@@ -681,7 +690,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                         <React.Fragment key={item.label}>
                             <ListItemButton
                                 disableRipple
-                                disabled={isPendingAccess}
+                                disabled={isDisabled}
                                 onClick={handleItemClick}
                                 sx={{
                                     borderRadius: 3,
@@ -695,18 +704,18 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                                         ? `inset 0 0 0 1px ${palette.border}`
                                         : 'none',
                                     color: palette.textPrimary,
-                                    opacity: isPendingAccess ? 0.55 : 1,
+                                    opacity: isDisabled ? 0.55 : 1,
                                     transition: 'all 0.25s ease',
                                     '&:hover': {
-                                        backgroundColor: isPendingAccess ? 'transparent' : palette.hoverBg,
-                                        transform: isPendingAccess ? 'none' : 'translateX(4px)',
-                                        boxShadow: isPendingAccess
+                                        backgroundColor: isDisabled ? 'transparent' : palette.hoverBg,
+                                        transform: isDisabled ? 'none' : 'translateX(4px)',
+                                        boxShadow: isDisabled
                                             ? 'none'
                                             : isDarkMode
                                                 ? '0 15px 35px rgba(0,0,0,0.55)'
                                                 : '0 15px 35px rgba(15,23,42,0.12)',
                                     },
-                                    ...(isPendingAccess
+                                    ...(isDisabled
                                         ? { cursor: 'not-allowed' }
                                         : {}),
                                 }}
@@ -776,9 +785,9 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                                                 <ListItemButton
                                                     key={`${item.label}-${child.path}`}
                                                     disableRipple
-                                                    disabled={isPendingAccess}
+                                                    disabled={isDisabled}
                                                     onClick={() => {
-                                                        if (isPendingAccess) return;
+                                                        if (isDisabled) return;
                                                         onNavigateAction(child.path);
                                                     }}
                                                     sx={{
@@ -794,11 +803,11 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                                                             ? `inset 0 0 0 1px ${palette.border}`
                                                             : 'none',
                                                         color: palette.textPrimary,
-                                                        opacity: isPendingAccess ? 0.55 : 1,
+                                                        opacity: isDisabled ? 0.55 : 1,
                                                         transition: 'all 0.2s ease',
                                                         '&:hover': {
-                                                            backgroundColor: isPendingAccess ? 'transparent' : palette.hoverBg,
-                                                            transform: isPendingAccess ? 'none' : 'translateX(4px)',
+                                                            backgroundColor: isDisabled ? 'transparent' : palette.hoverBg,
+                                                            transform: isDisabled ? 'none' : 'translateX(4px)',
                                                         },
                                                     }}
                                                 >
