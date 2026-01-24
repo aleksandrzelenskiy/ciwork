@@ -95,13 +95,24 @@ export default function Page() {
                 return;
             }
 
-            setError('Требуется дополнительная проверка. Завершите вход в следующем шаге.');
+            if (result.status === 'needs_second_factor') {
+                setError('Дополнительная проверка недоступна. Обратитесь к администратору.');
+                return;
+            }
+
+            if (result.status === 'needs_new_password') {
+                setError('Нужно обновить пароль. Обратитесь к администратору.');
+                return;
+            }
+
+            setError('Не удалось завершить вход. Попробуйте ещё раз или обратитесь к администратору.');
         } catch (signInError) {
             setError(getClerkErrorMessage(signInError, 'Не удалось выполнить вход.'));
         } finally {
             setIsSubmitting(false);
         }
     };
+
 
     return (
         <div
