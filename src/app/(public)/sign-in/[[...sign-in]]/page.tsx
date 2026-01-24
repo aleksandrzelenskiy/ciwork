@@ -29,6 +29,9 @@ export default function Page() {
     const [showPassword, setShowPassword] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [info, setInfo] = useState<string | null>(null);
+    const [secondFactorRequired, setSecondFactorRequired] = useState(false);
+    const [secondFactorCode, setSecondFactorCode] = useState('');
     const backgroundStyle = {
         '--signin-bg': "url('/bg/sign-in-bg.jpg')",
     } as CSSProperties;
@@ -81,6 +84,7 @@ export default function Page() {
 
         setIsSubmitting(true);
         setError(null);
+        setInfo(null);
 
         try {
             const result = await signIn.create({
@@ -96,7 +100,20 @@ export default function Page() {
             }
 
             if (result.status === 'needs_second_factor') {
-                setError('Дополнительная проверка недоступна. Обратитесь к администратору.');
+                const supported = result.supportedSecondFactors ?? [];
+                const hasEmailCode = supported.some(
+                    (factor) => factor.strategy === 'email_code',
+                );
+
+                if (!hasEmailCode) {
+                    setError('Дополнительная проверка недоступна. Обратитесь к администратору.');
+                    return;
+                }
+
+                await result.prepareSecondFactor({ strategy: 'email_code' });
+                setSecondFactorRequired(true);
+                setSecondFactorCode('');
+                setInfo('Вход с нового устройства. Код подтверждения отправлен на e-mail.');
                 return;
             }
 
@@ -111,6 +128,63 @@ export default function Page() {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleSecondFactorSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!isLoaded || !signIn) {
+            return;
+        }
+
+        setIsSubmitting(true);
+        setError(null);
+        setInfo(null);
+
+        try {
+            const result = await signIn.attemptSecondFactor({
+                strategy: 'email_code',
+                code: secondFactorCode,
+            });
+
+            if (result.status === 'complete') {
+                await setActive({ session: result.createdSessionId });
+                const redirectUrl = searchParams?.get('redirect_url') ?? null;
+                router.push(resolveRedirectTarget(redirectUrl));
+                return;
+            }
+
+            setError('Не удалось подтвердить код. Попробуйте ещё раз.');
+        } catch (signInError) {
+            setError(getClerkErrorMessage(signInError, 'Не удалось подтвердить код.'));
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleResendSecondFactor = async () => {
+        if (!isLoaded || !signIn) {
+            return;
+        }
+
+        setIsSubmitting(true);
+        setError(null);
+        setInfo(null);
+
+        try {
+            await signIn.prepareSecondFactor({ strategy: 'email_code' });
+            setInfo('Вход с нового устройства. Отправили новый код на e-mail.');
+        } catch (signInError) {
+            setError(getClerkErrorMessage(signInError, 'Не удалось отправить код.'));
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleBackToSignIn = () => {
+        setSecondFactorRequired(false);
+        setSecondFactorCode('');
+        setInfo(null);
+        setError(null);
     };
 
 
@@ -158,57 +232,111 @@ export default function Page() {
                             Добро пожаловать
                         </h2>
                         <p className="mt-2 text-sm text-slate-600">
-                            Введите почту и пароль, чтобы продолжить работу.
+                            {secondFactorRequired
+                                ? 'Введите код из письма, чтобы подтвердить вход.'
+                                : 'Введите почту и пароль, чтобы продолжить работу.'}
                         </p>
-                        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-                            <TextField
-                                id="email"
-                                label="Почта"
-                                variant="outlined"
-                                fullWidth
-                                value={email}
-                                onChange={(event) => setEmail(event.target.value)}
-                                autoComplete="email"
-                            />
-                            <FormControl variant="outlined" fullWidth>
-                                <InputLabel htmlFor="password">Пароль</InputLabel>
-                                <OutlinedInput
-                                    id="password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={(event) => setPassword(event.target.value)}
-                                    endAdornment={
-                                        <InputAdornment position="end">
-                                            <IconButton
-                                                aria-label={
-                                                    showPassword
-                                                        ? 'скрыть пароль'
-                                                        : 'показать пароль'
-                                                }
-                                                onClick={() => setShowPassword((prev) => !prev)}
-                                                onMouseDown={(event) => event.preventDefault()}
-                                                onMouseUp={(event) => event.preventDefault()}
-                                                edge="end"
-                                            >
-                                                {showPassword ? <VisibilityOff /> : <Visibility />}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    }
-                                    label="Пароль"
+                        {!secondFactorRequired ? (
+                            <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+                                <TextField
+                                    id="email"
+                                    label="Почта"
+                                    variant="outlined"
+                                    fullWidth
+                                    value={email}
+                                    onChange={(event) => setEmail(event.target.value)}
+                                    autoComplete="email"
                                 />
-                            </FormControl>
-                            {error ? (
-                                <Typography className="text-sm text-rose-600">{error}</Typography>
-                            ) : null}
-                            <Button
-                                type="submit"
-                                variant="contained"
-                                size="large"
-                                disabled={isSubmitting || !isLoaded}
+                                <FormControl variant="outlined" fullWidth>
+                                    <InputLabel htmlFor="password">Пароль</InputLabel>
+                                    <OutlinedInput
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(event) => setPassword(event.target.value)}
+                                        endAdornment={
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    aria-label={
+                                                        showPassword
+                                                            ? 'скрыть пароль'
+                                                            : 'показать пароль'
+                                                    }
+                                                    onClick={() => setShowPassword((prev) => !prev)}
+                                                    onMouseDown={(event) => event.preventDefault()}
+                                                    onMouseUp={(event) => event.preventDefault()}
+                                                    edge="end"
+                                                >
+                                                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        }
+                                        label="Пароль"
+                                    />
+                                </FormControl>
+                                {error ? (
+                                    <Typography className="text-sm text-rose-600">
+                                        {error}
+                                    </Typography>
+                                ) : null}
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    size="large"
+                                    disabled={isSubmitting || !isLoaded}
+                                >
+                                    {isSubmitting ? 'Входим...' : 'Войти'}
+                                </Button>
+                            </form>
+                        ) : (
+                            <form
+                                onSubmit={handleSecondFactorSubmit}
+                                className="mt-6 flex flex-col gap-4"
                             >
-                                {isSubmitting ? 'Входим...' : 'Войти'}
-                            </Button>
-                        </form>
+                                <TextField
+                                    id="second-factor-code"
+                                    label="Код из письма"
+                                    variant="outlined"
+                                    fullWidth
+                                    value={secondFactorCode}
+                                    onChange={(event) => setSecondFactorCode(event.target.value)}
+                                    inputProps={{ inputMode: 'numeric' }}
+                                    autoComplete="one-time-code"
+                                />
+                                {info ? (
+                                    <Typography className="text-sm text-slate-600">{info}</Typography>
+                                ) : null}
+                                {error ? (
+                                    <Typography className="text-sm text-rose-600">
+                                        {error}
+                                    </Typography>
+                                ) : null}
+                                <Button
+                                    type="submit"
+                                    variant="contained"
+                                    size="large"
+                                    disabled={isSubmitting || !isLoaded}
+                                >
+                                    {isSubmitting ? 'Проверяем...' : 'Подтвердить'}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="text"
+                                    disabled={isSubmitting || !isLoaded}
+                                    onClick={handleResendSecondFactor}
+                                >
+                                    Отправить код ещё раз
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="text"
+                                    disabled={isSubmitting}
+                                    onClick={handleBackToSignIn}
+                                >
+                                    Вернуться ко входу
+                                </Button>
+                            </form>
+                        )}
                         <p className="mt-8 text-sm text-slate-600">
                             Нет аккаунта?{' '}
                             <Link href="/sign-up" className="font-semibold text-blue-600">
