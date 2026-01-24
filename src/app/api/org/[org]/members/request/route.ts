@@ -30,7 +30,12 @@ export async function POST(
             return NextResponse.json({ error: 'Auth required' }, { status: 401 });
         }
 
-        const org = await Organization.findOne({ orgSlug }).lean();
+        const org = await Organization.findOne({ orgSlug }).lean<{
+            _id: Types.ObjectId;
+            name: string;
+            orgSlug: string;
+            ownerEmail: string;
+        }>();
         if (!org) return NextResponse.json({ error: 'Организация не найдена' }, { status: 404 });
 
         if (normalizeEmail(org.ownerEmail) === requesterEmail) {
