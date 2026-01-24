@@ -44,7 +44,7 @@ export async function PATCH(
 
         const requesterEmail = normalizeEmail(membership.userEmail);
         if (requesterEmail) {
-            const requester = await UserModel.findOne({ email: requesterEmail }, { _id: 1 }).lean<{ _id: unknown }>();
+            const requester = await UserModel.findOne({ email: requesterEmail }, { _id: 1 }).lean<{ _id: Types.ObjectId }>();
             if (requester?._id) {
                 try {
                     await createNotification({
@@ -102,7 +102,7 @@ export async function DELETE(
         await Membership.deleteOne({ _id: membership._id });
 
         if (requesterEmail) {
-            const requester = await UserModel.findOne({ email: requesterEmail }, { _id: 1 }).lean<{ _id: unknown }>();
+            const requester = await UserModel.findOne({ email: requesterEmail }, { _id: 1 }).lean<{ _id: Types.ObjectId }>();
             if (requester?._id) {
                 try {
                     await createNotification({
