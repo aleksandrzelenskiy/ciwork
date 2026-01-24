@@ -72,21 +72,22 @@ const findValueByLabelMatcherInRows = (
 
             const entries = Object.entries(row);
             const labelIndex = entries.findIndex(([entryKey]) => entryKey === key);
-            const candidates: Array<string | number> = [];
-            if (labelIndex >= 0) {
-                for (let i = labelIndex + 1; i < entries.length; i += 1) {
-                    const entryValue = entries[i][1];
-                    if (typeof entryValue === 'string' || typeof entryValue === 'number') {
-                        candidates.push(entryValue);
-                    }
-                }
-            } else {
-                for (const [, entryValue] of entries) {
-                    if (typeof entryValue === 'string' || typeof entryValue === 'number') {
-                        candidates.push(entryValue);
-                    }
+            const candidatesAfter: Array<string | number> = [];
+            const candidatesBefore: Array<string | number> = [];
+
+            for (let i = 0; i < entries.length; i += 1) {
+                if (i === labelIndex) continue;
+                const entryValue = entries[i][1];
+                if (typeof entryValue !== 'string' && typeof entryValue !== 'number') continue;
+                if (labelIndex >= 0 && i > labelIndex) {
+                    candidatesAfter.push(entryValue);
+                } else {
+                    candidatesBefore.push(entryValue);
                 }
             }
+
+            const candidates =
+                candidatesAfter.length > 0 ? candidatesAfter : candidatesBefore;
 
             for (const candidate of candidates) {
                 if (prefer === 'number') {
