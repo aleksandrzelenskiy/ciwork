@@ -175,6 +175,9 @@ export default function NewOrgPage() {
                         : org
                 )
             );
+            setTimeout(() => {
+                router.push('/');
+            }, 3000);
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
             setJoinAlert({ type: 'warning', message: msg });

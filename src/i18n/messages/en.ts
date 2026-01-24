@@ -366,6 +366,9 @@ const enMessages: Record<string, string> = {
     'org.members.request.approveError': 'Failed to approve request',
     'org.members.request.declineSuccess': 'Request declined',
     'org.members.request.declineError': 'Failed to decline request',
+    'dashboard.pending.title': 'Request sent',
+    'dashboard.pending.body': 'Your request has been sent to {orgName}. After review and approval you will get full access to the system.',
+    'dashboard.pending.orgFallback': 'the organization',
 };
 
 export default enMessages;

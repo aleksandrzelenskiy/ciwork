@@ -322,6 +322,13 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
         userContextLoading ||
         (isEmployerView && managerNavLoading) ||
         !profileType;
+    const hasRequestedMembership = (userContext?.memberships ?? []).some(
+        (membership) => membership.status === 'requested'
+    );
+    const hasActiveMembership = (userContext?.memberships ?? []).some(
+        (membership) => membership.status === 'active'
+    );
+    const isPendingAccess = isEmployer && hasRequestedMembership && !hasActiveMembership;
     const managerOrgPath = isEmployerView
         ? managerOrgSlug
             ? `/org/${encodeURIComponent(managerOrgSlug)}`
@@ -660,6 +667,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                         hasChildren &&
                         ((expandedItems[item.label] ?? false) || childActive);
                     const handleItemClick = () => {
+                        if (isPendingAccess) return;
                         if (!hasChildren) {
                             onNavigateAction(item.path);
                             return;
@@ -673,6 +681,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                         <React.Fragment key={item.label}>
                             <ListItemButton
                                 disableRipple
+                                disabled={isPendingAccess}
                                 onClick={handleItemClick}
                                 sx={{
                                     borderRadius: 3,
@@ -686,15 +695,20 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                                         ? `inset 0 0 0 1px ${palette.border}`
                                         : 'none',
                                     color: palette.textPrimary,
+                                    opacity: isPendingAccess ? 0.55 : 1,
                                     transition: 'all 0.25s ease',
                                     '&:hover': {
-                                        backgroundColor: palette.hoverBg,
-                                        transform: 'translateX(4px)',
-                                        boxShadow:
-                                            isDarkMode
+                                        backgroundColor: isPendingAccess ? 'transparent' : palette.hoverBg,
+                                        transform: isPendingAccess ? 'none' : 'translateX(4px)',
+                                        boxShadow: isPendingAccess
+                                            ? 'none'
+                                            : isDarkMode
                                                 ? '0 15px 35px rgba(0,0,0,0.55)'
                                                 : '0 15px 35px rgba(15,23,42,0.12)',
                                     },
+                                    ...(isPendingAccess
+                                        ? { cursor: 'not-allowed' }
+                                        : {}),
                                 }}
                             >
                                 <ListItemIcon
@@ -762,7 +776,11 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                                                 <ListItemButton
                                                     key={`${item.label}-${child.path}`}
                                                     disableRipple
-                                                    onClick={() => onNavigateAction(child.path)}
+                                                    disabled={isPendingAccess}
+                                                    onClick={() => {
+                                                        if (isPendingAccess) return;
+                                                        onNavigateAction(child.path);
+                                                    }}
                                                     sx={{
                                                         borderRadius: 2,
                                                         px: 2.5,
@@ -776,10 +794,11 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                                                             ? `inset 0 0 0 1px ${palette.border}`
                                                             : 'none',
                                                         color: palette.textPrimary,
+                                                        opacity: isPendingAccess ? 0.55 : 1,
                                                         transition: 'all 0.2s ease',
                                                         '&:hover': {
-                                                            backgroundColor: palette.hoverBg,
-                                                            transform: 'translateX(4px)',
+                                                            backgroundColor: isPendingAccess ? 'transparent' : palette.hoverBg,
+                                                            transform: isPendingAccess ? 'none' : 'translateX(4px)',
                                                         },
                                                     }}
                                                 >

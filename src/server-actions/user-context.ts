@@ -57,21 +57,29 @@ export const GetUserContext = async (): Promise<
     }));
   }
 
+  const activeMemberships = memberships.filter((membership) => membership.status === 'active');
+
   let activeOrgId: string | null = user.activeOrgId
     ? user.activeOrgId.toString()
     : null;
 
-  if (!activeOrgId && memberships.length > 0) {
-    activeOrgId = memberships[0].orgId || null;
+  if (
+    activeOrgId &&
+    !activeMemberships.some((membership) => membership.orgId === activeOrgId)
+  ) {
+    activeOrgId = null;
+  }
+
+  if (!activeOrgId && activeMemberships.length > 0) {
+    activeOrgId = activeMemberships[0].orgId || null;
   }
 
   const activeMembership =
-    memberships.find((m) => activeOrgId && m.orgId === activeOrgId) ?? null;
-  const fallbackMembership = activeMembership ?? memberships[0] ?? null;
+    activeMemberships.find((membership) => activeOrgId && membership.orgId === activeOrgId) ?? null;
   const isSuperAdmin = user.platformRole === 'super_admin';
   const effectiveOrgRole = isSuperAdmin
     ? 'super_admin'
-    : fallbackMembership?.role ?? null;
+    : activeMembership?.role ?? null;
 
   return {
     success: true,

@@ -3,6 +3,8 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { GetUserContext } from '@/server-actions/user-context';
+import dbConnect from '@/server/db/mongoose';
+import Organization from '@/server/models/OrganizationModel';
 import DashboardHome from '@/features/dashboards/DashboardHome';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +21,20 @@ const DashboardPage: React.FC = async () => {
     );
   }
 
-  const { user, effectiveOrgRole } = response.data;
+  const { user, effectiveOrgRole, memberships } = response.data;
+  const requestedMembership = memberships.find((membership) => membership.status === 'requested') ?? null;
+  const hasActiveMembership = memberships.some((membership) => membership.status === 'active');
+  const isEmployer = user.profileType === 'employer';
+  let pendingOrgName: string | null = null;
+
+  if (requestedMembership && !hasActiveMembership) {
+    await dbConnect();
+    const orgDoc = await Organization.findById(requestedMembership.orgId, {
+      name: 1,
+      orgSlug: 1,
+    }).lean();
+    pendingOrgName = orgDoc?.name || orgDoc?.orgSlug || null;
+  }
 
   return (
     <Box className='p-2 sm:p-4 md:p-8' sx={{ minHeight: '100vh' }}>
@@ -27,6 +42,8 @@ const DashboardPage: React.FC = async () => {
         role={effectiveOrgRole}
         clerkUserId={user.clerkUserId}
         profileType={user.profileType ?? null}
+        pendingAccess={Boolean(requestedMembership && !hasActiveMembership && isEmployer)}
+        pendingOrgName={pendingOrgName}
       />
     </Box>
   );
