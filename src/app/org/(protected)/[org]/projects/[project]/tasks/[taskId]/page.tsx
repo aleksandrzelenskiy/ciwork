@@ -845,36 +845,36 @@ export default function TaskDetailsPage() {
         return cleaned.length ? cleaned : undefined;
     };
 
-    const toEditShape = (t: Task): TaskForEdit => {
+    const toEditShape = (task: Task): TaskForEdit => {
         return {
-            _id: t._id,
-            taskId: t.taskId,
-            taskName: t.taskName,
-            status: t.status,
-            dueDate: t.dueDate,
-            bsNumber: t.bsNumber,
-            bsAddress: t.bsAddress,
-            taskDescription: t.taskDescription,
-            totalCost: t.totalCost,
-            contractorPayment: t.contractorPayment,
-            priority: t.priority,
-            executorId: t.executorId,
-            executorName: t.executorName,
-            executorEmail: t.executorEmail,
-            workItems: toEditWorkItems(t.workItems),
-            files: t.files?.map((f) => ({ name: f.name, url: f.url, size: f.size })),
-            attachments: Array.isArray(t.attachments)
-                ? t.attachments.filter((url) => !isDocumentUrl(url))
-                : t.attachments,
-            bsLocation: t.bsLocation
-                ? t.bsLocation.map((loc, idx) => ({
+            _id: task._id,
+            taskId: task.taskId,
+            taskName: task.taskName,
+            status: task.status,
+            dueDate: task.dueDate,
+            bsNumber: task.bsNumber,
+            bsAddress: task.bsAddress,
+            taskDescription: task.taskDescription,
+            totalCost: task.totalCost,
+            contractorPayment: task.contractorPayment,
+            priority: task.priority,
+            executorId: task.executorId,
+            executorName: task.executorName,
+            executorEmail: task.executorEmail,
+            workItems: toEditWorkItems(task.workItems),
+            files: task.files?.map((f) => ({ name: f.name, url: f.url, size: f.size })),
+            attachments: Array.isArray(task.attachments)
+                ? task.attachments.filter((url) => !isDocumentUrl(url))
+                : task.attachments,
+            bsLocation: task.bsLocation
+                ? task.bsLocation.map((loc, idx) => ({
                     name:
                         loc.name ??
                         t('task.geo.point', 'Точка {index}', { index: idx + 1 }),
                     coordinates: loc.coordinates,
                 }))
                 : undefined,
-            relatedTasks: t.relatedTasks,
+            relatedTasks: task.relatedTasks,
         };
     };
 
