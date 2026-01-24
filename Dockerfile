@@ -1,9 +1,7 @@
 # ---------- base ----------
 FROM node:20-alpine AS base
 
-RUN echo "https://mirror.yandex.ru/mirrors/alpine/latest-stable/main" > /etc/apk/repositories \
-    && echo "https://mirror.yandex.ru/mirrors/alpine/latest-stable/community" >> /etc/apk/repositories \
-    && apk update \
+RUN apk update \
     && apk add --no-cache ttf-dejavu ffmpeg
 
 # ---------- deps ----------
