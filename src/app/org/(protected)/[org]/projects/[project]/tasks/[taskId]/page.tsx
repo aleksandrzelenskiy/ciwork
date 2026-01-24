@@ -1484,7 +1484,7 @@ export default function TaskDetailsPage() {
         'orderSignDate',
         'workCompletionDate',
     ]);
-    const fieldLabels = React.useMemo(
+    const fieldLabels = React.useMemo<Record<string, string>>(
         () => ({
             taskName: t('task.fields.taskName', 'Задача'),
             bsNumber: t('task.fields.bsNumber', 'БС'),
