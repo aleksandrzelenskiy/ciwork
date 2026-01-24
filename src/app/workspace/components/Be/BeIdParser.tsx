@@ -70,11 +70,21 @@ const findValueByLabelMatcherInRows = (
             if (typeof value !== 'string') continue;
             if (!matcher(normalizeText(value))) continue;
 
+            const entries = Object.entries(row);
+            const labelIndex = entries.findIndex(([entryKey]) => entryKey === key);
             const candidates: Array<string | number> = [];
-            for (const [entryKey, entryValue] of Object.entries(row)) {
-                if (entryKey === key) continue;
-                if (typeof entryValue === 'string' || typeof entryValue === 'number') {
-                    candidates.push(entryValue);
+            if (labelIndex >= 0) {
+                for (let i = labelIndex + 1; i < entries.length; i += 1) {
+                    const entryValue = entries[i][1];
+                    if (typeof entryValue === 'string' || typeof entryValue === 'number') {
+                        candidates.push(entryValue);
+                    }
+                }
+            } else {
+                for (const [, entryValue] of entries) {
+                    if (typeof entryValue === 'string' || typeof entryValue === 'number') {
+                        candidates.push(entryValue);
+                    }
                 }
             }
 
@@ -190,7 +200,7 @@ const BeIdParser: React.FC<Props> = ({ open, onClose, onApply, operatorLabel }) 
         ) as number | null;
         const desc = findValueByLabelMatchers(
             data,
-            [(text) => text.includes('наименование')],
+            [(text) => text.includes('доп. информация')],
             'string'
         ) as string | null;
 
@@ -293,7 +303,7 @@ const BeIdParser: React.FC<Props> = ({ open, onClose, onApply, operatorLabel }) 
         typeof bsLongitude === 'number' ||
         !!taskDescription;
 
-    const title = operatorLabel ? `Заполнить по смете (${operatorLabel})` : 'Заполнить по смете';
+    const title = operatorLabel ? `Заполнить по ID (${operatorLabel})` : 'Заполнить по ID';
 
     return (
         <Dialog

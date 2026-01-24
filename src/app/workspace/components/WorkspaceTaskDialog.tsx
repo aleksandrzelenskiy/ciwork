@@ -1764,7 +1764,7 @@ export default function WorkspaceTaskDialog({
                                             onClick={handleOpenEstimateDialog}
                                             disabled={saving || uploading}
                                         >
-                                            Заполнить по смете
+                                            {isBeelineOperator ? 'Заполнить по ID' : 'Заполнить по смете'}
                                         </Button>
                                     )}
                                 </Stack>
