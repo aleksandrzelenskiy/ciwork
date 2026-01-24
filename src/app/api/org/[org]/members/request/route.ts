@@ -1,6 +1,7 @@
 // src/app/api/org/[org]/members/request/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
+import type { Types } from 'mongoose';
 import dbConnect from '@/server/db/mongoose';
 import Organization from '@/server/models/OrganizationModel';
 import Membership, { type OrgRole } from '@/server/models/MembershipModel';
@@ -63,7 +64,7 @@ export async function POST(
 
         const ownerEmail = normalizeEmail(org.ownerEmail);
         const owner = ownerEmail
-            ? await UserModel.findOne({ email: ownerEmail }, { _id: 1, name: 1 }).lean<{ _id: unknown; name?: string }>()
+            ? await UserModel.findOne({ email: ownerEmail }, { _id: 1, name: 1 }).lean<{ _id: Types.ObjectId; name?: string }>()
             : null;
 
         if (owner?._id) {

@@ -2,7 +2,7 @@
 'use client';
 
 import { ClerkProvider } from '@clerk/nextjs';
-import enUS, { ruRU } from '@clerk/localizations';
+import { ruRU } from '@clerk/localizations';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import type { ReactNode } from 'react';
 import ClientApp from './ClientApp';
@@ -20,17 +20,19 @@ function InnerProviders({ publishableKey, fontFamily, children }: ProvidersProps
     const theme = createTheme({
         typography: { fontFamily: `${fontFamily}, 'Open Sans', sans-serif` },
     });
-    const baseLocalization = (locale === 'en' ? enUS : ruRU) as {
-        signIn?: {
-            start?: Record<string, unknown>;
-        };
-    };
+    const baseLocalization = (locale === 'ru' ? ruRU : undefined) as
+        | {
+              signIn?: {
+                  start?: Record<string, unknown>;
+              };
+          }
+        | undefined;
     const localization = {
-        ...baseLocalization,
+        ...(baseLocalization ?? {}),
         signIn: {
-            ...(baseLocalization.signIn ?? {}),
+            ...(baseLocalization?.signIn ?? {}),
             start: {
-                ...(baseLocalization.signIn?.start ?? {}),
+                ...(baseLocalization?.signIn?.start ?? {}),
                 subtitle: t('auth.subtitle', 'чтобы продолжить работу в системе'),
             },
         },
