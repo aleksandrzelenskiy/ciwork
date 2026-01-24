@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import type { OrgRole } from '@/types/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type SnackSetter = (state: { open: boolean; msg: string; sev: 'success' | 'error' | 'info' }) => void;
 
@@ -16,6 +17,8 @@ type UseOrgMutationsArgs = {
 type UseOrgMutationsState = {
     updateMemberRole: (memberId: string, role: OrgRole) => Promise<boolean>;
     removeMember: (memberId: string) => Promise<boolean>;
+    approveJoinRequest: (memberId: string) => Promise<boolean>;
+    declineJoinRequest: (memberId: string) => Promise<boolean>;
     removeProject: (projectId: string) => Promise<boolean>;
     removeApplication: (applicationId: string) => Promise<boolean>;
 };
@@ -28,6 +31,7 @@ export default function useOrgMutations({
     refreshProjects,
     refreshApplications,
 }: UseOrgMutationsArgs): UseOrgMutationsState {
+    const { t } = useI18n();
     const updateMemberRole = React.useCallback(
         async (memberId: string, role: OrgRole) => {
             if (!org || !memberId) return false;
@@ -42,19 +46,23 @@ export default function useOrgMutations({
                 );
                 const data = await res.json();
                 if (!res.ok) {
-                    setSnack({ open: true, msg: data?.error || 'Ошибка изменения роли', sev: 'error' });
+                    setSnack({
+                        open: true,
+                        msg: data?.error || t('org.members.error.updateRole', 'Ошибка изменения роли'),
+                        sev: 'error',
+                    });
                     return false;
                 }
-                setSnack({ open: true, msg: 'Роль обновлена', sev: 'success' });
+                setSnack({ open: true, msg: t('org.members.success.roleUpdated', 'Роль обновлена'), sev: 'success' });
                 await refreshMembers();
                 return true;
             } catch (error: unknown) {
-                const msg = error instanceof Error ? error.message : 'Ошибка сети';
+                const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
                 setSnack({ open: true, msg, sev: 'error' });
                 return false;
             }
         },
-        [org, setSnack, refreshMembers]
+        [org, setSnack, refreshMembers, t]
     );
 
     const removeMember = React.useCallback(
@@ -67,16 +75,74 @@ export default function useOrgMutations({
                     setSnack({ open: true, msg: data?.error || res.statusText, sev: 'error' });
                     return false;
                 }
-                setSnack({ open: true, msg: 'Участник удалён', sev: 'success' });
+                setSnack({ open: true, msg: t('org.members.success.removed', 'Участник удалён'), sev: 'success' });
                 await refreshMembers();
                 return true;
             } catch (error: unknown) {
-                const msg = error instanceof Error ? error.message : 'Ошибка сети';
+                const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
                 setSnack({ open: true, msg, sev: 'error' });
                 return false;
             }
         },
-        [org, canManage, setSnack, refreshMembers]
+        [org, canManage, setSnack, refreshMembers, t]
+    );
+
+    const approveJoinRequest = React.useCallback(
+        async (memberId: string) => {
+            if (!org || !memberId) return false;
+            try {
+                const res = await fetch(
+                    `/api/org/${encodeURIComponent(org)}/members/requests/${encodeURIComponent(memberId)}`,
+                    { method: 'PATCH' }
+                );
+                const data = (await res.json().catch(() => ({}))) as { error?: string };
+                if (!res.ok) {
+                    setSnack({
+                        open: true,
+                        msg: data?.error || t('org.members.request.approveError', 'Ошибка одобрения запроса'),
+                        sev: 'error',
+                    });
+                    return false;
+                }
+                setSnack({ open: true, msg: t('org.members.request.approveSuccess', 'Запрос одобрен'), sev: 'success' });
+                await refreshMembers();
+                return true;
+            } catch (error: unknown) {
+                const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
+                setSnack({ open: true, msg, sev: 'error' });
+                return false;
+            }
+        },
+        [org, setSnack, refreshMembers, t]
+    );
+
+    const declineJoinRequest = React.useCallback(
+        async (memberId: string) => {
+            if (!org || !memberId) return false;
+            try {
+                const res = await fetch(
+                    `/api/org/${encodeURIComponent(org)}/members/requests/${encodeURIComponent(memberId)}`,
+                    { method: 'DELETE' }
+                );
+                const data = (await res.json().catch(() => ({}))) as { error?: string };
+                if (!res.ok) {
+                    setSnack({
+                        open: true,
+                        msg: data?.error || t('org.members.request.declineError', 'Ошибка отклонения запроса'),
+                        sev: 'error',
+                    });
+                    return false;
+                }
+                setSnack({ open: true, msg: t('org.members.request.declineSuccess', 'Запрос отклонён'), sev: 'info' });
+                await refreshMembers();
+                return true;
+            } catch (error: unknown) {
+                const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
+                setSnack({ open: true, msg, sev: 'error' });
+                return false;
+            }
+        },
+        [org, setSnack, refreshMembers, t]
     );
 
     const removeProject = React.useCallback(
@@ -94,16 +160,16 @@ export default function useOrgMutations({
                     setSnack({ open: true, msg: data?.error || res.statusText, sev: 'error' });
                     return false;
                 }
-                setSnack({ open: true, msg: 'Проект удалён', sev: 'success' });
+                setSnack({ open: true, msg: t('org.projects.success.deleted', 'Проект удалён'), sev: 'success' });
                 await refreshProjects();
                 return true;
             } catch (error: unknown) {
-                const msg = error instanceof Error ? error.message : 'Ошибка сети';
+                const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
                 setSnack({ open: true, msg, sev: 'error' });
                 return false;
             }
         },
-        [org, canManage, setSnack, refreshProjects]
+        [org, canManage, setSnack, refreshProjects, t]
     );
 
     const removeApplication = React.useCallback(
@@ -120,21 +186,23 @@ export default function useOrgMutations({
                     setSnack({ open: true, msg: data.error || res.statusText, sev: 'error' });
                     return false;
                 }
-                setSnack({ open: true, msg: 'Отклик удалён', sev: 'success' });
+                setSnack({ open: true, msg: t('org.applications.success.deleted', 'Отклик удалён'), sev: 'success' });
                 await refreshApplications();
                 return true;
             } catch (error: unknown) {
-                const msg = error instanceof Error ? error.message : 'Ошибка сети';
+                const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
                 setSnack({ open: true, msg, sev: 'error' });
                 return false;
             }
         },
-        [org, canManage, setSnack, refreshApplications]
+        [org, canManage, setSnack, refreshApplications, t]
     );
 
     return {
         updateMemberRole,
         removeMember,
+        approveJoinRequest,
+        declineJoinRequest,
         removeProject,
         removeApplication,
     };

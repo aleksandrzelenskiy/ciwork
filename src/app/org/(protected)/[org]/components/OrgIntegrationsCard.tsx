@@ -21,6 +21,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import type { IntegrationDTO } from '@/types/org';
 import { integrationTypeLabel } from '@/utils/org';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type OrgIntegrationsCardProps = {
     integrations: IntegrationDTO[];
@@ -67,6 +68,7 @@ export default function OrgIntegrationsCard({
     getAlertSx,
     buttonRadius,
 }: OrgIntegrationsCardProps) {
+    const { t } = useI18n();
     return (
         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
             <Stack spacing={2}>
@@ -74,10 +76,10 @@ export default function OrgIntegrationsCard({
                     <Stack direction="row" spacing={1} alignItems="center">
                         <IntegrationInstructionsIcon fontSize="small" />
                         <Typography variant="subtitle1" fontWeight={600}>
-                            Интеграции
+                            {t('org.integrations.title', 'Интеграции')}
                         </Typography>
                     </Stack>
-                    <Tooltip title="Обновить">
+                    <Tooltip title={t('common.refresh', 'Обновить')}>
                         <span>
                             <IconButton onClick={onRefresh} disabled={integrationsLoading}>
                                 <RefreshIcon />
@@ -86,7 +88,7 @@ export default function OrgIntegrationsCard({
                     </Tooltip>
                 </Stack>
                 <Typography variant="body2" color={textSecondary}>
-                    Подключайте Google Sheets, Telegram и 1C ERP.
+                    {t('org.integrations.subtitle', 'Подключайте Google Sheets, Telegram и 1C ERP.')}
                 </Typography>
                 {integrationsError && (
                     <Alert severity="warning" sx={getAlertSx('warning')}>
@@ -96,7 +98,9 @@ export default function OrgIntegrationsCard({
                 {integrationsLoading ? (
                     <Stack direction="row" spacing={1} alignItems="center">
                         <CircularProgress size={18} />
-                        <Typography variant="body2">Загружаем интеграции…</Typography>
+                        <Typography variant="body2">
+                            {t('org.integrations.loading', 'Загружаем интеграции…')}
+                        </Typography>
                     </Stack>
                 ) : integrations.length > 0 ? (
                     <Stack spacing={1}>
@@ -104,7 +108,7 @@ export default function OrgIntegrationsCard({
                             const projectLabel =
                                 integration.projectId && projectNameById.has(integration.projectId)
                                     ? projectNameById.get(integration.projectId)
-                                    : 'Все проекты';
+                                    : t('org.integrations.allProjects', 'Все проекты');
                             const name = integration.name?.trim();
                             return (
                                 <Box
@@ -121,20 +125,24 @@ export default function OrgIntegrationsCard({
                                     <Stack direction="row" alignItems="center" justifyContent="space-between">
                                         <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
                                             <Typography variant="body2" fontWeight={600}>
-                                                {name || integrationTypeLabel(integration.type)}
+                                                {name || integrationTypeLabel(integration.type, t)}
                                             </Typography>
                                             <Chip
                                                 size="small"
                                                 color={integration.status === 'active' ? 'success' : 'default'}
-                                                label={integration.status === 'active' ? 'active' : 'paused'}
+                                                label={
+                                                    integration.status === 'active'
+                                                        ? t('org.integrations.status.active', 'active')
+                                                        : t('org.integrations.status.paused', 'paused')
+                                                }
                                             />
                                         </Stack>
                                         <Stack direction="row" spacing={0.5}>
                                             <Tooltip
                                                 title={
                                                     integration.status === 'active'
-                                                        ? 'Приостановить'
-                                                        : 'Включить'
+                                                        ? t('org.integrations.actions.pause', 'Приостановить')
+                                                        : t('org.integrations.actions.enable', 'Включить')
                                                 }
                                             >
                                                 <span>
@@ -151,7 +159,7 @@ export default function OrgIntegrationsCard({
                                                     </IconButton>
                                                 </span>
                                             </Tooltip>
-                                            <Tooltip title="Редактировать">
+                                            <Tooltip title={t('common.edit', 'Редактировать')}>
                                                 <span>
                                                     <IconButton
                                                         size="small"
@@ -162,7 +170,7 @@ export default function OrgIntegrationsCard({
                                                     </IconButton>
                                                 </span>
                                             </Tooltip>
-                                            <Tooltip title="Удалить">
+                                            <Tooltip title={t('common.delete', 'Удалить')}>
                                                 <span>
                                                     <IconButton
                                                         size="small"
@@ -176,7 +184,7 @@ export default function OrgIntegrationsCard({
                                         </Stack>
                                     </Stack>
                                     <Typography variant="caption" color="text.secondary">
-                                        {integrationTypeLabel(integration.type)} · {projectLabel}
+                                        {integrationTypeLabel(integration.type, t)} · {projectLabel}
                                     </Typography>
                                 </Box>
                             );
@@ -184,7 +192,7 @@ export default function OrgIntegrationsCard({
                     </Stack>
                 ) : (
                     <Typography variant="body2" color={textSecondary}>
-                        Интеграций пока нет.
+                        {t('org.integrations.empty', 'Интеграций пока нет.')}
                     </Typography>
                 )}
                 <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
@@ -196,7 +204,7 @@ export default function OrgIntegrationsCard({
                                 disabled={!canRequestIntegrations}
                                 sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                             >
-                                Подключить
+                                {t('org.integrations.actions.connect', 'Подключить')}
                             </Button>
                         </span>
                     </Tooltip>
@@ -208,7 +216,7 @@ export default function OrgIntegrationsCard({
                                 disabled={!isSuperAdmin}
                                 sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                             >
-                                Сгенерировать ключ API
+                                {t('org.integrations.actions.generateKey', 'Сгенерировать ключ API')}
                             </Button>
                         </span>
                     </Tooltip>

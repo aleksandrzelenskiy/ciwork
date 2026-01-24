@@ -65,16 +65,19 @@ import type {
 import {
     integrationTypeLabel,
 } from '@/utils/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type SnackState = { open: boolean; msg: string; sev: 'success' | 'error' | 'info' };
 
 export default function OrgSettingsPage() {
+    const { t } = useI18n();
     const params = useParams<{ org: string }>();
     const org = params?.org;
 
     const allowedRoles: OrgRole[] = ['owner', 'org_admin', 'manager'];
     const { myRole, orgName, accessChecked } = useOrgAccess(org);
     const canManage = allowedRoles.includes(myRole ?? 'viewer');
+    const canApproveRequests = myRole === 'owner';
 
     // snackbar
     const [snack, setSnack] = React.useState<SnackState>({ open: false, msg: '', sev: 'success' });
@@ -159,6 +162,7 @@ export default function OrgSettingsPage() {
         setShowMemberSearch,
         filteredMembers,
         invitedMembersCount,
+        requestedMembersCount,
         activeMembersCount,
         managerOptions,
         memberByEmail,
@@ -202,6 +206,8 @@ export default function OrgSettingsPage() {
     const {
         updateMemberRole,
         removeMember,
+        approveJoinRequest,
+        declineJoinRequest,
         removeProject,
         removeApplication,
     } = useOrgMutations({
@@ -305,9 +311,13 @@ export default function OrgSettingsPage() {
         const result = await saveOrgSettings(values);
         if (result.ok) {
             setOrgSettingsOpen(false);
-            setSnack({ open: true, msg: 'Настройки организации обновлены', sev: 'success' });
+            setSnack({ open: true, msg: t('org.settings.updated', 'Настройки организации обновлены'), sev: 'success' });
         } else {
-            setSnack({ open: true, msg: result.error || 'Не удалось сохранить реквизиты', sev: 'error' });
+            setSnack({
+                open: true,
+                msg: result.error || t('org.settings.error.save', 'Не удалось сохранить реквизиты'),
+                sev: 'error',
+            });
         }
     };
 
@@ -394,7 +404,7 @@ export default function OrgSettingsPage() {
         subscriptionStatusColor,
         subscriptionStatusDescription,
         subscriptionEndLabel,
-        roleLabelRu,
+        roleLabel,
         formatExpire,
         canEditOrgSettings,
         canRequestIntegrations,
@@ -490,7 +500,9 @@ export default function OrgSettingsPage() {
         return renderStatusPanel(
             <Stack direction="row" spacing={1.5} alignItems="center">
                 <CircularProgress size={20} />
-                <Typography color={textPrimary}>Проверяем доступ…</Typography>
+                <Typography color={textPrimary}>
+                    {t('org.access.checking', 'Проверяем доступ…')}
+                </Typography>
             </Stack>
         );
     }
@@ -498,7 +510,10 @@ export default function OrgSettingsPage() {
     if (!canManage) {
         return renderStatusPanel(
             <Alert severity="error" sx={getAlertSx('error')}>
-                Недостаточно прав для просмотра страницы настроек организации.
+                {t(
+                    'org.access.deniedSettings',
+                    'Недостаточно прав для просмотра страницы настроек организации.'
+                )}
             </Alert>
         );
     }
@@ -550,7 +565,7 @@ export default function OrgSettingsPage() {
                     subscriptionStatusColor={subscriptionStatusColor}
                     subscriptionStatusDescription={subscriptionStatusDescription}
                     subscriptionEndLabel={subscriptionEndLabel}
-                    roleLabelRu={roleLabelRu}
+                    roleLabel={roleLabel}
                     onOpenPlansDialog={() => setPlansDialogOpen(true)}
                     subscriptionError={subscriptionError}
                     subscriptionLoading={subscriptionLoading}
@@ -657,6 +672,7 @@ export default function OrgSettingsPage() {
                             membersPreview={membersPreview}
                             activeMembersCount={activeMembersCount}
                             invitedMembersCount={invitedMembersCount}
+                            requestedMembersCount={requestedMembersCount}
                             onOpenDialog={() => setMembersDialogOpen(true)}
                             onInvite={openInviteDialog}
                             inviteTooltip={inviteTooltip}
@@ -734,7 +750,12 @@ export default function OrgSettingsPage() {
                 formatExpire={formatExpire}
                 onEditRole={openRoleDialog}
                 onRemoveMember={openRemoveDialog}
-                onInviteLinkCopied={() => setSnack({ open: true, msg: 'Ссылка скопирована', sev: 'info' })}
+                canApproveRequests={canApproveRequests}
+                onApproveRequest={(member) => void approveJoinRequest(member._id)}
+                onDeclineRequest={(member) => void declineJoinRequest(member._id)}
+                onInviteLinkCopied={() =>
+                    setSnack({ open: true, msg: t('common.copied', 'Ссылка скопирована'), sev: 'info' })
+                }
                 cardBaseSx={cardBaseSx}
                 cardHeaderSx={cardHeaderSx}
                 cardContentSx={cardContentSx}
@@ -815,16 +836,17 @@ export default function OrgSettingsPage() {
                 open={removeOpen}
                 onClose={closeRemoveDialog}
                 onConfirm={confirmRemove}
-                title="Удалить участника?"
+                title={t('org.members.remove.title', 'Удалить участника?')}
                 description={
                     <>
-                        Вы действительно хотите удалить участника{' '}
+                        {t('org.members.remove.confirmPrefix', 'Вы действительно хотите удалить участника')}{' '}
                         <b>{memberToRemove?.userName || memberToRemove?.userEmail}</b>{' '}
-                        из организации? Доступ пользователя {memberToRemove?.userName || memberToRemove?.userEmail} к
-                        проектам будет утерян.
+                        {t('org.members.remove.confirmSuffix', 'из организации? Доступ пользователя')}{' '}
+                        {memberToRemove?.userName || memberToRemove?.userEmail}{' '}
+                        {t('org.members.remove.confirmTail', 'к проектам будет утерян.')}
                     </>
                 }
-                confirmLabel={removing ? 'Удаляем…' : 'Удалить'}
+                confirmLabel={removing ? t('common.deleting', 'Удаляем…') : t('common.delete', 'Удалить')}
                 confirmColor="error"
                 loading={removing}
                 cardHeaderSx={cardHeaderSx}
@@ -838,14 +860,16 @@ export default function OrgSettingsPage() {
                 open={removeProjectOpen}
                 onClose={closeRemoveProjectDialog}
                 onConfirm={confirmRemoveProject}
-                title="Удалить проект?"
+                title={t('org.projects.remove.title', 'Удалить проект?')}
                 description={
                     <>
-                        Вы действительно хотите удалить проект{' '}
+                        {t('org.projects.remove.confirmPrefix', 'Вы действительно хотите удалить проект')}{' '}
                         <b>{projectToRemove?.name || projectToRemove?.key}</b>?
                     </>
                 }
-                confirmLabel={removingProject ? 'Удаляем…' : 'Удалить'}
+                confirmLabel={
+                    removingProject ? t('common.deleting', 'Удаляем…') : t('common.delete', 'Удалить')
+                }
                 confirmColor="error"
                 loading={removingProject}
                 cardHeaderSx={cardHeaderSx}
@@ -859,15 +883,21 @@ export default function OrgSettingsPage() {
                 open={removeApplicationOpen}
                 onClose={closeRemoveApplicationDialog}
                 onConfirm={confirmRemoveApplication}
-                title="Удалить отклик?"
+                title={t('org.applications.remove.title', 'Удалить отклик?')}
                 description={
                     <>
-                        Вы уверены, что хотите удалить отклик на задачу{' '}
-                        <b>{applicationToRemove?.taskName || 'Задача'}</b>{' '}
-                        от кандидата {applicationToRemove?.contractorName || applicationToRemove?.contractorEmail || 'без имени'}?
+                        {t('org.applications.remove.confirmPrefix', 'Вы уверены, что хотите удалить отклик на задачу')}{' '}
+                        <b>{applicationToRemove?.taskName || t('tasks.defaultName', 'Задача')}</b>{' '}
+                        {t('org.applications.remove.confirmMiddle', 'от кандидата')}{' '}
+                        {applicationToRemove?.contractorName
+                            || applicationToRemove?.contractorEmail
+                            || t('org.applications.noName', 'без имени')}
+                        ?
                     </>
                 }
-                confirmLabel={removingApplication ? 'Удаляем…' : 'Удалить'}
+                confirmLabel={
+                    removingApplication ? t('common.deleting', 'Удаляем…') : t('common.delete', 'Удалить')
+                }
                 confirmColor="error"
                 loading={removingApplication}
                 cardHeaderSx={cardHeaderSx}
@@ -935,18 +965,22 @@ export default function OrgSettingsPage() {
                 open={Boolean(integrationToDelete)}
                 onClose={() => setIntegrationToDelete(null)}
                 onConfirm={confirmDeleteIntegration}
-                title="Удалить интеграцию?"
+                title={t('org.integrations.remove.title', 'Удалить интеграцию?')}
                 description={
                     <>
-                        Удалить интеграцию{' '}
+                        {t('org.integrations.remove.confirmPrefix', 'Удалить интеграцию')}{' '}
                         <b>
                             {integrationToDelete?.name ||
-                                (integrationToDelete ? integrationTypeLabel(integrationToDelete.type) : 'интеграцию')}
+                                (integrationToDelete
+                                    ? integrationTypeLabel(integrationToDelete.type, t)
+                                    : t('org.integrations.remove.fallback', 'интеграцию'))}
                         </b>
-                        ? Подключение будет остановлено.
+                        {t('org.integrations.remove.confirmSuffix', ' ? Подключение будет остановлено.')}
                     </>
                 }
-                confirmLabel={integrationDeleting ? 'Удаляем…' : 'Удалить'}
+                confirmLabel={
+                    integrationDeleting ? t('common.deleting', 'Удаляем…') : t('common.delete', 'Удалить')
+                }
                 confirmColor="error"
                 loading={integrationDeleting}
                 cardHeaderSx={cardHeaderSx}

@@ -37,6 +37,7 @@ import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface MiniReportsListProps {
   role: EffectiveOrgRole | null;
@@ -53,6 +54,7 @@ export default function MiniReportsList({
   role,
   clerkUserId,
 }: MiniReportsListProps) {
+  const { t, locale } = useI18n();
   const theme = useTheme();
   const [reports, setReports] = useState<ReportClient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,13 +75,13 @@ export default function MiniReportsList({
       try {
         const res = await fetch(withBasePath('/api/reports'));
         if (!res.ok) {
-          setError('Не удалось загрузить отчеты');
+          setError(t('reports.error.load', 'Не удалось загрузить отчеты'));
           return;
         }
         // Ожидаем формат ApiResponse { reports: ReportClient[], error?: string }
         const data: ApiResponse = await res.json();
         if (!Array.isArray(data.reports)) {
-          setError('Некорректный ответ от сервера');
+          setError(t('common.error.invalidResponse', 'Некорректный ответ от сервера'));
           return;
         }
         setReports(data.reports);
@@ -87,14 +89,14 @@ export default function MiniReportsList({
         if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError('Неизвестная ошибка');
+          setError(t('common.error.unknown', 'Неизвестная ошибка'));
         }
       } finally {
         setLoading(false);
       }
     }
     fetchReports();
-  }, []);
+  }, [t]);
 
   // 2) Фильтрация по роли
   const filteredReports = useMemo(() => {
@@ -143,7 +145,7 @@ export default function MiniReportsList({
   if (lastFive.length === 0) {
     return (
       <Typography textAlign='center' mt={2}>
-        Отчеты не найдены
+        {t('reports.empty', 'Отчеты не найдены')}
       </Typography>
     );
   }
@@ -187,9 +189,9 @@ export default function MiniReportsList({
             <Table size='small' stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell>Отчет</TableCell>
-                  <TableCell>Автор</TableCell>
-                  <TableCell>Создан</TableCell>
+                  <TableCell>{t('reports.table.report', 'Отчет')}</TableCell>
+                  <TableCell>{t('reports.table.author', 'Автор')}</TableCell>
+                  <TableCell>{t('reports.table.createdAt', 'Создан')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -231,7 +233,7 @@ export default function MiniReportsList({
                         )}
                       </TableCell>
                       <TableCell>
-                        {new Date(report.createdAt).toLocaleDateString()}
+                        {new Date(report.createdAt).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US')}
                       </TableCell>
                     </TableRow>
                   );
@@ -260,7 +262,7 @@ export default function MiniReportsList({
         {/* Кнопка All Reports */}
         <Box sx={{ textAlign: 'center' }}>
         <Link href={isAdmin ? '/admin/reports' : '/reports'}>
-          <Button variant='text'>Все отчеты</Button>
+          <Button variant='text'>{t('reports.all', 'Все отчеты')}</Button>
         </Link>
       </Box>
       </Box>
@@ -283,9 +285,11 @@ export default function MiniReportsList({
             >
               <Box>
                 <Typography variant='subtitle1' sx={{ fontWeight: 'bold' }}>
-                  {'Открыть отчет по "' +
-                    (selectedReport.taskName || selectedReport.taskId) +
-                    '" на базовой станции:'}
+                  {t(
+                    'reports.openDialog.title',
+                    'Открыть отчет по "{task}" на базовой станции:',
+                    { task: selectedReport.taskName || selectedReport.taskId }
+                  )}
                 </Typography>
               </Box>
               <IconButton onClick={handleCloseDialog}>
@@ -295,8 +299,8 @@ export default function MiniReportsList({
 
             <DialogContent dividers>
               <Typography variant='subtitle2' sx={{ mb: 1 }}>
-                Создан:{' '}
-                {new Date(selectedReport.createdAt).toLocaleDateString()}
+                {t('reports.createdAt', 'Создан:')} {' '}
+                {new Date(selectedReport.createdAt).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US')}
               </Typography>
 
               {/* Список всех базовых станций */}
@@ -334,10 +338,11 @@ export default function MiniReportsList({
                           </Box>
                         }
                         secondary={
-                          'Статус изменен: ' +
-                          new Date(
-                            base.latestStatusChangeDate
-                          ).toLocaleDateString()
+                          t('reports.statusChanged', 'Статус изменен: {date}', {
+                            date: new Date(base.latestStatusChangeDate).toLocaleDateString(
+                              locale === 'ru' ? 'ru-RU' : 'en-US'
+                            ),
+                          })
                         }
                       />
                     </ListItemButton>
@@ -347,7 +352,7 @@ export default function MiniReportsList({
             </DialogContent>
 
             <DialogActions>
-              <Button onClick={handleCloseDialog}>Закрыть</Button>
+              <Button onClick={handleCloseDialog}>{t('common.close', 'Закрыть')}</Button>
             </DialogActions>
           </>
         )}

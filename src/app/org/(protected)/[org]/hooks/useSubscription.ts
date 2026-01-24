@@ -7,6 +7,7 @@ import type {
     SubscriptionInfo,
 } from '@/types/org';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type UseSubscriptionState = {
     subscription: SubscriptionInfo | null;
@@ -25,6 +26,7 @@ export default function useSubscription(
     org: string | undefined,
     canManage: boolean
 ): UseSubscriptionState {
+    const { t } = useI18n();
     const [subscription, setSubscription] = React.useState<SubscriptionInfo | null>(null);
     const [billing, setBilling] = React.useState<SubscriptionBillingInfo | null>(null);
     const [subscriptionLoading, setSubscriptionLoading] = React.useState(true);
@@ -44,21 +46,23 @@ export default function useSubscription(
             if (!res.ok || !('subscription' in data)) {
                 setSubscription(null);
                 setBilling(null);
-                setSubscriptionError('error' in data && data.error ? data.error : 'Не удалось загрузить подписку');
+                setSubscriptionError(
+                    'error' in data && data.error ? data.error : t('org.subscription.error.load', 'Не удалось загрузить подписку')
+                );
                 return;
             }
             setSubscription(data.subscription);
             setBilling(data.billing);
             setSubscriptionError(null);
         } catch (error: unknown) {
-            const msg = error instanceof Error ? error.message : 'Ошибка загрузки подписки';
+            const msg = error instanceof Error ? error.message : t('org.subscription.error.load', 'Ошибка загрузки подписки');
             setSubscription(null);
             setBilling(null);
             setSubscriptionError(msg);
         } finally {
             setSubscriptionLoading(false);
         }
-    }, [org, canManage]);
+    }, [org, canManage, t]);
 
     const loadPlanConfigs = React.useCallback(async () => {
         try {

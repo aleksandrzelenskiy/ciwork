@@ -15,15 +15,17 @@ import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 import type { MemberDTO } from '@/types/org';
-import { roleLabelRu } from '@/utils/org';
+import { roleLabel } from '@/utils/org';
 import { UI_RADIUS } from '@/config/uiTokens';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type OrgMembersCardProps = {
     loading: boolean;
     membersPreview: MemberDTO[];
     activeMembersCount: number;
     invitedMembersCount: number;
+    requestedMembersCount: number;
     onOpenDialog: () => void;
     onInvite: () => void;
     inviteTooltip: string;
@@ -48,6 +50,7 @@ export default function OrgMembersCard({
     membersPreview,
     activeMembersCount,
     invitedMembersCount,
+    requestedMembersCount,
     onOpenDialog,
     onInvite,
     inviteTooltip,
@@ -58,6 +61,7 @@ export default function OrgMembersCard({
     textSecondary,
     buttonRadius,
 }: OrgMembersCardProps) {
+    const { t } = useI18n();
     const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
     const [profileOpen, setProfileOpen] = React.useState(false);
 
@@ -79,11 +83,11 @@ export default function OrgMembersCard({
                     <Stack direction="row" spacing={1} alignItems="center">
                         <GroupIcon fontSize="small" />
                         <Typography variant="subtitle1" fontWeight={600}>
-                            Участники
+                            {t('org.members.title', 'Участники')}
                         </Typography>
                     </Stack>
                     <Stack direction="row" spacing={1}>
-                        <Tooltip title="Открыть список">
+                        <Tooltip title={t('common.openList', 'Открыть список')}>
                             <span>
                                 <IconButton onClick={onOpenDialog}>
                                     <OpenInFullIcon />
@@ -100,12 +104,16 @@ export default function OrgMembersCard({
                     </Stack>
                 </Stack>
                 <Typography variant="body2" color={textSecondary}>
-                    Активных: {activeMembersCount}, приглашённых: {invitedMembersCount}.
+                    {t('org.members.counts', 'Активных: {active}, приглашённых: {invited}, запросов: {requested}.', {
+                        active: activeMembersCount,
+                        invited: invitedMembersCount,
+                        requested: requestedMembersCount,
+                    })}
                 </Typography>
                 {loading ? (
                     <Stack direction="row" spacing={1} alignItems="center">
                         <CircularProgress size={18} />
-                        <Typography variant="body2">Загружаем участников…</Typography>
+                        <Typography variant="body2">{t('org.members.loading', 'Загружаем участников…')}</Typography>
                     </Stack>
                 ) : membersPreview.length > 0 ? (
                     <Stack spacing={1}>
@@ -134,15 +142,15 @@ export default function OrgMembersCard({
                                                     onClick={() => openProfileDialog(member.clerkId)}
                                                     sx={{ textTransform: 'none', px: 0, minWidth: 0, fontWeight: 600 }}
                                                 >
-                                                    {member.userName || 'Без имени'}
+                                                    {member.userName || t('common.noName', 'Без имени')}
                                                 </Button>
                                             ) : (
                                                 <Typography variant="body2" fontWeight={600}>
-                                                    {member.userName || 'Без имени'}
+                                                    {member.userName || t('common.noName', 'Без имени')}
                                                 </Typography>
                                             )}
                                             <Typography variant="caption" color="text.secondary">
-                                                {roleLabelRu(member.role)}
+                                                {roleLabel(member.role, t)}
                                             </Typography>
                                         </Stack>
                                         <Typography variant="caption" color="text.secondary">
@@ -155,7 +163,7 @@ export default function OrgMembersCard({
                     </Stack>
                 ) : (
                     <Typography variant="body2" color={textSecondary}>
-                        Участников пока нет.
+                        {t('org.members.empty', 'Участников пока нет.')}
                     </Typography>
                 )}
                 <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
@@ -164,7 +172,7 @@ export default function OrgMembersCard({
                         onClick={onOpenDialog}
                         sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                     >
-                        Открыть список
+                        {t('common.openList', 'Открыть список')}
                     </Button>
                     <Tooltip title={inviteTooltip} disableHoverListener={!disableCreationActions}>
                         <span>
@@ -174,7 +182,7 @@ export default function OrgMembersCard({
                                 disabled={disableCreationActions}
                                 sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                             >
-                                Пригласить
+                                {t('org.members.invite.action', 'Пригласить')}
                             </Button>
                         </span>
                     </Tooltip>

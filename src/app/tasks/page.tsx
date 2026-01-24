@@ -37,13 +37,14 @@ import TaskColumnPage from '@/features/tasks/TaskColumnPage';
 import { fetchUserContext, resolveRoleFromContext } from '@/app/utils/userContext';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { defaultTaskFilters, type TaskFilterOptions, type TaskFilters } from '@/app/types/taskFilters';
-import { getPriorityLabelRu } from '@/utils/priorityIcons';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ViewMode = 'table' | 'kanban';
 
 export default function TasksPage() {
+    const { t } = useI18n();
     const [tab, setTab] = useState<ViewMode>('table');
     const [searchQuery, setSearchQuery] = useState('');
     const [refreshToken, setRefreshToken] = useState(0);
@@ -91,6 +92,21 @@ export default function TasksPage() {
     const tabInactiveColor = isDarkMode ? 'rgba(226,232,240,0.65)' : 'rgba(15,23,42,0.55)';
     const tabBorderColor = isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.08)';
 
+    const getPriorityLabel = (priority?: string) => {
+        switch (priority) {
+            case 'urgent':
+                return t('priority.urgent', 'Срочный');
+            case 'high':
+                return t('priority.high', 'Высокий');
+            case 'medium':
+                return t('priority.medium', 'Средний');
+            case 'low':
+                return t('priority.low', 'Низкий');
+            default:
+                return t('priority.unknown', 'Не указан');
+        }
+    };
+
     useEffect(() => {
         const statusParam = searchParams?.get('status');
         if (statusParam) {
@@ -112,14 +128,14 @@ export default function TasksPage() {
                 if (!active) return;
 
                 if (!context) {
-                    setRoleError('Не удалось загрузить данные пользователя');
+                    setRoleError(t('tasks.error.loadUser', 'Не удалось загрузить данные пользователя'));
                     setUserRole(null);
                     return;
                 }
 
                 const resolvedRole = resolveRoleFromContext(context);
                 if (!resolvedRole) {
-                    setRoleError('Не удалось определить роль пользователя');
+                    setRoleError(t('tasks.error.role', 'Не удалось определить роль пользователя'));
                     setUserRole(null);
                     return;
                 }
@@ -128,7 +144,7 @@ export default function TasksPage() {
             } catch (err) {
                 if (!active) return;
                 console.error('Error loading user context', err);
-                setRoleError('Не удалось загрузить данные пользователя');
+                setRoleError(t('tasks.error.loadUser', 'Не удалось загрузить данные пользователя'));
                 setUserRole(null);
             } finally {
                 if (active) {
@@ -140,7 +156,7 @@ export default function TasksPage() {
         return () => {
             active = false;
         };
-    }, []);
+    }, [t]);
 
     const handleSearchIconClick = (event: MouseEvent<HTMLElement>) => {
         if (searchAnchor && event.currentTarget === searchAnchor) {
@@ -220,9 +236,7 @@ export default function TasksPage() {
         return (
             <Box sx={{ p: 3 }}>
                 <Alert severity="info">
-                    Модуль «Мои задачи» доступен только исполнителям. Попросите менеджера
-                    назначить вас исполнителем в организации, чтобы получить доступ к своим
-                    назначениям.
+                    {t('tasks.onlyExecutors', 'Модуль «Мои задачи» доступен только исполнителям. Попросите менеджера назначить вас исполнителем в организации, чтобы получить доступ к своим назначениям.')}
                 </Alert>
             </Box>
         );
@@ -261,18 +275,18 @@ export default function TasksPage() {
                                 color={textPrimary}
                                 sx={{ fontSize: { xs: '1.6rem', md: '1.95rem' } }}
                             >
-                                Мои задачи
+                                {t('tasks.title', 'Мои задачи')}
                             </Typography>
                             <Typography
                                 variant="body2"
                                 color={textSecondary}
                                 sx={{ fontSize: { xs: '0.95rem', md: '1.05rem' }, mt: 0.5 }}
                             >
-                                Все задачи. Воспользуйтесь поиском или фильтрами
+                                {t('tasks.subtitle', 'Все задачи. Воспользуйтесь поиском или фильтрами')}
                             </Typography>
                         </Box>
                         <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Tooltip title="Поиск">
+                            <Tooltip title={t('common.search', 'Поиск')}>
                                 <IconButton
                                     onClick={handleSearchIconClick}
                                     sx={{
@@ -292,7 +306,7 @@ export default function TasksPage() {
                                     <SearchIcon />
                                 </IconButton>
                             </Tooltip>
-                            <Tooltip title="Фильтры задач">
+                            <Tooltip title={t('tasks.filters.title', 'Фильтры задач')}>
                                 <IconButton
                                     onClick={handleFilterButtonClick}
                                     sx={{
@@ -314,7 +328,7 @@ export default function TasksPage() {
                                 </IconButton>
                             </Tooltip>
                             {tab === 'table' && (
-                                <Tooltip title="Настроить колонки">
+                                <Tooltip title={t('tasks.columns.configure', 'Настроить колонки')}>
                                     <IconButton
                                         onClick={handleColumnsClick}
                                         sx={{
@@ -335,7 +349,7 @@ export default function TasksPage() {
                                     </IconButton>
                                 </Tooltip>
                             )}
-                            <Tooltip title="Обновить">
+                            <Tooltip title={t('common.refresh', 'Обновить')}>
                                 <span>
                                     <IconButton
                                         onClick={() => setRefreshToken((prev) => prev + 1)}
@@ -380,7 +394,7 @@ export default function TasksPage() {
             >
                 <Box sx={{ p: 2, width: 320 }}>
                     <TextField
-                        label="Поиск (ID, название, БС)"
+                        label={t('tasks.search.label', 'Поиск (ID, название, БС)')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyDown={(event) => {
@@ -428,19 +442,19 @@ export default function TasksPage() {
                         clearOnEscape
                         handleHomeEndKeys
                         renderInput={(params) => (
-                            <TextField {...params} label="Менеджер" size="small" />
+                            <TextField {...params} label={t('tasks.filters.manager', 'Менеджер')} size="small" />
                         )}
                         fullWidth
                     />
                     <FormControl fullWidth size="small">
-                        <InputLabel>Статус</InputLabel>
+                        <InputLabel>{t('tasks.filters.status', 'Статус')}</InputLabel>
                         <Select
-                            label="Статус"
+                            label={t('tasks.filters.status', 'Статус')}
                             value={filters.status}
                             onChange={handleStatusFilterChange}
                         >
                             <MenuItem value="">
-                                <em>Все</em>
+                                <em>{t('common.all', 'Все')}</em>
                             </MenuItem>
                             {filterOptions.statuses
                                 .filter((status): status is string => Boolean(status))
@@ -452,35 +466,35 @@ export default function TasksPage() {
                         </Select>
                     </FormControl>
                     <FormControl fullWidth size="small">
-                        <InputLabel>Приоритет</InputLabel>
+                        <InputLabel>{t('tasks.filters.priority', 'Приоритет')}</InputLabel>
                         <Select
-                            label="Приоритет"
+                            label={t('tasks.filters.priority', 'Приоритет')}
                             value={filters.priority}
                             onChange={handlePriorityFilterChange}
                         >
                             <MenuItem value="">
-                                <em>Все</em>
+                                <em>{t('common.all', 'Все')}</em>
                             </MenuItem>
                             {filterOptions.priorities
                                 .filter((priority): priority is string => Boolean(priority))
                                 .map((priority) => (
                                     <MenuItem key={priority} value={priority}>
-                                        {getPriorityLabelRu(priority)}
+                                        {getPriorityLabel(priority)}
                                     </MenuItem>
                                 ))}
                         </Select>
                     </FormControl>
                     {hasActiveFilters && (
                         <Typography variant="caption" color="text.secondary">
-                            Активные фильтры: {activeFilterCount}
+                            {t('tasks.filters.active', 'Активные фильтры: {count}', { count: activeFilterCount })}
                         </Typography>
                     )}
                     <Stack direction="row" justifyContent="space-between" spacing={1}>
                         <Button size="small" onClick={handleFilterReset} color="secondary">
-                            Сбросить
+                            {t('common.reset', 'Сбросить')}
                         </Button>
                         <Button size="small" variant="contained" onClick={handleFilterClose}>
-                            Готово
+                            {t('common.done', 'Готово')}
                         </Button>
                     </Stack>
                 </Box>
@@ -512,7 +526,7 @@ export default function TasksPage() {
                     >
                         <Tab
                             value="table"
-                            label="СПИСОК"
+                            label={t('tasks.view.list', 'СПИСОК')}
                             sx={{
                                 textTransform: 'uppercase',
                                 fontWeight: 600,
@@ -532,7 +546,7 @@ export default function TasksPage() {
                         />
                         <Tab
                             value="kanban"
-                            label="ДОСКА"
+                            label={t('tasks.view.board', 'ДОСКА')}
                             sx={{
                                 textTransform: 'uppercase',
                                 fontWeight: 600,

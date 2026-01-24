@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import type { IntegrationDTO } from '@/types/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type SnackSetter = (state: { open: boolean; msg: string; sev: 'success' | 'error' | 'info' }) => void;
 
@@ -45,6 +46,7 @@ export default function useIntegrationManager(
     setSnack: SnackSetter,
     refreshIntegrations: () => Promise<void>
 ): UseIntegrationManagerState {
+    const { t } = useI18n();
     const [integrationDialogOpen, setIntegrationDialogOpen] = React.useState(false);
     const [integrationSubmitting, setIntegrationSubmitting] = React.useState(false);
     const [integrationDialogMode, setIntegrationDialogMode] = React.useState<'create' | 'edit'>('create');
@@ -87,7 +89,7 @@ export default function useIntegrationManager(
     const submitIntegrationRequest = async () => {
         if (!org || !canRequestIntegrations) return;
         if (!integrationWebhookUrl.trim()) {
-            setSnack({ open: true, msg: 'Укажите URL вебхука', sev: 'error' });
+            setSnack({ open: true, msg: t('org.integrations.error.webhookRequired', 'Укажите URL вебхука'), sev: 'error' });
             return;
         }
         let parsedConfig: Record<string, unknown> = {};
@@ -95,7 +97,11 @@ export default function useIntegrationManager(
             try {
                 parsedConfig = JSON.parse(integrationConfigJson);
             } catch {
-                setSnack({ open: true, msg: 'Некорректный JSON в конфигурации', sev: 'error' });
+                setSnack({
+                    open: true,
+                    msg: t('org.integrations.error.invalidConfig', 'Некорректный JSON в конфигурации'),
+                    sev: 'error',
+                });
                 return;
             }
         }
@@ -136,7 +142,9 @@ export default function useIntegrationManager(
             }
             setSnack({
                 open: true,
-                msg: isEdit ? 'Интеграция обновлена' : 'Интеграция создана',
+                msg: isEdit
+                    ? t('org.integrations.success.updated', 'Интеграция обновлена')
+                    : t('org.integrations.success.created', 'Интеграция создана'),
                 sev: 'success',
             });
             setIntegrationDialogOpen(false);
@@ -165,12 +173,15 @@ export default function useIntegrationManager(
             }
             setSnack({
                 open: true,
-                msg: nextStatus === 'active' ? 'Интеграция включена' : 'Интеграция приостановлена',
+                msg:
+                    nextStatus === 'active'
+                        ? t('org.integrations.success.enabled', 'Интеграция включена')
+                        : t('org.integrations.success.paused', 'Интеграция приостановлена'),
                 sev: 'success',
             });
             await refreshIntegrations();
         } catch (error) {
-            const msg = error instanceof Error ? error.message : 'Ошибка обновления интеграции';
+            const msg = error instanceof Error ? error.message : t('org.integrations.error.update', 'Ошибка обновления интеграции');
             setSnack({ open: true, msg, sev: 'error' });
         }
     };
@@ -188,11 +199,11 @@ export default function useIntegrationManager(
                 setSnack({ open: true, msg: data.error || res.statusText, sev: 'error' });
                 return;
             }
-            setSnack({ open: true, msg: 'Интеграция удалена', sev: 'success' });
+            setSnack({ open: true, msg: t('org.integrations.success.deleted', 'Интеграция удалена'), sev: 'success' });
             setIntegrationToDelete(null);
             await refreshIntegrations();
         } catch (error) {
-            const msg = error instanceof Error ? error.message : 'Ошибка удаления интеграции';
+            const msg = error instanceof Error ? error.message : t('org.integrations.error.delete', 'Ошибка удаления интеграции');
             setSnack({ open: true, msg, sev: 'error' });
         } finally {
             setIntegrationDeleting(false);
@@ -220,7 +231,7 @@ export default function useIntegrationManager(
             setGeneratedKeySecret(data.keySecret);
             setIntegrationKeyDialogOpen(true);
         } catch (error) {
-            const msg = error instanceof Error ? error.message : 'Ошибка создания ключа';
+            const msg = error instanceof Error ? error.message : t('org.integrations.error.createKey', 'Ошибка создания ключа');
             setSnack({ open: true, msg, sev: 'error' });
         }
     };

@@ -11,11 +11,12 @@ import {
 import type { Task, TaskPayment } from '@/app/types/taskTypes';
 import ContractorPaymentDialog from '@/features/dashboards/contractor/ContractorPaymentDialog';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const PAYABLE_STATUSES = new Set(['Agreed']);
 
-const formatRuble = (value: number) =>
-    new Intl.NumberFormat('ru-RU', {
+const formatRuble = (value: number, locale: string) =>
+    new Intl.NumberFormat(locale === 'ru' ? 'ru-RU' : 'en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     }).format(value);
@@ -24,6 +25,7 @@ const resolveTaskAmount = (task: Task) =>
     Number(task.contractorPayment ?? task.totalCost ?? 0);
 
 export default function ContractorPaymentSummary() {
+    const { t, locale } = useI18n();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -34,19 +36,19 @@ export default function ContractorPaymentSummary() {
             try {
                 const res = await fetch(withBasePath('/api/tasks'), { cache: 'no-store' });
                 if (!res.ok) {
-                    setError('Ошибка при загрузке задач');
+                    setError(t('tasks.error.load', 'Ошибка при загрузке задач'));
                     return;
                 }
                 const data = await res.json();
                 setTasks(data.tasks || []);
             } catch (err: unknown) {
-                setError(err instanceof Error ? err.message : 'Unknown error');
+                setError(err instanceof Error ? err.message : t('common.error.unknown', 'Unknown error'));
             } finally {
                 setLoading(false);
             }
         }
         fetchTasks();
-    }, []);
+    }, [t]);
 
     const agreedTasks = useMemo(
         () => tasks.filter((task) => PAYABLE_STATUSES.has(task.status)),
@@ -97,34 +99,38 @@ export default function ContractorPaymentSummary() {
         <Box>
             {payableTasks.length === 0 ? (
                 <Typography variant='h6' color='text.secondary' textAlign='center'>
-                    Нет задач к оплате
+                    {t('payments.empty', 'Нет задач к оплате')}
                 </Typography>
             ) : (
                 <>
                     <Typography variant='body2' color='text.secondary' textAlign='center'>
-                        К выплате по согласованным задачам
+                        {t('payments.payable.subtitle', 'К выплате по согласованным задачам')}
                     </Typography>
                     <Typography variant='h4' fontWeight={600} textAlign='center' sx={{ mt: 1 }}>
-                        {formatRuble(totalPayable)}
+                        {formatRuble(totalPayable, locale)}
                         {'\u00A0'}
                         {'\u20BD'}
                     </Typography>
                     <Typography variant='body2' color='text.secondary' textAlign='center' sx={{ mt: 1 }}>
-                        {`Задач: ${payableTasks.length}`}
+                        {t('payments.tasksCount', 'Задач: {count}', { count: payableTasks.length })}
                     </Typography>
                     <Divider sx={{ my: 2 }} />
                     <Typography variant='body2' color='text.secondary'>
-                        {`Ожидают отметки организации: ${awaitingOrgMark.length}`}
+                        {t('payments.awaitingOrgMark', 'Ожидают отметки организации: {count}', {
+                            count: awaitingOrgMark.length,
+                        })}
                     </Typography>
                     <Typography variant='body2' color='text.secondary'>
-                        {`Ожидают подтверждения: ${awaitingConfirmation.length}`}
+                        {t('payments.awaitingConfirmation', 'Ожидают подтверждения: {count}', {
+                            count: awaitingConfirmation.length,
+                        })}
                     </Typography>
                 </>
             )}
 
             <Box sx={{ textAlign: 'center', mt: 2 }}>
                 <Button variant='text' onClick={() => setDialogOpen(true)}>
-                    Показать задачи
+                    {t('payments.showTasks', 'Показать задачи')}
                 </Button>
             </Box>
 

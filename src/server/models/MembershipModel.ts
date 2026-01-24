@@ -9,7 +9,7 @@ export interface Membership extends Document {
     userEmail: string;
     userName?: string;
     role: OrgRole;
-    status: 'active' | 'invited';
+    status: 'active' | 'invited' | 'requested';
     createdAt: Date;
 
     invitedByEmail?: string;
@@ -24,7 +24,7 @@ const MembershipSchema = new Schema<Membership>(
         userEmail: { type: String, required: true, index: true, lowercase: true, trim: true },
         userName: { type: String },
         role: { type: String, enum: ['owner', 'org_admin', 'manager', 'executor', 'viewer'], default: 'viewer' },
-        status: { type: String, enum: ['active', 'invited'], default: 'active' },
+        status: { type: String, enum: ['active', 'invited', 'requested'], default: 'active' },
         createdAt: { type: Date, default: Date.now },
 
 

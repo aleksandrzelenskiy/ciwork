@@ -8,6 +8,7 @@ import {
     Typography,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ConfirmDialogProps = {
     open: boolean;
@@ -38,6 +39,7 @@ export default function ConfirmDialog({
     dialogPaperSx,
     dialogActionsSx,
 }: ConfirmDialogProps) {
+    const { t } = useI18n();
     return (
         <Dialog
             open={open}
@@ -58,7 +60,7 @@ export default function ConfirmDialog({
             </DialogContent>
             <DialogActions sx={dialogActionsSx}>
                 <Button onClick={onClose} disabled={loading}>
-                    Отмена
+                    {t('common.cancel', 'Отмена')}
                 </Button>
                 <Button
                     color={confirmColor}

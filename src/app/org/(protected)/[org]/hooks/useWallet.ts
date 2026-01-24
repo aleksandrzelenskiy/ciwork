@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import type { OrgWalletInfo, OrgWalletTx } from '@/types/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type UseWalletState = {
     walletInfo: OrgWalletInfo | null;
@@ -16,6 +17,7 @@ type UseWalletState = {
 };
 
 export default function useWallet(org: string | undefined): UseWalletState {
+    const { t } = useI18n();
     const [walletInfo, setWalletInfo] = React.useState<OrgWalletInfo | null>(null);
     const [walletLoading, setWalletLoading] = React.useState(false);
     const [walletError, setWalletError] = React.useState<string | null>(null);
@@ -34,16 +36,16 @@ export default function useWallet(org: string | undefined): UseWalletState {
                 | { wallet?: OrgWalletInfo; error?: string }
                 | null;
             if (!res.ok || !data?.wallet) {
-                setWalletError(data?.error || 'Не удалось загрузить баланс');
+                setWalletError(data?.error || t('org.wallet.error.load', 'Не удалось загрузить баланс'));
                 return;
             }
             setWalletInfo(data.wallet);
         } catch (err) {
-            setWalletError(err instanceof Error ? err.message : 'Не удалось загрузить баланс');
+            setWalletError(err instanceof Error ? err.message : t('org.wallet.error.load', 'Не удалось загрузить баланс'));
         } finally {
             setWalletLoading(false);
         }
-    }, [org]);
+    }, [org, t]);
 
     const fetchWalletTransactions = React.useCallback(async () => {
         if (!org) return;
@@ -58,16 +60,16 @@ export default function useWallet(org: string | undefined): UseWalletState {
                 | { transactions?: OrgWalletTx[]; error?: string }
                 | null;
             if (!res.ok || !Array.isArray(data?.transactions)) {
-                setWalletTxError(data?.error || 'Не удалось загрузить операции');
+                setWalletTxError(data?.error || t('org.wallet.error.load', 'Не удалось загрузить операции'));
                 return;
             }
             setWalletTx(data.transactions);
         } catch (err) {
-            setWalletTxError(err instanceof Error ? err.message : 'Не удалось загрузить операции');
+            setWalletTxError(err instanceof Error ? err.message : t('org.wallet.error.load', 'Не удалось загрузить операции'));
         } finally {
             setWalletTxLoading(false);
         }
-    }, [org]);
+    }, [org, t]);
 
     return {
         walletInfo,

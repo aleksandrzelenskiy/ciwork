@@ -28,6 +28,7 @@ import PreviewIcon from '@mui/icons-material/Preview';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { ApplicationRow } from '@/types/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ApplicationsDialogProps = {
     open: boolean;
@@ -48,10 +49,12 @@ type ApplicationsDialogProps = {
     alertSx: SxProps<Theme>;
 };
 
-const statusLabel = (status: string) => {
-    if (status === 'accepted') return 'Принят';
-    if (status === 'rejected') return 'Отклонен';
-    if (status === 'submitted') return 'Отправлен';
+type TranslateFn = (key: string, fallback?: string, params?: Record<string, string | number>) => string;
+
+const statusLabel = (status: string, t: TranslateFn) => {
+    if (status === 'accepted') return t('org.applications.status.accepted', 'Принят');
+    if (status === 'rejected') return t('org.applications.status.rejected', 'Отклонен');
+    if (status === 'submitted') return t('org.applications.status.submitted', 'Отправлен');
     return status || '—';
 };
 
@@ -73,6 +76,8 @@ export default function ApplicationsDialog({
     dialogContentBg,
     alertSx,
 }: ApplicationsDialogProps) {
+    const { t, locale } = useI18n();
+    const numberLocale = locale === 'ru' ? 'ru-RU' : 'en-US';
     return (
         <Dialog
             open={open}
@@ -88,7 +93,9 @@ export default function ApplicationsDialog({
         >
             <DialogTitle sx={cardHeaderSx}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="inherit">Отклики на публичные задачи</Typography>
+                    <Typography variant="inherit">
+                        {t('org.applications.dialog.title', 'Отклики на публичные задачи')}
+                    </Typography>
                     <IconButton onClick={onClose}>
                         <CloseFullscreenIcon />
                     </IconButton>
@@ -98,10 +105,10 @@ export default function ApplicationsDialog({
                 <Card variant="outlined" sx={cardBaseSx}>
                     <CardHeader
                         sx={cardHeaderSx}
-                        title="Отклики на публичные задачи"
-                        subheader="Последние 50 заявок подрядчиков"
+                        title={t('org.applications.dialog.title', 'Отклики на публичные задачи')}
+                        subheader={t('org.applications.dialog.subtitle', 'Последние 50 заявок подрядчиков')}
                         action={
-                            <Tooltip title="Обновить">
+                            <Tooltip title={t('common.refresh', 'Обновить')}>
                                 <span>
                                     <IconButton onClick={onRefresh} disabled={loading}>
                                         <RefreshIcon />
@@ -119,22 +126,22 @@ export default function ApplicationsDialog({
                         {loading ? (
                             <Stack direction="row" spacing={1} alignItems="center">
                                 <CircularProgress size={20} />
-                                <Typography>Загружаем отклики…</Typography>
+                                <Typography>{t('org.applications.loading', 'Загружаем отклики…')}</Typography>
                             </Stack>
                         ) : applications.length === 0 ? (
                             <Typography color="text.secondary">
-                                Откликов пока нет.
+                                {t('org.applications.empty', 'Откликов пока нет.')}
                             </Typography>
                         ) : (
                             <Table size="small">
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>Задача</TableCell>
-                                        <TableCell>Кандидат</TableCell>
-                                        <TableCell>Ставка</TableCell>
-                                        <TableCell>Статус</TableCell>
-                                        <TableCell>Создано</TableCell>
-                                        <TableCell align="right">Действия</TableCell>
+                                        <TableCell>{t('org.applications.table.task', 'Задача')}</TableCell>
+                                        <TableCell>{t('org.applications.table.candidate', 'Кандидат')}</TableCell>
+                                        <TableCell>{t('org.applications.table.budget', 'Ставка')}</TableCell>
+                                        <TableCell>{t('org.applications.table.status', 'Статус')}</TableCell>
+                                        <TableCell>{t('org.applications.table.createdAt', 'Создано')}</TableCell>
+                                        <TableCell align="right">{t('common.actions', 'Действия')}</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -146,31 +153,35 @@ export default function ApplicationsDialog({
                                                     {app.bsNumber ? ` · ${app.bsNumber}` : ''}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary" noWrap>
-                                                    {app.bsNumber ? `БС ${app.bsNumber}` : '—'}
+                                                    {app.bsNumber
+                                                        ? t('org.applications.base', 'БС {value}', { value: app.bsNumber })
+                                                        : '—'}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
                                                     {app.publicStatus === 'assigned'
-                                                        ? 'Назначена'
+                                                        ? t('market.status.assigned', 'Назначена')
                                                         : app.publicStatus === 'open'
-                                                            ? 'Открыта'
+                                                            ? t('market.status.open', 'Открыта')
                                                             : app.publicStatus || '—'}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
-                                                <Typography variant="body2">{app.contractorName || '—'}</Typography>
+                                                <Typography variant="body2">
+                                                    {app.contractorName || '—'}
+                                                </Typography>
                                                 <Typography variant="caption" color="text.secondary">
                                                     {app.contractorEmail || '—'}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
                                                 {Number.isFinite(app.proposedBudget)
-                                                    ? `${new Intl.NumberFormat('ru-RU').format(app.proposedBudget)} ₽`
+                                                    ? `${new Intl.NumberFormat(numberLocale).format(app.proposedBudget)} ₽`
                                                     : '—'}
                                             </TableCell>
                                             <TableCell>
                                                 <Chip
                                                     size="small"
-                                                    label={statusLabel(app.status)}
+                                                    label={statusLabel(app.status, t)}
                                                     color={
                                                         app.status === 'accepted'
                                                             ? 'success'
@@ -186,13 +197,13 @@ export default function ApplicationsDialog({
                                             <TableCell>
                                                 <Typography variant="body2" color="text.secondary">
                                                     {app.createdAt
-                                                        ? new Date(app.createdAt).toLocaleDateString('ru-RU')
+                                                        ? new Date(app.createdAt).toLocaleDateString(numberLocale)
                                                         : '—'}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell align="right">
                                                 <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                                                    <Tooltip title="Перейти в задачу">
+                                                    <Tooltip title={t('org.applications.actions.openTask', 'Перейти в задачу')}>
                                                         <span>
                                                             <IconButton
                                                                 size="small"
@@ -203,7 +214,7 @@ export default function ApplicationsDialog({
                                                             </IconButton>
                                                         </span>
                                                     </Tooltip>
-                                                    <Tooltip title="Удалить отклик">
+                                                    <Tooltip title={t('org.applications.remove.title', 'Удалить отклик')}>
                                                         <span>
                                                             <IconButton
                                                                 size="small"
@@ -226,7 +237,7 @@ export default function ApplicationsDialog({
                 </Card>
             </DialogContent>
             <DialogActions sx={dialogActionsSx}>
-                <Button onClick={onClose}>Закрыть</Button>
+                <Button onClick={onClose}>{t('common.close', 'Закрыть')}</Button>
             </DialogActions>
         </Dialog>
     );

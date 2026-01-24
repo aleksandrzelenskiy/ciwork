@@ -10,10 +10,13 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 
 import type { OrgWalletInfo, OrgWalletTx } from '@/types/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
-const txTypeLabel = (type: string) => {
-    if (type === 'debit') return 'Списание';
-    if (type === 'credit') return 'Пополнение';
+type TranslateFn = (key: string, fallback?: string, params?: Record<string, string | number>) => string;
+
+const txTypeLabel = (type: string, t: TranslateFn) => {
+    if (type === 'debit') return t('org.wallet.tx.debit', 'Списание');
+    if (type === 'credit') return t('org.wallet.tx.credit', 'Пополнение');
     return type || '—';
 };
 
@@ -40,13 +43,14 @@ export default function OrgWalletCard({
     textSecondary,
     buttonRadius,
 }: OrgWalletCardProps) {
+    const { t } = useI18n();
     return (
         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
             <Stack spacing={1.5}>
                 <Stack direction="row" spacing={1} alignItems="center">
                     <AccountBalanceWalletIcon fontSize="small" />
                     <Typography variant="subtitle1" fontWeight={600}>
-                        Баланс организации
+                        {t('org.wallet.title', 'Баланс организации')}
                     </Typography>
                 </Stack>
                 <Typography variant="h4" fontWeight={700}>
@@ -55,17 +59,19 @@ export default function OrgWalletCard({
                         : `${(walletInfo?.balance ?? 0).toFixed(2)} ${walletInfo?.currency ?? 'RUB'}`}
                 </Typography>
                 <Typography variant="body2" color={textSecondary}>
-                    Списания за хранение рассчитываются почасово.
+                    {t('org.wallet.hint', 'Списания за хранение рассчитываются почасово.')}
                 </Typography>
                 <Stack spacing={0.75}>
                     {walletTxLoading ? (
                         <Stack direction="row" spacing={1} alignItems="center">
                             <CircularProgress size={16} />
-                            <Typography variant="body2">Загружаем операции…</Typography>
+                            <Typography variant="body2">{t('org.wallet.loading', 'Загружаем операции…')}</Typography>
                         </Stack>
                     ) : walletTxError ? (
                         <Typography variant="body2" color={textSecondary}>
-                            Не удалось загрузить операции: {walletTxError}
+                            {t('org.wallet.error.load', 'Не удалось загрузить операции: {error}', {
+                                error: walletTxError,
+                            })}
                         </Typography>
                     ) : walletTx.length > 0 ? (
                         walletTx.slice(0, 3).map((tx) => (
@@ -74,7 +80,7 @@ export default function OrgWalletCard({
                                     variant="body2"
                                     color={tx.type === 'debit' ? 'error.main' : tx.type === 'credit' ? 'success.main' : textSecondary}
                                 >
-                                    {txTypeLabel(tx.type)}
+                                    {txTypeLabel(tx.type, t)}
                                 </Typography>
                                 <Typography variant="body2" fontWeight={600}>
                                     {tx.amount.toFixed(2)} {walletInfo?.currency ?? 'RUB'}
@@ -83,7 +89,7 @@ export default function OrgWalletCard({
                         ))
                     ) : (
                         <Typography variant="body2" color={textSecondary}>
-                            Операций пока нет.
+                            {t('org.wallet.empty', 'Операций пока нет.')}
                         </Typography>
                     )}
                 </Stack>
@@ -92,14 +98,14 @@ export default function OrgWalletCard({
                         variant="contained"
                         sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                     >
-                        Пополнить
+                        {t('org.wallet.actions.topUp', 'Пополнить')}
                     </Button>
                     <Button
                         variant="outlined"
                         onClick={onOpenHistory}
                         sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                     >
-                        История операций
+                        {t('org.wallet.actions.history', 'История операций')}
                     </Button>
                 </Stack>
             </Stack>

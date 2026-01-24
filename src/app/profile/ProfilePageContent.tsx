@@ -29,6 +29,7 @@ import SendIcon from '@mui/icons-material/Send';
 import ProfileEditForm from '@/features/profile/ProfileEditForm';
 import ReviewDialog from '@/features/profile/ReviewDialog';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ProfileResponse = {
     id?: string;
@@ -65,6 +66,7 @@ type ProfilePageContentProps = {
 };
 
 export default function ProfilePageContent({ mode, userId }: ProfilePageContentProps) {
+    const { t } = useI18n();
     const [profile, setProfile] = useState<ProfileResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -110,7 +112,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
 
     const loadProfile = useCallback(async () => {
         if (isPublicView && !userId) {
-            setError('Пользователь не указан');
+            setError(t('profile.error.missingUser', 'Пользователь не указан'));
             setLoading(false);
             return;
         }
@@ -129,7 +131,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             const data = await res.json();
 
             if (!res.ok) {
-                setError(data.error || 'Не удалось загрузить профиль');
+                setError(data.error || t('profile.error.load', 'Не удалось загрузить профиль'));
                 return;
             }
 
@@ -137,7 +139,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 mode === 'self' ? data : (data.profile as ProfileResponse | null);
 
             if (!payload) {
-                setError('Профиль не найден');
+                setError(t('profile.error.notFound', 'Профиль не найден'));
                 return;
             }
 
@@ -146,11 +148,11 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             deriveNames(payload.name);
             setBio(payload.bio || '');
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
+            setError(err instanceof Error ? err.message : t('common.error.unknown', 'Неизвестная ошибка'));
         } finally {
             setLoading(false);
         }
-    }, [deriveNames, isPublicView, mode, userId]);
+    }, [deriveNames, isPublicView, mode, t, userId]);
 
     useEffect(() => {
         void loadProfile();
@@ -168,7 +170,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             if (customEvent.detail?.ok) {
                 setChatToast({
                     open: true,
-                    message: 'Чат открыт',
+                    message: t('profile.chat.opened', 'Чат открыт'),
                     severity: 'success',
                     targetEmail,
                 });
@@ -177,7 +179,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     open: true,
                     message:
                         customEvent.detail?.error ||
-                        'Не удалось открыть чат. Попробуйте еще раз.',
+                        t('profile.chat.error', 'Не удалось открыть чат. Попробуйте еще раз.'),
                     severity: 'error',
                     targetEmail,
                 });
@@ -187,7 +189,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         return () => {
             window.removeEventListener('messenger:direct:result', handleChatResult);
         };
-    }, [chatToast.targetEmail]);
+    }, [chatToast.targetEmail, t]);
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
@@ -211,7 +213,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             if (!res.ok) {
                 setMessage({
                     type: 'error',
-                    text: data.error || 'Не удалось обновить профиль',
+                    text: data.error || t('profile.update.error', 'Не удалось обновить профиль'),
                 });
                 return;
             }
@@ -222,11 +224,11 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 deriveNames(data.profile.name);
                 setBio(data.profile.bio || '');
             }
-            setMessage({ type: 'success', text: 'Профиль обновлён' });
+            setMessage({ type: 'success', text: t('profile.update.success', 'Профиль обновлён') });
         } catch (err) {
             setMessage({
                 type: 'error',
-                text: err instanceof Error ? err.message : 'Неизвестная ошибка',
+                text: err instanceof Error ? err.message : t('common.error.unknown', 'Неизвестная ошибка'),
             });
         } finally {
             setSaving(false);
@@ -239,7 +241,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         if (readOnly) {
             setMessage({
                 type: 'error',
-                text: 'Редактирование доступно только владельцу профиля',
+                text: t('profile.edit.ownerOnly', 'Редактирование доступно только владельцу профиля'),
             });
             event.target.value = '';
             return;
@@ -258,18 +260,18 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             if (!res.ok) {
                 setMessage({
                     type: 'error',
-                    text: data.error || 'Не удалось загрузить аватар',
+                    text: data.error || t('profile.avatar.error', 'Не удалось загрузить аватар'),
                 });
                 return;
             }
             setProfile((prev) =>
                 prev ? { ...prev, profilePic: data.imageUrl } : prev
             );
-            setMessage({ type: 'success', text: 'Аватар обновлён' });
+            setMessage({ type: 'success', text: t('profile.avatar.success', 'Аватар обновлён') });
         } catch (err) {
             setMessage({
                 type: 'error',
-                text: err instanceof Error ? err.message : 'Неизвестная ошибка',
+                text: err instanceof Error ? err.message : t('common.error.unknown', 'Неизвестная ошибка'),
             });
         } finally {
             setUploading(false);
@@ -294,10 +296,10 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         return (
             <Box sx={{ p: 4, maxWidth: 640, mx: 'auto' }}>
                 <Alert severity="error" sx={{ mb: 2 }}>
-                    {error || 'Не удалось загрузить профиль'}
+                    {error || t('profile.error.load', 'Не удалось загрузить профиль')}
                 </Alert>
                 <Button variant="contained" onClick={loadProfile}>
-                    Повторить попытку
+                    {t('common.retry', 'Повторить попытку')}
                 </Button>
             </Box>
         );
@@ -312,26 +314,34 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         ? RUSSIAN_REGIONS.find((region) => region.code === profile.regionCode)?.name
         : '';
     const roleLabel = isContractor
-        ? 'Подрядчик'
+        ? t('profile.role.contractor', 'Подрядчик')
         : isEmployer
-            ? 'Работодатель'
-            : 'Профиль';
-    const orgRoleLabels: Record<string, string> = {
-        owner: 'Владелец',
-        org_admin: 'Администратор',
-        manager: 'Менеджер',
-        executor: 'Исполнитель',
-        viewer: 'Наблюдатель',
-    };
+            ? t('profile.role.employer', 'Работодатель')
+            : t('profile.role.profile', 'Профиль');
     const organizationRoleLabel = profile.organizationRole
-        ? orgRoleLabels[profile.organizationRole] || profile.organizationRole
+        ? (() => {
+            switch (profile.organizationRole) {
+                case 'owner':
+                    return t('org.roles.owner', 'Владелец');
+                case 'org_admin':
+                    return t('org.roles.admin', 'Администратор');
+                case 'manager':
+                    return t('org.roles.manager', 'Менеджер');
+                case 'executor':
+                    return t('org.roles.executor', 'Исполнитель');
+                case 'viewer':
+                    return t('org.roles.viewer', 'Наблюдатель');
+                default:
+                    return profile.organizationRole;
+            }
+        })()
         : null;
     const moderationLabel =
         profile.moderationStatus === 'approved'
-            ? 'Подтвержден'
+            ? t('profile.moderation.approved', 'Подтвержден')
             : profile.moderationStatus === 'rejected'
-                ? 'Отклонен'
-                : 'На модерации';
+                ? t('profile.moderation.rejected', 'Отклонен')
+                : t('profile.moderation.pending', 'На модерации');
     const moderationColor =
         profile.moderationStatus === 'approved'
             ? 'success'
@@ -341,7 +351,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     const highlightItems = isContractor
         ? [
             {
-                label: 'Выполненные задачи',
+                label: t('profile.highlights.completed', 'Выполненные задачи'),
                 value: String(
                     typeof profile.completedCount === 'number'
                         ? profile.completedCount
@@ -349,7 +359,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 ),
             },
             {
-                label: 'Рабочий рейтинг',
+                label: t('profile.highlights.rating', 'Рабочий рейтинг'),
                 value:
                     typeof profile.workRating === 'number'
                         ? profile.workRating.toFixed(1)
@@ -360,15 +370,15 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             ? []
             : [
                 {
-                    label: 'Профиль',
+                    label: t('profile.highlights.profile', 'Профиль'),
                     value: roleLabel,
                 },
                 {
-                    label: 'Регион',
+                    label: t('profile.highlights.region', 'Регион'),
                     value: regionName ? `${profile.regionCode} — ${regionName}` : '—',
                 },
                 {
-                    label: 'Контакт',
+                    label: t('profile.highlights.contact', 'Контакт'),
                     value: profile.email || '—',
                 },
             ];
@@ -387,7 +397,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
         if (!profile.email || typeof window === 'undefined') return;
         setChatToast({
             open: true,
-            message: 'Открываем чат...',
+            message: t('profile.chat.opening', 'Открываем чат...'),
             severity: 'info',
             targetEmail: profile.email,
         });
@@ -476,7 +486,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             alignItems={{ xs: 'flex-start', sm: 'center' }}
                         >
                             <Typography variant="h4" fontWeight={700}>
-                                {profile.name || 'Пользователь'}
+                                {profile.name || t('common.user', 'Пользователь')}
                             </Typography>
                             <Stack direction="row" spacing={1} flexWrap="wrap">
                                 <Chip
@@ -555,48 +565,52 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             )}
                         </Stack>
                         <Stack direction="row" spacing={1} flexWrap="wrap">
-                            {canMessage && (
-                                <Button
-                                    variant="contained"
-                                    startIcon={<SendIcon />}
-                                    onClick={handleOpenMessage}
-                                    sx={{ textTransform: 'none', borderRadius: 999 }}
-                                >
-                                    Отправить сообщение
-                                </Button>
-                            )}
+                                {canMessage && (
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<SendIcon />}
+                                        onClick={handleOpenMessage}
+                                        sx={{ textTransform: 'none', borderRadius: 999 }}
+                                    >
+                                        {t('profile.actions.message', 'Отправить сообщение')}
+                                    </Button>
+                                )}
+                                {canEdit && (
+                                    <Button
+                                        variant="outlined"
+                                        onClick={() => setShowEditForm((prev) => !prev)}
+                                        sx={{ textTransform: 'none', borderRadius: 999 }}
+                                    >
+                                        {showEditForm
+                                            ? t('profile.actions.hideEdit', 'Скрыть редактирование')
+                                            : t('profile.actions.edit', 'Редактировать')}
+                                    </Button>
+                                )}
+                            </Stack>
                             {canEdit && (
-                                <Button
-                                    variant="outlined"
-                                    onClick={() => setShowEditForm((prev) => !prev)}
-                                    sx={{ textTransform: 'none', borderRadius: 999 }}
-                                >
-                                    {showEditForm ? 'Скрыть редактирование' : 'Редактировать'}
-                                </Button>
-                            )}
-                        </Stack>
-                        {canEdit && (
-                            <Box>
-                                <Button
-                                    variant="outlined"
-                                    onClick={triggerAvatarSelect}
-                                    disabled={uploading}
-                                    sx={{
-                                        textTransform: 'none',
-                                        borderRadius: 999,
-                                        px: 2.5,
-                                        mt: 1,
-                                    }}
-                                >
-                                    {uploading ? 'Загрузка...' : 'Изменить аватар'}
-                                </Button>
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    sx={{ display: 'block', mt: 1 }}
-                                >
-                                    JPG или PNG до 5 МБ
-                                </Typography>
+                                <Box>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={triggerAvatarSelect}
+                                        disabled={uploading}
+                                        sx={{
+                                            textTransform: 'none',
+                                            borderRadius: 999,
+                                            px: 2.5,
+                                            mt: 1,
+                                        }}
+                                    >
+                                        {uploading
+                                            ? t('profile.avatar.uploading', 'Загрузка...')
+                                            : t('profile.avatar.change', 'Изменить аватар')}
+                                    </Button>
+                                    <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        sx={{ display: 'block', mt: 1 }}
+                                    >
+                                        {t('profile.avatar.hint', 'JPG или PNG до 5 МБ')}
+                                    </Typography>
                                 <input
                                     ref={fileInputRef}
                                     type="file"
@@ -630,23 +644,27 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     >
                         <Stack spacing={1}>
                             <Typography variant="body2" color="text.secondary">
-                                Работодатель управляет задачами, проектами и формирует
-                                команды подрядчиков.
+                                {t(
+                                    'profile.employer.hint',
+                                    'Работодатель управляет задачами, проектами и формирует команды подрядчиков.'
+                                )}
                             </Typography>
                             {profile.organizationName && (
                                 <Typography variant="body2" color="text.secondary">
-                                    Организация: {profile.organizationName}
+                                    {t('profile.employer.organization', 'Организация: {name}', {
+                                        name: profile.organizationName,
+                                    })}
                                 </Typography>
                             )}
                             {organizationRoleLabel && (
                                 <Typography variant="body2" color="text.secondary">
-                                    Роль: {organizationRoleLabel}
+                                    {t('profile.employer.role', 'Роль: {role}', { role: organizationRoleLabel })}
                                 </Typography>
                             )}
                             {profile.managedProjects && profile.managedProjects.length > 0 && (
                                 <Box>
                                     <Typography variant="body2" color="text.secondary">
-                                        Проекты управления:
+                                        {t('profile.employer.projects', 'Проекты управления:')}
                                     </Typography>
                                     <Stack spacing={0.5} sx={{ mt: 0.5 }}>
                                         {profile.managedProjects.map((project) => (
@@ -745,18 +763,18 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     {isContractor && (
                         <Stack spacing={1}>
                             <Typography variant="subtitle1" fontWeight={600}>
-                                О себе
+                                {t('profile.about', 'О себе')}
                             </Typography>
                             <Typography
                                 variant="body2"
                                 color="text.secondary"
                                 sx={{ whiteSpace: 'pre-line' }}
                             >
-                                {bio || 'Пока нет описания.'}
+                                {bio || t('profile.about.empty', 'Пока нет описания.')}
                             </Typography>
                             {isAdminViewer && profile.phone && (
                                 <Typography variant="body2" color="text.secondary">
-                                    Телефон: {profile.phone}
+                                    {t('profile.phone', 'Телефон: {value}', { value: profile.phone })}
                                 </Typography>
                             )}
                             {profile.portfolioLinks?.length ? (
@@ -776,7 +794,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                             variant="outlined"
                                             sx={{ borderRadius: 999, textTransform: 'none' }}
                                         >
-                                            {label || 'Портфолио'}
+                                            {label || t('profile.portfolio', 'Портфолио')}
                                         </Button>
                                         );
                                     })}
@@ -787,7 +805,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     {isContractor && profile.recentTasks && profile.recentTasks.length > 0 && (
                         <Stack spacing={1} sx={{ mt: 2 }}>
                             <Typography variant="subtitle1" fontWeight={600}>
-                                Последние выполненные задачи
+                                {t('profile.recentTasks.title', 'Последние выполненные задачи')}
                             </Typography>
                             <Stack spacing={0.5}>
                                 {profile.recentTasks.map((task, index) => (
@@ -796,7 +814,10 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                         variant="body2"
                                         color="text.secondary"
                                     >
-                                        {task.taskName} — БС {task.bsNumber}
+                                        {t('profile.recentTasks.item', '{task} — БС {bs}', {
+                                            task: task.taskName,
+                                            bs: task.bsNumber,
+                                        })}
                                     </Typography>
                                 ))}
                             </Stack>
@@ -808,8 +829,10 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                             color="text.secondary"
                             sx={{ mt: 1 }}
                         >
-                            Администратор платформы имеет доступ к модерации и
-                            управлению данными.
+                            {t(
+                                'profile.adminNote',
+                                'Администратор платформы имеет доступ к модерации и управлению данными.'
+                            )}
                         </Typography>
                     )}
                 </Box>

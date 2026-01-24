@@ -15,6 +15,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { ApplicationRow } from '@/types/org';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type OrgApplicationsCardProps = {
     applicationsLoading: boolean;
@@ -29,10 +30,12 @@ type OrgApplicationsCardProps = {
     buttonRadius: number;
 };
 
-const statusLabel = (status: string) => {
-    if (status === 'accepted') return 'Принят';
-    if (status === 'rejected') return 'Отклонен';
-    if (status === 'submitted') return 'Отправлен';
+type TranslateFn = (key: string, fallback?: string, params?: Record<string, string | number>) => string;
+
+const statusLabel = (status: string, t: TranslateFn) => {
+    if (status === 'accepted') return t('org.applications.status.accepted', 'Принят');
+    if (status === 'rejected') return t('org.applications.status.rejected', 'Отклонен');
+    if (status === 'submitted') return t('org.applications.status.submitted', 'Отправлен');
     return status || '—';
 };
 
@@ -55,6 +58,7 @@ export default function OrgApplicationsCard({
     textSecondary,
     buttonRadius,
 }: OrgApplicationsCardProps) {
+    const { t } = useI18n();
     return (
         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
             <Stack spacing={2}>
@@ -62,18 +66,18 @@ export default function OrgApplicationsCard({
                     <Stack direction="row" spacing={1} alignItems="center">
                         <WavingHandIcon fontSize="small" />
                         <Typography variant="subtitle1" fontWeight={600}>
-                            Отклики на задачи
+                            {t('org.applications.title', 'Отклики на задачи')}
                         </Typography>
                     </Stack>
                     <Stack direction="row" spacing={1}>
-                        <Tooltip title="Открыть список">
+                        <Tooltip title={t('common.openList', 'Открыть список')}>
                             <span>
                                 <IconButton onClick={onOpenDialog}>
                                     <OpenInFullIcon />
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="Обновить">
+                        <Tooltip title={t('common.refresh', 'Обновить')}>
                             <span>
                                 <IconButton onClick={onRefresh} disabled={applicationsLoading}>
                                     <RefreshIcon />
@@ -83,12 +87,12 @@ export default function OrgApplicationsCard({
                     </Stack>
                 </Stack>
                 <Typography variant="body2" color={textSecondary}>
-                    Всего заявок: {applicationsCount}.
+                    {t('org.applications.total', 'Всего заявок: {count}.', { count: applicationsCount })}
                 </Typography>
                 {applicationsLoading ? (
                     <Stack direction="row" spacing={1} alignItems="center">
                         <CircularProgress size={18} />
-                        <Typography variant="body2">Загружаем отклики…</Typography>
+                        <Typography variant="body2">{t('org.applications.loading', 'Загружаем отклики…')}</Typography>
                     </Stack>
                 ) : applicationsPreview.length > 0 ? (
                     <Stack spacing={1}>
@@ -109,9 +113,12 @@ export default function OrgApplicationsCard({
                                     {app.bsNumber ? ` · ${app.bsNumber}` : ''}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    {app.contractorName || app.contractorEmail || 'Без кандидата'} ·{' '}
+                                    {app.contractorName
+                                        || app.contractorEmail
+                                        || t('org.applications.noCandidate', 'Без кандидата')}{' '}
+                                    ·{' '}
                                     <Box component="span" sx={{ color: statusColor(app.status, textSecondary) }}>
-                                        {statusLabel(app.status)}
+                                        {statusLabel(app.status, t)}
                                     </Box>
                                 </Typography>
                             </Box>
@@ -119,7 +126,7 @@ export default function OrgApplicationsCard({
                     </Stack>
                 ) : (
                     <Typography variant="body2" color={textSecondary}>
-                        Откликов пока нет.
+                        {t('org.applications.empty', 'Откликов пока нет.')}
                     </Typography>
                 )}
                 <Button
@@ -127,7 +134,7 @@ export default function OrgApplicationsCard({
                     onClick={onOpenDialog}
                     sx={{ borderRadius: buttonRadius, textTransform: 'none', alignSelf: 'flex-start' }}
                 >
-                    Открыть список
+                    {t('common.openList', 'Открыть список')}
                 </Button>
             </Stack>
         </Box>

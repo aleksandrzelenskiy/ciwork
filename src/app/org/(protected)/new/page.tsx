@@ -11,13 +11,22 @@ import {
     Alert,
     Stack,
     Container,
+    CircularProgress,
 } from '@mui/material';
+import Autocomplete from '@mui/material/Autocomplete';
 import { useRouter } from 'next/navigation';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type CreateOrgSuccess = { ok: true; org: { orgSlug: string } };
 type CreateOrgError = { error: string };
+type OrgSearchItem = {
+    _id: string;
+    name: string;
+    orgSlug: string;
+    membershipStatus?: 'active' | 'invited' | 'requested';
+};
 
 // простая клиентская slugify (латиница/цифры/дефис, минимум 3 символа)
 function makeSlug(input: string): string {
@@ -33,11 +42,18 @@ function makeSlug(input: string): string {
 }
 
 export default function NewOrgPage() {
+    const { t } = useI18n();
     const [name, setName] = useState('');
     const [slug, setSlug] = useState('');
     const [touchedSlug, setTouchedSlug] = useState(false); // если юзер редактировал slug вручную
     const [loading, setLoading] = useState(false);
     const [resultAlert, setResultAlert] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
+    const [orgQuery, setOrgQuery] = useState('');
+    const [orgOptions, setOrgOptions] = useState<OrgSearchItem[]>([]);
+    const [orgLoading, setOrgLoading] = useState(false);
+    const [selectedOrg, setSelectedOrg] = useState<OrgSearchItem | null>(null);
+    const [joinLoading, setJoinLoading] = useState(false);
+    const [joinAlert, setJoinAlert] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
     const router = useRouter();
 
     // автогенерация slug из name, если пользователь не редактировал вручную
@@ -50,10 +66,44 @@ export default function NewOrgPage() {
 
     const slugError = useMemo(() => {
         if (!slug) return null;
-        if (slug.length < 3) return 'Минимум 3 символа';
-        if (!/^[a-z0-9-]+$/.test(slug)) return 'Разрешены только латиница, цифры, дефис';
+        if (slug.length < 3) return t('org.create.slug.minLength', 'Минимум 3 символа');
+        if (!/^[a-z0-9-]+$/.test(slug)) {
+            return t('org.create.slug.allowed', 'Разрешены только латиница, цифры, дефис');
+        }
         return null;
-    }, [slug]);
+    }, [slug, t]);
+
+    useEffect(() => {
+        const q = orgQuery.trim();
+        if (q.length < 2) {
+            setOrgOptions([]);
+            setOrgLoading(false);
+            return;
+        }
+        const ctrl = new AbortController();
+        setOrgLoading(true);
+        const timeout = setTimeout(async () => {
+            try {
+                const res = await fetch(
+                    withBasePath(`/api/org/search?q=${encodeURIComponent(q)}&limit=8`),
+                    { signal: ctrl.signal }
+                );
+                const data = (await res.json().catch(() => ({}))) as { orgs?: OrgSearchItem[] };
+                setOrgOptions(Array.isArray(data.orgs) ? data.orgs : []);
+            } catch (error) {
+                if (!(error instanceof DOMException && error.name === 'AbortError')) {
+                    setOrgOptions([]);
+                }
+            } finally {
+                setOrgLoading(false);
+            }
+        }, 250);
+
+        return () => {
+            clearTimeout(timeout);
+            ctrl.abort();
+        };
+    }, [orgQuery]);
 
     const handleCreate = async () => {
         setLoading(true);
@@ -70,7 +120,10 @@ export default function NewOrgPage() {
             if (!res.ok || !('ok' in data) || !data.ok) {
                 setResultAlert({
                     type: 'warning',
-                    message: 'error' in data && data.error ? data.error : 'Ошибка создания организации',
+                    message:
+                        'error' in data && data.error
+                            ? data.error
+                            : t('org.create.error.create', 'Ошибка создания организации'),
                 });
                 return;
             }
@@ -78,18 +131,68 @@ export default function NewOrgPage() {
             const orgName = name.trim() || data.org.orgSlug;
             setResultAlert({
                 type: 'success',
-                message: `Организация «${orgName}» создана`,
+                message: t('org.create.success', 'Организация «{orgName}» создана', { orgName }),
             });
             setTimeout(() => {
                 router.push(`/org/${data.org.orgSlug}`);
             }, 1500);
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка сети';
+            const msg = e instanceof Error ? e.message : t('common.error.network', 'Ошибка сети');
             setResultAlert({ type: 'warning', message: msg });
         } finally {
             setLoading(false);
         }
     };
+
+    const handleJoinRequest = async () => {
+        if (!selectedOrg) return;
+        setJoinLoading(true);
+        setJoinAlert(null);
+        try {
+            const res = await fetch(withBasePath(`/api/org/${encodeURIComponent(selectedOrg.orgSlug)}/members/request`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: 'manager' }),
+            });
+            const data = (await res.json().catch(() => ({}))) as { ok?: true; error?: string };
+            if (!res.ok || !data.ok) {
+                setJoinAlert({
+                    type: 'warning',
+                    message: data.error || t('org.join.request.error', 'Не удалось отправить запрос'),
+                });
+                return;
+            }
+
+            setJoinAlert({
+                type: 'success',
+                message: t('org.join.request.success', 'Запрос отправлен. Владелец организации получит уведомление.'),
+            });
+            setSelectedOrg((prev) => (prev ? { ...prev, membershipStatus: 'requested' } : prev));
+            setOrgOptions((prev) =>
+                prev.map((org) =>
+                    org.orgSlug === selectedOrg.orgSlug
+                        ? { ...org, membershipStatus: 'requested' }
+                        : org
+                )
+            );
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
+            setJoinAlert({ type: 'warning', message: msg });
+        } finally {
+            setJoinLoading(false);
+        }
+    };
+
+    const joinStatusLabel = useMemo(() => {
+        if (!selectedOrg?.membershipStatus) return null;
+        if (selectedOrg.membershipStatus === 'active') {
+            return t('org.join.request.status.active', 'Вы уже в этой организации');
+        }
+        if (selectedOrg.membershipStatus === 'invited') {
+            return t('org.join.request.status.invited', 'Для вас уже есть приглашение');
+        }
+        return t('org.join.request.status.requested', 'Запрос уже отправлен');
+    }, [selectedOrg?.membershipStatus, t]);
 
     return (
         <Box
@@ -134,7 +237,7 @@ export default function NewOrgPage() {
                 <Box sx={{ position: 'relative', zIndex: 1 }}>
                     <Stack spacing={2} textAlign="center" alignItems="center">
                         <Typography variant="h3" fontWeight={700}>
-                            Создайте организацию
+                            {t('org.create.title', 'Создайте организацию')}
                         </Typography>
                     </Stack>
 
@@ -159,26 +262,29 @@ export default function NewOrgPage() {
                             <Stack spacing={3}>
                                 <Box>
                                     <Typography variant="h6" fontWeight={700}>
-                                        Параметры организации
+                                        {t('org.create.section.title', 'Параметры организации')}
                                     </Typography>
                                     <Typography color="text.secondary">
-                                        Название увидят сотрудники, а slug попадёт в ссылку на рабочее пространство.
+                                        {t(
+                                            'org.create.section.subtitle',
+                                            'Название увидят сотрудники, а slug попадёт в ссылку на рабочее пространство.'
+                                        )}
                                     </Typography>
                                 </Box>
                                 <TextField
-                                    label="Название организации"
+                                    label={t('org.create.fields.name', 'Название организации')}
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     fullWidth
                                 />
                                 <TextField
-                                    label="Slug (URL-идентификатор)"
+                                    label={t('org.create.fields.slug', 'Slug (URL-идентификатор)')}
                                     value={slug}
                                     onChange={(e) => {
                                         setTouchedSlug(true);
                                         setSlug(makeSlug(e.target.value));
                                     }}
-                                    helperText={slugError ?? 'Идентификатор названия на латинице'}
+                                    helperText={slugError ?? t('org.create.slug.helper', 'Идентификатор названия на латинице')}
                                     error={Boolean(slugError)}
                                     fullWidth
                                 />
@@ -194,7 +300,124 @@ export default function NewOrgPage() {
                                         size="large"
                                         disabled={loading || name.trim().length < 2 || Boolean(slugError)}
                                     >
-                                        {loading ? 'Создаём…' : 'Создать'}
+                                        {loading ? t('org.create.creating', 'Создаём…') : t('org.create.submit', 'Создать')}
+                                    </Button>
+                                </Box>
+                            </Stack>
+                        </Paper>
+
+                        <Stack spacing={1} alignItems="center">
+                            <Typography variant="overline" color="text.secondary">
+                                {t('org.create.or', 'ИЛИ')}
+                            </Typography>
+                        </Stack>
+
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                p: { xs: 3, md: 4 },
+                                borderRadius: UI_RADIUS.surface,
+                                border: '1px solid',
+                                borderColor: (theme) =>
+                                    theme.palette.mode === 'dark'
+                                        ? 'rgba(255,255,255,0.08)'
+                                        : 'rgba(15,23,42,0.08)',
+                                backgroundColor: (theme) =>
+                                    theme.palette.mode === 'dark'
+                                        ? 'rgba(13,16,23,0.85)'
+                                        : 'rgba(255,255,255,0.9)',
+                                backdropFilter: 'blur(18px)',
+                            }}
+                        >
+                            <Stack spacing={3}>
+                                <Box>
+                                    <Typography variant="h6" fontWeight={700}>
+                                        {t('org.join.request.title', 'Присоединиться к организации')}
+                                    </Typography>
+                                    <Typography color="text.secondary">
+                                        {t(
+                                            'org.join.request.subtitle',
+                                            'Найдите организацию по названию или slug и отправьте запрос на роль менеджера проекта.'
+                                        )}
+                                    </Typography>
+                                </Box>
+
+                                <Autocomplete<OrgSearchItem, false, false, false>
+                                    options={orgOptions}
+                                    loading={orgLoading}
+                                    value={selectedOrg}
+                                    onChange={(_, value) => {
+                                        setSelectedOrg(value);
+                                        setJoinAlert(null);
+                                    }}
+                                    inputValue={orgQuery}
+                                    onInputChange={(_, value) => setOrgQuery(value)}
+                                    filterOptions={(items) => items}
+                                    getOptionLabel={(option) => option?.name ?? option?.orgSlug ?? ''}
+                                    isOptionEqualToValue={(option, value) => option.orgSlug === value.orgSlug}
+                                    noOptionsText={
+                                        orgQuery.length >= 2
+                                            ? t('org.join.request.search.empty', 'Ничего не найдено')
+                                            : t('org.join.request.search.hint', 'Начните вводить название или slug')
+                                    }
+                                    renderOption={(props, option) => {
+                                        const { key, ...liProps } = props as React.HTMLAttributes<HTMLLIElement> & { key?: string };
+                                        return (
+                                            <li key={key} {...liProps}>
+                                                <Stack spacing={0.5}>
+                                                    <Typography variant="body2" fontWeight={600}>
+                                                        {option.name}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {option.orgSlug}
+                                                    </Typography>
+                                                </Stack>
+                                            </li>
+                                        );
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label={t('org.join.request.search.label', 'Поиск организации')}
+                                            placeholder={t('org.join.request.search.placeholder', 'Например, acme или acme-labs')}
+                                            fullWidth
+                                            helperText={
+                                                joinStatusLabel ??
+                                                t('org.join.request.search.helper', 'Организация должна подтвердить запрос.')
+                                            }
+                                            InputProps={{
+                                                ...params.InputProps,
+                                                endAdornment: (
+                                                    <>
+                                                        {orgLoading ? <CircularProgress size={16} /> : null}
+                                                        {params.InputProps.endAdornment}
+                                                    </>
+                                                ),
+                                            }}
+                                        />
+                                    )}
+                                />
+
+                                {joinAlert && (
+                                    <Alert variant="filled" severity={joinAlert.type === 'success' ? 'success' : 'warning'}>
+                                        {joinAlert.message}
+                                    </Alert>
+                                )}
+
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                    <Button
+                                        onClick={() => void handleJoinRequest()}
+                                        variant="contained"
+                                        size="large"
+                                        disabled={
+                                            joinLoading ||
+                                            !selectedOrg ||
+                                            Boolean(selectedOrg?.membershipStatus)
+                                        }
+                                    >
+                                        {joinLoading
+                                            ? t('org.join.request.sending', 'Отправляем…')
+                                            : t('org.join.request.submit', 'Отправить запрос')}
                                     </Button>
                                 </Box>
                             </Stack>
@@ -217,8 +440,10 @@ export default function NewOrgPage() {
                             }}
                         >
                             <Typography variant="body2" color="text.secondary">
-                                Организацию можно переименовать позже: все изменения синхронизируются с рабочим
-                                пространством и приглашениями.
+                                {t(
+                                    'org.create.footerHint',
+                                    'Организацию можно переименовать позже: все изменения синхронизируются с рабочим пространством и приглашениями.'
+                                )}
                             </Typography>
                         </Paper>
                     </Stack>

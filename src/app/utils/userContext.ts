@@ -9,7 +9,7 @@ export interface ActiveMembership {
   userEmail: string;
   userName?: string;
   role: OrgRole;
-  status: 'active' | 'invited';
+  status: 'active' | 'invited' | 'requested';
 }
 
 export interface UserContextResponse {

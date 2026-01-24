@@ -10,6 +10,7 @@ import {
     TextField,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type IntegrationKeyDialogProps = {
     open: boolean;
@@ -34,6 +35,7 @@ export default function IntegrationKeyDialog({
     dialogActionsSx,
     alertSx,
 }: IntegrationKeyDialogProps) {
+    const { t } = useI18n();
     return (
         <Dialog
             open={open}
@@ -46,20 +48,23 @@ export default function IntegrationKeyDialog({
                 },
             }}
         >
-            <DialogTitle sx={cardHeaderSx}>Ключ интеграции</DialogTitle>
+            <DialogTitle sx={cardHeaderSx}>{t('org.integrations.key.title', 'Ключ интеграции')}</DialogTitle>
             <DialogContent dividers sx={cardContentSx}>
                 <Stack spacing={2}>
                     <Alert severity="warning" sx={alertSx}>
-                        Ключ показывается один раз. Сохраните его в безопасном месте.
+                        {t(
+                            'org.integrations.key.hint',
+                            'Ключ показывается один раз. Сохраните его в безопасном месте.'
+                        )}
                     </Alert>
                     <TextField
-                        label="Key ID"
+                        label={t('org.integrations.key.id', 'Key ID')}
                         value={keyId}
                         fullWidth
                         InputProps={{ readOnly: true }}
                     />
                     <TextField
-                        label="Key Secret"
+                        label={t('org.integrations.key.secret', 'Key Secret')}
                         value={keySecret}
                         fullWidth
                         InputProps={{ readOnly: true }}
@@ -67,7 +72,7 @@ export default function IntegrationKeyDialog({
                 </Stack>
             </DialogContent>
             <DialogActions sx={dialogActionsSx}>
-                <Button onClick={onClose}>Закрыть</Button>
+                <Button onClick={onClose}>{t('common.close', 'Закрыть')}</Button>
             </DialogActions>
         </Dialog>
     );

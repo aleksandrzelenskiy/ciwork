@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import type { ProjectDTO } from '@/types/org';
 import type { ProjectDialogValues } from '@/app/workspace/components/ProjectDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type SnackSetter = (state: { open: boolean; msg: string; sev: 'success' | 'error' | 'info' }) => void;
 
@@ -30,6 +31,7 @@ export default function useProjectDialog({
     setSnack,
     refreshProjects,
 }: UseProjectDialogArgs): UseProjectDialogState {
+    const { t } = useI18n();
     const [projectDialogOpen, setProjectDialogOpen] = React.useState(false);
     const [projectDialogMode, setProjectDialogMode] = React.useState<'create' | 'edit'>('create');
     const [projectDialogLoading, setProjectDialogLoading] = React.useState(false);
@@ -38,8 +40,8 @@ export default function useProjectDialog({
     const openProjectDialog = (project?: ProjectDTO) => {
         if (!project && (subscriptionLoading || !isSubscriptionActive)) {
             const msg = subscriptionLoading
-                ? 'Подождите завершения проверки подписки'
-                : 'Подписка не активна. Активируйте тариф или пробный период';
+                ? t('org.subscription.waitCheck', 'Подождите завершения проверки подписки')
+                : t('org.subscription.inactiveAction', 'Подписка не активна. Активируйте тариф или пробный период');
             setSnack({ open: true, msg, sev: 'error' });
             return;
         }
@@ -63,8 +65,8 @@ export default function useProjectDialog({
         if (!org) return;
         if (projectDialogMode === 'create' && (subscriptionLoading || !isSubscriptionActive)) {
             const msg = subscriptionLoading
-                ? 'Подождите завершения проверки подписки'
-                : 'Подписка не активна. Активируйте тариф или пробный период';
+                ? t('org.subscription.waitCheck', 'Подождите завершения проверки подписки')
+                : t('org.subscription.inactiveAction', 'Подписка не активна. Активируйте тариф или пробный период');
             setSnack({ open: true, msg, sev: 'error' });
             return;
         }
@@ -91,20 +93,23 @@ export default function useProjectDialog({
             });
             const data = await res.json();
             if (!res.ok || !data || data.error) {
-                const msg = data?.error || 'Не удалось сохранить проект';
+                const msg = data?.error || t('org.projects.error.save', 'Не удалось сохранить проект');
                 setSnack({ open: true, msg, sev: 'error' });
                 return;
             }
             setSnack({
                 open: true,
-                msg: projectDialogMode === 'create' ? 'Проект создан' : 'Проект обновлён',
+                msg:
+                    projectDialogMode === 'create'
+                        ? t('org.projects.success.created', 'Проект создан')
+                        : t('org.projects.success.updated', 'Проект обновлён'),
                 sev: 'success',
             });
             setProjectDialogOpen(false);
             setProjectToEdit(null);
             await refreshProjects();
         } catch (error: unknown) {
-            const msg = error instanceof Error ? error.message : 'Ошибка сети';
+            const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
             setSnack({ open: true, msg, sev: 'error' });
         } finally {
             setProjectDialogLoading(false);

@@ -15,6 +15,7 @@ import {
     Typography,
 } from '@mui/material';
 import type { Task, TaskPayment } from '@/app/types/taskTypes';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface ContractorPaymentDialogProps {
     open: boolean;
@@ -23,8 +24,8 @@ interface ContractorPaymentDialogProps {
     onPaymentUpdated: (taskId: string, payment: TaskPayment | null) => void;
 }
 
-const formatRuble = (value: number) =>
-    new Intl.NumberFormat('ru-RU', {
+const formatRuble = (value: number, locale: string) =>
+    new Intl.NumberFormat(locale === 'ru' ? 'ru-RU' : 'en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     }).format(value);
@@ -32,10 +33,10 @@ const formatRuble = (value: number) =>
 const resolveTaskAmount = (task: Task) =>
     Number(task.contractorPayment ?? task.totalCost ?? 0);
 
-const resolvePaymentStatus = (payment?: TaskPayment | null): string => {
-    if (payment?.contractorConfirmedAt) return 'Оплата подтверждена';
-    if (payment?.orgMarkedPaidAt) return 'Организация отметила оплату';
-    return 'Ожидает отметки организации';
+const resolvePaymentStatus = (payment: TaskPayment | null | undefined, t: (key: string, fallback?: string, params?: Record<string, string | number>) => string): string => {
+    if (payment?.contractorConfirmedAt) return t('payments.status.confirmed', 'Оплата подтверждена');
+    if (payment?.orgMarkedPaidAt) return t('payments.status.marked', 'Организация отметила оплату');
+    return t('payments.status.awaitingOrg', 'Ожидает отметки организации');
 };
 
 export default function ContractorPaymentDialog({
@@ -44,6 +45,7 @@ export default function ContractorPaymentDialog({
     tasks,
     onPaymentUpdated,
 }: ContractorPaymentDialogProps) {
+    const { t, locale } = useI18n();
     const [confirmingTaskId, setConfirmingTaskId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -75,7 +77,7 @@ export default function ContractorPaymentDialog({
 
             if (!res.ok) {
                 const payload = await res.json().catch(() => ({}));
-                setError(payload.error || 'Не удалось подтвердить оплату');
+                setError(payload.error || t('payments.error.confirm', 'Не удалось подтвердить оплату'));
                 return;
             }
 
@@ -83,7 +85,7 @@ export default function ContractorPaymentDialog({
             onPaymentUpdated(confirmingTaskId, payload.payment || null);
             setConfirmingTaskId(null);
         } catch (err: unknown) {
-            setError(err instanceof Error ? err.message : 'Unknown error');
+            setError(err instanceof Error ? err.message : t('common.error.unknown', 'Unknown error'));
         } finally {
             setSubmitting(false);
         }
@@ -92,17 +94,17 @@ export default function ContractorPaymentDialog({
     return (
         <>
             <Dialog open={open} onClose={onClose} maxWidth='sm' fullWidth>
-                <DialogTitle>Согласованные задачи</DialogTitle>
+                <DialogTitle>{t('payments.dialog.title', 'Согласованные задачи')}</DialogTitle>
                 <DialogContent dividers>
                     {tasks.length === 0 ? (
                         <Typography color='text.secondary'>
-                            Нет задач в статусе «Согласовано».
+                            {t('payments.dialog.empty', 'Нет задач в статусе «Согласовано».')}
                         </Typography>
                     ) : (
                         <List dense>
                             {sortedTasks.map((task) => {
                                 const amount = resolveTaskAmount(task);
-                                const statusLabel = resolvePaymentStatus(task.payment);
+                                const statusLabel = resolvePaymentStatus(task.payment, t);
                                 const canConfirm =
                                     Boolean(task.payment?.orgMarkedPaidAt) &&
                                     !task.payment?.contractorConfirmedAt;
@@ -116,7 +118,7 @@ export default function ContractorPaymentDialog({
                                                         variant='outlined'
                                                         onClick={() => setConfirmingTaskId(task.taskId)}
                                                     >
-                                                        Подтвердить оплату
+                                                        {t('payments.actions.confirm', 'Подтвердить оплату')}
                                                     </Button>
                                                 ) : null
                                             }
@@ -132,7 +134,9 @@ export default function ContractorPaymentDialog({
                                                             {statusLabel}
                                                         </Typography>
                                                         <Typography variant='caption' display='block'>
-                                                            {`Сумма: ${formatRuble(amount)} ₽`}
+                                                            {t('payments.amount', 'Сумма: {amount} ₽', {
+                                                                amount: formatRuble(amount, locale),
+                                                            })}
                                                         </Typography>
                                                     </Box>
                                                 }
@@ -151,7 +155,7 @@ export default function ContractorPaymentDialog({
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={onClose}>Закрыть</Button>
+                    <Button onClick={onClose}>{t('common.close', 'Закрыть')}</Button>
                 </DialogActions>
             </Dialog>
 
@@ -161,10 +165,10 @@ export default function ContractorPaymentDialog({
                 maxWidth='xs'
                 fullWidth
             >
-                <DialogTitle>Подтверждение оплаты</DialogTitle>
+                <DialogTitle>{t('payments.confirm.title', 'Подтверждение оплаты')}</DialogTitle>
                 <DialogContent dividers>
                     <Typography>
-                        Подтвердить получение оплаты по задаче?
+                        {t('payments.confirm.body', 'Подтвердить получение оплаты по задаче?')}
                     </Typography>
                 </DialogContent>
                 <DialogActions>
@@ -172,14 +176,14 @@ export default function ContractorPaymentDialog({
                         onClick={() => setConfirmingTaskId(null)}
                         disabled={submitting}
                     >
-                        Отмена
+                        {t('common.cancel', 'Отмена')}
                     </Button>
                     <Button
                         variant='contained'
                         onClick={() => void handleConfirm()}
                         disabled={submitting}
                     >
-                        Подтвердить
+                        {t('common.confirm', 'Подтвердить')}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -3,7 +3,25 @@ import type { OrgRole } from '@/types/org';
 export const DAY_MS = 24 * 60 * 60 * 1000;
 export const TRIAL_DURATION_DAYS = 10;
 
-export function roleLabel(role: OrgRole) {
+type TranslateFn = (key: string, fallback?: string, params?: Record<string, string | number>) => string;
+
+export function roleLabel(role: OrgRole, t?: TranslateFn) {
+    if (t) {
+        switch (role) {
+            case 'owner':
+                return t('org.roles.owner', 'Владелец');
+            case 'org_admin':
+                return t('org.roles.admin', 'Администратор');
+            case 'manager':
+                return t('org.roles.manager', 'Менеджер');
+            case 'executor':
+                return t('org.roles.executor', 'Исполнитель');
+            case 'viewer':
+                return t('org.roles.viewer', 'Наблюдатель');
+            default:
+                return role;
+        }
+    }
     switch (role) {
         case 'owner':
             return 'Owner';
@@ -20,31 +38,14 @@ export function roleLabel(role: OrgRole) {
     }
 }
 
-export function roleLabelRu(role: OrgRole) {
-    switch (role) {
-        case 'owner':
-            return 'Владелец';
-        case 'org_admin':
-            return 'Администратор';
-        case 'manager':
-            return 'Менеджер';
-        case 'executor':
-            return 'Исполнитель';
-        case 'viewer':
-            return 'Наблюдатель';
-        default:
-            return role;
-    }
-}
-
-export function integrationTypeLabel(value: string) {
+export function integrationTypeLabel(value: string, t?: TranslateFn) {
     switch (value) {
         case 'google_sheets':
-            return 'Google Sheets';
+            return t ? t('org.integrations.type.googleSheets', 'Google Sheets') : 'Google Sheets';
         case 'telegram':
-            return 'Telegram';
+            return t ? t('org.integrations.type.telegram', 'Telegram') : 'Telegram';
         case 'erp_1c':
-            return '1C ERP';
+            return t ? t('org.integrations.type.erp', '1C ERP') : '1C ERP';
         default:
             return value;
     }

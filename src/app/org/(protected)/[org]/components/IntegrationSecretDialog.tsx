@@ -10,6 +10,7 @@ import {
     TextField,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type IntegrationSecretDialogProps = {
     open: boolean;
@@ -32,6 +33,7 @@ export default function IntegrationSecretDialog({
     dialogActionsSx,
     alertSx,
 }: IntegrationSecretDialogProps) {
+    const { t } = useI18n();
     return (
         <Dialog
             open={open}
@@ -44,14 +46,17 @@ export default function IntegrationSecretDialog({
                 },
             }}
         >
-            <DialogTitle sx={cardHeaderSx}>Секрет вебхука</DialogTitle>
+            <DialogTitle sx={cardHeaderSx}>{t('org.integrations.webhook.title', 'Секрет вебхука')}</DialogTitle>
             <DialogContent dividers sx={cardContentSx}>
                 <Stack spacing={2}>
                     <Alert severity="warning" sx={alertSx}>
-                        Секрет показывается один раз. Сохраните его в безопасном месте.
+                        {t(
+                            'org.integrations.webhook.hint',
+                            'Секрет показывается один раз. Сохраните его в безопасном месте.'
+                        )}
                     </Alert>
                     <TextField
-                        label="Webhook Secret"
+                        label={t('org.integrations.webhook.field', 'Webhook Secret')}
                         value={webhookSecret}
                         fullWidth
                         InputProps={{ readOnly: true }}
@@ -59,7 +64,7 @@ export default function IntegrationSecretDialog({
                 </Stack>
             </DialogContent>
             <DialogActions sx={dialogActionsSx}>
-                <Button onClick={onClose}>Закрыть</Button>
+                <Button onClick={onClose}>{t('common.close', 'Закрыть')}</Button>
             </DialogActions>
         </Dialog>
     );

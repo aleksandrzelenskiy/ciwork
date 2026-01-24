@@ -12,6 +12,7 @@ import {
 import type { SxProps, Theme } from '@mui/material/styles';
 
 import type { ProjectDTO } from '@/types/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type IntegrationDialogProps = {
     open: boolean;
@@ -60,6 +61,7 @@ export default function IntegrationDialog({
     dialogPaperSx,
     dialogActionsSx,
 }: IntegrationDialogProps) {
+    const { t } = useI18n();
     return (
         <Dialog
             open={open}
@@ -73,13 +75,15 @@ export default function IntegrationDialog({
             }}
         >
             <DialogTitle sx={cardHeaderSx}>
-                {mode === 'edit' ? 'Редактирование интеграции' : 'Запрос на подключение интеграции'}
+                {mode === 'edit'
+                    ? t('org.integrations.dialog.editTitle', 'Редактирование интеграции')
+                    : t('org.integrations.dialog.createTitle', 'Запрос на подключение интеграции')}
             </DialogTitle>
             <DialogContent dividers sx={cardContentSx}>
                 <Stack spacing={2}>
                     <TextField
                         select
-                        label="Тип интеграции"
+                        label={t('org.integrations.fields.type', 'Тип интеграции')}
                         value={integrationType}
                         onChange={(event) => onChangeType(event.target.value)}
                         fullWidth
@@ -90,13 +94,13 @@ export default function IntegrationDialog({
                         <MenuItem value="erp_1c">1C ERP</MenuItem>
                     </TextField>
                     <TextField
-                        label="Название (опционально)"
+                        label={t('org.integrations.fields.name', 'Название (опционально)')}
                         value={integrationName}
                         onChange={(event) => onChangeName(event.target.value)}
                         fullWidth
                     />
                     <TextField
-                        label="Webhook URL"
+                        label={t('org.integrations.fields.webhook', 'Webhook URL')}
                         value={integrationWebhookUrl}
                         onChange={(event) => onChangeWebhookUrl(event.target.value)}
                         fullWidth
@@ -104,12 +108,12 @@ export default function IntegrationDialog({
                     />
                     <TextField
                         select
-                        label="Проект (опционально)"
+                        label={t('org.integrations.fields.project', 'Проект (опционально)')}
                         value={integrationProjectId}
                         onChange={(event) => onChangeProjectId(event.target.value)}
                         fullWidth
                     >
-                        <MenuItem value="">Все проекты</MenuItem>
+                        <MenuItem value="">{t('org.integrations.allProjects', 'Все проекты')}</MenuItem>
                         {projects.map((project) => (
                             <MenuItem key={project._id} value={project._id}>
                                 {project.name}
@@ -117,7 +121,7 @@ export default function IntegrationDialog({
                         ))}
                     </TextField>
                     <TextField
-                        label="Config JSON (опционально)"
+                        label={t('org.integrations.fields.config', 'Config JSON (опционально)')}
                         value={integrationConfigJson}
                         onChange={(event) => onChangeConfigJson(event.target.value)}
                         fullWidth
@@ -126,7 +130,10 @@ export default function IntegrationDialog({
                         placeholder='{"sheetId":"...","sheetName":"...","keyField":"taskId"}'
                         helperText={
                             mode === 'edit'
-                                ? 'Оставьте пустым, чтобы не менять конфигурацию'
+                                ? t(
+                                      'org.integrations.fields.configHint',
+                                      'Оставьте пустым, чтобы не менять конфигурацию'
+                                  )
                                 : undefined
                         }
                     />
@@ -134,7 +141,7 @@ export default function IntegrationDialog({
             </DialogContent>
             <DialogActions sx={dialogActionsSx}>
                 <Button onClick={onClose} disabled={submitting}>
-                    Отмена
+                    {t('common.cancel', 'Отмена')}
                 </Button>
                 <Button
                     variant="contained"
@@ -142,10 +149,10 @@ export default function IntegrationDialog({
                     disabled={submitting || !canRequestIntegrations}
                 >
                     {submitting
-                        ? 'Сохраняем…'
+                        ? t('common.saving', 'Сохраняем…')
                         : mode === 'edit'
-                            ? 'Сохранить'
-                            : 'Создать'}
+                            ? t('common.save', 'Сохранить')
+                            : t('common.create', 'Создать')}
                 </Button>
             </DialogActions>
         </Dialog>

@@ -81,7 +81,7 @@ type MemberDTO = {
     userEmail: string;
     userName?: string;
     role: OrgRole;
-    status: 'active' | 'invited';
+    status: 'active' | 'invited' | 'requested';
     profilePic?: string;
     clerkId?: string;
 };

@@ -15,6 +15,7 @@ import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 
 import type { ProjectDTO } from '@/types/org';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type OrgProjectsCardProps = {
     projectsLoading: boolean;
@@ -51,6 +52,7 @@ export default function OrgProjectsCard({
     textSecondary,
     buttonRadius,
 }: OrgProjectsCardProps) {
+    const { t } = useI18n();
     return (
         <Box sx={{ ...masonryCardSx, p: { xs: 2, md: 2.5 } }}>
             <Stack spacing={2}>
@@ -58,18 +60,18 @@ export default function OrgProjectsCard({
                     <Stack direction="row" spacing={1} alignItems="center">
                         <FolderIcon fontSize="small" />
                         <Typography variant="subtitle1" fontWeight={600}>
-                            Проекты
+                            {t('org.projects.titleShort', 'Проекты')}
                         </Typography>
                     </Stack>
                     <Stack direction="row" spacing={1}>
-                        <Tooltip title="Открыть список">
+                        <Tooltip title={t('common.openList', 'Открыть список')}>
                             <span>
                                 <IconButton onClick={onOpenDialog}>
                                     <OpenInFullIcon />
                                 </IconButton>
                             </span>
                         </Tooltip>
-                        <Tooltip title="К проектам">
+                        <Tooltip title={t('org.projects.actions.goToProjects', 'К проектам')}>
                             <span>
                                 <IconButton onClick={onGoToProjects}>
                                     <DriveFileMoveIcon />
@@ -79,12 +81,15 @@ export default function OrgProjectsCard({
                     </Stack>
                 </Stack>
                 <Typography variant="body2" color={textSecondary}>
-                    Активных проектов: {activeProjectsCount} из {projectsLimitLabel}.
+                    {t('org.projects.activeCount', 'Активных проектов: {count} из {limit}.', {
+                        count: activeProjectsCount,
+                        limit: projectsLimitLabel,
+                    })}
                 </Typography>
                 {projectsLoading ? (
                     <Stack direction="row" spacing={1} alignItems="center">
                         <CircularProgress size={18} />
-                        <Typography variant="body2">Загружаем проекты…</Typography>
+                        <Typography variant="body2">{t('org.projects.loading', 'Загружаем проекты…')}</Typography>
                     </Stack>
                 ) : projectPreview.length > 0 ? (
                     <Stack spacing={1}>
@@ -119,7 +124,7 @@ export default function OrgProjectsCard({
                     </Stack>
                 ) : (
                     <Typography variant="body2" color={textSecondary}>
-                        Проектов пока нет.
+                        {t('org.projects.empty', 'Проектов пока нет.')}
                     </Typography>
                 )}
                 <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
@@ -128,7 +133,7 @@ export default function OrgProjectsCard({
                         onClick={onOpenDialog}
                         sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                     >
-                        Открыть список
+                        {t('common.openList', 'Открыть список')}
                     </Button>
                     <Tooltip title={creationTooltip} disableHoverListener={!disableCreationActions}>
                         <span>
@@ -138,7 +143,7 @@ export default function OrgProjectsCard({
                                 disabled={disableCreationActions}
                                 sx={{ borderRadius: buttonRadius, textTransform: 'none' }}
                             >
-                                Создать проект
+                                {t('org.projects.actions.create', 'Создать проект')}
                             </Button>
                         </span>
                     </Tooltip>

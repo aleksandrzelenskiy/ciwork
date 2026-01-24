@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type OrgUsage = {
     tasksUsed: number;
@@ -17,6 +18,7 @@ type UseOrgUsageState = {
 };
 
 export default function useOrgUsage(orgSlug?: string): UseOrgUsageState {
+    const { t } = useI18n();
     const [usage, setUsage] = React.useState<OrgUsage | null>(null);
     const [usageLoading, setUsageLoading] = React.useState(true);
     const [usageError, setUsageError] = React.useState<string | null>(null);
@@ -32,18 +34,18 @@ export default function useOrgUsage(orgSlug?: string): UseOrgUsageState {
             const data = (await res.json().catch(() => ({}))) as { usage?: OrgUsage; error?: string };
             if (!res.ok || !data.usage) {
                 setUsage(null);
-                setUsageError(data.error || 'Не удалось загрузить лимиты задач');
+                setUsageError(data.error || t('org.usage.error.load', 'Не удалось загрузить лимиты задач'));
                 return;
             }
             setUsage(data.usage);
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Ошибка загрузки лимитов задач';
+            const message = error instanceof Error ? error.message : t('org.usage.error.load', 'Ошибка загрузки лимитов задач');
             setUsage(null);
             setUsageError(message);
         } finally {
             setUsageLoading(false);
         }
-    }, [orgSlug]);
+    }, [orgSlug, t]);
 
     React.useEffect(() => {
         if (!orgSlug) return;

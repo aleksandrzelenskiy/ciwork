@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import type { ApplicationRow } from '@/types/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type UseApplicationsState = {
     applications: ApplicationRow[];
@@ -14,6 +15,7 @@ export default function useApplications(
     org: string | undefined,
     canManage: boolean
 ): UseApplicationsState {
+    const { t } = useI18n();
     const [applications, setApplications] = React.useState<ApplicationRow[]>([]);
     const [applicationsLoading, setApplicationsLoading] = React.useState(false);
     const [applicationsError, setApplicationsError] = React.useState<string | null>(null);
@@ -32,12 +34,12 @@ export default function useApplications(
             }
             setApplications(Array.isArray(data.applications) ? data.applications : []);
         } catch (error: unknown) {
-            setApplicationsError(error instanceof Error ? error.message : 'Ошибка загрузки откликов');
+            setApplicationsError(error instanceof Error ? error.message : t('org.applications.error.load', 'Ошибка загрузки откликов'));
             setApplications([]);
         } finally {
             setApplicationsLoading(false);
         }
-    }, [org, canManage]);
+    }, [org, canManage, t]);
 
     return {
         applications,

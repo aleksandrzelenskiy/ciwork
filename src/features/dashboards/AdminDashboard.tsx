@@ -12,6 +12,7 @@ import MiniReportsList from '@/features/dashboards/MiniReportsList';
 import TaskMetricDiagram from './TaskMetricDiagram';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface AdminDashboardProps {
   role: EffectiveOrgRole | null;
@@ -24,6 +25,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   role,
   clerkUserId,
 }) => {
+  const { t } = useI18n();
   console.log(role, clerkUserId);
   const theme = useTheme();
   const { masonryCardSx } = getOrgPageStyles(theme);
@@ -39,7 +41,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <Box>
       <Typography variant='h6' gutterBottom sx={{ mb: 2 }}>
-        Панель администратора
+        {t('dashboard.admin.title', 'Панель администратора')}
       </Typography>
 
       <Box
@@ -66,20 +68,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <CardItem sx={{ minWidth: 0 }}>
             <Typography variant='h6' gutterBottom>
-              Последние задачи
+              {t('dashboard.recentTasks', 'Последние задачи')}
             </Typography>
             <MiniTaskTable role={role} clerkUserId={clerkUserId} />
           </CardItem>
 
           <CardItem sx={{ minWidth: 0 }}>
             <Typography variant='h6' gutterBottom>
-              Последние отчеты
+              {t('dashboard.recentReports', 'Последние отчеты')}
             </Typography>
             <MiniReportsList role={role} clerkUserId={clerkUserId} />
           </CardItem>
 
           <CardItem sx={{ minWidth: 0 }}>
-            <Typography variant='h6'>Карта задач</Typography>
+            <Typography variant='h6'>{t('dashboard.taskMap', 'Карта задач')}</Typography>
             <MiniMap role={role} clerkUserId={clerkUserId} />
           </CardItem>
 

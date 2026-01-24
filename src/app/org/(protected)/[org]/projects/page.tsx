@@ -37,7 +37,8 @@ import ProjectDialog, {
     ProjectManagerOption,
 } from '@/app/workspace/components/ProjectDialog';
 import { UI_RADIUS } from '@/config/uiTokens';
-import { roleLabelRu } from '@/utils/org';
+import { roleLabel } from '@/utils/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const getRegionInfo = (code: string) => REGION_MAP.get(code) ?? REGION_ISO_MAP.get(code);
 const getRegionLabel = (code: string): string => getRegionInfo(code)?.label ?? code;
@@ -63,7 +64,7 @@ type MemberDTO = {
     userEmail: string;
     userName?: string;
     role: OrgRole;
-    status: 'active' | 'invited';
+    status: 'active' | 'invited' | 'requested';
 };
 type MembersResponse = { members: MemberDTO[] } | { error: string };
 
@@ -115,6 +116,7 @@ const parseISODate = (value?: string | null): Date | null => {
 };
 
 export default function OrgProjectsPage() {
+    const { t, locale } = useI18n();
     const router = useRouter();
 
     const params = useParams() as { org: string | string[] };
@@ -167,18 +169,18 @@ export default function OrgProjectsPage() {
             const data: GetProjectsSuccess | ApiError = await res.json();
 
             if (!res.ok || !('projects' in data)) {
-                setErr('error' in data ? data.error : 'Ошибка загрузки проектов');
+                setErr('error' in data ? data.error : t('org.projects.error.load', 'Ошибка загрузки проектов'));
                 return;
             }
 
             setProjects(data.projects ?? []);
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка сети';
+            const msg = e instanceof Error ? e.message : t('common.error.network', 'Ошибка сети');
             setErr(msg);
         } finally {
             setLoading(false);
         }
-    }, [orgSlug, canManage]);
+    }, [orgSlug, canManage, t]);
 
     const loadSubscription = useCallback(async () => {
         if (!orgSlug) return;
@@ -189,7 +191,7 @@ export default function OrgProjectsPage() {
             const data: GetSubscriptionResponse | ApiError = await res.json();
 
             if (!res.ok || !('subscription' in data)) {
-                const message = 'error' in data ? data.error : 'Не удалось загрузить подписку';
+                const message = 'error' in data ? data.error : t('org.subscription.error.load', 'Не удалось загрузить подписку');
                 setSubscriptionError(message);
                 setSubscription(null);
                 setBilling(null);
@@ -200,14 +202,14 @@ export default function OrgProjectsPage() {
             setSubscription(data.subscription);
             setBilling(data.billing);
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка загрузки подписки';
+            const msg = e instanceof Error ? e.message : t('org.subscription.error.load', 'Ошибка загрузки подписки');
             setSubscriptionError(msg);
             setSubscription(null);
             setBilling(null);
         } finally {
             setSubscriptionLoading(false);
         }
-    }, [orgSlug]);
+    }, [orgSlug, t]);
 
     useEffect(() => {
         void checkAccessAndLoadOrg();
@@ -229,7 +231,8 @@ export default function OrgProjectsPage() {
     const isSubscriptionActive = billing?.isActive ?? (subscription?.status === 'active' || isTrialActive);
     const trialDaysLeft =
         isTrialActive && trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - nowTs) / DAY_MS)) : null;
-    const formattedTrialEnd = trialEndsAt?.toLocaleDateString('ru-RU');
+    const dateLocale = locale === 'ru' ? 'ru-RU' : 'en-US';
+    const formattedTrialEnd = trialEndsAt?.toLocaleDateString(dateLocale);
     const isOwnerOrAdmin = myRole === 'owner' || myRole === 'org_admin';
     const hasTrialHistory = Boolean(subscription?.periodStart);
     const canStartTrial =
@@ -237,16 +240,16 @@ export default function OrgProjectsPage() {
     const disableCreateButton = subscriptionLoading || !isSubscriptionActive;
     const createButtonTooltip = disableCreateButton
         ? subscriptionLoading
-            ? 'Проверяем статус подписки…'
-            : 'Доступно после активации подписки или пробного периода'
+            ? t('org.overview.loading.subscription', 'Проверяем статус подписки…')
+            : t('org.projects.disabled', 'Доступно после активации подписки или пробного периода')
         : '';
     const activeProjectsCount = projects.length;
     const projectsLimitLabel = subscription?.projectsLimit ? String(subscription.projectsLimit) : 'XX';
     const seatsLabel = subscription?.seats ? String(subscription.seats) : '—';
     const canEditOrgSettings = isOwnerOrAdmin;
     const settingsTooltip = canEditOrgSettings
-        ? 'Настройки организации'
-        : 'Недостаточно прав для изменения настроек';
+        ? t('org.settings.title', 'Настройки организации')
+        : t('org.settings.permissions', 'Недостаточно прав для изменения настроек');
     const formatLimitLabel = (value: number | null | undefined) =>
         typeof value === 'number' ? String(value) : '∞';
 
@@ -329,34 +332,37 @@ export default function OrgProjectsPage() {
         </Box>
     );
     const subscriptionStatusLabel = subscriptionLoading
-        ? 'Проверяем…'
+        ? t('org.subscription.checking', 'Проверяем…')
         : isSubscriptionActive
             ? isTrialActive
-                ? 'Пробный период'
-                : 'Подписка активна'
-            : 'Подписка не активна';
+                ? t('org.subscription.trial', 'Пробный период')
+                : t('org.subscription.active', 'Подписка активна')
+            : t('org.subscription.inactive', 'Подписка не активна');
     const subscriptionStatusColor = subscriptionLoading
         ? textSecondary
         : isSubscriptionActive
             ? '#34d399'
             : '#fbbf24';
     const subscriptionStatusDescription = subscriptionLoading
-        ? 'Получаем данные'
+        ? t('org.subscription.loading', 'Получаем данные')
         : isTrialActive && formattedTrialEnd
-            ? `До ${formattedTrialEnd} осталось ${trialDaysLeft} дней`
+            ? t('org.subscription.trialLeft', 'До {date} осталось {days} дней', {
+                date: formattedTrialEnd,
+                days: trialDaysLeft ?? 0,
+            })
             : subscription?.plan
-                ? `Тариф ${subscription.plan.toUpperCase()}`
-                : 'Тариф не выбран';
+                ? t('org.subscription.plan', 'Тариф {plan}', { plan: subscription.plan.toUpperCase() })
+                : t('org.subscription.noPlan', 'Тариф не выбран');
     const subscriptionEndDate = useMemo(() => {
         if (!subscription?.periodEnd) return null;
         const date = new Date(subscription.periodEnd);
-        return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString('ru-RU');
-    }, [subscription?.periodEnd]);
+        return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString(dateLocale);
+    }, [dateLocale, subscription?.periodEnd]);
     const subscriptionEndLabel =
         subscription?.status && subscription.status !== 'inactive' && subscriptionEndDate
-            ? `Действует до ${subscriptionEndDate}`
+            ? t('org.subscription.activeUntil', 'Действует до {date}', { date: subscriptionEndDate })
             : null;
-    const roleLabel = myRole ? roleLabelRu(myRole) : '—';
+    const roleLabelValue = myRole ? roleLabel(myRole, t) : '—';
 
 
     // ---- Участники для менеджеров ----
@@ -382,7 +388,7 @@ export default function OrgProjectsPage() {
             const data: MembersResponse = await res.json();
 
             if (!res.ok || !('members' in data)) {
-                const message = 'error' in data ? data.error : 'Не удалось загрузить участников';
+                const message = 'error' in data ? data.error : t('org.members.error.load', 'Не удалось загрузить участников');
                 setManagerOptionsError(message);
                 setManagerOptions([]);
                 setActiveMembersCount(0);
@@ -403,12 +409,12 @@ export default function OrgProjectsPage() {
                 }))
             );
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка загрузки участников';
+            const msg = e instanceof Error ? e.message : t('org.members.error.load', 'Ошибка загрузки участников');
             setManagerOptionsError(msg);
             setManagerOptions([]);
             setActiveMembersCount(0);
         }
-    }, [orgSlug]);
+    }, [orgSlug, t]);
 
     useEffect(() => {
         void loadManagerOptions();
@@ -442,8 +448,8 @@ export default function OrgProjectsPage() {
         if (!orgSlug) return;
         if (projectDialogMode === 'create' && (subscriptionLoading || !isSubscriptionActive)) {
             const msg = subscriptionLoading
-                ? 'Подождите завершения проверки подписки'
-                : 'Подписка не активна. Активируйте тариф или триал';
+                ? t('org.subscription.waitCheck', 'Подождите завершения проверки подписки')
+                : t('org.subscription.inactiveAction', 'Подписка не активна. Активируйте тариф или триал');
             showSnack(msg, 'error');
             return;
         }
@@ -473,21 +479,23 @@ export default function OrgProjectsPage() {
             const data: { ok: true; project: Project } | ApiError = await res.json();
 
             if (!res.ok || !('ok' in data) || !data.ok) {
-                const msg = 'error' in data ? data.error : 'Не удалось сохранить проект';
+                const msg = 'error' in data ? data.error : t('org.projects.error.save', 'Не удалось сохранить проект');
                 setErr(msg);
                 showSnack(msg, 'error');
                 return;
             }
 
             showSnack(
-                projectDialogMode === 'create' ? 'Проект создан' : 'Проект обновлён',
+                projectDialogMode === 'create'
+                    ? t('org.projects.success.created', 'Проект создан')
+                    : t('org.projects.success.updated', 'Проект обновлён'),
                 'success'
             );
             setProjectDialogOpen(false);
             setProjectToEdit(null);
             void loadProjects();
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка сети';
+            const msg = e instanceof Error ? e.message : t('common.error.network', 'Ошибка сети');
             setErr(msg);
             showSnack(msg, 'error');
         } finally {
@@ -514,13 +522,13 @@ export default function OrgProjectsPage() {
             setDeleteSubmitting(true);
             const projectRef = deleteProject?.key || deleteProject?._id;
             if (!projectRef) {
-                showSnack('Проект не найден', 'error');
+                showSnack(t('org.projects.error.notFound', 'Проект не найден'), 'error');
                 return;
             }
             const expectedKey = String(deleteProject.key || '').trim().toUpperCase();
             const typedKey = deleteConfirmation.trim().toUpperCase();
             if (!expectedKey || typedKey !== expectedKey) {
-                showSnack('Введите код проекта для подтверждения удаления', 'error');
+                showSnack(t('org.projects.delete.confirmCode', 'Введите код проекта для подтверждения удаления'), 'error');
                 return;
             }
             const res = await fetch(`/api/org/${encodeURIComponent(orgSlug)}/projects/${projectRef}`, {
@@ -529,7 +537,7 @@ export default function OrgProjectsPage() {
             const data: { ok: true } | ApiError = await res.json();
 
             if (!res.ok || !('ok' in data) || !data.ok) {
-                const msg = 'error' in data ? data.error : 'Ошибка удаления проекта';
+                const msg = 'error' in data ? data.error : t('org.projects.error.delete', 'Ошибка удаления проекта');
                 setErr(msg);
                 showSnack(msg, 'error');
                 return;
@@ -537,10 +545,10 @@ export default function OrgProjectsPage() {
 
             setOpenDelete(false);
             setDeleteProject(null);
-            showSnack('Проект удалён', 'success');
+            showSnack(t('org.projects.success.deleted', 'Проект удалён'), 'success');
             void loadProjects();
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка сети';
+            const msg = e instanceof Error ? e.message : t('common.error.network', 'Ошибка сети');
             setErr(msg);
             showSnack(msg, 'error');
         } finally {
@@ -585,7 +593,7 @@ export default function OrgProjectsPage() {
             const data: PatchSubscriptionResponse | ApiError = await res.json();
 
             if (!res.ok || !('ok' in data) || !data.ok) {
-                const msg = 'error' in data ? data.error : 'Не удалось активировать триал';
+                const msg = 'error' in data ? data.error : t('org.subscription.error.startTrial', 'Не удалось активировать триал');
                 setSubscriptionError(msg);
                 showSnack(msg, 'error');
                 return;
@@ -594,9 +602,9 @@ export default function OrgProjectsPage() {
             setSubscription(data.subscription);
             setBilling(data.billing);
             setSubscriptionError(null);
-            showSnack('Триал активирован на 10 дней', 'success');
+            showSnack(t('org.subscription.trial.started', 'Триал активирован на 10 дней'), 'success');
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка запуска триала';
+            const msg = e instanceof Error ? e.message : t('org.subscription.error.startTrial', 'Ошибка запуска триала');
             setSubscriptionError(msg);
             showSnack(msg, 'error');
         } finally {
@@ -612,14 +620,14 @@ export default function OrgProjectsPage() {
             });
             const data = (await res.json().catch(() => ({}))) as { billing?: SubscriptionBillingInfo; error?: string };
             if (!res.ok || !data.billing) {
-                const msg = data?.error || 'Не удалось активировать grace';
+                const msg = data?.error || t('org.subscription.error.activateGrace', 'Не удалось активировать grace');
                 showSnack(msg, 'error');
                 return;
             }
             setBilling(data.billing);
-            showSnack('Льготный период активирован на 3 дня', 'success');
+            showSnack(t('org.subscription.grace.activated', 'Льготный период активирован на 3 дня'), 'success');
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка активации grace';
+            const msg = e instanceof Error ? e.message : t('org.subscription.error.activateGrace', 'Ошибка активации grace');
             showSnack(msg, 'error');
         }
     };
@@ -638,7 +646,9 @@ export default function OrgProjectsPage() {
     if (managerOptionsError) {
         secondaryAlerts.push(
             <Alert key="managers" severity="warning" sx={getAlertSx('warning')}>
-                Не удалось загрузить список менеджеров: {managerOptionsError}
+                {t('org.members.error.loadManagers', 'Не удалось загрузить список менеджеров: {error}', {
+                    error: managerOptionsError,
+                })}
             </Alert>
         );
     }
@@ -654,7 +664,9 @@ export default function OrgProjectsPage() {
         return renderStatusPanel(
             <Stack direction="row" spacing={1.5} alignItems="center">
                 <CircularProgress size={20} />
-                <Typography color={textPrimary}>Проверяем доступ…</Typography>
+                <Typography color={textPrimary}>
+                    {t('org.access.checking', 'Проверяем доступ…')}
+                </Typography>
             </Stack>
         );
     }
@@ -662,7 +674,7 @@ export default function OrgProjectsPage() {
     if (!canManage) {
         return renderStatusPanel(
             <Alert severity="error" sx={getAlertSx('error')}>
-                Недостаточно прав для просмотра страницы проектов.
+                {t('org.projects.accessDenied', 'Недостаточно прав для просмотра страницы проектов.')}
             </Alert>
         );
     }
@@ -687,9 +699,9 @@ export default function OrgProjectsPage() {
                     onInvite={openCreateDialog}
                     disableCreationActions={disableCreateButton}
                     inviteTooltip={createButtonTooltip}
-                    primaryActionLabel="Организация"
+                    primaryActionLabel={t('org.projects.actions.orgSettings', 'Организация')}
                     primaryActionIcon={<BusinessIcon />}
-                    secondaryActionLabel="Новый проект"
+                    secondaryActionLabel={t('org.projects.actions.newProject', 'Новый проект')}
                     secondaryActionIcon={<AddIcon />}
                     actionButtonBaseSx={actionButtonBaseSx}
                     panelBaseSx={panelBaseSx}
@@ -717,7 +729,7 @@ export default function OrgProjectsPage() {
                     subscriptionStatusColor={subscriptionStatusColor}
                     subscriptionStatusDescription={subscriptionStatusDescription}
                     subscriptionEndLabel={subscriptionEndLabel}
-                    roleLabelRu={roleLabel}
+                    roleLabel={roleLabelValue}
                     onOpenPlansDialog={() => setPlansDialogOpen(true)}
                     subscriptionError={subscriptionError}
                     subscriptionLoading={subscriptionLoading}
@@ -771,7 +783,9 @@ export default function OrgProjectsPage() {
                                         elevation={0}
                                         onClick={() => handleCardClick(p.key)}
                                         role="button"
-                                        aria-label={`Открыть задачи проекта ${p.name}`}
+                                        aria-label={t('org.projects.actions.openTasks', 'Открыть задачи проекта {name}', {
+                                            name: p.name,
+                                        })}
                                         sx={{
                                             p: { xs: 2, md: 2.5 },
                                             borderRadius: UI_RADIUS.surface,
@@ -794,10 +808,10 @@ export default function OrgProjectsPage() {
                                         }}
                                     >
                                         <Stack direction="row" spacing={1} sx={{ position: 'absolute', top: 12, right: 12 }}>
-                                            <Tooltip title="Редактировать">
+                                            <Tooltip title={t('common.edit', 'Редактировать')}>
                                                 <IconButton
                                                     size="small"
-                                                    aria-label="Редактировать"
+                                                    aria-label={t('common.edit', 'Редактировать')}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         openEditDialog(p);
@@ -807,10 +821,10 @@ export default function OrgProjectsPage() {
                                                     <EditIcon fontSize="small" />
                                                 </IconButton>
                                             </Tooltip>
-                                            <Tooltip title="Удалить">
+                                            <Tooltip title={t('common.delete', 'Удалить')}>
                                                 <IconButton
                                                     size="small"
-                                                    aria-label="Удалить"
+                                                    aria-label={t('common.delete', 'Удалить')}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         askDelete(p);
@@ -849,7 +863,7 @@ export default function OrgProjectsPage() {
                                                     variant="caption"
                                                     sx={{ color: textSecondary, letterSpacing: 0.6 }}
                                                 >
-                                                    Менеджер
+                                                    {t('org.projects.fields.manager', 'Менеджер')}
                                                 </Typography>
                                                 <Typography variant="body1" fontWeight={600} color={textPrimary}>
                                                     {manager}
@@ -865,7 +879,7 @@ export default function OrgProjectsPage() {
                                                         variant="caption"
                                                         sx={{ color: textSecondary, letterSpacing: 0.6 }}
                                                     >
-                                                        Регион
+                                                        {t('org.projects.fields.region', 'Регион')}
                                                     </Typography>
                                                     <Typography variant="body2" color={textPrimary}>
                                                         {regionLabel}
@@ -876,7 +890,7 @@ export default function OrgProjectsPage() {
                                                         variant="caption"
                                                         sx={{ color: textSecondary, letterSpacing: 0.6 }}
                                                     >
-                                                        Оператор
+                                                        {t('org.projects.fields.operator', 'Оператор')}
                                                     </Typography>
                                                     <Typography variant="body2" color={textPrimary}>
                                                         {operatorLabel}
@@ -927,18 +941,19 @@ export default function OrgProjectsPage() {
                     setOpenDelete(false);
                 }}
             >
-                <DialogTitle>Удалить проект без возможности восстановления?</DialogTitle>
+                <DialogTitle>{t('org.projects.delete.title', 'Удалить проект без возможности восстановления?')}</DialogTitle>
                 <DialogContent>
                     <Stack spacing={2} sx={{ mt: 1 }}>
                         <Alert severity="error" variant="filled">
-                            ВНИМАНИЕ: удаление проекта необратимо.
+                            {t('org.projects.delete.warning', 'ВНИМАНИЕ: удаление проекта необратимо.')}
                         </Alert>
                         <Typography>
-                            Проект <strong>{deleteProject?.name}</strong> будет удален навсегда.
-                            Вместе с ним будут удалены все задачи проекта и все связанные файлы из хранилища.
+                            {t('org.projects.delete.body', 'Проект {name} будет удален навсегда. Вместе с ним будут удалены все задачи проекта и все связанные файлы из хранилища.', {
+                                name: deleteProject?.name ?? '',
+                            })}
                         </Typography>
                         <TextField
-                            label="Введите код проекта для подтверждения"
+                            label={t('org.projects.delete.codeLabel', 'Введите код проекта для подтверждения')}
                             placeholder="PROJECT-KEY"
                             fullWidth
                             value={deleteConfirmation}
@@ -946,15 +961,15 @@ export default function OrgProjectsPage() {
                             disabled={deleteSubmitting}
                             helperText={
                                 deleteProject?.key
-                                    ? `Нужно ввести: ${deleteProject.key}`
-                                    : 'Введите точный код проекта'
+                                    ? t('org.projects.delete.codeHint', 'Нужно ввести: {key}', { key: deleteProject.key })
+                                    : t('org.projects.delete.codePlaceholder', 'Введите точный код проекта')
                             }
                         />
                     </Stack>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenDelete(false)} disabled={deleteSubmitting}>
-                        Отмена
+                        {t('common.cancel', 'Отмена')}
                     </Button>
                     <Button
                         color="error"
@@ -967,7 +982,7 @@ export default function OrgProjectsPage() {
                                 String(deleteProject?.key || '').trim().toUpperCase()
                         }
                     >
-                        Удалить
+                        {t('common.delete', 'Удалить')}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -19,7 +19,7 @@ type MemberDTO = {
     userEmail: string;
     userName?: string;
     role: OrgRole;
-    status: 'active' | 'invited';
+    status: 'active' | 'invited' | 'requested';
     clerkId?: string;
 
     /** аватар из users.profilePic */
@@ -40,7 +40,7 @@ type MembershipLean = {
     userEmail: string;
     userName?: string;
     role: OrgRole;
-    status: 'active' | 'invited';
+    status: 'active' | 'invited' | 'requested';
     invitedByEmail?: string;
     inviteToken?: string;
     inviteExpiresAt?: Date;
@@ -52,7 +52,7 @@ type AggRow = {
     userEmail: string;
     userName?: string;
     role: OrgRole;
-    status: 'active' | 'invited';
+    status: 'active' | 'invited' | 'requested';
     invitedByEmail?: string;
     inviteToken?: string;
     inviteExpiresAt?: Date;
@@ -61,7 +61,7 @@ type AggRow = {
 };
 
 
-// GET /api/org/:org/members?role=executor&status=active|invited|all
+// GET /api/org/:org/members?role=executor&status=active|invited|requested|all
 export async function GET(
     req: NextRequest,
     ctx: { params: Promise<{ org: string }> }
@@ -92,7 +92,7 @@ export async function GET(
 
         // По умолчанию — 'all' (показываем и active, и invited)
         const statusParamRaw =
-            (url.searchParams.get('status')?.toLowerCase() as 'active' | 'invited' | 'all' | undefined) ?? 'all';
+            (url.searchParams.get('status')?.toLowerCase() as 'active' | 'invited' | 'requested' | 'all' | undefined) ?? 'all';
 
         const matchStage: Record<string, unknown> = { orgId: org._id };
         if (roleParam) {
@@ -102,7 +102,7 @@ export async function GET(
             }
             matchStage.role = roleParam;
         }
-        if (!['active', 'invited', 'all'].includes(statusParamRaw)) {
+        if (!['active', 'invited', 'requested', 'all'].includes(statusParamRaw)) {
             return NextResponse.json({ error: `Unknown status: ${statusParamRaw}` }, { status: 400 });
         }
         if (statusParamRaw !== 'all') matchStage.status = statusParamRaw;

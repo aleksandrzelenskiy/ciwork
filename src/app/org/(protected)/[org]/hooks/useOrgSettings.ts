@@ -2,8 +2,10 @@ import * as React from 'react';
 
 import { defaultOrgSettings } from '@/app/workspace/components/OrgSetDialog';
 import type { OrgSettingsFormValues } from '@/app/workspace/components/OrgSetDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function useOrgSettings(org: string | undefined) {
+    const { t } = useI18n();
     const [orgSettingsOpen, setOrgSettingsOpen] = React.useState(false);
     const [orgSettingsData, setOrgSettingsData] = React.useState<OrgSettingsFormValues | null>(null);
     const [orgSettingsLoading, setOrgSettingsLoading] = React.useState(false);
@@ -18,7 +20,7 @@ export default function useOrgSettings(org: string | undefined) {
             const res = await fetch(`/api/org/${encodeURIComponent(org)}/settings`, { cache: 'no-store' });
             const data = (await res.json()) as { settings?: OrgSettingsFormValues | null; error?: string };
             if (!res.ok || data.error) {
-                setOrgSettingsError(data.error || 'Не удалось загрузить реквизиты');
+                setOrgSettingsError(data.error || t('org.settings.error.load', 'Не удалось загрузить реквизиты'));
                 setOrgSettingsData(null);
                 return;
             }
@@ -28,17 +30,18 @@ export default function useOrgSettings(org: string | undefined) {
                 setOrgSettingsData(null);
             }
         } catch (error: unknown) {
-            const msg = error instanceof Error ? error.message : 'Ошибка загрузки реквизитов';
+            const msg =
+                error instanceof Error ? error.message : t('org.settings.error.load', 'Ошибка загрузки реквизитов');
             setOrgSettingsError(msg);
             setOrgSettingsData(null);
         } finally {
             setOrgSettingsLoading(false);
         }
-    }, [org]);
+    }, [org, t]);
 
     const saveOrgSettings = React.useCallback(
         async (values: OrgSettingsFormValues) => {
-            if (!org) return { ok: false, error: 'Не удалось сохранить реквизиты' };
+            if (!org) return { ok: false, error: t('org.settings.error.save', 'Не удалось сохранить реквизиты') };
             setOrgSettingsSaving(true);
             try {
                 const res = await fetch(`/api/org/${encodeURIComponent(org)}/settings`, {
@@ -48,7 +51,10 @@ export default function useOrgSettings(org: string | undefined) {
                 });
                 const data = await res.json();
                 if (!res.ok || data?.error) {
-                    return { ok: false, error: data?.error || 'Не удалось сохранить реквизиты' };
+                    return {
+                        ok: false,
+                        error: data?.error || t('org.settings.error.save', 'Не удалось сохранить реквизиты'),
+                    };
                 }
                 if (data?.settings) {
                     setOrgSettingsData({ ...defaultOrgSettings, ...data.settings });
@@ -58,7 +64,7 @@ export default function useOrgSettings(org: string | undefined) {
                 setOrgSettingsSaving(false);
             }
         },
-        [org]
+        [org, t]
     );
 
     return {

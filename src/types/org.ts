@@ -1,5 +1,5 @@
 export type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
-export type MemberStatus = 'active' | 'invited';
+export type MemberStatus = 'active' | 'invited' | 'requested';
 
 export type MemberDTO = {
     _id: string;

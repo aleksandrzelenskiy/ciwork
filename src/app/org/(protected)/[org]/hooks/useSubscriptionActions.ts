@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import type { PatchSubscriptionResponse, SubscriptionBillingInfo, SubscriptionInfo } from '@/types/org';
 import { DAY_MS, TRIAL_DURATION_DAYS } from '@/utils/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type SnackSetter = (state: { open: boolean; msg: string; sev: 'success' | 'error' | 'info' }) => void;
 
@@ -26,6 +27,7 @@ export default function useSubscriptionActions({
     setSubscriptionError,
     setSnack,
 }: UseSubscriptionActionsArgs): UseSubscriptionActionsState {
+    const { t } = useI18n();
     const [startTrialLoading, setStartTrialLoading] = React.useState(false);
 
     const startTrial = React.useCallback(
@@ -47,7 +49,10 @@ export default function useSubscriptionActions({
                 });
                 const data = (await res.json().catch(() => ({}))) as PatchSubscriptionResponse | { error?: string };
                 if (!res.ok || !('ok' in data) || !data.ok) {
-                    const msg = 'error' in data && data.error ? data.error : 'Не удалось активировать пробный период';
+                    const msg =
+                        'error' in data && data.error
+                            ? data.error
+                            : t('org.subscription.error.startTrial', 'Не удалось активировать пробный период');
                     setSubscriptionError(msg);
                     setSnack({ open: true, msg, sev: 'error' });
                     return;
@@ -55,16 +60,21 @@ export default function useSubscriptionActions({
                 setSubscription(data.subscription);
                 setBilling(data.billing);
                 setSubscriptionError(null);
-                setSnack({ open: true, msg: 'Пробный период активирован на 10 дней', sev: 'success' });
+                setSnack({
+                    open: true,
+                    msg: t('org.subscription.trial.started', 'Пробный период активирован на 10 дней'),
+                    sev: 'success',
+                });
             } catch (error: unknown) {
-                const msg = error instanceof Error ? error.message : 'Ошибка запуска пробного периода';
+                const msg =
+                    error instanceof Error ? error.message : t('org.subscription.error.startTrial', 'Ошибка запуска пробного периода');
                 setSubscriptionError(msg);
                 setSnack({ open: true, msg, sev: 'error' });
             } finally {
                 setStartTrialLoading(false);
             }
         },
-        [org, setSubscription, setBilling, setSubscriptionError, setSnack]
+        [org, setSubscription, setBilling, setSubscriptionError, setSnack, t]
     );
 
     const activateGrace = React.useCallback(
@@ -80,18 +90,23 @@ export default function useSubscriptionActions({
                     error?: string;
                 };
                 if (!res.ok || !data.billing) {
-                    const msg = data?.error || 'Не удалось активировать grace';
+                    const msg = data?.error || t('org.subscription.error.activateGrace', 'Не удалось активировать grace');
                     setSnack({ open: true, msg, sev: 'error' });
                     return;
                 }
                 setBilling(data.billing);
-                setSnack({ open: true, msg: 'Льготный период активирован на 3 дня', sev: 'success' });
+                setSnack({
+                    open: true,
+                    msg: t('org.subscription.grace.activated', 'Льготный период активирован на 3 дня'),
+                    sev: 'success',
+                });
             } catch (error: unknown) {
-                const msg = error instanceof Error ? error.message : 'Ошибка активации grace';
+                const msg =
+                    error instanceof Error ? error.message : t('org.subscription.error.activateGrace', 'Ошибка активации grace');
                 setSnack({ open: true, msg, sev: 'error' });
             }
         },
-        [org, setBilling, setSubscriptionError, setSnack]
+        [org, setBilling, setSubscriptionError, setSnack, t]
     );
 
     return {

@@ -12,7 +12,8 @@ import {
 import type { SxProps, Theme } from '@mui/material/styles';
 
 import type { MemberDTO, OrgRole } from '@/types/org';
-import { roleLabelRu } from '@/utils/org';
+import { roleLabel } from '@/utils/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type MemberRoleDialogProps = {
     open: boolean;
@@ -39,6 +40,7 @@ export default function MemberRoleDialog({
     dialogPaperSx,
     dialogActionsSx,
 }: MemberRoleDialogProps) {
+    const { t } = useI18n();
     return (
         <Dialog
             open={open}
@@ -50,7 +52,7 @@ export default function MemberRoleDialog({
             }}
         >
             <DialogTitle sx={cardHeaderSx}>
-                Изменить роль участника
+                {t('org.members.role.title', 'Изменить роль участника')}
             </DialogTitle>
             <DialogContent sx={cardContentSx}>
                 <Typography variant="body2" sx={{ mb: 2 }}>
@@ -58,7 +60,7 @@ export default function MemberRoleDialog({
                 </Typography>
                 <TextField
                     select
-                    label="Роль"
+                    label={t('org.members.role.field', 'Роль')}
                     fullWidth
                     value={value}
                     onChange={(event) => onChange(event.target.value as OrgRole)}
@@ -66,15 +68,15 @@ export default function MemberRoleDialog({
                 >
                     {(['org_admin', 'manager', 'executor', 'viewer'] as OrgRole[]).map((role) => (
                         <MenuItem key={role} value={role}>
-                            {roleLabelRu(role)}
+                            {roleLabel(role, t)}
                         </MenuItem>
                     ))}
                 </TextField>
             </DialogContent>
             <DialogActions sx={dialogActionsSx}>
-                <Button onClick={onClose}>Отмена</Button>
+                <Button onClick={onClose}>{t('common.cancel', 'Отмена')}</Button>
                 <Button variant="contained" onClick={onSave}>
-                    Сохранить
+                    {t('common.save', 'Сохранить')}
                 </Button>
             </DialogActions>
         </Dialog>

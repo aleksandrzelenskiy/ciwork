@@ -13,7 +13,7 @@ interface MembershipSummary {
   userEmail: string;
   userName?: string;
   role: OrgRole;
-  status: 'active' | 'invited';
+  status: 'active' | 'invited' | 'requested';
   createdAt?: string;
 }
 

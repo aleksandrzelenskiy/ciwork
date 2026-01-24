@@ -14,6 +14,7 @@ type UseMembersState = {
     setShowMemberSearch: React.Dispatch<React.SetStateAction<boolean>>;
     filteredMembers: MemberDTO[];
     invitedMembersCount: number;
+    requestedMembersCount: number;
     activeMembersCount: number;
     managerOptions: ProjectManagerOption[];
     memberByEmail: Map<string, MemberDTO>;
@@ -70,7 +71,14 @@ export default function useMembers(
         () => members.filter((member) => member.status === 'invited').length,
         [members]
     );
-    const activeMembersCount = members.length - invitedMembersCount;
+    const requestedMembersCount = React.useMemo(
+        () => members.filter((member) => member.status === 'requested').length,
+        [members]
+    );
+    const activeMembersCount = React.useMemo(
+        () => members.filter((member) => member.status === 'active').length,
+        [members]
+    );
 
     const managerOptions: ProjectManagerOption[] = React.useMemo(
         () =>
@@ -94,6 +102,7 @@ export default function useMembers(
         setShowMemberSearch,
         filteredMembers,
         invitedMembersCount,
+        requestedMembersCount,
         activeMembersCount,
         managerOptions,
         memberByEmail,

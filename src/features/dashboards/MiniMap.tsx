@@ -17,6 +17,7 @@ import {
   normalizeOperator,
 } from '@/utils/operatorColors';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface MiniMapProps {
   role: EffectiveOrgRole | null; // admin | manager | executor | viewer
@@ -40,10 +41,11 @@ export default function MiniMap({
   clerkUserId,
   showOverlay = true,
   showCta = true,
-  ctaLabel = 'На карте',
+  ctaLabel,
   ctaHref = '/tasks/locations',
   mapHeight = 400,
 }: MiniMapProps) {
+  const { t } = useI18n();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,19 +58,19 @@ export default function MiniMap({
       try {
         const res = await fetch(withBasePath('/api/tasks'));
         if (!res.ok) {
-          setError('Не удалось загрузить задачи');
+          setError(t('tasks.error.load', 'Не удалось загрузить задачи'));
           return;
         }
         const data = await res.json();
         setTasks(data.tasks);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
+        setError(err instanceof Error ? err.message : t('common.error.unknown', 'Неизвестная ошибка'));
       } finally {
         setLoading(false);
       }
     }
     fetchData();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!shouldUseOrgRoutes) return;
@@ -123,6 +125,7 @@ export default function MiniMap({
       projectRef
     )}/tasks/locations`;
   }, [ctaHref, filteredTasks, orgSlugById, shouldUseOrgRoutes]);
+  const resolvedCtaLabel = ctaLabel ?? t('dashboard.map.cta', 'На карте');
 
   // 3. Собираем координаты всех базовых станций (уже отфильтрованных задач)
   const coordinatesList = filteredTasks.flatMap((task) =>
@@ -231,7 +234,7 @@ export default function MiniMap({
           {resolvedCtaHref && (
             <Link href={resolvedCtaHref}>
               <Button endIcon={<MapIcon />} variant='contained'>
-                {ctaLabel}
+                {resolvedCtaLabel}
               </Button>
             </Link>
           )}

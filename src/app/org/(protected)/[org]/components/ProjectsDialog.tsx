@@ -29,6 +29,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { MemberDTO, ProjectDTO } from '@/types/org';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ProjectsDialogProps = {
     open: boolean;
@@ -71,6 +72,7 @@ export default function ProjectsDialog({
     dialogActionsSx,
     dialogContentBg,
 }: ProjectsDialogProps) {
+    const { t } = useI18n();
     const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
     const [profileOpen, setProfileOpen] = React.useState(false);
 
@@ -100,7 +102,7 @@ export default function ProjectsDialog({
         >
             <DialogTitle sx={cardHeaderSx}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="inherit">Проекты организации</Typography>
+                    <Typography variant="inherit">{t('org.projects.title', 'Проекты организации')}</Typography>
                     <IconButton onClick={onClose}>
                         <CloseFullscreenIcon />
                     </IconButton>
@@ -110,7 +112,9 @@ export default function ProjectsDialog({
                 <Card variant="outlined" sx={cardBaseSx}>
                     <CardHeader
                         sx={cardHeaderSx}
-                        title={`Проекты организации (${projects.length})`}
+                        title={t('org.projects.titleCount', 'Проекты организации ({count})', {
+                            count: projects.length,
+                        })}
                         action={
                             <Stack direction="row" spacing={1}>
                                 <Tooltip title={creationTooltip}>
@@ -123,14 +127,14 @@ export default function ProjectsDialog({
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Перейти к проектам">
+                                <Tooltip title={t('org.projects.actions.goToProjects', 'Перейти к проектам')}>
                                     <span>
                                         <IconButton onClick={onGoToProjects}>
                                             <DriveFileMoveIcon />
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Обновить">
+                                <Tooltip title={t('common.refresh', 'Обновить')}>
                                     <span>
                                         <IconButton onClick={onRefresh} disabled={projectsLoading}>
                                             <RefreshIcon />
@@ -144,17 +148,17 @@ export default function ProjectsDialog({
                         {projectsLoading ? (
                             <Stack direction="row" spacing={1} alignItems="center">
                                 <CircularProgress size={20} />
-                                <Typography>Загрузка проектов…</Typography>
+                                <Typography>{t('org.projects.loading', 'Загрузка проектов…')}</Typography>
                             </Stack>
                         ) : (
                             <Table size="small">
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>Код</TableCell>
-                                        <TableCell>Проект</TableCell>
-                                        <TableCell>Менеджер</TableCell>
-                                        <TableCell>Описание</TableCell>
-                                        <TableCell align="right">Действия</TableCell>
+                                        <TableCell>{t('org.projects.table.key', 'Код')}</TableCell>
+                                        <TableCell>{t('org.projects.table.project', 'Проект')}</TableCell>
+                                        <TableCell>{t('org.projects.table.manager', 'Менеджер')}</TableCell>
+                                        <TableCell>{t('org.projects.table.description', 'Описание')}</TableCell>
+                                        <TableCell align="right">{t('common.actions', 'Действия')}</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -224,12 +228,12 @@ export default function ProjectsDialog({
                                                 </Typography>
                                             </TableCell>
                                             <TableCell align="right">
-                                                <Tooltip title="Редактировать проект">
+                                                <Tooltip title={t('org.projects.actions.edit', 'Редактировать проект')}>
                                                     <IconButton onClick={() => onOpenProjectDialog(project)}>
                                                         <EditOutlinedIcon fontSize="small" />
                                                     </IconButton>
                                                 </Tooltip>
-                                                <Tooltip title="Удалить проект">
+                                                <Tooltip title={t('org.projects.actions.delete', 'Удалить проект')}>
                                                     <IconButton onClick={() => onRemoveProject(project)}>
                                                         <DeleteOutlineOutlinedIcon fontSize="small" />
                                                     </IconButton>
@@ -242,7 +246,7 @@ export default function ProjectsDialog({
                                         <TableRow>
                                             <TableCell colSpan={5}>
                                                 <Typography color="text.secondary">
-                                                    Проектов пока нет. Чтобы создать нажмите
+                                                    {t('org.projects.empty', 'Проектов пока нет. Чтобы создать нажмите')}
                                                     <IconButton
                                                         onClick={() => onOpenProjectDialog()}
                                                         disabled={disableCreationActions}
@@ -260,7 +264,7 @@ export default function ProjectsDialog({
                 </Card>
             </DialogContent>
             <DialogActions sx={dialogActionsSx}>
-                <Button onClick={onClose}>Закрыть</Button>
+                <Button onClick={onClose}>{t('common.close', 'Закрыть')}</Button>
             </DialogActions>
 
             <ProfileDialog

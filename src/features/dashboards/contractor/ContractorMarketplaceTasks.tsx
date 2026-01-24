@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import Link from 'next/link';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface MarketplaceTask {
     _id: string;
@@ -28,11 +29,11 @@ interface MarketplaceTask {
     createdAt?: string;
 }
 
-const formatBudget = (budget?: number | null, currency?: string) => {
+const formatBudget = (budget: number | null | undefined, currency: string | undefined, locale: string) => {
     if (!budget) return '—';
     const resolvedCurrency = currency || 'RUB';
     try {
-        return new Intl.NumberFormat('ru-RU', {
+        return new Intl.NumberFormat(locale === 'ru' ? 'ru-RU' : 'en-US', {
             style: 'currency',
             currency: resolvedCurrency,
             maximumFractionDigits: 0,
@@ -43,6 +44,7 @@ const formatBudget = (budget?: number | null, currency?: string) => {
 };
 
 export default function ContractorMarketplaceTasks() {
+    const { t, locale } = useI18n();
     const [tasks, setTasks] = useState<MarketplaceTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -52,19 +54,19 @@ export default function ContractorMarketplaceTasks() {
             try {
                 const res = await fetch(withBasePath('/api/tasks/public?limit=5'));
                 if (!res.ok) {
-                    setError('Ошибка при загрузке задач маркетплейса');
+                    setError(t('market.error.loadTasks', 'Ошибка при загрузке задач маркетплейса'));
                     return;
                 }
                 const data = await res.json();
                 setTasks(data.tasks || []);
             } catch (err: unknown) {
-                setError(err instanceof Error ? err.message : 'Unknown error');
+                setError(err instanceof Error ? err.message : t('common.error.unknown', 'Unknown error'));
             } finally {
                 setLoading(false);
             }
         }
         fetchTasks();
-    }, []);
+    }, [t]);
 
     if (loading) {
         return (
@@ -85,7 +87,7 @@ export default function ContractorMarketplaceTasks() {
     if (tasks.length === 0) {
         return (
             <Typography textAlign='center' color='text.secondary'>
-                Сейчас нет новых задач на маркетплейсе
+                {t('market.empty.newTasks', 'Сейчас нет новых задач на маркетплейсе')}
             </Typography>
         );
     }
@@ -96,9 +98,9 @@ export default function ContractorMarketplaceTasks() {
                 <Table size='small' stickyHeader>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Задача</TableCell>
-                            <TableCell>Организация</TableCell>
-                            <TableCell align='right'>Бюджет</TableCell>
+                            <TableCell>{t('market.table.task', 'Задача')}</TableCell>
+                            <TableCell>{t('market.table.organization', 'Организация')}</TableCell>
+                            <TableCell align='right'>{t('market.table.budget', 'Бюджет')}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -106,7 +108,7 @@ export default function ContractorMarketplaceTasks() {
                             <TableRow key={task._id}>
                                 <TableCell>
                                     <Typography variant='body2' fontWeight={600}>
-                                        {task.taskName || 'Без названия'}
+                                        {task.taskName || t('common.untitled', 'Без названия')}
                                     </Typography>
                                     {task.project?.name && (
                                         <Typography variant='caption' color='text.secondary'>
@@ -116,7 +118,7 @@ export default function ContractorMarketplaceTasks() {
                                 </TableCell>
                                 <TableCell>{task.orgName || '—'}</TableCell>
                                 <TableCell align='right'>
-                                    {formatBudget(task.budget, task.currency)}
+                                    {formatBudget(task.budget, task.currency, locale)}
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -126,7 +128,7 @@ export default function ContractorMarketplaceTasks() {
 
             <Box sx={{ textAlign: 'center', mt: 2 }}>
                 <Link href='/market'>
-                    <Button variant='text'>Показать еще</Button>
+                    <Button variant='text'>{t('dashboard.showMore', 'Показать еще')}</Button>
                 </Link>
             </Box>
         </Box>

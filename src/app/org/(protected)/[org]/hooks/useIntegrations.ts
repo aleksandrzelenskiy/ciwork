@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import type { IntegrationDTO } from '@/types/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type UseIntegrationsState = {
     integrations: IntegrationDTO[];
@@ -13,6 +14,7 @@ export default function useIntegrations(
     org: string | undefined,
     canManage: boolean
 ): UseIntegrationsState {
+    const { t } = useI18n();
     const [integrations, setIntegrations] = React.useState<IntegrationDTO[]>([]);
     const [integrationsLoading, setIntegrationsLoading] = React.useState(false);
     const [integrationsError, setIntegrationsError] = React.useState<string | null>(null);
@@ -29,18 +31,18 @@ export default function useIntegrations(
             };
             if (!res.ok || !Array.isArray(data.integrations)) {
                 setIntegrations([]);
-                setIntegrationsError(data.error || 'Не удалось загрузить интеграции');
+                setIntegrationsError(data.error || t('org.integrations.error.load', 'Не удалось загрузить интеграции'));
                 return;
             }
             setIntegrations(data.integrations);
         } catch (error) {
-            const msg = error instanceof Error ? error.message : 'Ошибка загрузки интеграций';
+            const msg = error instanceof Error ? error.message : t('org.integrations.error.load', 'Ошибка загрузки интеграций');
             setIntegrations([]);
             setIntegrationsError(msg);
         } finally {
             setIntegrationsLoading(false);
         }
-    }, [org, canManage]);
+    }, [org, canManage, t]);
 
     return {
         integrations,

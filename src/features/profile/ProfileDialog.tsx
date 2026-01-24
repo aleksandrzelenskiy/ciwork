@@ -15,6 +15,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import ProfilePageContent from '@/app/profile/ProfilePageContent';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ProfileDialogProps = {
     open: boolean;
@@ -29,6 +30,7 @@ export default function ProfileDialog({
     clerkUserId,
     mode = 'public',
 }: ProfileDialogProps) {
+    const { t } = useI18n();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [forceFullScreen, setForceFullScreen] = React.useState(false);
@@ -67,7 +69,11 @@ export default function ProfileDialog({
             >
                 <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 'auto' }}>
                     <IconButton
-                        aria-label={fullScreen ? 'Свернуть' : 'Развернуть'}
+                        aria-label={
+                            fullScreen
+                                ? t('profile.dialog.collapse', 'Свернуть')
+                                : t('profile.dialog.expand', 'Развернуть')
+                        }
                         onClick={() => setForceFullScreen((prev) => !prev)}
                         size="small"
                     >
@@ -77,7 +83,7 @@ export default function ProfileDialog({
                             <OpenInFullIcon fontSize="small" />
                         )}
                     </IconButton>
-                    <IconButton aria-label="Закрыть" onClick={handleClose} size="small">
+                    <IconButton aria-label={t('common.close', 'Закрыть')} onClick={handleClose} size="small">
                         <CloseIcon fontSize="small" />
                     </IconButton>
                 </Stack>
@@ -89,7 +95,7 @@ export default function ProfileDialog({
                     <ProfilePageContent mode="public" userId={clerkUserId} />
                 ) : (
                     <Stack sx={{ p: 3 }}>
-                        <Typography>Пользователь не выбран.</Typography>
+                        <Typography>{t('profile.dialog.noUser', 'Пользователь не выбран.')}</Typography>
                     </Stack>
                 )}
             </DialogContent>

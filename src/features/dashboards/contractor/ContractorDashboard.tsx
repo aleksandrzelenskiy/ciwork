@@ -12,6 +12,7 @@ import ContractorMarketplaceTasks from '@/features/dashboards/contractor/Contrac
 import ContractorReportsStatus from '@/features/dashboards/contractor/ContractorReportsStatus';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface ContractorDashboardProps {
     role: EffectiveOrgRole | null;
@@ -24,6 +25,7 @@ const ContractorDashboard: React.FC<ContractorDashboardProps> = ({
     role,
     clerkUserId,
 }) => {
+    const { t } = useI18n();
     const theme = useTheme();
     const { masonryCardSx } = getOrgPageStyles(theme);
     const cardPadding = React.useMemo(() => ({ xs: 2, md: 2.5 }), []);
@@ -38,7 +40,7 @@ const ContractorDashboard: React.FC<ContractorDashboardProps> = ({
     return (
         <Box>
             <Typography variant='h5' gutterBottom sx={{ mb: 2 }}>
-                Панель подрядчика
+                {t('dashboard.contractor.title', 'Панель подрядчика')}
             </Typography>
             <Box
                 sx={(theme) => ({
@@ -64,32 +66,32 @@ const ContractorDashboard: React.FC<ContractorDashboardProps> = ({
                 >
                     <CardItem sx={{ minWidth: 0 }}>
                         <Typography variant='h6' gutterBottom>
-                            Мои задачи
+                            {t('dashboard.contractor.myTasks', 'Мои задачи')}
                         </Typography>
                         <MiniTaskTable
                             role={role}
                             clerkUserId={clerkUserId}
-                            ctaLabel='Показать еще'
+                            ctaLabel={t('dashboard.showMore', 'Показать еще')}
                             ctaHref='/tasks'
                         />
                     </CardItem>
                     <CardItem sx={{ minWidth: 0 }}>
                         <Typography variant='h6' gutterBottom>
-                            Оплата
+                            {t('dashboard.contractor.payment', 'Оплата')}
                         </Typography>
                         <ContractorPaymentSummary />
                     </CardItem>
                     <CardItem sx={{ minWidth: 0 }}>
-                        <Typography variant='h6'>Карта задач</Typography>
+                        <Typography variant='h6'>{t('dashboard.taskMap', 'Карта задач')}</Typography>
                         <MiniMap role={role} clerkUserId={clerkUserId} />
                     </CardItem>
                     <CardItem sx={{ minWidth: 0 }}>
-                        <Typography variant='h6'>Маркетплейс</Typography>
+                        <Typography variant='h6'>{t('dashboard.contractor.marketplace', 'Маркетплейс')}</Typography>
                         <ContractorMarketplaceTasks />
                     </CardItem>
                     <CardItem sx={{ minWidth: 0 }}>
                         <Typography variant='h6' gutterBottom>
-                            Фотоотчеты
+                            {t('dashboard.contractor.reports', 'Фотоотчеты')}
                         </Typography>
                         <ContractorReportsStatus />
                     </CardItem>

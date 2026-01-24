@@ -15,6 +15,7 @@ import {
     Typography,
 } from '@mui/material';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ReviewDialogProps = {
     open: boolean;
@@ -43,6 +44,7 @@ export default function ReviewDialog({
     canReview = true,
     reviewBlockReason,
 }: ReviewDialogProps) {
+    const { t, locale } = useI18n();
     const [rating, setRating] = React.useState<number | null>(0);
     const [comment, setComment] = React.useState('');
     const [saving, setSaving] = React.useState(false);
@@ -62,18 +64,18 @@ export default function ReviewDialog({
             );
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-                setReviewsError(data.error || 'Не удалось загрузить отзывы');
+                setReviewsError(data.error || t('profile.reviews.error.load', 'Не удалось загрузить отзывы'));
                 return;
             }
             setReviews(Array.isArray(data.reviews) ? data.reviews : []);
         } catch (error) {
             setReviewsError(
-                error instanceof Error ? error.message : 'Не удалось загрузить отзывы'
+                error instanceof Error ? error.message : t('profile.reviews.error.load', 'Не удалось загрузить отзывы')
             );
         } finally {
             setLoadingReviews(false);
         }
-    }, [targetClerkUserId]);
+    }, [targetClerkUserId, t]);
 
     React.useEffect(() => {
         if (!open) {
@@ -90,7 +92,7 @@ export default function ReviewDialog({
     const handleSubmit = async () => {
         if (!targetClerkUserId) return;
         if (!rating || rating < 1) {
-            setMessage({ type: 'error', text: 'Поставьте оценку от 1 до 5.' });
+            setMessage({ type: 'error', text: t('profile.reviews.error.rating', 'Поставьте оценку от 1 до 5.') });
             return;
         }
         setSaving(true);
@@ -109,11 +111,11 @@ export default function ReviewDialog({
             if (!res.ok) {
                 setMessage({
                     type: 'error',
-                    text: data.error || 'Не удалось отправить отзыв',
+                    text: data.error || t('profile.reviews.error.send', 'Не удалось отправить отзыв'),
                 });
                 return;
             }
-            setMessage({ type: 'success', text: 'Отзыв отправлен.' });
+            setMessage({ type: 'success', text: t('profile.reviews.success.sent', 'Отзыв отправлен.') });
             onSubmitted?.();
             void loadReviews();
             setTimeout(() => {
@@ -122,7 +124,7 @@ export default function ReviewDialog({
         } catch (error) {
             setMessage({
                 type: 'error',
-                text: error instanceof Error ? error.message : 'Ошибка отправки отзыва',
+                text: error instanceof Error ? error.message : t('profile.reviews.error.send', 'Ошибка отправки отзыва'),
             });
         } finally {
             setSaving(false);
@@ -131,18 +133,18 @@ export default function ReviewDialog({
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-            <DialogTitle>Отзывы</DialogTitle>
+            <DialogTitle>{t('profile.reviews.title', 'Отзывы')}</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                     <Stack spacing={1.5}>
                         <Typography variant="subtitle2" color="text.secondary">
-                            Опубликованные отзывы
+                            {t('profile.reviews.published', 'Опубликованные отзывы')}
                         </Typography>
                         {loadingReviews && (
                             <Stack direction="row" spacing={1} alignItems="center">
                                 <CircularProgress size={18} />
                                 <Typography variant="body2" color="text.secondary">
-                                    Загружаем отзывы...
+                                    {t('profile.reviews.loading', 'Загружаем отзывы...')}
                                 </Typography>
                             </Stack>
                         )}
@@ -151,7 +153,7 @@ export default function ReviewDialog({
                         )}
                         {!loadingReviews && !reviewsError && reviews.length === 0 && (
                             <Typography variant="body2" color="text.secondary">
-                                Отзывов пока нет.
+                                {t('profile.reviews.empty', 'Отзывов пока нет.')}
                             </Typography>
                         )}
                         {!loadingReviews && !reviewsError && reviews.length > 0 && (
@@ -180,7 +182,7 @@ export default function ReviewDialog({
                                                     variant="subtitle2"
                                                     sx={{ fontWeight: 600 }}
                                                 >
-                                                    {review.authorName || 'Пользователь'}
+                                                    {review.authorName || t('common.user', 'Пользователь')}
                                                 </Typography>
                                                 <Typography
                                                     variant="caption"
@@ -188,7 +190,7 @@ export default function ReviewDialog({
                                                 >
                                                     {Number.isNaN(reviewDate.getTime())
                                                         ? ''
-                                                        : reviewDate.toLocaleDateString('ru-RU')}
+                                                        : reviewDate.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US')}
                                                 </Typography>
                                             </Stack>
                                             <Rating
@@ -205,7 +207,7 @@ export default function ReviewDialog({
                                                     variant="body2"
                                                     color="text.secondary"
                                                 >
-                                                    Без комментария.
+                                                    {t('profile.reviews.noComment', 'Без комментария.')}
                                                 </Typography>
                                             )}
                                         </Stack>
@@ -215,7 +217,9 @@ export default function ReviewDialog({
                         )}
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
-                        {targetName ? `Оцените пользователя ${targetName}` : 'Оцените пользователя'}
+                        {targetName
+                            ? t('profile.reviews.rateUser', 'Оцените пользователя {name}', { name: targetName })
+                            : t('profile.reviews.rateUserGeneric', 'Оцените пользователя')}
                     </Typography>
                     <Rating
                         value={rating}
@@ -224,31 +228,31 @@ export default function ReviewDialog({
                         readOnly={!canReview}
                     />
                     <TextField
-                        label="Комментарий"
+                        label={t('profile.reviews.comment', 'Комментарий')}
                         value={comment}
                         onChange={(event) => setComment(event.target.value)}
                         multiline
                         minRows={3}
-                        placeholder="Напишите пару слов о сотрудничестве"
+                        placeholder={t('profile.reviews.commentPlaceholder', 'Напишите пару слов о сотрудничестве')}
                         disabled={!canReview}
                     />
                     {!canReview && (
                         <Alert severity="info">
                             {reviewBlockReason ||
-                                'Оставлять отзыв можно только после совместной задачи.'}
+                                t('profile.reviews.blocked', 'Оставлять отзыв можно только после совместной задачи.')}
                         </Alert>
                     )}
                     {message && <Alert severity={message.type}>{message.text}</Alert>}
                 </Stack>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>Отмена</Button>
+                <Button onClick={onClose}>{t('common.cancel', 'Отмена')}</Button>
                 <Button
                     variant="contained"
                     onClick={handleSubmit}
                     disabled={saving || !canReview}
                 >
-                    {saving ? 'Отправляем...' : 'Отправить'}
+                    {saving ? t('profile.reviews.sending', 'Отправляем...') : t('profile.reviews.send', 'Отправить')}
                 </Button>
             </DialogActions>
         </Dialog>

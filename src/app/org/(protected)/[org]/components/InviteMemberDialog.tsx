@@ -9,6 +9,7 @@ import {
 import type { SxProps, Theme } from '@mui/material/styles';
 
 import InviteMemberForm from '@/app/workspace/components/InviteMemberForm';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type InviteMemberDialogProps = {
     open: boolean;
@@ -31,6 +32,7 @@ export default function InviteMemberDialog({
     dialogPaperSx,
     dialogActionsSx,
 }: InviteMemberDialogProps) {
+    const { t } = useI18n();
     return (
         <Dialog
             open={open}
@@ -44,7 +46,7 @@ export default function InviteMemberDialog({
             }}
         >
             <DialogTitle sx={cardHeaderSx}>
-                Пригласить участника
+                {t('org.members.invite.title', 'Пригласить участника')}
             </DialogTitle>
             <DialogContent dividers sx={cardContentSx}>
                 {orgSlug ? (
@@ -58,7 +60,7 @@ export default function InviteMemberDialog({
             </DialogContent>
             <DialogActions sx={dialogActionsSx}>
                 <Button variant="text" color="primary" onClick={onClose}>
-                    Закрыть
+                    {t('common.close', 'Закрыть')}
                 </Button>
             </DialogActions>
         </Dialog>

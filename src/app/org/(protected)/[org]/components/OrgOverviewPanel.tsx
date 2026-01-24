@@ -15,6 +15,7 @@ import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type OrgOverviewPanelProps = {
     orgName?: string;
@@ -53,7 +54,7 @@ type OrgOverviewPanelProps = {
     subscriptionStatusColor: string;
     subscriptionStatusDescription: string;
     subscriptionEndLabel: string | null;
-    roleLabelRu: string;
+    roleLabel: string;
     tasksUsedLabel: string;
     publicTasksUsedLabel: string;
     tasksMonthLimitLabel: string;
@@ -114,7 +115,7 @@ export default function OrgOverviewPanel({
     subscriptionStatusColor,
     subscriptionStatusDescription,
     subscriptionEndLabel,
-    roleLabelRu,
+    roleLabel,
     tasksUsedLabel,
     publicTasksUsedLabel,
     tasksMonthLimitLabel,
@@ -137,8 +138,9 @@ export default function OrgOverviewPanel({
     isTrialActive,
     getAlertSx,
 }: OrgOverviewPanelProps) {
-    const primaryLabel = primaryActionLabel ?? 'К проектам';
-    const secondaryLabel = secondaryActionLabel ?? 'Пригласить';
+    const { t } = useI18n();
+    const primaryLabel = primaryActionLabel ?? t('org.overview.actions.projects', 'К проектам');
+    const secondaryLabel = secondaryActionLabel ?? t('org.overview.actions.invite', 'Пригласить');
     const primaryIcon = primaryActionIcon ?? <DriveFileMoveIcon />;
     const secondaryIcon = secondaryActionIcon ?? <PersonAddIcon />;
     const statCardCompactSx = {
@@ -217,7 +219,10 @@ export default function OrgOverviewPanel({
                             </Tooltip>
                         </Stack>
                         <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                            Управляйте подпиской, участниками и проектами организации.
+                            {t(
+                                'org.overview.subtitle',
+                                'Управляйте подпиской, участниками и проектами организации.'
+                            )}
                         </Typography>
                     </Box>
                     <Stack
@@ -282,51 +287,57 @@ export default function OrgOverviewPanel({
             >
                 <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                        Активные проекты
+                        {t('org.overview.stats.projects', 'Активные проекты')}
                     </Typography>
                     <Typography variant="h4" fontWeight={700} color={textPrimary}>
                         {activeProjectsCount}
                     </Typography>
                     <Typography variant="body2" color={textSecondary}>
-                        из {projectsLimitLabel} доступных
+                        {t('org.overview.stats.projectsLimit', 'из {value} доступных', {
+                            value: projectsLimitLabel,
+                        })}
                     </Typography>
                 </Box>
                 <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                        Рабочих мест
+                        {t('org.overview.stats.seats', 'Рабочих мест')}
                     </Typography>
                     <Typography variant="h4" fontWeight={700} color={textPrimary}>
                         {activeMembersCount}
                     </Typography>
                     <Typography variant="body2" color={textSecondary}>
-                        Всего {seatsLabel}
+                        {t('org.overview.stats.seatsTotal', 'Всего {value}', { value: seatsLabel })}
                     </Typography>
                 </Box>
                 <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                        Задач за месяц
+                        {t('org.overview.stats.tasksMonth', 'Задач за месяц')}
                     </Typography>
                     <Typography variant="h4" fontWeight={700} color={textPrimary}>
                         {tasksUsedLabel}
                     </Typography>
                     <Typography variant="body2" color={textSecondary}>
-                        из {tasksMonthLimitLabel} доступных
+                        {t('org.overview.stats.tasksMonthLimit', 'из {value} доступных', {
+                            value: tasksMonthLimitLabel,
+                        })}
                     </Typography>
                 </Box>
                 <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                        Публичных задач
+                        {t('org.overview.stats.publicTasks', 'Публичных задач')}
                     </Typography>
                     <Typography variant="h4" fontWeight={700} color={textPrimary}>
                         {publicTasksUsedLabel}
                     </Typography>
                     <Typography variant="body2" color={textSecondary}>
-                        из {publicTasksLimitLabel} в месяц
+                        {t('org.overview.stats.publicTasksLimit', 'из {value} в месяц', {
+                            value: publicTasksLimitLabel,
+                        })}
                     </Typography>
                 </Box>
                 <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                        Статус подписки
+                        {t('org.overview.stats.subscription', 'Статус подписки')}
                     </Typography>
                     <Typography variant="h6" fontWeight={600} sx={{ color: subscriptionStatusColor }}>
                         {subscriptionStatusLabel}
@@ -345,18 +356,18 @@ export default function OrgOverviewPanel({
                         onClick={onOpenPlansDialog}
                         sx={{ mt: 1, px: 0, textTransform: 'none' }}
                     >
-                        Изменить
+                        {t('common.change', 'Изменить')}
                     </Button>
                 </Box>
                 <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                        Ваша роль
+                        {t('org.overview.role', 'Ваша роль')}
                     </Typography>
                     <Typography variant="h6" fontWeight={600} color={textPrimary}>
-                        {roleLabelRu}
+                        {roleLabel}
                     </Typography>
                     <Typography variant="body2" color={textSecondary}>
-                        Организация {orgName || orgSlug}
+                        {t('org.overview.orgLabel', 'Организация {value}', { value: orgName || orgSlug || '' })}
                     </Typography>
                 </Box>
             </Box>
@@ -365,12 +376,14 @@ export default function OrgOverviewPanel({
                 <Stack spacing={1.5} sx={{ mt: { xs: 2, md: 2.5 } }}>
                     {subscriptionError && (
                         <Alert severity="error" sx={getAlertSx('error')}>
-                            Не удалось получить статус подписки: {subscriptionError}
+                            {t('org.overview.error.subscription', 'Не удалось получить статус подписки: {error}', {
+                                error: subscriptionError,
+                            })}
                         </Alert>
                     )}
                     {!subscriptionError && subscriptionLoading && (
                         <Alert severity="info" sx={getAlertSx('info')}>
-                            Проверяем статус подписки…
+                            {t('org.overview.loading.subscription', 'Проверяем статус подписки…')}
                         </Alert>
                     )}
                     {!subscriptionError && !subscriptionLoading && billingReadOnly && (
@@ -391,12 +404,13 @@ export default function OrgOverviewPanel({
                                             color: '#2f1000',
                                         }}
                                     >
-                                        Льготный период 3 дня
+                                        {t('org.overview.grace.activate', 'Льготный период 3 дня')}
                                     </Button>
                                 ) : undefined
                             }
                         >
-                            {billingReason ?? 'Доступ ограничен: недостаточно средств'}
+                            {billingReason
+                                ?? t('org.overview.billing.limited', 'Доступ ограничен: недостаточно средств')}
                         </Alert>
                     )}
                     {!subscriptionError && !subscriptionLoading && !isSubscriptionActive && !billingReadOnly && (
@@ -409,19 +423,29 @@ export default function OrgOverviewPanel({
                             >
                                 <Box>
                                     <Typography fontWeight={600} color={textPrimary}>
-                                        Подписка не активна.
+                                        {t('org.overview.subscription.inactive', 'Подписка не активна.')}
                                     </Typography>
                                     {isTrialExpired && formattedTrialEnd && (
                                         <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                            Пробный период завершился {formattedTrialEnd}.
+                                            {t(
+                                                'org.overview.subscription.trialEnded',
+                                                'Пробный период завершился {date}.',
+                                                { date: formattedTrialEnd }
+                                            )}
                                         </Typography>
                                     )}
                                     <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                        Получите бесплатный пробный период на 10 дней с тарифом PRO.
+                                        {t(
+                                            'org.overview.subscription.trialOffer',
+                                            'Получите бесплатный пробный период на 10 дней с тарифом PRO.'
+                                        )}
                                     </Typography>
                                     {!canStartTrial && (
                                         <Typography variant="body2" color={textSecondary} sx={{ mt: 0.5 }}>
-                                            Обратитесь к владельцу организации, чтобы активировать подписку.
+                                            {t(
+                                                'org.overview.subscription.contactOwner',
+                                                'Обратитесь к владельцу организации, чтобы активировать подписку.'
+                                            )}
                                         </Typography>
                                     )}
                                 </Box>
@@ -438,7 +462,9 @@ export default function OrgOverviewPanel({
                                             color: '#2f1000',
                                         }}
                                     >
-                                        {startTrialLoading ? 'Запускаем…' : 'Активировать'}
+                                        {startTrialLoading
+                                            ? t('org.overview.trial.starting', 'Запускаем…')
+                                            : t('org.overview.trial.activate', 'Активировать')}
                                     </Button>
                                 )}
                             </Stack>
@@ -446,10 +472,14 @@ export default function OrgOverviewPanel({
                     )}
                     {!subscriptionError && !subscriptionLoading && isTrialActive && (
                         <Alert severity="info" sx={getAlertSx('info')}>
-                            Пробный период активен до {formattedTrialEnd ?? '—'}
+                            {t('org.overview.trial.activeUntil', 'Пробный период активен до {date}', {
+                                date: formattedTrialEnd ?? '—',
+                            })}
                             {typeof trialDaysLeft === 'number' && (
                                 <Typography component="span" sx={{ ml: 0.5 }}>
-                                    (осталось {trialDaysLeft} дн.)
+                                    {t('org.overview.trial.daysLeft', '(осталось {days} дн.)', {
+                                        days: trialDaysLeft,
+                                    })}
                                 </Typography>
                             )}
                         </Alert>

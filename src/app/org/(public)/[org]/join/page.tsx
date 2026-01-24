@@ -15,6 +15,7 @@ import {
     Paper,
 } from '@mui/material';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ApiOk = { ok: true };
 type ApiErr = { error: string };
@@ -24,6 +25,7 @@ type InvitePreview =
     | { error: string };
 
 export default function OrgJoinPage() {
+    const { t, locale } = useI18n();
     const params = useParams() as Record<string, string> | null;
     const org = params?.org ?? null;
 
@@ -72,7 +74,11 @@ export default function OrgJoinPage() {
                 }
             } catch (err) {
                 if (!cancelled && !(err instanceof DOMException && err.name === 'AbortError')) {
-                    setPreviewError(err instanceof Error ? err.message : 'Не удалось загрузить приглашение');
+                    setPreviewError(
+                        err instanceof Error
+                            ? err.message
+                            : t('org.join.error.loadInvite', 'Не удалось загрузить приглашение')
+                    );
                 }
             } finally {
                 if (!cancelled) {
@@ -85,7 +91,7 @@ export default function OrgJoinPage() {
             cancelled = true;
             controller.abort();
         };
-    }, [org, token]);
+    }, [org, token, t]);
 
     const accept = React.useCallback(async () => {
         if (!org || !token) return;
@@ -99,7 +105,14 @@ export default function OrgJoinPage() {
             const data = (await res.json().catch(() => ({}) as ApiErr)) as ApiResp;
 
             if (res.status === 401) {
-                setSnack({ open: true, msg: 'Нужно войти в аккаунт, чтобы принять приглашение', sev: 'error' });
+                setSnack({
+                    open: true,
+                    msg: t(
+                        'org.join.error.signInRequiredAccept',
+                        'Нужно войти в аккаунт, чтобы принять приглашение'
+                    ),
+                    sev: 'error',
+                });
                 return;
             }
 
@@ -112,7 +125,11 @@ export default function OrgJoinPage() {
             const orgName = inviteInfo?.orgName ?? org ?? '—';
             setActionResult({
                 type: 'success',
-                message: `Вы успешно добавлены в организацию «${orgName}»`,
+                message: t(
+                    'org.join.success.accepted',
+                    'Вы успешно добавлены в организацию «{orgName}»',
+                    { orgName }
+                ),
             });
             setTimeout(() => {
                 router.replace('/');
@@ -120,7 +137,7 @@ export default function OrgJoinPage() {
         } finally {
             setActionPending(null);
         }
-    }, [org, token, router, inviteInfo?.orgName]);
+    }, [org, token, router, inviteInfo?.orgName, t]);
 
     const decline = React.useCallback(async () => {
         if (!org || !token) return;
@@ -132,7 +149,14 @@ export default function OrgJoinPage() {
                 body: JSON.stringify({ token }),
             });
             if (res.status === 401) {
-                setSnack({ open: true, msg: 'Нужно войти в аккаунт, чтобы отклонить приглашение', sev: 'error' });
+                setSnack({
+                    open: true,
+                    msg: t(
+                        'org.join.error.signInRequiredDecline',
+                        'Нужно войти в аккаунт, чтобы отклонить приглашение'
+                    ),
+                    sev: 'error',
+                });
                 return;
             }
             if (!res.ok) {
@@ -145,7 +169,11 @@ export default function OrgJoinPage() {
             const orgName = inviteInfo?.orgName ?? org ?? '—';
             setActionResult({
                 type: 'declined',
-                message: `Вы отказались от приглашения от организации «${orgName}»`,
+                message: t(
+                    'org.join.success.declined',
+                    'Вы отказались от приглашения от организации «{orgName}»',
+                    { orgName }
+                ),
             });
             setTimeout(() => {
                 router.replace('/');
@@ -153,7 +181,7 @@ export default function OrgJoinPage() {
         } finally {
             setActionPending(null);
         }
-    }, [org, token, router, inviteInfo?.orgName]);
+    }, [org, token, router, inviteInfo?.orgName, t]);
 
     const actionsDisabled = actionPending !== null || Boolean(actionResult);
 
@@ -207,10 +235,13 @@ export default function OrgJoinPage() {
                                 lineHeight: 1.1,
                             }}
                         >
-                            Вы приглашены!
+                            {t('org.join.title', 'Вы приглашены!')}
                         </Typography>
                         <Typography variant="h6" color="text.secondary" maxWidth={560}>
-                            Подтвердите участие, чтобы получить доступ к задачам и рабочему пространству.
+                            {t(
+                                'org.join.subtitle',
+                                'Подтвердите участие, чтобы получить доступ к задачам и рабочему пространству.'
+                            )}
                         </Typography>
                     </Stack>
 
@@ -234,27 +265,40 @@ export default function OrgJoinPage() {
                         >
                             {!token ? (
                                 <Typography color="text.secondary">
-                                    Токен приглашения не найден. Проверьте ссылку у пригласившего.
+                                    {t(
+                                        'org.join.error.missingToken',
+                                        'Токен приглашения не найден. Проверьте ссылку у пригласившего.'
+                                    )}
                                 </Typography>
                             ) : !org ? (
                                 <Typography color="text.secondary">
-                                    Параметр организации отсутствует в URL.
+                                    {t(
+                                        'org.join.error.missingOrg',
+                                        'Параметр организации отсутствует в URL.'
+                                    )}
                                 </Typography>
                             ) : (
                                 <Stack spacing={3}>
                                     <Box>
                                         <Typography variant="h6" fontWeight={700}>
-                                            Вы приглашены в организацию «{inviteInfo?.orgName ?? org ?? '—'}»
+                                            {t(
+                                                'org.join.inviteTitle',
+                                                'Вы приглашены в организацию «{orgName}»',
+                                                { orgName: inviteInfo?.orgName ?? org ?? '—' }
+                                            )}
                                         </Typography>
                                         <Typography color="text.secondary">
-                                            Нажмите кнопку ниже, чтобы принять приглашение, или откажитесь, если оно неактуально.
+                                            {t(
+                                                'org.join.inviteHint',
+                                                'Нажмите кнопку ниже, чтобы принять приглашение, или откажитесь, если оно неактуально.'
+                                            )}
                                         </Typography>
                                     </Box>
                                     {previewLoading && (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <CircularProgress size={16} />
                                             <Typography variant="body2" color="text.secondary">
-                                                Загружаем детали приглашения…
+                                                {t('org.join.loadingDetails', 'Загружаем детали приглашения…')}
                                             </Typography>
                                         </Box>
                                     )}
@@ -265,8 +309,10 @@ export default function OrgJoinPage() {
                                     )}
                                     {inviteInfo?.expiresAt && (
                                         <Alert severity="info" variant="outlined">
-                                            Приглашение действительно до{' '}
-                                            {new Date(inviteInfo.expiresAt).toLocaleString('ru-RU')}
+                                            {t('org.join.expiresAt', 'Приглашение действительно до')} {' '}
+                                            {new Date(inviteInfo.expiresAt).toLocaleString(
+                                                locale === 'ru' ? 'ru-RU' : 'en-US'
+                                            )}
                                         </Alert>
                                     )}
                                     {actionResult && (
@@ -285,7 +331,9 @@ export default function OrgJoinPage() {
                                             disabled={actionsDisabled}
                                             size="large"
                                         >
-                                            {actionPending === 'accept' ? <CircularProgress size={18} /> : 'Принять'}
+                                            {actionPending === 'accept'
+                                                ? <CircularProgress size={18} />
+                                                : t('org.join.accept', 'Принять')}
                                         </Button>
                                         <Button
                                             variant="outlined"
@@ -294,7 +342,7 @@ export default function OrgJoinPage() {
                                             disabled={actionsDisabled}
                                             size="large"
                                         >
-                                            Отказаться
+                                            {t('org.join.decline', 'Отказаться')}
                                         </Button>
                                     </Stack>
                                 </Stack>
@@ -318,7 +366,10 @@ export default function OrgJoinPage() {
                             }}
                         >
                             <Typography variant="body2" color="text.secondary">
-                                Если ссылка устарела, попросите организатора отправить новый инвайт — срок действия ограничен.
+                                {t(
+                                    'org.join.footerHint',
+                                    'Если ссылка устарела, попросите организатора отправить новый инвайт — срок действия ограничен.'
+                                )}
                             </Typography>
                         </Paper>
                     </Stack>

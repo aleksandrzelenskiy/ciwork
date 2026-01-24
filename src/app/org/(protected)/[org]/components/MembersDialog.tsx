@@ -25,7 +25,9 @@ import {
 import type { SxProps, Theme } from '@mui/material/styles';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import HighlightOffIcon from '@mui/icons-material/HighlightOff';
 import LinkIcon from '@mui/icons-material/Link';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
@@ -33,8 +35,9 @@ import PersonSearchIcon from '@mui/icons-material/PersonSearch';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { MemberDTO, MemberStatus } from '@/types/org';
-import { makeAbsoluteUrl, roleLabelRu } from '@/utils/org';
+import { makeAbsoluteUrl, roleLabel } from '@/utils/org';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const initialsFromMember = (member: MemberDTO) => {
     const base = member.userName || member.userEmail || '';
@@ -65,6 +68,9 @@ type MembersDialogProps = {
     onEditRole: (member: MemberDTO) => void;
     onRemoveMember: (member: MemberDTO) => void;
     onInviteLinkCopied: () => void;
+    canApproveRequests: boolean;
+    onApproveRequest: (member: MemberDTO) => void;
+    onDeclineRequest: (member: MemberDTO) => void;
     cardBaseSx: SxProps<Theme>;
     cardHeaderSx: SxProps<Theme>;
     cardContentSx: SxProps<Theme>;
@@ -73,10 +79,16 @@ type MembersDialogProps = {
     dialogContentBg?: string;
 };
 
-function statusChip(status: MemberStatus) {
-    return status === 'active'
-        ? <Chip label="active" size="small" color="success" />
-        : <Chip label="invited" size="small" color="warning" variant="outlined" />;
+type TranslateFn = (key: string, fallback?: string, params?: Record<string, string | number>) => string;
+
+function statusChip(status: MemberStatus, t: TranslateFn) {
+    if (status === 'active') {
+        return <Chip label={t('org.members.status.active', 'active')} size="small" color="success" />;
+    }
+    if (status === 'invited') {
+        return <Chip label={t('org.members.status.invited', 'invited')} size="small" color="warning" variant="outlined" />;
+    }
+    return <Chip label={t('org.members.status.requested', 'requested')} size="small" color="info" variant="outlined" />;
 }
 
 export default function MembersDialog({
@@ -100,6 +112,9 @@ export default function MembersDialog({
     onEditRole,
     onRemoveMember,
     onInviteLinkCopied,
+    canApproveRequests,
+    onApproveRequest,
+    onDeclineRequest,
     cardBaseSx,
     cardHeaderSx,
     cardContentSx,
@@ -107,6 +122,7 @@ export default function MembersDialog({
     dialogActionsSx,
     dialogContentBg,
 }: MembersDialogProps) {
+    const { t } = useI18n();
     const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
     const [profileOpen, setProfileOpen] = React.useState(false);
 
@@ -136,7 +152,7 @@ export default function MembersDialog({
         >
             <DialogTitle sx={cardHeaderSx}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography variant="inherit">Участники организации</Typography>
+                    <Typography variant="inherit">{t('org.members.dialog.title', 'Участники организации')}</Typography>
                     <IconButton onClick={onClose}>
                         <CloseFullscreenIcon />
                     </IconButton>
@@ -146,11 +162,23 @@ export default function MembersDialog({
                 <Card variant="outlined" sx={cardBaseSx}>
                     <CardHeader
                         sx={cardHeaderSx}
-                        title={`Участники организации (${members.length})`}
-                        subheader={`Действующие и приглашённые участники ${orgSlug ?? ''}`}
+                        title={t('org.members.dialog.titleCount', 'Участники организации ({count})', {
+                            count: members.length,
+                        })}
+                        subheader={t(
+                            'org.members.dialog.subtitle',
+                            'Действующие и приглашённые участники {org}',
+                            { org: orgSlug ?? '' }
+                        )}
                         action={
                             <Stack direction="row" spacing={1}>
-                                <Tooltip title={showMemberSearch ? 'Скрыть поиск' : 'Поиск по участникам'}>
+                                <Tooltip
+                                    title={
+                                        showMemberSearch
+                                            ? t('org.members.search.hide', 'Скрыть поиск')
+                                            : t('org.members.search.show', 'Поиск по участникам')
+                                    }
+                                >
                                     <span>
                                         <IconButton
                                             onClick={onToggleSearch}
@@ -170,7 +198,7 @@ export default function MembersDialog({
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Обновить">
+                                <Tooltip title={t('common.refresh', 'Обновить')}>
                                     <span>
                                         <IconButton onClick={onRefresh} disabled={loading}>
                                             <RefreshIcon />
@@ -187,11 +215,11 @@ export default function MembersDialog({
                                     <TextField
                                         size="small"
                                         fullWidth
-                                        label="Поиск по имени или e-mail"
+                                        label={t('org.members.search.field', 'Поиск по имени или e-mail')}
                                         value={memberSearch}
                                         onChange={(event) => onSearchChange(event.target.value)}
                                     />
-                                    <Tooltip title="Сбросить поиск">
+                                    <Tooltip title={t('org.members.search.reset', 'Сбросить поиск')}>
                                         <IconButton onClick={onClearSearch}>
                                             <CancelIcon fontSize="small" />
                                         </IconButton>
@@ -203,22 +231,23 @@ export default function MembersDialog({
                         {loading ? (
                             <Stack direction="row" spacing={1} alignItems="center">
                                 <CircularProgress size={20} />
-                                <Typography>Загрузка участников…</Typography>
+                                <Typography>{t('org.members.loading', 'Загрузка участников…')}</Typography>
                             </Stack>
                         ) : (
                             <Table size="small">
                                 <TableHead>
                                     <TableRow>
-                                        <TableCell>Имя</TableCell>
-                                        <TableCell>E-mail</TableCell>
-                                        <TableCell>Роль</TableCell>
-                                        <TableCell>Статус</TableCell>
-                                        <TableCell align="right">Действия</TableCell>
+                                        <TableCell>{t('org.members.table.name', 'Имя')}</TableCell>
+                                        <TableCell>{t('org.members.table.email', 'E-mail')}</TableCell>
+                                        <TableCell>{t('org.members.table.role', 'Роль')}</TableCell>
+                                        <TableCell>{t('org.members.table.status', 'Статус')}</TableCell>
+                                        <TableCell align="right">{t('common.actions', 'Действия')}</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {filteredMembers.map((member) => {
                                         const isInvited = member.status === 'invited';
+                                        const isRequested = member.status === 'requested';
                                         const invitePath = `/org/${encodeURIComponent(String(orgSlug))}/join?token=${encodeURIComponent(
                                             member.inviteToken || ''
                                         )}`;
@@ -231,7 +260,14 @@ export default function MembersDialog({
                                             <TableRow
                                                 key={member._id}
                                                 sx={isInvited ? { opacity: 0.85 } : undefined}
-                                                title={isInvited ? 'Приглашение отправлено, ожидаем подтверждения' : undefined}
+                                                title={
+                                                    isInvited
+                                                        ? t(
+                                                              'org.members.invite.sent',
+                                                              'Приглашение отправлено, ожидаем подтверждения'
+                                                          )
+                                                        : undefined
+                                                }
                                             >
                                                 <TableCell>
                                                     <Stack direction="row" spacing={1} alignItems="center">
@@ -255,22 +291,24 @@ export default function MembersDialog({
                                                     </Stack>
                                                 </TableCell>
                                                 <TableCell>{member.userEmail}</TableCell>
-                                                <TableCell>{roleLabelRu(member.role)}</TableCell>
+                                                <TableCell>{roleLabel(member.role, t)}</TableCell>
                                                 <TableCell>
                                                     <Stack direction="row" spacing={1} alignItems="center">
-                                                        {statusChip(member.status)}
+                                                        {statusChip(member.status, t)}
                                                         {isInvited && member.inviteExpiresAt && (
                                                             <Chip
                                                                 size="small"
                                                                 variant="outlined"
-                                                                label={`до ${formatExpire(member.inviteExpiresAt)}`}
+                                                                label={t('org.members.invite.expires', 'до {date}', {
+                                                                    date: formatExpire(member.inviteExpiresAt),
+                                                                })}
                                                             />
                                                         )}
                                                     </Stack>
                                                 </TableCell>
                                                 <TableCell align="right">
                                                     {inviteLink && (
-                                                        <Tooltip title="Скопировать ссылку приглашения">
+                                                        <Tooltip title={t('org.members.invite.copy', 'Скопировать ссылку приглашения')}>
                                                             <IconButton
                                                                 onClick={() => {
                                                                     void navigator.clipboard.writeText(inviteLink).then(onInviteLinkCopied);
@@ -281,16 +319,31 @@ export default function MembersDialog({
                                                         </Tooltip>
                                                     )}
 
-                                                    {member.role !== 'owner' && (
-                                                        <Tooltip title="Изменить роль">
+                                                    {isRequested && canApproveRequests && (
+                                                        <>
+                                                            <Tooltip title={t('org.members.request.approve', 'Одобрить запрос')}>
+                                                                <IconButton onClick={() => onApproveRequest(member)}>
+                                                                    <CheckCircleOutlineIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                            <Tooltip title={t('org.members.request.decline', 'Отклонить запрос')}>
+                                                                <IconButton onClick={() => onDeclineRequest(member)}>
+                                                                    <HighlightOffIcon fontSize="small" />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        </>
+                                                    )}
+
+                                                    {member.role !== 'owner' && member.status !== 'requested' && (
+                                                        <Tooltip title={t('org.members.role.change', 'Изменить роль')}>
                                                             <IconButton onClick={() => onEditRole(member)}>
                                                                 <ManageAccountsIcon fontSize="small" />
                                                             </IconButton>
                                                         </Tooltip>
                                                     )}
 
-                                                    {member.role !== 'owner' && (
-                                                        <Tooltip title="Удалить участника">
+                                                    {member.role !== 'owner' && member.status !== 'requested' && (
+                                                        <Tooltip title={t('org.members.remove.title', 'Удалить участника')}>
                                                             <IconButton onClick={() => onRemoveMember(member)}>
                                                                 <DeleteOutlineOutlinedIcon fontSize="small" />
                                                             </IconButton>
@@ -305,7 +358,7 @@ export default function MembersDialog({
                                         <TableRow>
                                             <TableCell colSpan={5}>
                                                 <Typography color="text.secondary">
-                                                    Не найдено участников по запросу.
+                                                    {t('org.members.search.empty', 'Не найдено участников по запросу.')}
                                                 </Typography>
                                             </TableCell>
                                         </TableRow>
@@ -314,11 +367,11 @@ export default function MembersDialog({
                             </Table>
                         )}
                     </CardContent>
-                </Card>
-            </DialogContent>
-            <DialogActions sx={dialogActionsSx}>
-                <Button onClick={onClose}>Закрыть</Button>
-            </DialogActions>
+            </Card>
+        </DialogContent>
+        <DialogActions sx={dialogActionsSx}>
+                <Button onClick={onClose}>{t('common.close', 'Закрыть')}</Button>
+        </DialogActions>
 
             <ProfileDialog
                 open={profileOpen}

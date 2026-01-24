@@ -55,7 +55,7 @@ import Masonry from '@mui/lab/Masonry';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
-import { getPriorityIcon, getPriorityLabelRu, normalizePriority } from '@/utils/priorityIcons';
+import { getPriorityIcon, normalizePriority } from '@/utils/priorityIcons';
 import TaskGeoLocation from '@/app/workspace/components/TaskGeoLocation';
 import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
@@ -72,6 +72,7 @@ import { usePhotoReports } from '@/hooks/usePhotoReports';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type TaskEventDetailsValue = string | number | boolean | null | undefined;
 
@@ -83,6 +84,7 @@ type Change = {
 type TaskEventDetails = Record<string, TaskEventDetailsValue | Change>;
 
 export default function TaskDetailPage() {
+    const { t, locale } = useI18n();
     const params = useParams<{ taskId: string }>();
     const taskId = params?.taskId?.trim() || '';
     const router = useRouter();
@@ -195,32 +197,33 @@ export default function TaskDetailPage() {
     }, []);
 
     const formatDate = (v?: string | Date) => {
-        if (!v) return '—';
+        if (!v) return t('common.empty', '—');
         const d = new Date(v);
         if (Number.isNaN(d.getTime())) return String(v);
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        return `${dd}.${mm}.${yyyy}`;
+        return d.toLocaleDateString(locale === 'en' ? 'en-US' : 'ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        });
     };
 
     const formatDateTime = (v?: string | Date) => {
-        if (!v) return '—';
+        if (!v) return t('common.empty', '—');
         const d = new Date(v);
         if (Number.isNaN(d.getTime())) return String(v);
-        return d.toLocaleString('ru-RU');
+        return d.toLocaleString(locale === 'en' ? 'en-US' : 'ru-RU');
     };
 
     const formatRuble = (value?: number) => {
-        if (typeof value !== 'number') return '—';
-        return new Intl.NumberFormat('ru-RU', {
+        if (typeof value !== 'number') return t('common.empty', '—');
+        return new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'ru-RU', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-        }).format(value) + ' ₽';
+        }).format(value) + (locale === 'en' ? ' RUB' : ' ₽');
     };
 
     const renderCost = () => {
-        if (typeof task?.contractorPayment !== 'number') return '—';
+        if (typeof task?.contractorPayment !== 'number') return t('common.empty', '—');
         return formatRuble(task.contractorPayment);
     };
 
@@ -232,14 +235,14 @@ export default function TaskDetailPage() {
         if (names.length === 1) return names[0];
         if (names.length === 2) return `${names[0]}-${names[1]}`;
         if (names.length > 2) return names.join(', ');
-        return task?.bsNumber || '—';
-    }, [task?.bsLocation, task?.bsNumber]);
+        return task?.bsNumber || t('common.empty', '—');
+    }, [task?.bsLocation, task?.bsNumber, t]);
 
     const asText = (x: unknown): string => {
-        if (x === null || typeof x === 'undefined') return '—';
+        if (x === null || typeof x === 'undefined') return t('common.empty', '—');
         if (typeof x === 'string') {
             const d = new Date(x);
-            if (!Number.isNaN(d.getTime())) return d.toLocaleString('ru-RU');
+            if (!Number.isNaN(d.getTime())) return d.toLocaleString(locale === 'en' ? 'en-US' : 'ru-RU');
         }
         return String(x);
     };
@@ -254,18 +257,18 @@ export default function TaskDetailPage() {
             });
             const data = (await res.json()) as { task?: Task; error?: string };
             if (!res.ok || !data.task) {
-                setError(data.error || `Не удалось загрузить задачу (${res.status})`);
+                setError(data.error || t('tasks.error.loadTask', 'Не удалось загрузить задачу ({status})', { status: res.status }));
                 setTask(null);
             } else {
                 setTask(data.task);
             }
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Network error');
+            setError(e instanceof Error ? e.message : t('tasks.error.network', 'Network error'));
             setTask(null);
         } finally {
             setLoading(false);
         }
-    }, [taskId]);
+    }, [taskId, t]);
 
     React.useEffect(() => {
         const fetchUserRole = async () => {
@@ -380,12 +383,12 @@ export default function TaskDetailPage() {
     }, [task?.events]);
 
     const getEventTitle = (action: string, ev?: TaskEvent): string => {
-        if (action === 'created') return 'Задача создана';
-        if (action === 'status_changed_assigned') return 'Задача назначена исполнителю';
+        if (action === 'created') return t('tasks.events.created', 'Задача создана');
+        if (action === 'status_changed_assigned') return t('tasks.events.assigned', 'Задача назначена исполнителю');
         if (action === 'updated' && ev && isExecutorRemovedEvent(ev)) {
-            return 'Исполнитель снят с задачи';
+            return t('tasks.events.executorRemoved', 'Исполнитель снят с задачи');
         }
-        if (action === 'updated') return 'Задача изменена';
+        if (action === 'updated') return t('tasks.events.updated', 'Задача изменена');
         return action;
     };
 
@@ -421,7 +424,7 @@ export default function TaskDetailPage() {
             raw === null ||
             typeof raw === 'undefined'
         ) {
-            return raw === null || typeof raw === 'undefined' ? '—' : String(raw);
+        return raw === null || typeof raw === 'undefined' ? t('common.empty', '—') : String(raw);
         }
 
         return '—';
@@ -438,52 +441,65 @@ export default function TaskDetailPage() {
         'workCompletionDate',
     ]);
     const fieldLabels: Record<string, string> = {
-        taskName: 'Задача',
-        bsNumber: 'БС',
-        status: 'Статус',
-        priority: 'Приоритет',
-        executorName: 'Исполнитель',
-        executorEmail: 'Почта',
-        executorId: 'Исполнитель',
-        taskDescription: 'Описание',
-        publicDescription: 'Информация для подрядчика',
-        dueDate: 'Срок',
-        totalCost: 'Стоимость',
-        budget: 'Плановый бюджет',
-        contractorPayment: 'Оплата подрядчику',
-        taskType: 'Тип задачи',
-        visibility: 'Видимость',
-        publicStatus: 'Публичный статус',
-        publicModerationStatus: 'Статус модерации',
-        publicModerationComment: 'Комментарий модерации',
-        orderNumber: 'Номер заказа',
-        orderDate: 'Дата заказа',
-        orderSignDate: 'Дата подписания',
-        orderUrl: 'Ссылка на заказ',
-        bsAddress: 'Адрес',
-        workCompletionDate: 'Дата завершения',
-        applicationCount: 'Отклики',
-        allowInstantClaim: 'Мгновенный отклик',
-        currency: 'Валюта',
-        authorName: 'Автор',
-        authorEmail: 'Почта автора',
-        initiatorName: 'Инициатор',
-        initiatorEmail: 'Почта инициатора',
-        createdAt: 'Создана',
-        updatedAt: 'Обновлена',
+        taskName: t('tasks.fields.taskName', 'Задача'),
+        bsNumber: t('tasks.fields.bsNumber', 'БС'),
+        status: t('tasks.fields.status', 'Статус'),
+        priority: t('tasks.fields.priority', 'Приоритет'),
+        executorName: t('tasks.fields.executorName', 'Исполнитель'),
+        executorEmail: t('tasks.fields.executorEmail', 'Почта'),
+        executorId: t('tasks.fields.executorId', 'Исполнитель'),
+        taskDescription: t('tasks.fields.taskDescription', 'Описание'),
+        publicDescription: t('tasks.fields.publicDescription', 'Информация для подрядчика'),
+        dueDate: t('tasks.fields.dueDate', 'Срок'),
+        totalCost: t('tasks.fields.totalCost', 'Стоимость'),
+        budget: t('tasks.fields.budget', 'Плановый бюджет'),
+        contractorPayment: t('tasks.fields.contractorPayment', 'Оплата подрядчику'),
+        taskType: t('tasks.fields.taskType', 'Тип задачи'),
+        visibility: t('tasks.fields.visibility', 'Видимость'),
+        publicStatus: t('tasks.fields.publicStatus', 'Публичный статус'),
+        publicModerationStatus: t('tasks.fields.publicModerationStatus', 'Статус модерации'),
+        publicModerationComment: t('tasks.fields.publicModerationComment', 'Комментарий модерации'),
+        orderNumber: t('tasks.fields.orderNumber', 'Номер заказа'),
+        orderDate: t('tasks.fields.orderDate', 'Дата заказа'),
+        orderSignDate: t('tasks.fields.orderSignDate', 'Дата подписания'),
+        orderUrl: t('tasks.fields.orderUrl', 'Ссылка на заказ'),
+        bsAddress: t('tasks.fields.bsAddress', 'Адрес'),
+        workCompletionDate: t('tasks.fields.workCompletionDate', 'Дата завершения'),
+        applicationCount: t('tasks.fields.applicationCount', 'Отклики'),
+        allowInstantClaim: t('tasks.fields.allowInstantClaim', 'Мгновенный отклик'),
+        currency: t('tasks.fields.currency', 'Валюта'),
+        authorName: t('tasks.fields.authorName', 'Автор'),
+        authorEmail: t('tasks.fields.authorEmail', 'Почта автора'),
+        initiatorName: t('tasks.fields.initiatorName', 'Инициатор'),
+        initiatorEmail: t('tasks.fields.initiatorEmail', 'Почта инициатора'),
+        createdAt: t('tasks.fields.createdAt', 'Создана'),
+        updatedAt: t('tasks.fields.updatedAt', 'Обновлена'),
     };
 
-    const getDetailLabel = (key: string) => fieldLabels[key] ?? 'Поле';
+    const getDetailLabel = (key: string) => fieldLabels[key] ?? t('tasks.fields.unknown', 'Поле');
 
     const formatEventValue = (key: string, value: unknown): string => {
-        if (typeof value === 'boolean') return value ? 'Да' : 'Нет';
+        if (typeof value === 'boolean') return value ? t('common.yes', 'Да') : t('common.no', 'Нет');
         if (typeof value === 'string' && dateKeys.has(key)) return formatDateTime(value);
         if (typeof value === 'string' && statusKeys.has(key)) {
             const label = getStatusLabel(normalizeStatusTitle(value));
             return label || value;
         }
         if (typeof value === 'string' && key === 'priority') {
-            const label = getPriorityLabelRu(value);
+            const label = (() => {
+                switch (value) {
+                    case 'urgent':
+                        return t('priority.urgent', 'Срочный');
+                    case 'high':
+                        return t('priority.high', 'Высокий');
+                    case 'medium':
+                        return t('priority.medium', 'Средний');
+                    case 'low':
+                        return t('priority.low', 'Низкий');
+                    default:
+                        return t('priority.unknown', 'Не указан');
+                }
+            })();
             return label || value;
         }
         return asText(value);
@@ -500,7 +516,7 @@ export default function TaskDetailPage() {
                 : undefined;
         return {
             id: ev.authorId || detailAuthorId,
-            name: ev.author || detailAuthorName || '—',
+            name: ev.author || detailAuthorName || t('common.empty', '—'),
         };
     };
 
@@ -576,7 +592,7 @@ export default function TaskDetailPage() {
             if (!isManager) {
                 return (
                     <Typography variant="caption" display="block">
-                        Детали изменений доступны менеджеру
+                        {t('tasks.events.managerOnly', 'Детали изменений доступны менеджеру')}
                     </Typography>
                 );
             }
@@ -598,7 +614,7 @@ export default function TaskDetailPage() {
                 return (
                     <>
                         <Typography variant="caption" display="block">
-                            {getDetailLabel('executorName')}: —
+                            {getDetailLabel('executorName')}: {t('common.empty', '—')}
                         </Typography>
                         {statusLine && (
                             <Typography variant="caption" display="block">
@@ -691,10 +707,11 @@ export default function TaskDetailPage() {
         return '/tasks';
     }, [task?.orgId, task?.projectKey]);
 
-    const taskTitleLine = task?.taskName || task?.taskId || 'Задача';
-    const guideText = `Нажмите для загрузки фотоотчета по задаче ${taskTitleLine}${
-        bsNumberDisplay !== '—' ? ` ${bsNumberDisplay}` : ''
-    }`;
+    const taskTitleLine = task?.taskName || task?.taskId || t('tasks.defaultName', 'Задача');
+    const guideText = t('tasks.guide.upload', 'Нажмите для загрузки фотоотчета по задаче {task}{base}', {
+        task: taskTitleLine,
+        base: bsNumberDisplay !== t('common.empty', '—') ? ` ${bsNumberDisplay}` : '',
+    });
 
     const guidePadding = 10;
     const guideRect = uploadButtonRect
@@ -729,7 +746,7 @@ export default function TaskDetailPage() {
         if (!hasWorkItems) {
             return (
                 <Typography color="text.secondary" sx={{ px: 1 }}>
-                    Нет данных
+                    {t('common.noData', 'Нет данных')}
                 </Typography>
             );
         }
@@ -744,21 +761,21 @@ export default function TaskDetailPage() {
                 <Table size="small" stickyHeader>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Вид работ</TableCell>
-                            <TableCell>Кол-во</TableCell>
-                            <TableCell>Ед.</TableCell>
-                            <TableCell>Примечание</TableCell>
+                            <TableCell>{t('market.workItems.type', 'Вид работ')}</TableCell>
+                            <TableCell>{t('market.workItems.qty', 'Кол-во')}</TableCell>
+                            <TableCell>{t('market.workItems.unit', 'Ед.')}</TableCell>
+                            <TableCell>{t('market.workItems.note', 'Примечание')}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {task?.workItems?.map((item: WorkItem, idx) => (
                             <TableRow key={`work-${idx}`}>
-                                <TableCell sx={{ minWidth: 180 }}>{item.workType || '—'}</TableCell>
+                                <TableCell sx={{ minWidth: 180 }}>{item.workType || t('common.empty', '—')}</TableCell>
                                 <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                                    {Number.isFinite(item.quantity) ? item.quantity : '—'}
+                                    {Number.isFinite(item.quantity) ? item.quantity : t('common.empty', '—')}
                                 </TableCell>
-                                <TableCell sx={{ whiteSpace: 'nowrap' }}>{item.unit || '—'}</TableCell>
-                                <TableCell>{item.note || '—'}</TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap' }}>{item.unit || t('common.empty', '—')}</TableCell>
+                                <TableCell>{item.note || t('common.empty', '—')}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
@@ -804,7 +821,7 @@ export default function TaskDetailPage() {
     const handleDecisionConfirm = async () => {
         if (!pendingDecision) return;
         if (!taskId) {
-            setDecisionError('Не найден идентификатор задачи');
+            setDecisionError(t('tasks.error.missingId', 'Не найден идентификатор задачи'));
             return;
         }
         setDecisionLoading(true);
@@ -819,7 +836,7 @@ export default function TaskDetailPage() {
             });
             const data = (await res.json()) as { task?: Task; error?: string };
             if (!res.ok || !data.task) {
-                setDecisionError(data.error || 'Не удалось обновить задачу');
+                setDecisionError(data.error || t('tasks.error.update', 'Не удалось обновить задачу'));
                 return;
             }
 
@@ -830,7 +847,7 @@ export default function TaskDetailPage() {
             await loadTask();
             setPendingDecision(null);
         } catch (e) {
-            setDecisionError(e instanceof Error ? e.message : 'Неизвестная ошибка');
+            setDecisionError(e instanceof Error ? e.message : t('tasks.error.unknown', 'Неизвестная ошибка'));
         } finally {
             setDecisionLoading(false);
         }
@@ -921,7 +938,7 @@ export default function TaskDetailPage() {
 
     const handleCompleteConfirm = React.useCallback(async () => {
         if (!taskId) {
-            setCompleteError('Не найден идентификатор задачи');
+            setCompleteError(t('tasks.error.missingId', 'Не найден идентификатор задачи'));
             return;
         }
         setCompleteLoading(true);
@@ -936,7 +953,7 @@ export default function TaskDetailPage() {
             });
             const data = (await res.json()) as { task?: Task; error?: string };
             if (!res.ok || !data.task) {
-                setCompleteError(data.error || 'Не удалось завершить задачу');
+                setCompleteError(data.error || t('tasks.error.complete', 'Не удалось завершить задачу'));
                 return;
             }
 
@@ -948,11 +965,11 @@ export default function TaskDetailPage() {
                 !getHasPhotoReport(updatedTask);
             setPhotoGuideOpen(shouldShowGuide);
         } catch (e) {
-            setCompleteError(e instanceof Error ? e.message : 'Неизвестная ошибка');
+            setCompleteError(e instanceof Error ? e.message : t('tasks.error.unknown', 'Неизвестная ошибка'));
         } finally {
             setCompleteLoading(false);
         }
-    }, [getHasPhotoReport, taskId]);
+    }, [getHasPhotoReport, taskId, t]);
 
     if (loading) {
         return (
@@ -981,7 +998,7 @@ export default function TaskDetailPage() {
                     onClick={() => void loadTask()}
                     sx={{ borderRadius: UI_RADIUS.button }}
                 >
-                    Повторить
+                    {t('common.retry', 'Повторить')}
                 </Button>
             </Container>
         );
@@ -994,14 +1011,14 @@ export default function TaskDetailPage() {
                 maxWidth="xl"
                 sx={{ px: pageGutter, py: { xs: 3, sm: 4 }, textAlign: 'center' }}
             >
-                <Typography gutterBottom>Задача не найдена</Typography>
+                <Typography gutterBottom>{t('tasks.notFound', 'Задача не найдена')}</Typography>
                 <Button
                     variant="text"
                     onClick={() => router.push('/tasks')}
                     startIcon={<ArrowBackIcon />}
                     sx={{ borderRadius: UI_RADIUS.button }}
                 >
-                    К списку задач
+                    {t('tasks.backToList', 'К списку задач')}
                 </Button>
             </Container>
         );
@@ -1034,16 +1051,16 @@ export default function TaskDetailPage() {
                     textAlign: 'center',
                 }}
             >
-                <Typography variant="h6">Страница доступна только подрядчикам</Typography>
+                <Typography variant="h6">{t('tasks.restricted.contractorsOnly', 'Страница доступна только подрядчикам')}</Typography>
                 <Typography color="text.secondary">
-                    Пожалуйста, используйте соответствующий личный кабинет.
+                    {t('tasks.restricted.contractorsHint', 'Пожалуйста, используйте соответствующий личный кабинет.')}
                 </Typography>
                     <Button
                         variant="contained"
                         onClick={() => router.push(orgTasksHref)}
                         sx={{ borderRadius: UI_RADIUS.button }}
                     >
-                    К списку задач
+                    {t('tasks.backToList', 'К списку задач')}
                 </Button>
             </Container>
         );
@@ -1073,16 +1090,18 @@ export default function TaskDetailPage() {
                     textAlign: 'center',
                 }}
             >
-                <Typography variant="h6">Задача доступна только назначенному исполнителю</Typography>
+                <Typography variant="h6">
+                    {t('tasks.restricted.executorOnly', 'Задача доступна только назначенному исполнителю')}
+                </Typography>
                 <Typography color="text.secondary">
-                    Для просмотра нужно, чтобы задача была назначена вам.
+                    {t('tasks.restricted.executorHint', 'Для просмотра нужно, чтобы задача была назначена вам.')}
                 </Typography>
                 <Button
                     variant="contained"
                     onClick={() => router.push('/tasks')}
                     sx={{ borderRadius: UI_RADIUS.button }}
                 >
-                    К списку задач
+                    {t('tasks.backToList', 'К списку задач')}
                 </Button>
             </Container>
         );
@@ -1108,7 +1127,7 @@ export default function TaskDetailPage() {
                     gap={{ xs: 1.5, md: 1 }}
                 >
                     <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ minWidth: 0, width: '100%' }}>
-                        <Tooltip title="Назад">
+                        <Tooltip title={t('common.back', 'Назад')}>
                             <IconButton onClick={() => router.back()} sx={getIconButtonSx()}>
                                 <ArrowBackIcon />
                             </IconButton>
@@ -1116,7 +1135,7 @@ export default function TaskDetailPage() {
                         <Box sx={{ minWidth: 0, flex: 1 }}>
                             <Stack direction="row" gap={1} alignItems="center" flexWrap="wrap" sx={{ rowGap: 0.75 }}>
                                 <Typography variant="h6" sx={{ wordBreak: 'break-word', minWidth: 0 }}>
-                                    {task.taskName || 'Задача'}
+                                    {task.taskName || t('tasks.defaultName', 'Задача')}
                                 </Typography>
                                 {bsNumberDisplay !== '—' && (
                                     <Typography variant="h6" sx={{ wordBreak: 'break-word' }}>
@@ -1151,7 +1170,7 @@ export default function TaskDetailPage() {
                                     color="text.secondary"
                                     sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 0 }}
                                 >
-                                    Проект:{' '}
+                                    {t('tasks.project', 'Проект:')}{' '}
                                     {task.projectKey && task.orgId ? (
                                         <Link
                                             href={`/org/${encodeURIComponent(task.orgId ?? '')}/projects/${encodeURIComponent(
@@ -1205,25 +1224,27 @@ export default function TaskDetailPage() {
                                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                             >
                                 <InfoOutlinedIcon fontSize="small" />
-                                Информация
+                                {t('market.details.info', 'Информация')}
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
 
                             <Stack spacing={1}>
                                 <Typography variant="body1">
-                                    <strong>Базовая станция:</strong> {bsNumberDisplay}
+                                    <strong>{t('market.details.base', 'Базовая станция:')}</strong> {bsNumberDisplay}
                                 </Typography>
 
                                 <Typography variant="body1">
-                                    <strong>Адрес:</strong> {task.bsAddress || 'Адрес не указан'}
+                                    <strong>{t('market.details.address', 'Адрес:')}</strong>{' '}
+                                    {task.bsAddress || t('tasks.addressMissing', 'Адрес не указан')}
                                 </Typography>
 
                                 <Typography variant="body1">
-                                    <strong>Срок:</strong> {task.dueDate ? formatDate(task.dueDate) : '—'}
+                                    <strong>{t('tasks.dueDate', 'Срок:')}</strong>{' '}
+                                    {task.dueDate ? formatDate(task.dueDate) : t('common.empty', '—')}
                                 </Typography>
                                 {task.workCompletionDate && (
                                     <Typography variant="body1">
-                                        <strong>Дата завершения:</strong>{' '}
+                                        <strong>{t('tasks.completedAt', 'Дата завершения:')}</strong>{' '}
                                         {formatDate(task.workCompletionDate)}
                                     </Typography>
                                 )}
@@ -1236,7 +1257,7 @@ export default function TaskDetailPage() {
                                         flexWrap: 'wrap',
                                     }}
                                 >
-                                    <strong>Приоритет:</strong>
+                                    <strong>{t('market.details.priority', 'Приоритет:')}</strong>
                                     <Box
                                         component="span"
                                         sx={{
@@ -1249,20 +1270,21 @@ export default function TaskDetailPage() {
                                             (normalizePriority(task.priority as string) ?? 'medium') as
                                                 'urgent' | 'high' | 'medium' | 'low'
                                         )}
-                                        <span>{task.priority || '—'}</span>
+                                        <span>{task.priority || t('common.empty', '—')}</span>
                                     </Box>
                                 </Typography>
 
                                 <Typography variant="body1">
-                                    <strong>Стоимость:</strong> {renderCost()}
+                                    <strong>{t('tasks.cost', 'Стоимость:')}</strong> {renderCost()}
                                 </Typography>
                                 <Typography variant="body1">
-                                    <strong>Тип задачи:</strong> {task.taskType || '—'}
+                                    <strong>{t('market.details.taskType', 'Тип задачи:')}</strong>{' '}
+                                    {task.taskType || t('common.empty', '—')}
                                 </Typography>
 
                                 {task.authorName && (
                                     <Typography variant="body1">
-                                        <strong>Автор:</strong>{' '}
+                                        <strong>{t('tasks.author', 'Автор:')}</strong>{' '}
                                         {task.authorId ? (
                                             <Button
                                                 variant="text"
@@ -1288,7 +1310,7 @@ export default function TaskDetailPage() {
 
                                 {(task.initiatorName || task.initiatorEmail) && (
                                     <Typography variant="body1">
-                                        <strong>Инициатор:</strong>{' '}
+                                        <strong>{t('tasks.initiator', 'Инициатор:')}</strong>{' '}
                                         {task.initiatorName && task.initiatorEmail
                                             ? `${task.initiatorName} (${task.initiatorEmail})`
                                             : task.initiatorName || task.initiatorEmail}
@@ -1305,12 +1327,12 @@ export default function TaskDetailPage() {
                                     }}
                                 >
                                     <Typography variant="body1">
-                                        <strong>Создана:</strong>{' '}
-                                        {task.createdAt ? formatDate(task.createdAt) : '—'}
+                                        <strong>{t('tasks.createdAt', 'Создана:')}</strong>{' '}
+                                        {task.createdAt ? formatDate(task.createdAt) : t('common.empty', '—')}
                                     </Typography>
                                     <Typography variant="body1">
-                                        <strong>Обновлена:</strong>{' '}
-                                        {task.updatedAt ? formatDateTime(task.updatedAt) : '—'}
+                                        <strong>{t('tasks.updatedAt', 'Обновлена:')}</strong>{' '}
+                                        {task.updatedAt ? formatDateTime(task.updatedAt) : t('common.empty', '—')}
                                     </Typography>
                                 </Box>
 
@@ -1344,7 +1366,7 @@ export default function TaskDetailPage() {
                                                     },
                                                 }}
                                             >
-                                                Принять
+                                                {t('tasks.decisions.accept', 'Принять')}
                                             </Button>
                                             <Button
                                                 variant="contained"
@@ -1368,7 +1390,7 @@ export default function TaskDetailPage() {
                                                     },
                                                 }}
                                             >
-                                                Отказать
+                                                {t('tasks.decisions.reject', 'Отказать')}
                                             </Button>
                                         </Stack>
                                     </Stack>
@@ -1389,7 +1411,7 @@ export default function TaskDetailPage() {
                                                 fontWeight: 700,
                                             }}
                                         >
-                                            Завершено
+                                            {t('tasks.complete', 'Завершено')}
                                         </Button>
                                     </Box>
                                 )}
@@ -1405,7 +1427,7 @@ export default function TaskDetailPage() {
                                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                             >
                                 <PhotoLibraryOutlinedIcon fontSize="small" />
-                                Фотоотчеты
+                                {t('reports.list.title', 'Фотоотчеты')}
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
                             <Stack
@@ -1429,7 +1451,9 @@ export default function TaskDetailPage() {
                                             fontWeight: 700,
                                         }}
                                     >
-                                        {isReportReadOnly ? 'Посмотреть отчет' : 'Загрузить фото'}
+                                        {isReportReadOnly
+                                            ? t('tasks.reports.view', 'Посмотреть отчет')
+                                            : t('tasks.reports.upload', 'Загрузить фото')}
                                     </Button>
                                 )}
                             </Stack>
@@ -1445,7 +1469,7 @@ export default function TaskDetailPage() {
                                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                             >
                                 <LinkOutlinedIcon fontSize="small" />
-                                Связанные задачи
+                                {t('tasks.related', 'Связанные задачи')}
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
                             <Stack spacing={1}>
@@ -1554,7 +1578,7 @@ export default function TaskDetailPage() {
                                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                             >
                                 <DescriptionOutlinedIcon fontSize="small" />
-                                Описание
+                                {t('market.details.description', 'Описание')}
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
                             <Typography sx={{ whiteSpace: 'pre-wrap' }}>{task.taskDescription}</Typography>
@@ -1589,10 +1613,10 @@ export default function TaskDetailPage() {
                                             }}
                                         >
                                             <TocOutlinedIcon fontSize="small" />
-                                            Состав работ
+                                            {t('market.workItems.title', 'Состав работ')}
                                         </Typography>
 
-                                        <Tooltip title="Развернуть на весь экран">
+                                        <Tooltip title={t('market.workItems.fullscreen', 'Развернуть на весь экран')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={(e) => {
@@ -1622,7 +1646,7 @@ export default function TaskDetailPage() {
                                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                             >
                                 <AttachFileOutlinedIcon fontSize="small" />
-                                Вложения
+                                {t('tasks.attachments', 'Вложения')}
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
                             <Stack gap={1}>
@@ -1634,7 +1658,10 @@ export default function TaskDetailPage() {
                                         rel="noreferrer"
                                         underline="hover"
                                     >
-                                        {extractFileNameFromUrl(url, `Вложение ${idx + 1}`)}
+                                        {extractFileNameFromUrl(
+                                            url,
+                                            t('tasks.attachment', 'Вложение {index}', { index: idx + 1 })
+                                        )}
                                     </Link>
                                 ))}
                             </Stack>
@@ -1669,10 +1696,10 @@ export default function TaskDetailPage() {
                                         }}
                                     >
                                         <CommentOutlinedIcon fontSize="small" />
-                                        Комментарии
+                                        {t('tasks.comments', 'Комментарии')}
                                     </Typography>
 
-                                    <Tooltip title="Развернуть на весь экран">
+                                    <Tooltip title={t('market.workItems.fullscreen', 'Развернуть на весь экран')}>
                                         <IconButton
                                             size="small"
                                             onClick={(e) => {
@@ -1706,14 +1733,14 @@ export default function TaskDetailPage() {
                                     }}
                                 >
                                     <HistoryIcon fontSize="small" />
-                                    История
+                                    {t('tasks.history', 'История')}
                                 </Typography>
                             </AccordionSummary>
                             <AccordionDetails sx={accordionDetailsSx}>
                                 <Divider sx={{ mb: 1.5 }} />
                                 {sortedEvents.length === 0 ? (
                                     <Typography color="text.secondary" sx={{ pb: 1 }}>
-                                        История пуста
+                                        {t('tasks.history.empty', 'История пуста')}
                                     </Typography>
                                 ) : (
                                     <Timeline
@@ -1750,7 +1777,7 @@ export default function TaskDetailPage() {
                                                         {getEventTitle(ev.action, ev)}
                                                     </Typography>
                                             <Typography variant="body2" color="text.secondary">
-                                                Автор:{' '}
+                                                {t('tasks.author', 'Автор:')}{' '}
                                                 {(() => {
                                                     const author = getEventAuthorInfo(ev);
                                                     return author.id ? (
@@ -1850,7 +1877,7 @@ export default function TaskDetailPage() {
                         }}
                     >
                         <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 0.5 }}>
-                            Фотоотчет
+                            {t('reports.header.title', 'Фотоотчет')}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                             {guideText}
@@ -1902,12 +1929,19 @@ export default function TaskDetailPage() {
                     },
                 }}
             >
-                <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>Завершить задачу?</DialogTitle>
+                <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>
+                    {t('tasks.complete.title', 'Завершить задачу?')}
+                </DialogTitle>
                 <DialogContent sx={{ pt: 1 }}>
                     <Typography variant="body1" sx={{ mb: 1.5 }}>
-                        Подтвердите, что работы по задаче «{task.taskName || task.taskId || 'Задача'}»
-                        {bsNumberDisplay !== '—' ? ` (БС ${bsNumberDisplay})` : ''} завершены. Статус будет изменен на
-                        «Выполнено», а участники получат уведомление.
+                        {t(
+                            'tasks.complete.confirm',
+                            'Подтвердите, что работы по задаче «{task}»{base} завершены. Статус будет изменен на «Выполнено», а участники получат уведомление.',
+                            {
+                                task: task.taskName || task.taskId || t('tasks.defaultName', 'Задача'),
+                                base: bsNumberDisplay !== t('common.empty', '—') ? ` (БС ${bsNumberDisplay})` : '',
+                            }
+                        )}
                     </Typography>
                     {completeError && (
                         <Typography variant="body2" color="error" fontWeight={600}>
@@ -1939,7 +1973,7 @@ export default function TaskDetailPage() {
                             },
                         }}
                     >
-                        Отмена
+                        {t('common.cancel', 'Отмена')}
                     </Button>
                     <Button
                         variant="contained"
@@ -1959,7 +1993,9 @@ export default function TaskDetailPage() {
                             },
                         }}
                     >
-                        {completeLoading ? 'Сохранение...' : 'Подтвердить'}
+                        {completeLoading
+                            ? t('tasks.saving', 'Сохранение...')
+                            : t('common.confirm', 'Подтвердить')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1982,23 +2018,37 @@ export default function TaskDetailPage() {
                 }}
             >
                 <DialogTitle sx={{ fontWeight: 700, pb: 0.5 }}>
-                    {pendingDecision === 'accept' ? 'Принять задачу' : 'Отказаться от задачи'}
+                    {pendingDecision === 'accept'
+                        ? t('tasks.decisions.acceptTitle', 'Принять задачу')
+                        : t('tasks.decisions.rejectTitle', 'Отказаться от задачи')}
                 </DialogTitle>
                 <DialogContent sx={{ pt: 1 }}>
                     <Typography variant="body1" sx={{ mb: 1.5 }}>
                         {pendingDecision === 'accept' ? (
                             <>
-                                Вы подтверждаете что готовы принять задачу {task.taskName}{' '}
-                                {bsNumberDisplay !== '—' ? bsNumberDisplay : ''}? Срок выполнения -{' '}
+                                {t(
+                                    'tasks.decisions.acceptText',
+                                    'Вы подтверждаете что готовы принять задачу {task}{base}? Срок выполнения -',
+                                    {
+                                        task: task.taskName || t('tasks.defaultName', 'Задача'),
+                                        base: bsNumberDisplay !== t('common.empty', '—') ? ` ${bsNumberDisplay}` : '',
+                                    }
+                                )}{' '}
                                 <Box component="span" sx={{ fontWeight: 700 }}>
-                                    {task.dueDate ? formatDate(task.dueDate) : '—'}
+                                    {task.dueDate ? formatDate(task.dueDate) : t('common.empty', '—')}
                                 </Box>
                                 .
                             </>
                         ) : (
                             <>
-                                Вы уверены что хотите отказаться от задачи {task.taskName}{' '}
-                                {bsNumberDisplay !== '—' ? bsNumberDisplay : ''}?
+                                {t(
+                                    'tasks.decisions.rejectText',
+                                    'Вы уверены что хотите отказаться от задачи {task}{base}?',
+                                    {
+                                        task: task.taskName || t('tasks.defaultName', 'Задача'),
+                                        base: bsNumberDisplay !== t('common.empty', '—') ? ` ${bsNumberDisplay}` : '',
+                                    }
+                                )}
                             </>
                         )}
                     </Typography>
@@ -2032,7 +2082,7 @@ export default function TaskDetailPage() {
                             },
                         }}
                     >
-                        Отмена
+                        {t('common.cancel', 'Отмена')}
                     </Button>
                     <Button
                         variant="contained"
@@ -2059,10 +2109,10 @@ export default function TaskDetailPage() {
                         }}
                     >
                         {decisionLoading
-                            ? 'Сохранение...'
+                            ? t('tasks.saving', 'Сохранение...')
                             : pendingDecision === 'accept'
-                              ? 'Принять'
-                              : 'Отказать'}
+                              ? t('tasks.decisions.accept', 'Принять')
+                              : t('tasks.decisions.reject', 'Отказать')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -2079,7 +2129,7 @@ export default function TaskDetailPage() {
                     }}
                 >
                     <Typography variant="h6" fontWeight={600}>
-                        Состав работ
+                        {t('market.workItems.title', 'Состав работ')}
                     </Typography>
                     <IconButton onClick={() => setWorkItemsFullScreen(false)}>
                         <CloseFullscreenIcon />
@@ -2101,7 +2151,7 @@ export default function TaskDetailPage() {
                     }}
                 >
                     <Typography variant="h6" fontWeight={600}>
-                        Комментарии
+                        {t('tasks.comments', 'Комментарии')}
                     </Typography>
                     <IconButton onClick={() => setCommentsFullScreen(false)}>
                         <CloseFullscreenIcon />

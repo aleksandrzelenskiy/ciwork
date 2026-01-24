@@ -32,6 +32,7 @@ import { getStatusLabel } from '@/utils/statusLabels';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface MiniTaskTableProps {
   role: EffectiveOrgRole | null;
@@ -71,6 +72,7 @@ export default function MiniTaskTable({
   ctaHref,
   maxItems,
 }: MiniTaskTableProps) {
+  const { t, locale } = useI18n();
   const theme = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,19 +87,19 @@ export default function MiniTaskTable({
       try {
         const res = await fetch(withBasePath('/api/tasks'));
         if (!res.ok) {
-          setError('Не удалось загрузить задачи');
+          setError(t('tasks.error.load', 'Не удалось загрузить задачи'));
           return;
         }
         const data = await res.json();
         setTasks(data.tasks);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
+        setError(err instanceof Error ? err.message : t('common.error.unknown', 'Неизвестная ошибка'));
       } finally {
         setLoading(false);
       }
     };
     fetchTasks();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!shouldUseOrgRoutes) return;
@@ -218,7 +220,7 @@ export default function MiniTaskTable({
   if (lastFive.length === 0) {
     return (
       <Typography textAlign='center' mt={2}>
-        Задач не найдено
+        {t('tasks.empty', 'Задач не найдено')}
       </Typography>
     );
   }
@@ -239,10 +241,10 @@ export default function MiniTaskTable({
             <TableHead>
               <TableRow>
                 <TableCell align='center'>ID</TableCell>
-                <TableCell align='center'>Задача</TableCell>
-                <TableCell align='center'>Срок</TableCell>
-                <TableCell align='center'>Статус</TableCell>
-                <TableCell align='center'>Приоритет</TableCell>
+                <TableCell align='center'>{t('tasks.table.task', 'Задача')}</TableCell>
+                <TableCell align='center'>{t('tasks.table.dueDate', 'Срок')}</TableCell>
+                <TableCell align='center'>{t('tasks.table.status', 'Статус')}</TableCell>
+                <TableCell align='center'>{t('tasks.table.priority', 'Приоритет')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -260,7 +262,7 @@ export default function MiniTaskTable({
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {new Date(task.dueDate).toLocaleDateString()}
+                    {new Date(task.dueDate).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US')}
                   </TableCell>
                   <TableCell align='center'>
                     <Chip
@@ -307,7 +309,7 @@ export default function MiniTaskTable({
         }}
       >
         <Link href={resolvedCtaHref}>
-          <Button variant='text'>{ctaLabel ?? 'Все задачи'}</Button>
+          <Button variant='text'>{ctaLabel ?? t('tasks.all', 'Все задачи')}</Button>
         </Link>
       </Box>
     </Box>

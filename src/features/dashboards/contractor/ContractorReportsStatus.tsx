@@ -8,12 +8,14 @@ import { getStatusLabel } from '@/utils/statusLabels';
 import { getStatusColor } from '@/utils/statusColors';
 import { fetchUserContext } from '@/app/utils/userContext';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const REPORT_STATUSES = ['Pending', 'Issues', 'Fixed', 'Agreed'] as const;
 
 type ReportStatus = (typeof REPORT_STATUSES)[number];
 
 export default function ContractorReportsStatus() {
+    const { t } = useI18n();
     const theme = useTheme();
     const [reports, setReports] = useState<ReportClient[]>([]);
     const [loading, setLoading] = useState(true);
@@ -32,19 +34,19 @@ export default function ContractorReportsStatus() {
 
                 const res = reportsResponse;
                 if (!res.ok) {
-                    setError('Ошибка при загрузке фотоотчетов');
+                    setError(t('reports.error.load', 'Ошибка при загрузке фотоотчетов'));
                     return;
                 }
                 const data = await res.json();
                 setReports(data.reports || []);
             } catch (err: unknown) {
-                setError(err instanceof Error ? err.message : 'Unknown error');
+                setError(err instanceof Error ? err.message : t('common.error.unknown', 'Unknown error'));
             } finally {
                 setLoading(false);
             }
         }
         fetchReports();
-    }, []);
+    }, [t]);
 
     const statusCounts = useMemo(() => {
         const counts: Record<ReportStatus, number> = {
@@ -89,7 +91,9 @@ export default function ContractorReportsStatus() {
     return (
         <Box>
             <Typography variant='body2' color='text.secondary' sx={{ mb: 1 }}>
-                {`Всего базовых станций в отчетах: ${totalReports}`}
+                {t('reports.totalBases', 'Всего базовых станций в отчетах: {count}', {
+                    count: totalReports,
+                })}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                 {REPORT_STATUSES.map((status) => (

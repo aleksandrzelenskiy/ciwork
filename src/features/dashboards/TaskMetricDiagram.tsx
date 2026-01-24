@@ -19,6 +19,7 @@ import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
 import { getStatusLabel, STATUS_ORDER } from '@/utils/statusLabels';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface ChartData {
   name: string;
@@ -58,6 +59,7 @@ export default function TaskMetricDiagram({
   role,
   clerkUserId,
 }: TaskMetricDiagramProps) {
+  const { t } = useI18n();
   const theme = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ export default function TaskMetricDiagram({
       try {
         const res = await fetch(withBasePath('/api/tasks'));
         if (!res.ok) {
-          setError('Не удалось загрузить задачи');
+          setError(t('tasks.error.load', 'Не удалось загрузить задачи'));
           return;
         }
         const data = await res.json();
@@ -80,14 +82,14 @@ export default function TaskMetricDiagram({
         if (err instanceof Error) {
           setError(err.message);
         } else {
-          setError('Unknown error');
+          setError(t('common.error.unknown', 'Unknown error'));
         }
       } finally {
         setLoading(false);
       }
     }
     fetchTasks();
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!shouldUseOrgRoutes) return;
@@ -220,7 +222,7 @@ export default function TaskMetricDiagram({
     return (
       <div style={{ textAlign: 'center' }}>
         <Typography variant='h6' gutterBottom>
-          {`Всего задач: ${totalCount}`}
+          {t('tasks.total', 'Всего задач: {count}', { count: totalCount })}
         </Typography>
         <div
           style={{
@@ -268,7 +270,7 @@ export default function TaskMetricDiagram({
 
   return (
     <Box>
-      <Typography variant='h6'>Статусы задач</Typography>
+      <Typography variant='h6'>{t('tasks.statuses', 'Статусы задач')}</Typography>
       <Box width='100%' height={350}>
         <ResponsiveContainer>
           <PieChart>

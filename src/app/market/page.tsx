@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
 import 'dayjs/locale/ru';
+import 'dayjs/locale/en';
 import {
     Box,
     Container,
@@ -61,9 +62,9 @@ import type { PriorityLevel, TaskType } from '@/app/types/taskTypes';
 import type { TaskApplication } from '@/app/types/application';
 import MarketLocations, { type MarketPublicTask } from '@/features/market/MarketLocations';
 import { REGION_MAP } from '@/app/utils/regions';
-import { getPriorityLabelRu } from '@/utils/priorityIcons';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 dayjs.locale('ru');
 
@@ -133,41 +134,6 @@ const glassPaperStyles = (theme: { palette: { mode: string } }) => ({
             : '0 30px 90px rgba(15,23,42,0.08)',
 });
 
-const mapMarketTaskToPublicTask = (task: MarketPublicTask): PublicTask => ({
-    _id: task._id,
-    taskName: task.taskName || 'Задача',
-    taskDescription: task.taskDescription,
-    bsNumber: task.bsNumber,
-    bsAddress: task.bsAddress,
-    bsLocation: task.bsLocation?.map((loc) => ({
-        name: loc?.name,
-        coordinates: loc?.coordinates ?? undefined,
-        address: loc?.address,
-    })),
-    orgSlug: task.orgSlug,
-    orgName: task.orgName,
-    budget: task.budget ?? undefined,
-    currency: task.currency,
-    dueDate: task.dueDate,
-    priority: task.priority,
-    taskType: task.taskType,
-    attachments: task.attachments,
-    workItems: task.workItems,
-    publicDescription: task.publicDescription,
-    publicStatus: task.publicStatus,
-    visibility: task.visibility,
-    applicationCount: task.applicationCount,
-    project: task.project,
-    myApplication: task.myApplication,
-});
-
-const statusChipMap: Record<PublicTaskStatus, { label: string; color: 'default' | 'success' | 'warning' }> = {
-    open: { label: 'Открыта', color: 'success' },
-    in_review: { label: 'На рассмотрении', color: 'warning' },
-    assigned: { label: 'Назначена', color: 'default' },
-    closed: { label: 'Закрыта', color: 'default' },
-};
-
 const CardItem = styled(Paper)(({ theme }) => ({
     backgroundColor: '#fff',
     padding: theme.spacing(2),
@@ -178,51 +144,14 @@ const CardItem = styled(Paper)(({ theme }) => ({
     }),
 }));
 
-function getBudgetDisplay(budget?: number, currency?: string): BudgetDisplay {
-    const code = currency || 'RUB';
-    const isRuble = code === 'RUB';
-
-    if (!budget || budget <= 0) {
-        return { label: 'Бюджет не указан', amount: null, currencyCode: isRuble ? '₽' : code, isRuble };
-    }
-
-    const fmt = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
-
-    return {
-        label: `${fmt.format(budget)} ${isRuble ? '₽' : code}`,
-        amount: fmt.format(budget),
-        currencyCode: isRuble ? '₽' : code,
-        isRuble,
-    };
-}
-
 function getRegionLabel(code?: string) {
     if (!code) return '';
     const region = REGION_MAP.get(code) || REGION_MAP.get(code.toUpperCase());
     return region?.label || '';
 }
 
-function formatDateRu(dateInput?: string) {
-    if (!dateInput) return '—';
-    const date = new Date(dateInput);
-    if (Number.isNaN(date.getTime())) return '—';
-    return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
-}
-
-function getTaskTypeLabel(taskType?: TaskType) {
-    switch (taskType) {
-        case 'construction':
-            return 'Строительная';
-        case 'installation':
-            return 'Инсталляционная';
-        case 'document':
-            return 'Документальная';
-        default:
-            return 'Не указан';
-    }
-}
-
 export default function MarketplacePage() {
+    const { t, locale } = useI18n();
     const [tasks, setTasks] = useState<PublicTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -253,6 +182,110 @@ export default function MarketplacePage() {
     });
     const [userContext, setUserContext] = useState<UserContext | null>(null);
     const [contextError, setContextError] = useState<string | null>(null);
+
+    useEffect(() => {
+        dayjs.locale(locale === 'en' ? 'en' : 'ru');
+    }, [locale]);
+
+    const mapMarketTaskToPublicTask = (task: MarketPublicTask): PublicTask => ({
+        _id: task._id,
+        taskName: task.taskName || t('tasks.defaultName', 'Задача'),
+        taskDescription: task.taskDescription,
+        bsNumber: task.bsNumber,
+        bsAddress: task.bsAddress,
+        bsLocation: task.bsLocation?.map((loc) => ({
+            name: loc?.name,
+            coordinates: loc?.coordinates ?? undefined,
+            address: loc?.address,
+        })),
+        orgSlug: task.orgSlug,
+        orgName: task.orgName,
+        budget: task.budget ?? undefined,
+        currency: task.currency,
+        dueDate: task.dueDate,
+        priority: task.priority,
+        taskType: task.taskType,
+        attachments: task.attachments,
+        workItems: task.workItems,
+        publicDescription: task.publicDescription,
+        publicStatus: task.publicStatus,
+        visibility: task.visibility,
+        applicationCount: task.applicationCount,
+        project: task.project,
+        myApplication: task.myApplication,
+    });
+
+    const statusChipMap = useMemo<Record<PublicTaskStatus, { label: string; color: 'default' | 'success' | 'warning' }>>(
+        () => ({
+            open: { label: t('market.status.open', 'Открыта'), color: 'success' },
+            in_review: { label: t('market.status.inReview', 'На рассмотрении'), color: 'warning' },
+            assigned: { label: t('market.status.assigned', 'Назначена'), color: 'default' },
+            closed: { label: t('market.status.closed', 'Закрыта'), color: 'default' },
+        }),
+        [t]
+    );
+
+    const getBudgetDisplay = (budget?: number, currency?: string): BudgetDisplay => {
+        const code = currency || 'RUB';
+        const isRuble = code === 'RUB';
+
+        if (!budget || budget <= 0) {
+            return {
+                label: t('market.budget.none', 'Бюджет не указан'),
+                amount: null,
+                currencyCode: isRuble ? '₽' : code,
+                isRuble,
+            };
+        }
+
+        const fmt = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'ru-RU', { maximumFractionDigits: 0 });
+
+        return {
+            label: `${fmt.format(budget)} ${isRuble ? '₽' : code}`,
+            amount: fmt.format(budget),
+            currencyCode: isRuble ? '₽' : code,
+            isRuble,
+        };
+    };
+
+    const formatDate = (dateInput?: string) => {
+        if (!dateInput) return '—';
+        const date = new Date(dateInput);
+        if (Number.isNaN(date.getTime())) return '—';
+        return date.toLocaleDateString(locale === 'en' ? 'en-US' : 'ru-RU', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+        });
+    };
+
+    const getTaskTypeLabel = (taskType?: TaskType) => {
+        switch (taskType) {
+            case 'construction':
+                return t('market.taskType.construction', 'Строительная');
+            case 'installation':
+                return t('market.taskType.installation', 'Инсталляционная');
+            case 'document':
+                return t('market.taskType.document', 'Документальная');
+            default:
+                return t('market.taskType.unknown', 'Не указан');
+        }
+    };
+
+    const getPriorityLabel = (priority?: PriorityLevel) => {
+        switch (priority) {
+            case 'urgent':
+                return t('priority.urgent', 'Срочный');
+            case 'high':
+                return t('priority.high', 'Высокий');
+            case 'medium':
+                return t('priority.medium', 'Средний');
+            case 'low':
+                return t('priority.low', 'Низкий');
+            default:
+                return t('priority.unknown', 'Не указан');
+        }
+    };
 
     const organizationOptions = useMemo(() => {
         const values = tasks
@@ -316,13 +349,13 @@ export default function MarketplacePage() {
             const res = await fetch(query ? `/api/tasks/public?${query}` : '/api/tasks/public');
             const data: TaskResponse = await res.json();
             if (!res.ok || data.error) {
-                setError(data.error || 'Не удалось загрузить задачи');
+                setError(data.error || t('market.error.loadTasks', 'Не удалось загрузить задачи'));
                 setTasks([]);
             } else {
                 setTasks(data.tasks || []);
             }
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Ошибка загрузки задач');
+            setError(e instanceof Error ? e.message : t('market.error.loadTasksGeneric', 'Ошибка загрузки задач'));
             setTasks([]);
         } finally {
             setLoading(false);
@@ -346,7 +379,7 @@ export default function MarketplacePage() {
             if (!res.ok || data.error) {
                 setSnack({
                     open: true,
-                    message: data.error || 'Не удалось отменить отклик',
+                    message: data.error || t('market.error.withdraw', 'Не удалось отменить отклик'),
                     severity: 'error',
                 });
                 return;
@@ -366,13 +399,13 @@ export default function MarketplacePage() {
 
             setSnack({
                 open: true,
-                message: 'Отклик удалён',
+                message: t('market.withdrawn', 'Отклик удалён'),
                 severity: 'success',
             });
         } catch (e) {
             setSnack({
                 open: true,
-                message: e instanceof Error ? e.message : 'Ошибка при удалении',
+                message: e instanceof Error ? e.message : t('market.error.withdrawGeneric', 'Ошибка при удалении'),
                 severity: 'error',
             });
         } finally {
@@ -385,14 +418,14 @@ export default function MarketplacePage() {
             const res = await fetch(withBasePath('/api/current-user'), { cache: 'no-store' });
             const data: UserContext & { error?: string } = await res.json();
             if (!res.ok) {
-                setContextError(data.error || 'Не удалось получить профиль');
+                setContextError(data.error || t('market.error.profile', 'Не удалось получить профиль'));
                 setUserContext(null);
                 return;
             }
             setUserContext(data);
             setContextError(null);
         } catch (e) {
-            setContextError(e instanceof Error ? e.message : 'Ошибка профиля');
+            setContextError(e instanceof Error ? e.message : t('market.error.profileGeneric', 'Ошибка профиля'));
             setUserContext(null);
         }
     };
@@ -442,18 +475,18 @@ export default function MarketplacePage() {
         if (userContext?.profileType !== 'contractor') {
             setSnack({
                 open: true,
-                message: 'Отклики доступны только подрядчикам',
+                message: t('market.apply.onlyContractors', 'Отклики доступны только подрядчикам'),
                 severity: 'error',
             });
             return;
         }
         const budgetValue = Number(applyBudget);
         if (!budgetValue || Number.isNaN(budgetValue) || budgetValue <= 0) {
-            setSnack({ open: true, message: 'Укажите фиксированную ставку', severity: 'error' });
+            setSnack({ open: true, message: t('market.apply.budgetRequired', 'Укажите фиксированную ставку'), severity: 'error' });
             return;
         }
         if (!applyEtaDate || !applyEtaDate.isValid()) {
-            setSnack({ open: true, message: 'Выберите плановую дату завершения', severity: 'error' });
+            setSnack({ open: true, message: t('market.apply.etaRequired', 'Выберите плановую дату завершения'), severity: 'error' });
             return;
         }
         const completionDate = applyEtaDate.startOf('day');
@@ -462,7 +495,7 @@ export default function MarketplacePage() {
         if (etaDays < 0) {
             setSnack({
                 open: true,
-                message: 'Дата завершения не может быть в прошлом',
+                message: t('market.apply.etaPast', 'Дата завершения не может быть в прошлом'),
                 severity: 'error',
             });
             return;
@@ -480,10 +513,10 @@ export default function MarketplacePage() {
             });
             const data = await res.json();
             if (!res.ok || data.error) {
-                setSnack({ open: true, message: data.error || 'Не удалось отправить отклик', severity: 'error' });
+                setSnack({ open: true, message: data.error || t('market.apply.error', 'Не удалось отправить отклик'), severity: 'error' });
                 return;
             }
-            setSnack({ open: true, message: 'Отклик отправлен', severity: 'success' });
+            setSnack({ open: true, message: t('market.apply.success', 'Отклик отправлен'), severity: 'success' });
             setSelectedTask(null);
             setApplyMessage('');
             setApplyBudget('');
@@ -492,7 +525,7 @@ export default function MarketplacePage() {
         } catch (e) {
             setSnack({
                 open: true,
-                message: e instanceof Error ? e.message : 'Ошибка при отправке',
+                message: e instanceof Error ? e.message : t('market.apply.errorGeneric', 'Ошибка при отправке'),
                 severity: 'error',
             });
         } finally {
@@ -529,7 +562,7 @@ export default function MarketplacePage() {
         filters.organization
             ? {
                   key: 'organization',
-                  label: `Организация: ${filters.organization}`,
+                  label: t('market.filters.organizationChip', 'Организация: {value}', { value: filters.organization }),
                   onDelete: () =>
                       setFilters((prev) => ({
                           ...prev,
@@ -540,7 +573,7 @@ export default function MarketplacePage() {
         filters.project
             ? {
                   key: 'project',
-                  label: `Проект: ${filters.project}`,
+                  label: t('market.filters.projectChip', 'Проект: {value}', { value: filters.project }),
                   onDelete: () =>
                       setFilters((prev) => ({
                           ...prev,
@@ -551,7 +584,7 @@ export default function MarketplacePage() {
         filters.status
             ? {
                   key: 'status',
-                  label: `Статус: ${statusChipMap[filters.status]?.label || filters.status}`,
+                  label: t('market.filters.statusChip', 'Статус: {value}', { value: statusChipMap[filters.status]?.label || filters.status }),
                   onDelete: () =>
                       setFilters((prev) => ({
                           ...prev,
@@ -565,7 +598,7 @@ export default function MarketplacePage() {
         if (!hasDetailsWorkItems || !detailsTask?.workItems) {
             return (
                 <Typography color="text.secondary" sx={{ px: 1 }}>
-                    Нет данных
+                    {t('common.noData', 'Нет данных')}
                 </Typography>
             );
         }
@@ -580,10 +613,10 @@ export default function MarketplacePage() {
                 <Table size="small" stickyHeader>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Вид работ</TableCell>
-                            <TableCell>Кол-во</TableCell>
-                            <TableCell>Ед.</TableCell>
-                            <TableCell>Примечание</TableCell>
+                            <TableCell>{t('market.workItems.type', 'Вид работ')}</TableCell>
+                            <TableCell>{t('market.workItems.qty', 'Кол-во')}</TableCell>
+                            <TableCell>{t('market.workItems.unit', 'Ед.')}</TableCell>
+                            <TableCell>{t('market.workItems.note', 'Примечание')}</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -646,7 +679,7 @@ export default function MarketplacePage() {
                 >
                     <TextField
                         fullWidth
-                        placeholder="Поиск по названию, адресу или описанию"
+                        placeholder={t('market.search.placeholder', 'Поиск по названию, адресу или описанию')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         slotProps={{
@@ -662,7 +695,7 @@ export default function MarketplacePage() {
                         sx={{ flexGrow: 1, minWidth: { xs: 260, sm: 320 }, maxWidth: 520 }}
                     />
                     <Stack direction="row" spacing={1.25} alignItems="center" flexWrap="wrap">
-                        <Tooltip title="Обновить">
+                        <Tooltip title={t('common.refresh', 'Обновить')}>
                             <IconButton
                                 size="large"
                                 onClick={() => void fetchTasks()}
@@ -671,7 +704,7 @@ export default function MarketplacePage() {
                                 <RefreshIcon />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title="Смотреть на карте">
+                        <Tooltip title={t('market.map.open', 'Смотреть на карте')}>
                             <IconButton
                                 size="large"
                                 onClick={() => setMapOpen(true)}
@@ -680,7 +713,7 @@ export default function MarketplacePage() {
                                 <LocationOnIcon />
                             </IconButton>
                         </Tooltip>
-                        <Tooltip title="Фильтры">
+                        <Tooltip title={t('market.filters.title', 'Фильтры')}>
                             <IconButton
                                 size="large"
                                 color={filtersDialogOpen || isFiltersApplied ? 'primary' : 'default'}
@@ -707,7 +740,7 @@ export default function MarketplacePage() {
     );
 
     return (
-        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="ru">
+        <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={locale === 'en' ? 'en' : 'ru'}>
             <Box
                 sx={{
                     minHeight: '100vh',
@@ -719,7 +752,7 @@ export default function MarketplacePage() {
                     {loading ? (
                         <Stack alignItems="center" spacing={2} sx={{ py: 6 }}>
                             <CircularProgress />
-                            <Typography color="text.secondary">Загружаем задачи…</Typography>
+                            <Typography color="text.secondary">{t('market.loading', 'Загружаем задачи…')}</Typography>
                         </Stack>
                     ) : error ? (
                         <Alert severity="error" sx={{ mb: 3 }}>
@@ -727,7 +760,7 @@ export default function MarketplacePage() {
                         </Alert>
                     ) : filteredTasks.length === 0 ? (
                         <Alert severity="info" sx={{ mb: 3 }}>
-                            Подходящих задач не найдено
+                            {t('market.empty', 'Подходящих задач не найдено')}
                         </Alert>
                     ) : (
                         <Grid container spacing={2.5}>
@@ -758,10 +791,14 @@ export default function MarketplacePage() {
                                             <Stack spacing={2}>
                                                 <Stack spacing={0.25}>
                                                     <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                                        Организация: {task.orgName || task.orgSlug || task.orgId || '—'}
+                                                        {t('market.card.organization', 'Организация: {value}', {
+                                                            value: task.orgName || task.orgSlug || task.orgId || '—',
+                                                        })}
                                                     </Typography>
                                                     <Typography variant="caption" color="text.secondary">
-                                                        Регион: {task.project?.regionCode || '—'}
+                                                        {t('market.card.region', 'Регион: {value}', {
+                                                            value: task.project?.regionCode || '—',
+                                                        })}
                                                         {getRegionLabel(task.project?.regionCode)
                                                             ? ` — ${getRegionLabel(task.project?.regionCode)}`
                                                             : ''}
@@ -772,7 +809,7 @@ export default function MarketplacePage() {
                                                         size="small"
                                                         color="default"
                                                         variant="outlined"
-                                                        label={task.project?.key || 'Публичная задача'}
+                                                        label={task.project?.key || t('market.card.publicTask', 'Публичная задача')}
                                                         sx={{ borderRadius: UI_RADIUS.item }}
                                                     />
                                                     {chipMeta && (
@@ -786,17 +823,19 @@ export default function MarketplacePage() {
                                                     <Chip
                                                         size="small"
                                                         icon={<StarRoundedIcon fontSize="small" />}
-                                                        label={`${task.applicationCount ?? 0} откликов`}
+                                                        label={t('market.card.applications', '{count} откликов', {
+                                                            count: task.applicationCount ?? 0,
+                                                        })}
                                                         sx={{ borderRadius: UI_RADIUS.item }}
                                                     />
                                                 </Stack>
                                                 <Stack spacing={1}>
                                                     <Typography variant="h5" fontWeight={700} sx={{ pr: 1, wordBreak: 'break-word' }}>
-                                                        {taskTitle || 'Без названия'}
+                                                        {taskTitle || t('market.card.untitled', 'Без названия')}
                                                     </Typography>
                                                     <Stack spacing={0.25}>
                                                         <Typography variant="caption" color="text.secondary">
-                                                            Планируемый бюджет
+                                                            {t('market.card.budgetLabel', 'Планируемый бюджет')}
                                                         </Typography>
                                                         {budgetDisplay.amount ? (
                                                             <Box
@@ -834,7 +873,7 @@ export default function MarketplacePage() {
                                                     </Stack>
                                                 </Stack>
                                                 <Typography color="text.secondary" sx={{ lineHeight: 1.5 }}>
-                                                    {task.publicDescription || task.taskDescription || 'Описание не заполнено'}
+                                                    {task.publicDescription || task.taskDescription || t('market.card.noDescription', 'Описание не заполнено')}
                                                 </Typography>
                                                 <Divider flexItem />
                                                 <Stack
@@ -855,7 +894,7 @@ export default function MarketplacePage() {
                                                             textTransform: 'none',
                                                         }}
                                                     >
-                                                        Подробнее
+                                                        {t('market.card.details', 'Подробнее')}
                                                     </Button>
                                                     {hasActiveApplication ? (
                                                         <Button
@@ -868,7 +907,9 @@ export default function MarketplacePage() {
                                                             disabled={isCanceling}
                                                             sx={{ borderRadius: UI_RADIUS.item }}
                                                         >
-                                                            {isCanceling ? 'Отменяем…' : 'Отменить отклик'}
+                                                            {isCanceling
+                                                                ? t('market.card.withdrawLoading', 'Отменяем…')
+                                                                : t('market.card.withdraw', 'Отменить отклик')}
                                                         </Button>
                                                     ) : (
                                                         <Button
@@ -886,7 +927,7 @@ export default function MarketplacePage() {
                                                                 textTransform: 'none',
                                                             }}
                                                         >
-                                                            Откликнуться
+                                                            {t('market.card.apply', 'Откликнуться')}
                                                         </Button>
                                                     )}
                                                 </Stack>
@@ -906,12 +947,12 @@ export default function MarketplacePage() {
                 fullWidth
                 PaperProps={{ sx: { borderRadius: UI_RADIUS.tooltip } }}
             >
-                <DialogTitle>Фильтры</DialogTitle>
+                <DialogTitle>{t('market.filters.title', 'Фильтры')}</DialogTitle>
                 <DialogContent dividers>
                     <Stack spacing={2}>
                         <Stack spacing={1}>
                             <Typography variant="subtitle2" color="text.secondary">
-                                Выбранные фильтры
+                                {t('market.filters.selected', 'Выбранные фильтры')}
                             </Typography>
                             {selectedFilterChips.length > 0 ? (
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -926,7 +967,7 @@ export default function MarketplacePage() {
                                 </Stack>
                             ) : (
                                 <Typography variant="body2" color="text.secondary">
-                                    Фильтры не выбраны
+                                    {t('market.filters.none', 'Фильтры не выбраны')}
                                 </Typography>
                             )}
                         </Stack>
@@ -939,11 +980,11 @@ export default function MarketplacePage() {
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
-                                    label="Организация"
+                                    label={t('market.filters.organization', 'Организация')}
                                     placeholder={
                                         organizationOptions.length
-                                            ? 'Выберите организацию'
-                                            : 'Нет данных из опубликованных задач'
+                                            ? t('market.filters.organizationPlaceholder', 'Выберите организацию')
+                                            : t('market.filters.noData', 'Нет данных из опубликованных задач')
                                     }
                                 />
                             )}
@@ -959,11 +1000,11 @@ export default function MarketplacePage() {
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
-                                    label="Проект"
+                                    label={t('market.filters.project', 'Проект')}
                                     placeholder={
                                         projectOptions.length
-                                            ? 'Выберите проект'
-                                            : 'Нет данных из опубликованных задач'
+                                            ? t('market.filters.projectPlaceholder', 'Выберите проект')
+                                            : t('market.filters.noData', 'Нет данных из опубликованных задач')
                                     }
                                 />
                             )}
@@ -972,7 +1013,7 @@ export default function MarketplacePage() {
                         />
                         <TextField
                             select
-                            label="Статус"
+                            label={t('market.filters.status', 'Статус')}
                             value={filters.status}
                             onChange={(e) =>
                                 setFilters((prev) => ({
@@ -982,7 +1023,7 @@ export default function MarketplacePage() {
                             }
                             fullWidth
                         >
-                            <MenuItem value="">Все статусы</MenuItem>
+                            <MenuItem value="">{t('market.filters.all', 'Все статусы')}</MenuItem>
                             {availableStatuses.map((status) => (
                                 <MenuItem key={status} value={status}>
                                     {statusChipMap[status]?.label}
@@ -998,10 +1039,10 @@ export default function MarketplacePage() {
                         startIcon={<FilterListOffIcon />}
                         onClick={resetFilters}
                     >
-                        Сбросить
+                        {t('common.reset', 'Сбросить')}
                     </Button>
                     <Button variant="contained" onClick={() => setFiltersDialogOpen(false)}>
-                        Закрыть
+                        {t('common.close', 'Закрыть')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1028,7 +1069,7 @@ export default function MarketplacePage() {
                         }}
                     >
                         <Typography variant="h6" fontWeight={700}>
-                            Публичные задачи на карте
+                            {t('market.map.title', 'Публичные задачи на карте')}
                         </Typography>
                         <IconButton onClick={() => setMapOpen(false)}>
                             <CloseIcon />
@@ -1055,12 +1096,12 @@ export default function MarketplacePage() {
                 <DialogTitle>
                     {selectedTask
                         ? [selectedTask.taskName, selectedTask.bsNumber].filter(Boolean).join(' ')
-                        : 'Отклик на задачу'}
+                        : t('market.apply.title', 'Отклик на задачу')}
                 </DialogTitle>
                 <DialogContent>
                     <Stack spacing={2} sx={{ mt: 1 }}>
                         <Alert severity="info">
-                            Фиксированная ставка, без комиссий платформы. Сообщение увидит работодатель.
+                            {t('market.apply.info', 'Фиксированная ставка, без комиссий платформы. Сообщение увидит работодатель.')}
                         </Alert>
                         {selectedTask?.publicDescription && (
                             <Typography
@@ -1072,7 +1113,7 @@ export default function MarketplacePage() {
                             </Typography>
                         )}
                         <TextField
-                            label="Ставка за задачу"
+                            label={t('market.apply.budget', 'Ставка за задачу')}
                             type="number"
                             value={applyBudget}
                             onChange={(e) => setApplyBudget(e.target.value)}
@@ -1080,7 +1121,7 @@ export default function MarketplacePage() {
                             fullWidth
                         />
                         <DatePicker
-                            label="Плановая дата завершения"
+                            label={t('market.apply.eta', 'Плановая дата завершения')}
                             value={applyEtaDate}
                             minDate={dayjs()}
                             onChange={(value) => setApplyEtaDate(value)}
@@ -1093,13 +1134,13 @@ export default function MarketplacePage() {
                                                   applyEtaDate.startOf('day').diff(dayjs().startOf('day'), 'day'),
                                                   0
                                               )
-                                          } дн. от сегодня`
-                                        : 'Выберите дату, когда планируете сдать работу',
+                                          } ${t('market.apply.daysShort', 'дн.')} ${t('market.apply.fromToday', 'от сегодня')}`
+                                        : t('market.apply.etaHelper', 'Выберите дату, когда планируете сдать работу'),
                                 },
                             }}
                         />
                         <TextField
-                            label="Сообщение (необязательно)"
+                            label={t('market.apply.message', 'Сообщение (необязательно)')}
                             value={applyMessage}
                             onChange={(e) => setApplyMessage(e.target.value)}
                             fullWidth
@@ -1108,14 +1149,14 @@ export default function MarketplacePage() {
                         />
                         {userContext?.profileType !== 'contractor' && (
                             <Alert severity="warning">
-                                Для отправки отклика выберите роль «Исполнитель» в профиле.
+                                {t('market.apply.roleWarning', 'Для отправки отклика выберите роль «Исполнитель» в профиле.')}
                             </Alert>
                         )}
                     </Stack>
                 </DialogContent>
                 <DialogActions sx={{ px: 3, pb: 2 }}>
                     <Button onClick={() => setSelectedTask(null)} variant="text">
-                        Отмена
+                        {t('common.cancel', 'Отмена')}
                     </Button>
                     <Button
                         onClick={() => void handleSubmitApplication()}
@@ -1123,7 +1164,9 @@ export default function MarketplacePage() {
                         endIcon={<SendIcon />}
                         disabled={submitLoading}
                     >
-                        {submitLoading ? 'Отправляем…' : 'Отправить'}
+                        {submitLoading
+                            ? t('market.apply.sending', 'Отправляем…')
+                            : t('market.apply.send', 'Отправить')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -1160,7 +1203,7 @@ export default function MarketplacePage() {
                             <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
                                 <Box sx={{ minWidth: 0 }}>
                                     <Typography variant="overline" color="text.secondary">
-                                        Задача
+                                        {t('reports.header.task', 'Задача')}
                                     </Typography>
                                     <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                                         <Typography
@@ -1172,7 +1215,7 @@ export default function MarketplacePage() {
                                                 ? [detailsTask.taskName, detailsTask.bsNumber]
                                                       .filter(Boolean)
                                                       .join(' ')
-                                                : 'Детали задачи'}
+                                                : t('market.details.title', 'Детали задачи')}
                                         </Typography>
                                         {detailsTask?.project?.key && (
                                             <Chip
@@ -1220,50 +1263,50 @@ export default function MarketplacePage() {
                                         sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                                     >
                                         <InfoOutlinedIcon fontSize="small" />
-                                        Информация
+                                        {t('market.details.info', 'Информация')}
                                     </Typography>
                                     <Divider sx={{ mb: 1.5 }} />
                                     <Stack spacing={1}>
                                         <Typography variant="body1">
-                                            <strong>Организация:</strong>{' '}
+                                            <strong>{t('market.details.organization', 'Организация:')}</strong>{' '}
                                             {detailsTask?.orgName ||
                                                 detailsTask?.orgSlug ||
                                                 detailsTask?.orgId ||
                                                 '—'}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Оператор:</strong> {detailsTask?.project?.operator || '—'}
+                                            <strong>{t('market.details.operator', 'Оператор:')}</strong> {detailsTask?.project?.operator || '—'}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Регион:</strong> {detailsTask?.project?.regionCode || '—'}
+                                            <strong>{t('market.details.region', 'Регион:')}</strong> {detailsTask?.project?.regionCode || '—'}
                                             {getRegionLabel(detailsTask?.project?.regionCode)
                                                 ? ` — ${getRegionLabel(detailsTask?.project?.regionCode)}`
                                                 : ''}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Название проекта:</strong> {detailsTask?.project?.name || '—'}
+                                            <strong>{t('market.details.projectName', 'Название проекта:')}</strong> {detailsTask?.project?.name || '—'}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Базовая станция:</strong> {detailsTask?.bsNumber || '—'}
+                                            <strong>{t('market.details.base', 'Базовая станция:')}</strong> {detailsTask?.bsNumber || '—'}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Адрес:</strong> {detailsTask?.bsAddress || '—'}
+                                            <strong>{t('market.details.address', 'Адрес:')}</strong> {detailsTask?.bsAddress || '—'}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Геолокация:</strong>{' '}
+                                            <strong>{t('market.details.geo', 'Геолокация:')}</strong>{' '}
                                             {detailsTask?.bsLocation?.[0]?.coordinates ||
                                                 detailsTask?.bsLocation?.[0]?.name ||
                                                 '—'}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Срок выполнения:</strong> {formatDateRu(detailsTask?.dueDate)}
+                                            <strong>{t('market.details.dueDate', 'Срок выполнения:')}</strong> {formatDate(detailsTask?.dueDate)}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Приоритет:</strong>{' '}
-                                            {getPriorityLabelRu(detailsTask?.priority) || 'Не указан'}
+                                            <strong>{t('market.details.priority', 'Приоритет:')}</strong>{' '}
+                                            {getPriorityLabel(detailsTask?.priority)}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Плановый бюджет:</strong>{' '}
+                                            <strong>{t('market.details.budget', 'Плановый бюджет:')}</strong>{' '}
                                             {detailsBudget.amount ? (
                                                 <Box
                                                     component="span"
@@ -1287,7 +1330,7 @@ export default function MarketplacePage() {
                                             )}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>Тип задачи:</strong> {getTaskTypeLabel(detailsTask?.taskType)}
+                                            <strong>{t('market.details.taskType', 'Тип задачи:')}</strong> {getTaskTypeLabel(detailsTask?.taskType)}
                                         </Typography>
                                     </Stack>
                                 </CardItem>
@@ -1295,7 +1338,7 @@ export default function MarketplacePage() {
                                 {detailsTask?.publicDescription || detailsTask?.taskDescription ? (
                                     <CardItem sx={{ minWidth: 0 }}>
                                         <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                                            Описание
+                                            {t('market.details.description', 'Описание')}
                                         </Typography>
                                         <Divider sx={{ mb: 1.5 }} />
                                         <Typography
@@ -1332,10 +1375,10 @@ export default function MarketplacePage() {
                                                         sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                                                     >
                                                         <TocOutlinedIcon fontSize="small" />
-                                                        Состав работ
+                                                        {t('market.workItems.title', 'Состав работ')}
                                                     </Typography>
 
-                                                    <Tooltip title="Развернуть на весь экран">
+                                                    <Tooltip title={t('market.workItems.fullscreen', 'Развернуть на весь экран')}>
                                                         <IconButton
                                                             size="small"
                                                             onClick={(e) => {
@@ -1359,7 +1402,7 @@ export default function MarketplacePage() {
                                 {detailsTask?.attachments && detailsTask.attachments.length > 0 ? (
                                     <CardItem sx={{ minWidth: 0 }}>
                                         <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                                            Аттачменты
+                                            {t('market.details.attachments', 'Аттачменты')}
                                         </Typography>
                                         <Divider sx={{ mb: 1.5 }} />
                                         <Stack spacing={1}>
@@ -1405,8 +1448,8 @@ export default function MarketplacePage() {
                                     >
                                         {Boolean(cancelLoadingId) &&
                                         detailsTask.myApplication?._id === cancelLoadingId
-                                            ? 'Отменяем…'
-                                            : 'Отменить отклик'}
+                                            ? t('market.card.withdrawLoading', 'Отменяем…')
+                                            : t('market.card.withdraw', 'Отменить отклик')}
                                     </Button>
                                 ) : (
                                     <Button
@@ -1425,7 +1468,7 @@ export default function MarketplacePage() {
                                             alignSelf: { xs: 'stretch', sm: 'center' },
                                         }}
                                     >
-                                        Откликнуться
+                                        {t('market.card.apply', 'Откликнуться')}
                                     </Button>
                                 )}
                             </Stack>
@@ -1450,7 +1493,7 @@ export default function MarketplacePage() {
                     }}
                 >
                     <Typography variant="h6" fontWeight={600}>
-                        Состав работ
+                        {t('market.workItems.title', 'Состав работ')}
                     </Typography>
                     <IconButton onClick={() => setWorkItemsFullScreen(false)}>
                         <CloseFullscreenIcon />

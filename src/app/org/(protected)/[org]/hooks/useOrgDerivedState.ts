@@ -1,7 +1,8 @@
 import * as React from 'react';
 
 import type { OrgRole, PlanConfig, SubscriptionBillingInfo, SubscriptionInfo } from '@/types/org';
-import { DAY_MS, roleLabelRu } from '@/utils/org';
+import { DAY_MS, roleLabel } from '@/utils/org';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type UseOrgDerivedStateArgs = {
     subscription: SubscriptionInfo | null;
@@ -34,7 +35,7 @@ type UseOrgDerivedState = {
     subscriptionStatusColor: string;
     subscriptionStatusDescription: string;
     subscriptionEndLabel: string | null;
-    roleLabelRu: string;
+    roleLabel: string;
     tasksMonthLimitLabel: string;
     publicTasksLimitLabel: string;
     canEditOrgSettings: boolean;
@@ -53,6 +54,7 @@ export default function useOrgDerivedState({
     myRole,
     textSecondary,
 }: UseOrgDerivedStateArgs): UseOrgDerivedState {
+    const { t, locale } = useI18n();
     const trialEndsAt = React.useMemo(() => {
         const iso = subscription?.periodEnd;
         if (!iso) return null;
@@ -67,20 +69,21 @@ export default function useOrgDerivedState({
     const hasTrialHistory = Boolean(subscription?.periodStart);
     const canStartTrial = isOwnerOrAdmin && (!subscription || (subscription.status === 'inactive' && !hasTrialHistory));
     const isSubscriptionActive = billing?.isActive ?? (subscription?.status === 'active' || isTrialActive);
-    const formattedTrialEnd = trialEndsAt?.toLocaleDateString('ru-RU') ?? null;
+    const dateLocale = locale === 'ru' ? 'ru-RU' : 'en-US';
+    const formattedTrialEnd = trialEndsAt?.toLocaleDateString(dateLocale) ?? null;
     const trialDaysLeft =
         isTrialActive && trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - nowTs) / DAY_MS)) : null;
     const disableCreationActions = subscriptionLoading || !isSubscriptionActive;
     const creationTooltip = disableCreationActions
         ? subscriptionLoading
-            ? 'Проверяем статус подписки…'
-            : 'Доступно после активации подписки или пробного периода'
-        : 'Создать проект';
+            ? t('org.overview.loading.subscription', 'Проверяем статус подписки…')
+            : t('org.projects.disabled', 'Доступно после активации подписки или пробного периода')
+        : t('org.projects.actions.create', 'Создать проект');
     const inviteTooltip = disableCreationActions
         ? subscriptionLoading
-            ? 'Проверяем статус подписки…'
-            : 'Добавление участников доступно после активации подписки'
-        : 'Пригласить участника';
+            ? t('org.overview.loading.subscription', 'Проверяем статус подписки…')
+            : t('org.members.invite.disabled', 'Добавление участников доступно после активации подписки')
+        : t('org.members.invite.action', 'Пригласить участника');
     const currentPlanConfig = planConfigs.find((planConfig) => planConfig.plan === (subscription?.plan ?? 'basic'));
     const resolvedProjectsLimit =
         typeof currentPlanConfig?.projectsLimit === 'number'
@@ -112,12 +115,12 @@ export default function useOrgDerivedState({
     const tasksMonthLimitLabel = formatLimitLabel(resolvedTasksMonthLimit);
     const publicTasksLimitLabel = formatLimitLabel(resolvedPublicTasksLimit);
     const subscriptionStatusLabel = subscriptionLoading
-        ? 'Проверяем…'
+        ? t('org.subscription.checking', 'Проверяем…')
         : isSubscriptionActive
             ? isTrialActive
-                ? 'Пробный период'
-                : 'Подписка активна'
-            : 'Подписка не активна';
+                ? t('org.subscription.trial', 'Пробный период')
+                : t('org.subscription.active', 'Подписка активна')
+            : t('org.subscription.inactive', 'Подписка не активна');
     const subscriptionStatusColor = subscriptionLoading
         ? textSecondary
             : isSubscriptionActive
@@ -127,32 +130,37 @@ export default function useOrgDerivedState({
         const iso = subscription?.periodEnd;
         if (!iso) return null;
         const date = new Date(iso);
-        return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString('ru-RU');
-    }, [subscription?.periodEnd]);
+        return Number.isNaN(date.getTime()) ? null : date.toLocaleDateString(dateLocale);
+    }, [dateLocale, subscription?.periodEnd]);
     const subscriptionEndLabel =
         subscription?.status && subscription.status !== 'inactive' && subscriptionEndDate
-            ? `Действует до ${subscriptionEndDate}`
+            ? t('org.subscription.activeUntil', 'Действует до {date}', { date: subscriptionEndDate })
             : null;
     const subscriptionStatusDescription = subscriptionLoading
-        ? 'Получаем данные'
+        ? t('org.subscription.loading', 'Получаем данные')
         : isTrialActive && formattedTrialEnd
-            ? `До ${formattedTrialEnd} осталось ${trialDaysLeft} дней`
+            ? t('org.subscription.trialLeft', 'До {date} осталось {days} дней', {
+                date: formattedTrialEnd,
+                days: trialDaysLeft ?? 0,
+            })
             : subscription?.plan
-                ? `Тариф ${subscription.plan.toUpperCase()}`
-                : 'Тариф не выбран';
-    const roleLabelRuLabel = myRole ? roleLabelRu(myRole as OrgRole) : '—';
+                ? t('org.subscription.plan', 'Тариф {plan}', { plan: subscription.plan.toUpperCase() })
+                : t('org.subscription.noPlan', 'Тариф не выбран');
+    const roleLabelValue = myRole ? roleLabel(myRole as OrgRole, t) : '—';
     const canEditOrgSettings = myRole === 'owner' || myRole === 'org_admin';
     const canRequestIntegrations = myRole === 'owner' || myRole === 'org_admin';
     const settingsTooltip = !canEditOrgSettings
-        ? 'Только владелец или администратор может менять настройки'
+        ? t('org.settings.permissions', 'Только владелец или администратор может менять настройки')
         : subscriptionLoading
-            ? 'Загружаем реквизиты…'
-            : 'Настройки организации';
+            ? t('org.settings.loading', 'Загружаем реквизиты…')
+            : t('org.settings.title', 'Настройки организации');
     const integrationRequestTooltip = !canRequestIntegrations
-        ? 'Только владелец или администратор может подключать интеграции'
-        : 'Подключить интеграцию';
+        ? t('org.integrations.permissions', 'Только владелец или администратор может подключать интеграции')
+        : t('org.integrations.actions.connect', 'Подключить интеграцию');
     const integrationKeyTooltip = (isSuperAdmin: boolean) =>
-        !isSuperAdmin ? 'Доступно только супер-администратору' : 'Создать ключ для интеграций';
+        !isSuperAdmin
+            ? t('org.integrations.permissions.superAdmin', 'Доступно только супер-администратору')
+            : t('org.integrations.actions.generateKey', 'Создать ключ для интеграций');
     const formatExpire = (iso?: string) => {
         if (!iso) return '';
         const date = new Date(iso);
@@ -182,7 +190,7 @@ export default function useOrgDerivedState({
         subscriptionStatusColor,
         subscriptionStatusDescription,
         subscriptionEndLabel,
-        roleLabelRu: roleLabelRuLabel,
+        roleLabel: roleLabelValue,
         tasksMonthLimitLabel,
         publicTasksLimitLabel,
         canEditOrgSettings,

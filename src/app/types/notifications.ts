@@ -2,6 +2,9 @@
 
 export type NotificationKind =
     | 'org_invite'
+    | 'org_join_request'
+    | 'org_join_approved'
+    | 'org_join_declined'
     | 'org_welcome'
     | 'signup_bonus'
     | 'invite_accepted'
