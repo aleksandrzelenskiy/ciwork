@@ -1,4 +1,5 @@
 import type { CurrentStatus } from '@/app/types/taskTypes';
+import type { Translator } from '@/i18n';
 
 export const STATUS_ORDER: CurrentStatus[] = [
     'To do',
@@ -59,8 +60,33 @@ export const normalizeStatusTitle = (status?: string): CurrentStatus => {
     return TITLE_CASE_MAP[key] ?? (status as CurrentStatus);
 };
 
-export const getStatusLabel = (status?: string): string => {
+export const getStatusLabel = (status?: string, t?: Translator): string => {
     if (!status) return '';
     const normalized = normalizeStatusTitle(status);
-    return STATUS_LABELS_RU[normalized] ?? EXTRA_STATUS_LABELS[status] ?? status;
+    if (!t) {
+        return STATUS_LABELS_RU[normalized] ?? EXTRA_STATUS_LABELS[status] ?? status;
+    }
+
+    switch (normalized) {
+        case 'To do':
+            return t('status.todo', STATUS_LABELS_RU['To do']);
+        case 'Draft':
+            return t('status.draft', STATUS_LABELS_RU.Draft);
+        case 'Assigned':
+            return t('status.assigned', STATUS_LABELS_RU.Assigned);
+        case 'At work':
+            return t('status.inProgress', STATUS_LABELS_RU['At work']);
+        case 'Done':
+            return t('status.done', STATUS_LABELS_RU.Done);
+        case 'Pending':
+            return t('status.pending', STATUS_LABELS_RU.Pending);
+        case 'Issues':
+            return t('status.issues', STATUS_LABELS_RU.Issues);
+        case 'Fixed':
+            return t('status.fixed', STATUS_LABELS_RU.Fixed);
+        case 'Agreed':
+            return t('status.approved', STATUS_LABELS_RU.Agreed);
+        default:
+            return EXTRA_STATUS_LABELS[status] ?? status;
+    }
 };

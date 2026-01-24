@@ -54,10 +54,11 @@ import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 
 import { useTheme } from '@mui/material/styles';
 import { getStatusColor } from '@/utils/statusColors';
-import { getPriorityIcon, getPriorityLabelRu, normalizePriority, type Priority as Pri } from '@/utils/priorityIcons';
+import { getPriorityIcon, getPriorityLabel, normalizePriority, type Priority as Pri } from '@/utils/priorityIcons';
 import { STATUS_ORDER, getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 import type { CurrentStatus } from '@/app/types/taskTypes';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 import ProfileDialog from '@/features/profile/ProfileDialog';
 
@@ -107,11 +108,11 @@ type Task = {
 type TaskWithStatus = Task & { _statusTitle: StatusTitle };
 
 /* ───────────── утилиты ───────────── */
-const formatDate = (iso?: string) => {
+const formatDate = (iso?: string, locale?: string) => {
     if (!iso) return '—';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('ru-RU');
+    return d.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US');
 };
 
 const getInitials = (s?: string) =>
@@ -124,16 +125,6 @@ const getInitials = (s?: string) =>
 
 const COLUMN_KEYS = ['taskId', 'task', 'status', 'priority', 'executor', 'due', 'order'] as const;
 type ColumnKey = (typeof COLUMN_KEYS)[number];
-
-const COLUMN_LABELS: Record<ColumnKey, string> = {
-    taskId: 'ID',
-    task: 'Задача',
-    status: 'Статус',
-    priority: 'Приоритет',
-    executor: 'Исполнитель',
-    due: 'Срок',
-    order: 'Заказ',
-};
 
 const DEFAULT_COLUMN_VISIBILITY: Record<ColumnKey, boolean> = {
     taskId: true,
@@ -184,7 +175,7 @@ const ProjectTaskListInner = (
     }: ProjectTaskListProps,
     ref: React.ForwardedRef<ProjectTaskListHandle>
 ) => {
-
+    const { t, locale } = useI18n();
     const router = useRouter();
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
@@ -198,6 +189,18 @@ const ProjectTaskListInner = (
     const menuIconDangerColor = '#ef4444';
     const menuItemHover = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.05)';
     const rowHoverBg = isDarkMode ? 'rgba(255,255,255,0.08)' : '#fffde7';
+    const columnLabels = useMemo(
+        () => ({
+            taskId: t('common.id', 'ID'),
+            task: t('task.fields.taskName', 'Задача'),
+            status: t('task.fields.status', 'Статус'),
+            priority: t('task.fields.priority', 'Приоритет'),
+            executor: t('task.fields.executorName', 'Исполнитель'),
+            due: t('task.fields.dueDate', 'Срок'),
+            order: t('task.sections.order', 'Заказ'),
+        }),
+        [t]
+    );
     const tableBg = isDarkMode ? 'rgba(10,13,20,0.92)' : '#ffffff';
     const headBg = isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(248,250,252,0.95)';
     const cellBorder = isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.06)';
@@ -365,7 +368,7 @@ const ProjectTaskListInner = (
             setDeleteOpen(false);
             onReloadAction?.();
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка удаления';
+            const msg = e instanceof Error ? e.message : t('task.delete.error', 'Ошибка удаления');
             setDeleteError(msg);
         } finally {
             setDeleteLoading(false);
@@ -390,7 +393,7 @@ const ProjectTaskListInner = (
     if (loading) {
         return (
             <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography color="text.secondary">Загрузка…</Typography>
+                <Typography color="text.secondary">{t('common.loading', 'Загрузка…')}</Typography>
             </Box>
         );
     }
@@ -413,37 +416,37 @@ const ProjectTaskListInner = (
                         <TableRow sx={{ backgroundColor: headBg }}>
                             {columnVisibility.taskId && (
                                 <TableCell width={100} align="center" sx={{ borderColor: cellBorder }}>
-                                    <strong>ID</strong>
+                                    <strong>{t('common.id', 'ID')}</strong>
                                 </TableCell>
                             )}
                             {columnVisibility.task && (
                                 <TableCell sx={{ minWidth: 280, width: '28%', borderColor: cellBorder }}>
-                                    <strong>Задача</strong>
+                                    <strong>{columnLabels.task}</strong>
                                 </TableCell>
                             )}
                             {columnVisibility.status && (
                                 <TableCell width={200} align="center" sx={{ borderColor: cellBorder }}>
-                                    <strong>Статус</strong>
+                                    <strong>{columnLabels.status}</strong>
                                 </TableCell>
                             )}
                             {columnVisibility.priority && (
                                 <TableCell width={180} align="center" sx={{ borderColor: cellBorder }}>
-                                    <strong>Приоритет</strong>
+                                    <strong>{columnLabels.priority}</strong>
                                 </TableCell>
                             )}
                             {columnVisibility.executor && (
                                 <TableCell width={320} sx={{ borderColor: cellBorder }}>
-                                    <strong>Исполнитель</strong>
+                                    <strong>{columnLabels.executor}</strong>
                                 </TableCell>
                             )}
                             {columnVisibility.due && (
                                 <TableCell width={220} align="center" sx={{ borderColor: cellBorder }}>
-                                    <strong>Срок</strong>
+                                    <strong>{columnLabels.due}</strong>
                                 </TableCell>
                             )}
                             {columnVisibility.order && (
                                 <TableCell width={120} align="center" sx={{ borderColor: cellBorder }}>
-                                    <strong>Заказ</strong>
+                                    <strong>{columnLabels.order}</strong>
                                 </TableCell>
                             )}
                         </TableRow>
@@ -453,7 +456,9 @@ const ProjectTaskListInner = (
                         {pageSlice.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={visibleColumnsCount}>
-                                    <Typography color="text.secondary">Пока нет задач.</Typography>
+                                    <Typography color="text.secondary">
+                                        {t('tasks.empty', 'Пока нет задач.')}
+                                    </Typography>
                                 </TableCell>
                             </TableRow>
                         )}
@@ -498,7 +503,7 @@ const ProjectTaskListInner = (
                                                     {t.bsNumber ? ` ${t.bsNumber}` : ''}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
-                                                    Создана: {formatDate(t.createdAt)}
+                                                    {t('task.fields.createdAt', 'Создана')}: {formatDate(t.createdAt, locale)}
                                                 </Typography>
                                             </Stack>
                                         </TableCell>
@@ -508,7 +513,7 @@ const ProjectTaskListInner = (
                                         <TableCell align="center">
                                             <Chip
                                                 size="small"
-                                                label={getStatusLabel(statusTitle)}
+                                                label={getStatusLabel(statusTitle, t)}
                                                 variant="outlined"
                                                 sx={{
                                                     backgroundColor: getStatusColor(statusTitle),
@@ -522,7 +527,7 @@ const ProjectTaskListInner = (
                                     {columnVisibility.priority && (
                                         <TableCell align="center">
                                             {getPriorityIcon(safePriority) ? (
-                                                <Tooltip title={getPriorityLabelRu(safePriority)}>
+                                                <Tooltip title={getPriorityLabel(safePriority, t)}>
                                                     <Box
                                                         component="span"
                                                         sx={{ display: 'inline-flex', alignItems: 'center' }}
@@ -582,15 +587,16 @@ const ProjectTaskListInner = (
                                     )}
 
                                     {columnVisibility.due && (
-                                        <TableCell align="center">{formatDate(t.dueDate)}</TableCell>
+                                        <TableCell align="center">{formatDate(t.dueDate, locale)}</TableCell>
                                     )}
                                     {columnVisibility.order && (
                                         <TableCell align="center">
                                             {t.orderUrl ? (
                                                 <Tooltip
-                                                    title={`Заказ ${t.orderNumber || '—'} от ${formatDate(
-                                                        t.orderDate
-                                                    )}`}
+                                                    title={t('task.order.tooltip', 'Заказ {orderNumber} от {date}', {
+                                                        orderNumber: t.orderNumber || '—',
+                                                        date: formatDate(t.orderDate, locale),
+                                                    })}
                                                 >
                                                     <IconButton
                                                         size="small"
@@ -625,10 +631,12 @@ const ProjectTaskListInner = (
                 {/* пагинация */}
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', p: 2 }}>
                     <FormControl size="small" sx={{ minWidth: 120 }}>
-                        <InputLabel id="rows-per-page-label">Items</InputLabel>
+                        <InputLabel id="rows-per-page-label">
+                            {t('common.itemsPerPage', 'Записей на странице')}
+                        </InputLabel>
                         <Select
                             labelId="rows-per-page-label"
-                            label="Items"
+                            label={t('common.itemsPerPage', 'Записей на странице')}
                             value={rowsPerPage}
                             onChange={(e) => {
                                 const v = Number(e.target.value);
@@ -639,7 +647,7 @@ const ProjectTaskListInner = (
                             <MenuItem value={10}>10</MenuItem>
                             <MenuItem value={50}>50</MenuItem>
                             <MenuItem value={100}>100</MenuItem>
-                            <MenuItem value={-1}>Все</MenuItem>
+                            <MenuItem value={-1}>{t('common.all', 'Все')}</MenuItem>
                         </Select>
                     </FormControl>
 
@@ -670,7 +678,7 @@ const ProjectTaskListInner = (
                         }}
                     >
                         <Typography variant="h6" fontWeight={600}>
-                            Настройка колонок
+                            {t('tasks.columns.configure', 'Настройка колонок')}
                         </Typography>
                         <IconButton onClick={closeColumnsDialog}>
                             <CloseIcon />
@@ -686,16 +694,16 @@ const ProjectTaskListInner = (
                                         onChange={() => toggleColumn(key)}
                                     />
                                 }
-                                label={COLUMN_LABELS[key]}
+                                label={columnLabels[key]}
                             />
                         ))}
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleSelectAllColumns} startIcon={<CheckBoxIcon />}>
-                            Выбрать все
+                            {t('common.selectAll', 'Выбрать все')}
                         </Button>
                         <Button onClick={handleResetColumns} startIcon={<CheckBoxOutlineBlankIcon />}>
-                            Очистить
+                            {t('common.clear', 'Очистить')}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -756,7 +764,7 @@ const ProjectTaskListInner = (
                                 <OpenInNewIcon fontSize="small" />
                             </Box>
                         </MListItemIcon>
-                        <MListItemText primary="Открыть" />
+                        <MListItemText primary={t('common.open', 'Открыть')} />
                     </MMenuItem>
 
                     <MMenuItem
@@ -790,7 +798,7 @@ const ProjectTaskListInner = (
                                 <EditNoteOutlinedIcon fontSize="small" />
                             </Box>
                         </MListItemIcon>
-                        <MListItemText primary="Редактировать" />
+                        <MListItemText primary={t('common.edit', 'Редактировать')} />
                     </MMenuItem>
 
                     <Divider sx={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.1)' }} />
@@ -826,17 +834,17 @@ const ProjectTaskListInner = (
                                 <DeleteOutlineIcon fontSize="small" />
                             </Box>
                         </MListItemIcon>
-                        <MListItemText primary="Удалить" />
+                        <MListItemText primary={t('common.delete', 'Удалить')} />
                     </MMenuItem>
                 </Menu>
 
                 {/* диалог удаления */}
                 <Dialog open={deleteOpen} onClose={deleteLoading ? undefined : handleCancelDelete}>
-                    <DialogTitle>Удалить задачу?</DialogTitle>
+                    <DialogTitle>{t('task.delete.title', 'Удалить задачу?')}</DialogTitle>
                     <DialogContent>
                         <DialogContentText>
-                            Это действие нельзя отменить. Будет удалена задача
-                            {selectedTask ? ` «${selectedTask.taskName}»` : ''}.
+                            {t('task.delete.confirmation', 'Это действие нельзя отменить. Будет удалена задача')}{' '}
+                            {selectedTask ? `«${selectedTask.taskName}»` : ''}.
                         </DialogContentText>
                         <FormControlLabel
                             sx={{ mt: 1 }}
@@ -845,18 +853,18 @@ const ProjectTaskListInner = (
                                     checked={deleteReports}
                                     onChange={(event) => setDeleteReports(event.target.checked)}
                                     disabled={deleteLoading}
-                                />
-                            }
-                            label="Удалить связанные с задачей фотоотчеты"
+                            />
+                        }
+                            label={t('task.delete.reports', 'Удалить связанные с задачей фотоотчеты')}
                         />
                         {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleCancelDelete} disabled={deleteLoading}>
-                            Отмена
+                            {t('common.cancel', 'Отмена')}
                         </Button>
                         <Button onClick={handleConfirmDelete} variant="contained" color="error" disabled={deleteLoading}>
-                            {deleteLoading ? 'Удаляю…' : 'Удалить'}
+                            {deleteLoading ? t('common.deleting', 'Удаляю…') : t('common.delete', 'Удалить')}
                         </Button>
                     </DialogActions>
                 </Dialog>

@@ -1,6 +1,7 @@
 // src/utils/priorityIcons.tsx
 import * as React from 'react';
 import type { SxProps, Theme } from '@mui/material/styles';
+import type { Translator } from '@/i18n';
 
 import RemoveIcon from '@mui/icons-material/Remove';
 import DragHandleIcon from '@mui/icons-material/DragHandle';
@@ -56,4 +57,23 @@ export function getPriorityLabelRu(priority?: string | null): string {
     const normalized = normalizePriority(priority ?? '');
     if (!normalized) return '';
     return PRIORITY_LABEL_RU[normalized];
+}
+
+export function getPriorityLabel(priority?: string | null, t?: Translator): string {
+    const normalized = normalizePriority(priority ?? '');
+    if (!normalized) return '';
+    if (!t) return PRIORITY_LABEL_RU[normalized];
+
+    switch (normalized) {
+        case 'urgent':
+            return t('priority.urgent', PRIORITY_LABEL_RU.urgent);
+        case 'high':
+            return t('priority.high', PRIORITY_LABEL_RU.high);
+        case 'medium':
+            return t('priority.medium', PRIORITY_LABEL_RU.medium);
+        case 'low':
+            return t('priority.low', PRIORITY_LABEL_RU.low);
+        default:
+            return PRIORITY_LABEL_RU[normalized];
+    }
 }

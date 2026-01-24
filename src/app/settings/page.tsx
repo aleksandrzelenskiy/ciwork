@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Paper,
@@ -34,6 +34,11 @@ export default function SettingsPage() {
   const [language, setLanguage] = useState(locale);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; severity: 'success' | 'error' } | null>(null);
+  const tRef = useRef(t);
+
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     (async () => {
@@ -46,10 +51,16 @@ export default function SettingsPage() {
         setLanguage(resolvedLocale);
         setLocale(resolvedLocale);
       } else {
-        setProfile({ error: data.error || t('settings.profileLoadError', 'Не удалось загрузить профиль') });
+        setProfile({
+          error: data.error || tRef.current('settings.profileLoadError', 'Не удалось загрузить профиль'),
+        });
       }
     })();
-  }, [setLocale, t]);
+  }, [setLocale]);
+
+  useEffect(() => {
+    setLanguage(locale);
+  }, [locale]);
 
   const handleSave = async () => {
     setSaving(true);

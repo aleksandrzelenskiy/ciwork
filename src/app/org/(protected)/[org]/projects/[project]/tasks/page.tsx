@@ -49,10 +49,11 @@ import ProjectTaskList, { ProjectTaskListHandle } from '@/app/workspace/componen
 import ProjectTaskBoard from '@/app/workspace/components/ProjectTaskBoard';
 import ProjectTaskCalendar from '@/app/workspace/components/ProjectTaskCalendar';
 import { defaultTaskFilters, type TaskFilters } from '@/app/types/taskFilters';
-import { getPriorityLabelRu } from '@/utils/priorityIcons';
+import { getPriorityLabel } from '@/utils/priorityIcons';
 import { startOfDay, endOfDay, format } from 'date-fns';
 import { getStatusLabel, normalizeStatusTitle, STATUS_ORDER } from '@/utils/statusLabels';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type Priority = 'urgent' | 'high' | 'medium' | 'low';
 
@@ -109,6 +110,7 @@ const getExecutorLabel = (task: Task) => {
 };
 
 export default function ProjectTasksPage() {
+    const { t } = useI18n();
     const params = useParams<{ org: string; project: string }>() as {
         org: string;
         project: string;
@@ -188,7 +190,9 @@ export default function ProjectTasksPage() {
                 if (!res.ok || !data || 'error' in data) {
                     setOrgInfoError(
                         !data || !('error' in data)
-                            ? `Failed to load org: ${res.status}`
+                            ? t('tasks.error.loadOrg', 'Не удалось загрузить организацию: {status}', {
+                                status: res.status,
+                            })
                             : data.error
                     );
                     setOrgInfo(null);
@@ -197,14 +201,18 @@ export default function ProjectTasksPage() {
                 setOrgInfo(data.org);
             } catch (e) {
                 if ((e as DOMException)?.name !== 'AbortError') {
-                    setOrgInfoError(e instanceof Error ? e.message : 'Org load error');
+                    setOrgInfoError(
+                        e instanceof Error
+                            ? e.message
+                            : t('tasks.error.loadOrgGeneric', 'Ошибка загрузки организации')
+                    );
                 }
             }
         }
 
         void fetchOrg();
         return () => ctrl.abort();
-    }, [orgSlug]);
+    }, [orgSlug, t]);
 
     const filterOptions = React.useMemo(() => {
         const executorSet = new Set<string>();
@@ -287,18 +295,18 @@ export default function ProjectTasksPage() {
             const data: ApiListResponse = await res.json();
 
             if (!('ok' in data)) {
-                setError(data.error || 'Failed to load');
+                setError(data.error || t('tasks.error.load', 'Не удалось загрузить задачи'));
                 setItems([]);
             } else {
                 setItems(data.items || []);
             }
         } catch (e) {
-            setError(e instanceof Error ? e.message : 'Network error');
+            setError(e instanceof Error ? e.message : t('common.networkError', 'Ошибка сети'));
             setItems([]);
         } finally {
             setLoading(false);
         }
-    }, [orgSlug, projectRef, q]);
+    }, [orgSlug, projectRef, q, t]);
 
     React.useEffect(() => {
         void load();
@@ -483,13 +491,38 @@ export default function ProjectTasksPage() {
 
     const filterChips = React.useMemo(() => {
         const chips: Array<{ key: keyof TaskFilters; label: string }> = [];
-        if (filters.executor) chips.push({ key: 'executor', label: `Исполнитель: ${filters.executor}` });
-        if (filters.status) chips.push({ key: 'status', label: `Статус: ${getStatusLabel(filters.status)}` });
-        if (filters.priority) chips.push({ key: 'priority', label: `Приоритет: ${getPriorityLabelRu(filters.priority)}` });
-        if (filters.dueFrom) chips.push({ key: 'dueFrom', label: `Срок от: ${format(filters.dueFrom, 'dd.MM.yyyy')}` });
-        if (filters.dueTo) chips.push({ key: 'dueTo', label: `Срок до: ${format(filters.dueTo, 'dd.MM.yyyy')}` });
+        if (filters.executor) {
+            chips.push({
+                key: 'executor',
+                label: `${t('tasks.filters.executor', 'Исполнитель')}: ${filters.executor}`,
+            });
+        }
+        if (filters.status) {
+            chips.push({
+                key: 'status',
+                label: `${t('tasks.filters.status', 'Статус')}: ${getStatusLabel(filters.status, t)}`,
+            });
+        }
+        if (filters.priority) {
+            chips.push({
+                key: 'priority',
+                label: `${t('tasks.filters.priority', 'Приоритет')}: ${getPriorityLabel(filters.priority, t)}`,
+            });
+        }
+        if (filters.dueFrom) {
+            chips.push({
+                key: 'dueFrom',
+                label: `${t('tasks.filters.dueFrom', 'Срок от')}: ${format(filters.dueFrom, 'dd.MM.yyyy')}`,
+            });
+        }
+        if (filters.dueTo) {
+            chips.push({
+                key: 'dueTo',
+                label: `${t('tasks.filters.dueTo', 'Срок до')}: ${format(filters.dueTo, 'dd.MM.yyyy')}`,
+            });
+        }
         return chips;
-    }, [filters]);
+    }, [filters, t]);
 
     const primaryManagerRaw = React.useMemo(() => {
         const first = projectManagers.find((manager) => manager.trim().length > 0);
@@ -562,7 +595,7 @@ export default function ProjectTasksPage() {
                     >
                         <Box>
                             <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
-                                <Tooltip title="К списку проектов">
+                                <Tooltip title={t('projects.backToList', 'К списку проектов')}>
                                     <span>
                                         <IconButton
                                             component="a"
@@ -572,7 +605,7 @@ export default function ProjectTasksPage() {
                                                     : '#'
                                             }
                                             disabled={!orgSlug}
-                                            aria-label="Перейти к проектам"
+                                            aria-label={t('projects.backToList', 'К списку проектов')}
                                             sx={getIconButtonSx({ disabled: !orgSlug })}
                                         >
                                             <ArrowBackIcon />
@@ -585,7 +618,9 @@ export default function ProjectTasksPage() {
                                     color={textPrimary}
                                     sx={{ fontSize: { xs: '1.6rem', md: '1.95rem' } }}
                                 >
-                                    Задачи {projectKeyRef}
+                                    {t('tasks.project.title', 'Задачи {project}', {
+                                        project: projectKeyRef,
+                                    })}
                                 </Typography>
                             </Stack>
                             <Typography
@@ -593,7 +628,7 @@ export default function ProjectTasksPage() {
                                 color={textSecondary}
                                 sx={{ fontSize: { xs: '1rem', md: '1.05rem' } }}
                             >
-                                Организация:{' '}
+                                {t('org.label', 'Организация')}: {' '}
                                 {orgSlug ? (
                                     <Box
                                         component={Link}
@@ -617,7 +652,7 @@ export default function ProjectTasksPage() {
                                     color={textSecondary}
                                     sx={{ fontSize: { xs: '1rem', md: '1.05rem' }, mt: 0.5 }}
                                 >
-                                    Менеджер проекта:{' '}
+                                    {t('projects.manager', 'Менеджер проекта')}: {' '}
                                     {managerClerkId ? (
                                         <Button
                                             variant="text"
@@ -654,7 +689,7 @@ export default function ProjectTasksPage() {
                             )}
                             {orgInfoError && (
                                 <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                                    Не удалось загрузить организацию: {orgInfoError}
+                                    {t('tasks.error.loadOrgInline', 'Не удалось загрузить организацию')}: {orgInfoError}
                                 </Typography>
                             )}
                         </Box>
@@ -664,7 +699,7 @@ export default function ProjectTasksPage() {
                             alignItems="center"
                             sx={{ flexWrap: 'wrap', rowGap: 1 }}
                         >
-                            <Tooltip title="Поиск">
+                            <Tooltip title={t('common.search', 'Поиск')}>
                                 <IconButton
                                     onClick={handleSearchIconClick}
                                     sx={getIconButtonSx({ active: searchOpen || Boolean(q) })}
@@ -672,7 +707,7 @@ export default function ProjectTasksPage() {
                                     <SearchIcon />
                                 </IconButton>
                             </Tooltip>
-                            <Tooltip title="Фильтры задач">
+                            <Tooltip title={t('tasks.filters.title', 'Фильтры задач')}>
                                 <IconButton
                                     onClick={handleFilterButtonClick}
                                     sx={getIconButtonSx({
@@ -684,7 +719,7 @@ export default function ProjectTasksPage() {
                                 </IconButton>
                             </Tooltip>
                             {tab === 'list' && (
-                                <Tooltip title="Настроить колонки">
+                                <Tooltip title={t('tasks.columns.configure', 'Настроить колонки')}>
                                     <IconButton
                                         onClick={() => taskListRef.current?.openColumns()}
                                         sx={getIconButtonSx({
@@ -696,7 +731,7 @@ export default function ProjectTasksPage() {
                                     </IconButton>
                                 </Tooltip>
                             )}
-                            <Tooltip title="Обновить">
+                            <Tooltip title={t('common.refresh', 'Обновить')}>
                                 <span>
                                     <IconButton
                                         onClick={() => void load()}
@@ -720,7 +755,7 @@ export default function ProjectTasksPage() {
                                     boxShadow: buttonShadow,
                                 }}
                             >
-                                Создать задачу
+                                {t('tasks.create', 'Создать задачу')}
                             </Button>
                         </Stack>
                     </Stack>
@@ -748,7 +783,7 @@ export default function ProjectTasksPage() {
                 >
                     <Box sx={{ p: 2, width: 320 }}>
                         <TextField
-                            label="Поиск (ID, название, БС)"
+                            label={t('tasks.search.label', 'Поиск (ID, название, БС)')}
                             value={q}
                             onChange={(e) => setQ(e.target.value)}
                             onKeyDown={(event) => {
@@ -787,7 +822,7 @@ export default function ProjectTasksPage() {
                         }}
                     >
                         <Typography variant="h6" fontWeight={600}>
-                            Фильтры задач
+                            {t('tasks.filters.title', 'Фильтры задач')}
                         </Typography>
                         <IconButton onClick={handleFilterClose}>
                             <CloseIcon />
@@ -811,52 +846,56 @@ export default function ProjectTasksPage() {
                                     clearOnEscape
                                     handleHomeEndKeys
                                     renderInput={(params) => (
-                                        <TextField {...params} label="Исполнитель" size="small" />
+                                        <TextField
+                                            {...params}
+                                            label={t('tasks.filters.executor', 'Исполнитель')}
+                                            size="small"
+                                        />
                                     )}
                                 />
                                 <FormControl fullWidth size="small">
-                                    <InputLabel>Статус</InputLabel>
+                                    <InputLabel>{t('tasks.filters.status', 'Статус')}</InputLabel>
                                     <Select
-                                        label="Статус"
+                                        label={t('tasks.filters.status', 'Статус')}
                                         value={filters.status}
                                         onChange={handleSelectFilterChange('status')}
                                     >
                                         <MenuItem value="">
-                                            <em>Все</em>
+                                            <em>{t('common.all', 'Все')}</em>
                                         </MenuItem>
                                         {filterOptions.statuses.map((status) => (
                                             <MenuItem key={status} value={status}>
-                                                {getStatusLabel(status)}
+                                                {getStatusLabel(status, t)}
                                             </MenuItem>
                                         ))}
                                     </Select>
                                 </FormControl>
                                 <FormControl fullWidth size="small">
-                                    <InputLabel>Приоритет</InputLabel>
+                                    <InputLabel>{t('tasks.filters.priority', 'Приоритет')}</InputLabel>
                                     <Select
-                                        label="Приоритет"
+                                        label={t('tasks.filters.priority', 'Приоритет')}
                                         value={filters.priority}
                                         onChange={handleSelectFilterChange('priority')}
                                     >
                                         <MenuItem value="">
-                                            <em>Все</em>
+                                            <em>{t('common.all', 'Все')}</em>
                                         </MenuItem>
                                         {filterOptions.priorities.map((priority) => (
                                             <MenuItem key={priority} value={priority}>
-                                                {getPriorityLabelRu(priority)}
+                                                {getPriorityLabel(priority, t)}
                                             </MenuItem>
                                         ))}
                                     </Select>
                                 </FormControl>
                                 <Stack direction="row" spacing={1}>
                                     <DatePicker
-                                        label="Срок от"
+                                        label={t('tasks.filters.dueFrom', 'Срок от')}
                                         value={filters.dueFrom}
                                         onChange={handleDueDateChange('dueFrom')}
                                         slotProps={{ textField: { size: 'small' } }}
                                     />
                                     <DatePicker
-                                        label="Срок до"
+                                        label={t('tasks.filters.dueTo', 'Срок до')}
                                         value={filters.dueTo}
                                         onChange={handleDueDateChange('dueTo')}
                                         slotProps={{ textField: { size: 'small' } }}
@@ -877,7 +916,9 @@ export default function ProjectTasksPage() {
                                 )}
                                 {hasActiveFilters && (
                                     <Typography variant="caption" color="text.secondary">
-                                        Активные фильтры: {activeFilterCount}
+                                        {t('tasks.filters.active', 'Активные фильтры: {count}', {
+                                            count: activeFilterCount,
+                                        })}
                                     </Typography>
                                 )}
                             </Stack>
@@ -885,10 +926,10 @@ export default function ProjectTasksPage() {
                     </DialogContent>
                     <DialogActions sx={{ justifyContent: 'space-between', px: 3, py: 2 }}>
                         <Button onClick={handleFilterReset} color="secondary">
-                            Сбросить
+                            {t('common.reset', 'Сбросить')}
                         </Button>
                         <Button variant="contained" onClick={handleFilterClose}>
-                            Готово
+                            {t('common.done', 'Готово')}
                         </Button>
                     </DialogActions>
                 </Dialog>
@@ -922,7 +963,7 @@ export default function ProjectTasksPage() {
                     >
                         <Tab
                             value="list"
-                            label="Список"
+                            label={t('tasks.view.list', 'Список')}
                             sx={{
                                 textTransform: 'none',
                                 fontWeight: 600,
@@ -942,7 +983,7 @@ export default function ProjectTasksPage() {
                         />
                         <Tab
                             value="board"
-                            label="Доска"
+                            label={t('tasks.view.board', 'Доска')}
                             sx={{
                                 textTransform: 'none',
                                 fontWeight: 600,
@@ -962,7 +1003,7 @@ export default function ProjectTasksPage() {
                         />
                         <Tab
                             value="calendar"
-                            label="Календарь"
+                            label={t('tasks.view.calendar', 'Календарь')}
                             sx={{
                                 textTransform: 'none',
                                 fontWeight: 600,

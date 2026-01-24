@@ -24,13 +24,14 @@ import Tooltip from '@mui/material/Tooltip';
 import TaskOutlinedIcon from '@mui/icons-material/TaskOutlined';
 import { useTheme } from '@mui/material/styles';
 import { getStatusColor } from '@/utils/statusColors';
-import { getPriorityIcon, normalizePriority } from '@/utils/priorityIcons';
+import { getPriorityIcon, getPriorityLabel, normalizePriority } from '@/utils/priorityIcons';
 import { STATUS_ORDER, getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 import type { CurrentStatus } from '@/app/types/taskTypes';
 import WorkspaceTaskDialog, { TaskForEdit } from '@/app/workspace/components/WorkspaceTaskDialog';
 import TaskContextMenu from '@/app/workspace/components/TaskContextMenu';
 import { UI_RADIUS } from '@/config/uiTokens';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type StatusTitle = CurrentStatus;
 
@@ -70,25 +71,29 @@ type Task = {
     relatedTasks?: string[];
 };
 
-const formatDateRU = (v?: string) => (v ? new Date(v).toLocaleDateString('ru-RU') : '—');
+const formatDate = (v?: string, locale?: string) =>
+    v ? new Date(v).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US') : '—';
 
 function TaskCard({
-                      t,
-                      statusTitle,
-                      onClick,
-                      onContextMenu,
-                      onOpenProfile,
-                  }: {
-    t: Task;
+    task,
+    statusTitle,
+    onClick,
+    onContextMenu,
+    onOpenProfile,
+}: {
+    task: Task;
     statusTitle: StatusTitle;
     onClick?: (task: Task) => void;
     onContextMenu?: (e: React.MouseEvent, task: Task) => void;
     onOpenProfile?: (clerkUserId?: string | null) => void;
 }) {
-    const p = normalizePriority(t.priority);
-    const execLabel = t.executorName || t.executorEmail || '';
+    const { t, locale } = useI18n();
+    const p = normalizePriority(task.priority);
+    const execLabel = task.executorName || task.executorEmail || '';
     const execTooltip =
-        t.executorName && t.executorEmail ? `${t.executorName} • ${t.executorEmail}` : execLabel;
+        task.executorName && task.executorEmail
+            ? `${task.executorName} • ${task.executorEmail}`
+            : execLabel;
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const cardBg = isDark
@@ -99,7 +104,7 @@ function TaskCard({
 
     return (
         <Card
-            data-task-id={t._id}
+            data-task-id={task._id}
             sx={{
                 mb: 2,
                 boxShadow: cardShadow,
@@ -110,24 +115,26 @@ function TaskCard({
                 border: `1px solid ${cardBorder}`,
                 '&:hover': onClick ? { transform: 'translateY(-1px)', transition: '150ms ease' } : undefined,
             }}
-            onClick={onClick ? () => onClick(t) : undefined}
-            onContextMenu={onContextMenu ? (e) => onContextMenu(e, t) : undefined}
+            onClick={onClick ? () => onClick(task) : undefined}
+            onContextMenu={onContextMenu ? (e) => onContextMenu(e, task) : undefined}
         >
             <Box sx={{ mt: '5px', ml: '5px' }}>
                 <Typography variant="caption" color="text.secondary">
                     <TaskOutlinedIcon sx={{ fontSize: 15, mb: 0.5, mr: 0.5 }} />
-                    {t.taskId} {t.createdAt ? new Date(t.createdAt).toLocaleDateString('ru-RU') : ''}
+                    {task.taskId} {task.createdAt ? formatDate(task.createdAt, locale) : ''}
                 </Typography>
             </Box>
 
             <CardContent sx={{ pb: 6 }}>
                 <Typography variant="subtitle1" gutterBottom>
-                    {t.taskName}
+                    {task.taskName}
                 </Typography>
 
-                <Typography variant="body2">BS: {t.bsNumber || '—'}</Typography>
+                <Typography variant="body2">
+                    {t('task.fields.bsNumberShort', 'БС')}: {task.bsNumber || '—'}
+                </Typography>
                 <Typography variant="caption" color="text.secondary">
-                    Проект: {t.projectKey || '—'}
+                    {t('project.label', 'Проект')}: {task.projectKey || '—'}
                 </Typography>
 
                 <Box sx={{ mt: 0.5, minHeight: 28 }}>
@@ -139,20 +146,22 @@ function TaskCard({
                                 variant="outlined"
                                 sx={{ maxWidth: '100%' }}
                                 onClick={(event) => {
-                                    if (!t.executorId) return;
+                                    if (!task.executorId) return;
                                     event.stopPropagation();
-                                    onOpenProfile?.(t.executorId);
+                                    onOpenProfile?.(task.executorId);
                                 }}
                             />
                         </Tooltip>
                     ) : (
                         <Typography variant="caption" color="text.secondary">
-                            Исполнитель: —
+                            {t('task.fields.executorName', 'Исполнитель')}: —
                         </Typography>
                     )}
                 </Box>
 
-                <Typography variant="caption">Due date: {formatDateRU(t.dueDate)}</Typography>
+                <Typography variant="caption">
+                    {t('task.fields.dueDate', 'Срок')}: {formatDate(task.dueDate, locale)}
+                </Typography>
             </CardContent>
 
             <Box
@@ -167,14 +176,14 @@ function TaskCard({
                 }}
             >
                 <Chip
-                    label={getStatusLabel(statusTitle)}
+                    label={getStatusLabel(statusTitle, t)}
                     size="small"
                     sx={{ bgcolor: getStatusColor(statusTitle), color: '#fff' }}
                 />
 
                 <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center' }}>
                     {p && (
-                        <Tooltip title={p}>
+                        <Tooltip title={getPriorityLabel(p, t) || p}>
                             <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
                                 {getPriorityIcon(p, { fontSize: 20 })}
                             </Box>
@@ -187,13 +196,13 @@ function TaskCard({
 }
 
 export default function ProjectTaskBoard({
-                                             items,
-                                             loading,
-                                             error,
-                                             org,
-                                             project,
-                                             onReloadAction,
-                                         }: {
+    items,
+    loading,
+    error,
+    org,
+    project,
+    onReloadAction,
+}: {
     items: Task[];
     loading: boolean;
     error: string | null;
@@ -201,7 +210,7 @@ export default function ProjectTaskBoard({
     project: string;
     onReloadAction?: () => void;
 }) {
-
+    const { t } = useI18n();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const columnBg = isDark ? 'rgba(10,13,20,0.9)' : 'rgba(255,255,255,0.94)';
@@ -313,7 +322,7 @@ export default function ProjectTaskBoard({
             setDeleteOpen(false);
             onReloadAction?.();
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'Ошибка удаления';
+            const msg = e instanceof Error ? e.message : t('task.delete.error', 'Ошибка удаления');
             setDeleteError(msg);
         } finally {
             setDeleteLoading(false);
@@ -328,7 +337,7 @@ export default function ProjectTaskBoard({
     if (loading)
         return (
             <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography color="text.secondary">Загрузка…</Typography>
+                <Typography color="text.secondary">{t('common.loading', 'Загрузка…')}</Typography>
             </Box>
         );
     if (error)
@@ -356,12 +365,12 @@ export default function ProjectTaskBoard({
                         }}
                     >
                         <Typography variant="h6" sx={{ mb: 2, textTransform: 'none' }}>
-                            {getStatusLabel(status)} ({grouped[status]?.length || 0})
+                            {getStatusLabel(status, t)} ({grouped[status]?.length || 0})
                         </Typography>
                         {(grouped[status] || []).map((t) => (
                             <TaskCard
                                 key={t._id}
-                                t={t}
+                                task={t}
                                 statusTitle={status}
                                 onClick={handleCardClick}
                                 onContextMenu={handleCardContext}
@@ -383,11 +392,11 @@ export default function ProjectTaskBoard({
 
             {/* диалог удаления */}
             <Dialog open={deleteOpen} onClose={deleteLoading ? undefined : () => setDeleteOpen(false)}>
-                <DialogTitle>Удалить задачу?</DialogTitle>
+                <DialogTitle>{t('task.delete.title', 'Удалить задачу?')}</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Это действие нельзя отменить. Будет удалена задача
-                        {menuTask ? ` «${menuTask.taskName}»` : ''}.
+                        {t('task.delete.confirmation', 'Это действие нельзя отменить. Будет удалена задача')}{' '}
+                        {menuTask ? `«${menuTask.taskName}»` : ''}.
                     </DialogContentText>
                     <FormControlLabel
                         sx={{ mt: 1 }}
@@ -398,16 +407,16 @@ export default function ProjectTaskBoard({
                                 disabled={deleteLoading}
                             />
                         }
-                        label="Удалить связанные с задачей фотоотчеты"
+                        label={t('task.delete.reports', 'Удалить связанные с задачей фотоотчеты')}
                     />
                     {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setDeleteOpen(false)} disabled={deleteLoading}>
-                        Отмена
+                        {t('common.cancel', 'Отмена')}
                     </Button>
                     <Button onClick={confirmDelete} variant="contained" color="error" disabled={deleteLoading}>
-                        {deleteLoading ? 'Удаляю…' : 'Удалить'}
+                        {deleteLoading ? t('common.deleting', 'Удаляю…') : t('common.delete', 'Удалить')}
                     </Button>
                 </DialogActions>
             </Dialog>

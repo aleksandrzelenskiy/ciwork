@@ -32,6 +32,7 @@ import ArrowBackIos from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIos from '@mui/icons-material/ArrowForwardIos';
 import Today from '@mui/icons-material/Today';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 // Типы
 type Status = 'TO DO' | 'IN PROGRESS' | 'DONE';
@@ -139,6 +140,7 @@ export default function ProjectTaskCalendar({
     project?: string;
     onReloadAction?: () => void;
 }) {
+    const { t } = useI18n();
     const router = useRouter();
     void onReloadAction;
     const theme = useTheme();
@@ -177,7 +179,7 @@ export default function ProjectTaskCalendar({
     if (loading) {
         return (
             <Box sx={{ p: 3, textAlign: 'center' }}>
-                <Typography color="text.secondary">Загрузка…</Typography>
+                <Typography color="text.secondary">{t('common.loading', 'Загрузка…')}</Typography>
             </Box>
         );
     }

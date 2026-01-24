@@ -15,6 +15,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type Props = {
     anchorPosition: { top: number; left: number } | null;
@@ -25,12 +26,13 @@ type Props = {
 };
 
 export default function TaskContextMenu({
-                                            anchorPosition,
-                                            onClose,
-                                            onOpenTask,
-                                            onEditTask,
-                                            onDeleteTask,
-                                        }: Props) {
+    anchorPosition,
+    onClose,
+    onOpenTask,
+    onEditTask,
+    onDeleteTask,
+}: Props) {
+    const { t } = useI18n();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const menuBg = isDark ? 'rgba(12,16,26,0.95)' : 'rgba(255,255,255,0.96)';
@@ -68,7 +70,7 @@ export default function TaskContextMenu({
                 <ListItemIcon>
                     <OpenInNewIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText primary="Открыть" />
+                <ListItemText primary={t('common.open', 'Открыть')} />
             </MenuItem>
 
             <MenuItem
@@ -81,7 +83,7 @@ export default function TaskContextMenu({
                 <ListItemIcon>
                     <EditIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText primary="Редактировать" />
+                <ListItemText primary={t('common.edit', 'Редактировать')} />
             </MenuItem>
 
             <Divider sx={{ borderColor: menuBorder }} />
@@ -99,7 +101,7 @@ export default function TaskContextMenu({
                 <ListItemIcon>
                     <DeleteOutlineIcon fontSize="small" color="error" />
                 </ListItemIcon>
-                <ListItemText primary="Удалить" />
+                <ListItemText primary={t('common.delete', 'Удалить')} />
             </MenuItem>
         </Menu>
     );
