@@ -467,17 +467,13 @@ export default function MarketplacePage() {
             });
             return;
         }
-        if (!applyMessage.trim()) {
-            setSnack({ open: true, message: 'Добавьте сопроводительное сообщение', severity: 'error' });
-            return;
-        }
         setSubmitLoading(true);
         try {
             const res = await fetch(`/api/tasks/${selectedTask._id}/applications`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    coverMessage: applyMessage,
+                    coverMessage: applyMessage.trim() || undefined,
                     proposedBudget: budgetValue,
                     etaDays,
                 }),
@@ -1103,7 +1099,7 @@ export default function MarketplacePage() {
                             }}
                         />
                         <TextField
-                            label="Сообщение"
+                            label="Сообщение (необязательно)"
                             value={applyMessage}
                             onChange={(e) => setApplyMessage(e.target.value)}
                             fullWidth

@@ -25,6 +25,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import StoreIcon from '@mui/icons-material/Store';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import ManageAccountsSharpIcon from '@mui/icons-material/ManageAccountsSharp';
 import { useClerk, useUser } from '@clerk/nextjs';
 import type { UserResource } from '@clerk/types';
 import {
@@ -34,6 +35,7 @@ import {
 } from '@/app/utils/userContext';
 import { MANAGER_ROLES } from '@/app/types/roles';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type NavigationMenuProps = {
     onNavigateAction: (path: string) => void;
@@ -47,6 +49,7 @@ type NavChildItem = {
 
 type NavItem = {
     label: string;
+    labelKey?: string;
     path: string;
     icon: React.ReactNode;
     children?: NavChildItem[];
@@ -65,7 +68,7 @@ type ManagerOrgLink = {
 };
 
 const BASE_NAV_ITEMS: NavItem[] = [
-    { label: 'ГЛАВНАЯ', path: '/', icon: <HomeIcon sx={{ fontSize: 20 }} /> },
+    { label: 'ГЛАВНАЯ', labelKey: 'nav.home', path: '/', icon: <HomeIcon sx={{ fontSize: 20 }} /> },
     // {
     //     label: 'ФОТООТЧЕТЫ',
     //     path: '/reports',
@@ -82,6 +85,7 @@ type DbUserPayload = {
 };
 
 export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps) {
+    const { t } = useI18n();
     const { user } = useUser();
     const { signOut } = useClerk();
     const pathname = usePathname() ?? '';
@@ -348,7 +352,9 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
     const locationsPath = isEmployerView
         ? employerLocationsPath
         : baseGeoPath;
-    const geoLabel = isContractorView && !isEmployerView ? 'НА КАРТЕ' : 'ГЕОЛОКАЦИИ';
+    const geoLabel = isContractorView && !isEmployerView
+        ? t('nav.locations.map', 'НА КАРТЕ')
+        : t('nav.locations', 'ГЕОЛОКАЦИИ');
     const tasksChildren =
         isEmployerView && managerProjectPaths.length > 1
             ? managerProjectPaths.map((project) => ({
@@ -383,17 +389,20 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
             : undefined;
     const navItems = React.useMemo<NavItem[]>(() => {
         if (!profileType && !isSuperAdminUser) return [];
-        const items: NavItem[] = [...BASE_NAV_ITEMS];
+        const items: NavItem[] = BASE_NAV_ITEMS.map((item) => ({
+            ...item,
+            label: item.labelKey ? t(item.labelKey, item.label) : t(item.label, item.label),
+        }));
         if (isSuperAdminUser) {
             items.push({
-                label: 'АДМИН',
+                label: t('nav.admin', 'АДМИН'),
                 path: '/admin',
                 icon: <AdminPanelSettingsIcon sx={{ fontSize: 20 }} />,
             });
         }
         if (isEmployerView && managerOrgPath) {
             items.push({
-                label: 'ОРГАНИЗАЦИЯ',
+                label: t('nav.organization', 'ОРГАНИЗАЦИЯ'),
                 path: managerOrgPath,
                 icon: <BusinessIcon sx={{ fontSize: 20 }} />,
             });
@@ -401,19 +410,19 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
         if (isEmployerView) {
             if (projectsPath) {
                 items.push({
-                    label: 'МОИ ПРОЕКТЫ',
+                    label: t('nav.projects', 'МОИ ПРОЕКТЫ'),
                     path: projectsPath,
                     icon: <FolderIcon sx={{ fontSize: 20 }} />,
                     children: projectsChildren,
                 });
             }
             items.push({
-                label: 'ФОТООТЧЕТЫ',
+                label: t('nav.reports', 'ФОТООТЧЕТЫ'),
                 path: '/reports',
                 icon: <PermMediaIcon sx={{ fontSize: 20 }} />,
             });
             items.push({
-                label: 'ГЕОЛОКАЦИИ',
+                label: t('nav.locations', 'ГЕОЛОКАЦИИ'),
                 path: locationsPath,
                 icon: <PlaceIcon sx={{ fontSize: 20 }} />,
                 children: locationsChildren,
@@ -422,13 +431,13 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
         }
         if (isContractorView) {
             items.push({
-                label: 'МОИ ЗАДАЧИ',
+                label: t('nav.myTasks', 'МОИ ЗАДАЧИ'),
                 path: tasksPath,
                 icon: <TaskIcon sx={{ fontSize: 20 }} />,
                 children: tasksChildren,
             });
             items.push({
-                label: 'БИРЖА',
+                label: t('nav.market', 'БИРЖА'),
                 path: '/market',
                 icon: <StoreIcon sx={{ fontSize: 20 }} />,
             });
@@ -453,6 +462,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
         profileType,
         isSuperAdminUser,
         geoLabel,
+        t,
     ]);
 
 
@@ -475,7 +485,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
         contextName ||
         namedUser?.name ||
         namedUser?.username ||
-        'Пользователь';
+        t('common.user', 'Пользователь');
     const userEmail =
         contextEmail || normalizeValue(user?.emailAddresses[0]?.emailAddress);
     const avatarSrc = contextUser?.profilePic || user?.imageUrl || '';
@@ -486,6 +496,10 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
 
     const handleProfileClick = () => {
         onNavigateAction('/profile');
+    };
+
+    const handleSettingsClick = () => {
+        onNavigateAction('/settings');
     };
 
     const palette = {
@@ -561,11 +575,11 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                 <Button
                     size='small'
                     variant='text'
-                    onClick={handleLogout}
-                    startIcon={<LogoutIcon fontSize='inherit' />}
+                    onClick={handleSettingsClick}
+                    startIcon={<ManageAccountsSharpIcon fontSize='inherit' />}
                     sx={{
                         textTransform: 'none',
-                        mt: 1,
+                        mt: 0.5,
                         fontSize: '0.9rem',
                         lineHeight: 1,
                         padding: '4px 12px',
@@ -581,7 +595,32 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                         },
                     }}
                 >
-                    Выйти
+                    {t('common.settings', 'Настройки')}
+                </Button>
+                <Button
+                    size='small'
+                    variant='text'
+                    onClick={handleLogout}
+                    startIcon={<LogoutIcon fontSize='inherit' />}
+                    sx={{
+                        textTransform: 'none',
+                        mt: 0.5,
+                        fontSize: '0.9rem',
+                        lineHeight: 1,
+                        padding: '4px 12px',
+                        borderRadius: 999,
+                        minHeight: 0,
+                        width: 'auto',
+                        fontWeight: 500,
+                        color: palette.accent,
+                        '&:hover': {
+                            backgroundColor: isDarkMode
+                                ? 'rgba(0,113,227,0.15)'
+                                : 'rgba(0,113,227,0.08)',
+                        },
+                    }}
+                >
+                    {t('common.logout', 'Выйти')}
                 </Button>
             </Box>
             <List

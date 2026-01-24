@@ -44,6 +44,7 @@ export async function GET() {
     effectiveOrgRole,
     isSuperAdmin,
     regionCode: user.regionCode || '',
+    locale: user.locale || 'ru',
     name: user.name,
     phone: user.phone || '',
     email: user.email,
@@ -60,19 +61,32 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { regionCode } = (await request.json()) as { regionCode?: string };
-  if (
-    !regionCode ||
-    !RUSSIAN_REGIONS.some((region) => region.code === regionCode)
-  ) {
-    return NextResponse.json({ error: 'Некорректный регион' }, { status: 400 });
+  const { regionCode, locale } = (await request.json()) as { regionCode?: string; locale?: string };
+  const updatePayload: { regionCode?: string; locale?: 'ru' | 'en' } = {};
+
+  if (typeof regionCode !== 'undefined') {
+    if (!RUSSIAN_REGIONS.some((region) => region.code === regionCode)) {
+      return NextResponse.json({ error: 'Некорректный регион' }, { status: 400 });
+    }
+    updatePayload.regionCode = regionCode;
+  }
+
+  if (typeof locale !== 'undefined') {
+    if (locale !== 'ru' && locale !== 'en') {
+      return NextResponse.json({ error: 'Некорректный язык интерфейса' }, { status: 400 });
+    }
+    updatePayload.locale = locale;
+  }
+
+  if (Object.keys(updatePayload).length === 0) {
+    return NextResponse.json({ error: 'Нет данных для обновления' }, { status: 400 });
   }
 
   await dbConnect();
 
   const updated = await UserModel.findOneAndUpdate(
     { clerkUserId: clerkUser.id },
-    { regionCode },
+    updatePayload,
     { new: true }
   ).lean();
 
@@ -80,5 +94,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  return NextResponse.json({ ok: true, regionCode: updated.regionCode || '' });
+  return NextResponse.json({
+    ok: true,
+    regionCode: updated.regionCode || '',
+    locale: updated.locale || 'ru',
+  });
 }

@@ -18,8 +18,10 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { getClerkErrorMessage } from '@/utils/clerkErrorMessages';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function Page() {
+    const { t } = useI18n();
     const { isLoaded, signIn, setActive } = useSignIn();
     const { isLoaded: isUserLoaded, isSignedIn } = useUser();
     const router = useRouter();
@@ -106,25 +108,25 @@ export default function Page() {
                 );
 
                 if (!hasEmailCode) {
-                    setError('Дополнительная проверка недоступна. Обратитесь к администратору.');
+                    setError(t('auth.signin.error.secondFactorUnavailable', 'Дополнительная проверка недоступна. Обратитесь к администратору.'));
                     return;
                 }
 
                 await result.prepareSecondFactor({ strategy: 'email_code' });
                 setSecondFactorRequired(true);
                 setSecondFactorCode('');
-                setInfo('Вход с нового устройства. Код подтверждения отправлен на e-mail.');
+                setInfo(t('auth.signin.info.secondFactorSent', 'Вход с нового устройства. Код подтверждения отправлен на e-mail.'));
                 return;
             }
 
             if (result.status === 'needs_new_password') {
-                setError('Нужно обновить пароль. Обратитесь к администратору.');
+                setError(t('auth.signin.error.passwordResetRequired', 'Нужно обновить пароль. Обратитесь к администратору.'));
                 return;
             }
 
-            setError('Не удалось завершить вход. Попробуйте ещё раз или обратитесь к администратору.');
+            setError(t('auth.signin.error.generic', 'Не удалось завершить вход. Попробуйте ещё раз или обратитесь к администратору.'));
         } catch (signInError) {
-            setError(getClerkErrorMessage(signInError, 'Не удалось выполнить вход.'));
+            setError(getClerkErrorMessage(signInError, t('auth.signin.error.failed', 'Не удалось выполнить вход.')));
         } finally {
             setIsSubmitting(false);
         }
@@ -153,9 +155,9 @@ export default function Page() {
                 return;
             }
 
-            setError('Не удалось подтвердить код. Попробуйте ещё раз.');
+            setError(t('auth.signin.error.codeInvalid', 'Не удалось подтвердить код. Попробуйте ещё раз.'));
         } catch (signInError) {
-            setError(getClerkErrorMessage(signInError, 'Не удалось подтвердить код.'));
+            setError(getClerkErrorMessage(signInError, t('auth.signin.error.codeFailed', 'Не удалось подтвердить код.')));
         } finally {
             setIsSubmitting(false);
         }
@@ -172,9 +174,9 @@ export default function Page() {
 
         try {
             await signIn.prepareSecondFactor({ strategy: 'email_code' });
-            setInfo('Вход с нового устройства. Отправили новый код на e-mail.');
+            setInfo(t('auth.signin.info.secondFactorResent', 'Вход с нового устройства. Отправили новый код на e-mail.'));
         } catch (signInError) {
-            setError(getClerkErrorMessage(signInError, 'Не удалось отправить код.'));
+            setError(getClerkErrorMessage(signInError, t('auth.signin.error.codeSendFailed', 'Не удалось отправить код.')));
         } finally {
             setIsSubmitting(false);
         }
@@ -202,24 +204,22 @@ export default function Page() {
                         CI Work
                     </span>
                     <h1 className="mt-5 inline-flex w-fit rounded-2xl bg-white/10 px-5 py-3 text-4xl font-semibold leading-[1.1] text-white drop-shadow-md md:text-5xl">
-                        АВТОРИЗАЦИЯ
+                        {t('auth.signin.hero.title', 'АВТОРИЗАЦИЯ')}
                     </h1>
                     <p className="mt-5 max-w-md border-l-2 border-white/30 pl-4 text-base font-medium text-white/85">
-                        Все проекты, задачи и статусы в одном пространстве —
-                        удобно и для команд, и для исполнителей. Для заказчиков —
-                        полный обзор задач, дедлайнов и загрузки команды.
+                        {t('auth.signin.hero.body1', 'Все проекты, задачи и статусы в одном пространстве — удобно и для команд, и для исполнителей. Для заказчиков — полный обзор задач, дедлайнов и загрузки команды.')}
                         <br />
-                        Для подрядчиков — все назначенные задачи и статусы в одном месте.
+                        {t('auth.signin.hero.body2', 'Для подрядчиков — все назначенные задачи и статусы в одном месте.')}
                     </p>
                     <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/80">
                         <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
-                            Контроль задач
+                            {t('auth.signin.hero.chip.control', 'Контроль задач')}
                         </span>
                         <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
-                            Статусы в реальном времени
+                            {t('auth.signin.hero.chip.status', 'Статусы в реальном времени')}
                         </span>
                         <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
-                            Безопасный доступ
+                            {t('auth.signin.hero.chip.security', 'Безопасный доступ')}
                         </span>
                     </div>
                 </section>
@@ -229,18 +229,18 @@ export default function Page() {
                         style={cardGlassStyle}
                     >
                         <h2 className="text-[34px] font-semibold leading-[1.05] tracking-[-0.02em] text-slate-900 md:text-[38px]">
-                            Добро пожаловать
+                            {t('auth.signin.title', 'Добро пожаловать')}
                         </h2>
                         <p className="mt-2 text-sm text-slate-600">
                             {secondFactorRequired
-                                ? 'Введите код из письма, чтобы подтвердить вход.'
-                                : 'Введите почту и пароль, чтобы продолжить работу.'}
+                                ? t('auth.signin.codePrompt', 'Введите код из письма, чтобы подтвердить вход.')
+                                : t('auth.signin.prompt', 'Введите почту и пароль, чтобы продолжить работу.')}
                         </p>
                         {!secondFactorRequired ? (
                             <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
                                 <TextField
                                     id="email"
-                                    label="Почта"
+                                    label={t('auth.signin.email', 'Почта')}
                                     variant="outlined"
                                     fullWidth
                                     value={email}
@@ -248,7 +248,7 @@ export default function Page() {
                                     autoComplete="email"
                                 />
                                 <FormControl variant="outlined" fullWidth>
-                                    <InputLabel htmlFor="password">Пароль</InputLabel>
+                                    <InputLabel htmlFor="password">{t('auth.signin.password', 'Пароль')}</InputLabel>
                                     <OutlinedInput
                                         id="password"
                                         type={showPassword ? 'text' : 'password'}
@@ -259,8 +259,8 @@ export default function Page() {
                                                 <IconButton
                                                     aria-label={
                                                         showPassword
-                                                            ? 'скрыть пароль'
-                                                            : 'показать пароль'
+                                                            ? t('auth.signin.password.hide', 'скрыть пароль')
+                                                            : t('auth.signin.password.show', 'показать пароль')
                                                     }
                                                     onClick={() => setShowPassword((prev) => !prev)}
                                                     onMouseDown={(event) => event.preventDefault()}
@@ -271,7 +271,7 @@ export default function Page() {
                                                 </IconButton>
                                             </InputAdornment>
                                         }
-                                        label="Пароль"
+                                        label={t('auth.signin.password', 'Пароль')}
                                     />
                                 </FormControl>
                                 {error ? (
@@ -285,7 +285,7 @@ export default function Page() {
                                     size="large"
                                     disabled={isSubmitting || !isLoaded}
                                 >
-                                    {isSubmitting ? 'Входим...' : 'Войти'}
+                                    {isSubmitting ? t('auth.signin.submit.loading', 'Входим...') : t('auth.signin.submit', 'Войти')}
                                 </Button>
                             </form>
                         ) : (
@@ -295,7 +295,7 @@ export default function Page() {
                             >
                                 <TextField
                                     id="second-factor-code"
-                                    label="Код из письма"
+                                    label={t('auth.signin.code', 'Код из письма')}
                                     variant="outlined"
                                     fullWidth
                                     value={secondFactorCode}
@@ -317,7 +317,7 @@ export default function Page() {
                                     size="large"
                                     disabled={isSubmitting || !isLoaded}
                                 >
-                                    {isSubmitting ? 'Проверяем...' : 'Подтвердить'}
+                                    {isSubmitting ? t('auth.signin.codeSubmit.loading', 'Проверяем...') : t('auth.signin.codeSubmit', 'Подтвердить')}
                                 </Button>
                                 <Button
                                     type="button"
@@ -325,7 +325,7 @@ export default function Page() {
                                     disabled={isSubmitting || !isLoaded}
                                     onClick={handleResendSecondFactor}
                                 >
-                                    Отправить код ещё раз
+                                    {t('auth.signin.codeResend', 'Отправить код ещё раз')}
                                 </Button>
                                 <Button
                                     type="button"
@@ -333,14 +333,14 @@ export default function Page() {
                                     disabled={isSubmitting}
                                     onClick={handleBackToSignIn}
                                 >
-                                    Вернуться ко входу
+                                    {t('auth.signin.back', 'Вернуться ко входу')}
                                 </Button>
                             </form>
                         )}
                         <p className="mt-8 text-sm text-slate-600">
-                            Нет аккаунта?{' '}
+                            {t('auth.signin.noAccount', 'Нет аккаунта?')}{' '}
                             <Link href="/sign-up" className="font-semibold text-blue-600">
-                                Зарегистрироваться
+                                {t('auth.signin.register', 'Зарегистрироваться')}
                             </Link>
                         </p>
                     </div>

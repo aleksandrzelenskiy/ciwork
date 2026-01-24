@@ -2,11 +2,12 @@
 'use client';
 
 import { ClerkProvider } from '@clerk/nextjs';
-import { ruRU } from '@clerk/localizations';
+import { ruRU, enUS } from '@clerk/localizations';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import type { ReactNode } from 'react';
 import ClientApp from './ClientApp';
 import { withBasePath } from '@/utils/basePath';
+import { I18nProvider, useI18n } from '@/i18n/I18nProvider';
 
 type ProvidersProps = {
     publishableKey: string;
@@ -14,22 +15,23 @@ type ProvidersProps = {
     children: ReactNode;
 };
 
-export default function Providers({ publishableKey, fontFamily, children }: ProvidersProps) {
+function InnerProviders({ publishableKey, fontFamily, children }: ProvidersProps) {
+    const { locale, t } = useI18n();
     const theme = createTheme({
         typography: { fontFamily: `${fontFamily}, 'Open Sans', sans-serif` },
     });
-    const ruLocalization = ruRU as {
+    const baseLocalization = (locale === 'en' ? enUS : ruRU) as {
         signIn?: {
             start?: Record<string, unknown>;
         };
     };
     const localization = {
-        ...ruLocalization,
+        ...baseLocalization,
         signIn: {
-            ...(ruLocalization.signIn ?? {}),
+            ...(baseLocalization.signIn ?? {}),
             start: {
-                ...(ruLocalization.signIn?.start ?? {}),
-                subtitle: 'чтобы продолжить работу в системе',
+                ...(baseLocalization.signIn?.start ?? {}),
+                subtitle: t('auth.subtitle', 'чтобы продолжить работу в системе'),
             },
         },
     };
@@ -47,5 +49,13 @@ export default function Providers({ publishableKey, fontFamily, children }: Prov
                 <ClientApp>{children}</ClientApp>
             </ThemeProvider>
         </ClerkProvider>
+    );
+}
+
+export default function Providers(props: ProvidersProps) {
+    return (
+        <I18nProvider>
+            <InnerProviders {...props} />
+        </I18nProvider>
     );
 }

@@ -20,6 +20,7 @@ export interface IUser extends Document {
     billingStatus: BillingStatus;
     activeOrgId?: Types.ObjectId | null;
     regionCode?: string;
+    locale?: 'ru' | 'en';
     lastActive?: Date | null;
     desiredRate?: number; // фиксированная ставка за типовую задачу
     bio?: string;
@@ -76,6 +77,11 @@ const UserSchema = new Schema<IUser>(
         regionCode: {
             type: String,
             default: '',
+        },
+        locale: {
+            type: String,
+            enum: ['ru', 'en'],
+            default: 'ru',
         },
         lastActive: {
             type: Date,

@@ -23,6 +23,7 @@ export interface UserContextResponse {
   email?: string;
   phone?: string;
   regionCode?: string;
+  locale?: string;
   user?: Record<string, unknown>;
   memberships?: ActiveMembership[];
   activeOrgId?: string | null;

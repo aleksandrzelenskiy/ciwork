@@ -16,13 +16,15 @@ import { useUser, useClerk } from '@clerk/nextjs';
 import ManageAccountsSharpIcon from '@mui/icons-material/ManageAccountsSharp';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const menu = [
-  { name: 'Settings', path: '/settings', icon: <ManageAccountsSharpIcon /> },
-  { name: 'Logout', action: 'logout', icon: <LogoutIcon /> },
+  { name: 'common.settings', fallback: 'Settings', path: '/settings', icon: <ManageAccountsSharpIcon /> },
+  { name: 'common.logout', fallback: 'Logout', action: 'logout', icon: <LogoutIcon /> },
 ];
 
 export default function UserMenu() {
+  const { t } = useI18n();
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -33,7 +35,7 @@ export default function UserMenu() {
     [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() ||
     user?.username ||
     user?.emailAddresses[0]?.emailAddress ||
-    'Пользователь';
+    t('common.user', 'Пользователь');
   const userEmail = user?.emailAddresses[0]?.emailAddress;
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -55,9 +57,9 @@ export default function UserMenu() {
 
   return (
     <Box sx={{ flexGrow: 0 }}>
-      <Tooltip title='Open menu'>
+      <Tooltip title={t('menu.open', 'Open menu')}>
         <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-          <Avatar alt={fallbackName || 'User'} src={user?.imageUrl || ''} />
+          <Avatar alt={fallbackName || t('common.user', 'User')} src={user?.imageUrl || ''} />
         </IconButton>
       </Tooltip>
       <Menu
@@ -89,7 +91,7 @@ export default function UserMenu() {
             >
               <ListItemIcon>{setting.icon}</ListItemIcon>
               <Typography textAlign='center' fontSize='0.9rem'>
-                {setting.name}
+                {t(setting.name, setting.fallback)}
               </Typography>
             </MenuItem>
           ))}

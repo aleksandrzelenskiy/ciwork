@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, type ReactNode } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -38,6 +38,7 @@ import { UI_RADIUS } from '@/config/uiTokens';
 import { CONSENT_VERSION } from '@/config/legal';
 import { ConsentContent, PrivacyContent, UserAgreementContent } from '@/features/legal/LegalText';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ProfileResponse = {
   profileType?: ProfileType;
@@ -59,33 +60,6 @@ type ProfileFormValues = {
   phone: string;
   regionCode: string;
 };
-
-const ROLE_OPTIONS: Array<{
-  type: ProfileType;
-  title: string;
-  description: string;
-  helperText?: string;
-  icon: ReactNode;
-}> = [
-  {
-    type: 'employer',
-    title: 'ЗАКАЗЧИК',
-    description:
-        'Создаю задачи и управляю исполнителями внутри собственной организации.',
-    helperText:
-        '* Можно приглашать коллег, создавать проекты и управлять воронкой задач.',
-    icon: <BusinessCenterIcon color='inherit' sx={{ fontSize: 44 }} />,
-  },
-  {
-    type: 'contractor',
-    title: 'ИСПОЛНИТЕЛЬ',
-    description:
-        'Работаю по приглашению или как независимый подрядчик, мне нужен быстрый доступ к задачам.',
-    helperText:
-        '* Базовые функции бесплатны. Расширенный функционал по подписке.',
-    icon: <EngineeringIcon color='inherit' sx={{ fontSize: 44 }} />,
-  },
-];
 
 const parseNameParts = (rawName?: string) => {
   if (!rawName) {
@@ -128,6 +102,7 @@ const FIELD_MAX_WIDTH = 520;
 const PAGE_PADDING_X = { xs: 2, sm: 3, md: 4 };
 
 export default function OnboardingPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -144,6 +119,34 @@ export default function OnboardingPage() {
     phone: '',
     regionCode: '',
   });
+  const roleOptions = useMemo(() => ([
+    {
+      type: 'employer' as const,
+      title: t('onboarding.role.employer.title', 'ЗАКАЗЧИК'),
+      description: t(
+        'onboarding.role.employer.description',
+        'Создаю задачи и управляю исполнителями внутри собственной организации.',
+      ),
+      helperText: t(
+        'onboarding.role.employer.helper',
+        '* Можно приглашать коллег, создавать проекты и управлять воронкой задач.',
+      ),
+      icon: <BusinessCenterIcon color='inherit' sx={{ fontSize: 44 }} />,
+    },
+    {
+      type: 'contractor' as const,
+      title: t('onboarding.role.contractor.title', 'ИСПОЛНИТЕЛЬ'),
+      description: t(
+        'onboarding.role.contractor.description',
+        'Работаю по приглашению или как независимый подрядчик, мне нужен быстрый доступ к задачам.',
+      ),
+      helperText: t(
+        'onboarding.role.contractor.helper',
+        '* Базовые функции бесплатны. Расширенный функционал по подписке.',
+      ),
+      icon: <EngineeringIcon color='inherit' sx={{ fontSize: 44 }} />,
+    },
+  ]), [t]);
 
   useEffect(() => {
     if (roleStepVisible && roleSectionRef.current) {
@@ -162,7 +165,7 @@ export default function OnboardingPage() {
         const data: ProfileResponse = await res.json();
         if (!mounted) return;
         if (!res.ok) {
-          setError(data.error || 'Не удалось загрузить профиль');
+          setError(data.error || t('onboarding.error.loadProfile', 'Не удалось загрузить профиль'));
         } else {
           const userPayload = data.user || {};
           const resolvedProfileType: ProfileType | null =
@@ -197,7 +200,7 @@ export default function OnboardingPage() {
         setError(
             err instanceof Error
                 ? err.message
-                : 'Не удалось загрузить профиль пользователя'
+                : t('onboarding.error.loadProfileUser', 'Не удалось загрузить профиль пользователя')
         );
       } finally {
         if (mounted) {
@@ -210,7 +213,7 @@ export default function OnboardingPage() {
     return () => {
       mounted = false;
     };
-  }, [router]);
+  }, [router, t]);
 
   const getTrimmedFormValues = () => {
     const trimmed = {
@@ -226,12 +229,12 @@ export default function OnboardingPage() {
         !trimmed.phone ||
         !trimmed.regionCode
     ) {
-      setError('Пожалуйста, заполните личные данные и выберите регион.');
+      setError(t('onboarding.error.missingFields', 'Пожалуйста, заполните личные данные и выберите регион.'));
       return null;
     }
 
     if (!isPhoneValid(trimmed.phone)) {
-      setError('Введите номер телефона в формате +7XXXXXXXXXX.');
+      setError(t('onboarding.error.phoneInvalid', 'Введите номер телефона в формате +7XXXXXXXXXX.'));
       return null;
     }
 
@@ -240,7 +243,7 @@ export default function OnboardingPage() {
 
   const handleContinue = () => {
     if (!consentAccepted) {
-      setError('Для продолжения примите согласие на обработку персональных данных.');
+      setError(t('onboarding.error.consentRequired', 'Для продолжения примите согласие на обработку персональных данных.'));
       return;
     }
     const trimmed = getTrimmedFormValues();
@@ -253,7 +256,7 @@ export default function OnboardingPage() {
 
   const handleSelect = async (profileType: ProfileType) => {
     if (!consentAccepted) {
-      setError('Для продолжения примите согласие на обработку персональных данных.');
+      setError(t('onboarding.error.consentRequired', 'Для продолжения примите согласие на обработку персональных данных.'));
       return;
     }
     const trimmedValues = getTrimmedFormValues();
@@ -278,7 +281,7 @@ export default function OnboardingPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data?.error || 'Не удалось сохранить выбор');
+        setError(data?.error || t('onboarding.error.saveFailed', 'Не удалось сохранить выбор'));
         return;
       }
 
@@ -288,7 +291,7 @@ export default function OnboardingPage() {
       router.replace(onboardingCompleteRedirect);
     } catch (err) {
       setError(
-          err instanceof Error ? err.message : 'Ошибка при сохранении выбора'
+          err instanceof Error ? err.message : t('onboarding.error.saveFailed', 'Ошибка при сохранении выбора')
       );
     } finally {
       setSavingType(null);
@@ -316,7 +319,7 @@ export default function OnboardingPage() {
       Boolean(phoneDigits) && phoneDigits.length > 0 && phoneDigits.length < 11;
   const phoneFormatInvalid = phoneHasValue && !isPhoneValid(formValues.phone);
   const phoneHelperText = showPhoneLengthError
-      ? 'Номер должен содержать 11 цифр'
+      ? t('onboarding.phone.helper', 'Номер должен содержать 11 цифр')
       : undefined;
 
   const isFormValid =
@@ -416,7 +419,7 @@ export default function OnboardingPage() {
           >
             <Stack spacing={1.5} textAlign='center' alignItems='center'>
               <Chip
-                  label='Шаг 1 из 2'
+                  label={t('onboarding.step1', 'Шаг 1 из 2')}
                   color='default'
                   sx={{
                     fontWeight: 600,
@@ -433,7 +436,7 @@ export default function OnboardingPage() {
                     lineHeight: { xs: 1.25, md: 1.3 },
                   }}
               >
-                Настройте ваш профиль
+                {t('onboarding.title', 'Настройте ваш профиль')}
               </Typography>
               <Typography
                   color='text.secondary'
@@ -442,8 +445,7 @@ export default function OnboardingPage() {
                     fontSize: { xs: '0.95rem', md: '1.02rem' },
                   }}
               >
-                Сконцентрируйтесь на основном: заполните контакты и выберите
-                подходящую роль, чтобы мы подготовили среду под ваши задачи.
+                {t('onboarding.subtitle', 'Сконцентрируйтесь на основном: заполните контакты и выберите подходящую роль, чтобы мы подготовили среду под ваши задачи.')}
               </Typography>
             </Stack>
 
@@ -490,10 +492,10 @@ export default function OnboardingPage() {
                       sx={{ width: '100%', textAlign: 'center' }}
                   >
                     <Typography variant='h6' fontWeight={700}>
-                      Контактные данные
+                      {t('onboarding.contacts.title', 'Контактные данные')}
                     </Typography>
                     <Typography color='text.secondary'>
-                      Эти данные будут видны только вашей команде.
+                      {t('onboarding.contacts.note', 'Эти данные будут видны только вашей команде.')}
                     </Typography>
                   </Stack>
 
@@ -506,7 +508,7 @@ export default function OnboardingPage() {
                   >
                     <Grid sx={formItemWrapperSx}>
                       <TextField
-                          label='Имя'
+                          label={t('onboarding.form.firstName', 'Имя')}
                           fullWidth
                           sx={fieldSx}
                           value={formValues.firstName}
@@ -520,7 +522,7 @@ export default function OnboardingPage() {
                     </Grid>
                     <Grid sx={formItemWrapperSx}>
                       <TextField
-                          label='Фамилия'
+                          label={t('onboarding.form.lastName', 'Фамилия')}
                           fullWidth
                           sx={fieldSx}
                           value={formValues.lastName}
@@ -534,7 +536,7 @@ export default function OnboardingPage() {
                     </Grid>
                     <Grid sx={formItemWrapperSx}>
                       <TextField
-                          label='Телефон'
+                          label={t('onboarding.form.phone', 'Телефон')}
                           fullWidth
                           sx={fieldSx}
                           type='tel'
@@ -547,7 +549,7 @@ export default function OnboardingPage() {
                           }
                           error={Boolean(showPhoneLengthError) || phoneFormatInvalid}
                           helperText={phoneHelperText}
-                          placeholder='+7XXXXXXXXXX'
+                          placeholder={t('onboarding.form.phonePlaceholder', '+7XXXXXXXXXX')}
                           slotProps={{ htmlInput: { inputMode: 'tel' } }}
                       />
                     </Grid>
@@ -568,7 +570,7 @@ export default function OnboardingPage() {
                           renderInput={(params) => (
                               <TextField
                                   {...params}
-                                  label='Регион'
+                                  label={t('onboarding.form.region', 'Регион')}
                                   fullWidth
                                   sx={fieldSx}
                               />
@@ -582,8 +584,7 @@ export default function OnboardingPage() {
                       color='text.secondary'
                       sx={{ textAlign: 'center', maxWidth: 420 }}
                   >
-                    Мы никому не передаём контакты без вашего согласия и используем
-                    их только для уведомлений.
+                    {t('onboarding.contacts.privacyNote', 'Мы никому не передаём контакты без вашего согласия и используем их только для уведомлений.')}
                   </Typography>
 
                   <Stack spacing={1.5} sx={{ width: '100%' }}>
@@ -603,32 +604,32 @@ export default function OnboardingPage() {
                           )}
                           label={(
                               <Typography variant='body2' color='text.secondary'>
-                                Я принимаю{' '}
+                                {t('onboarding.consent.prefix', 'Я принимаю')}{' '}
                                 <Link
                                     component='button'
                                     type='button'
                                     onClick={() => openLegalDialog('agreement')}
                                     sx={{ cursor: 'pointer' }}
                                 >
-                                  Пользовательское соглашение
+                                  {t('onboarding.consent.agreement', 'Пользовательское соглашение')}
                                 </Link>{' '}
-                                и даю{' '}
+                                {t('onboarding.consent.and', 'и даю')}{' '}
                                 <Link
                                     component='button'
                                     type='button'
                                     onClick={() => openLegalDialog('consent')}
                                     sx={{ cursor: 'pointer' }}
                                 >
-                                  согласие
+                                  {t('onboarding.consent.consent', 'согласие')}
                                 </Link>{' '}
-                                на обработку персональных данных, ознакомлен(а) с{' '}
+                                {t('onboarding.consent.processing', 'на обработку персональных данных, ознакомлен(а) с')}{' '}
                                 <Link
                                     component='button'
                                     type='button'
                                     onClick={() => openLegalDialog('privacy')}
                                     sx={{ cursor: 'pointer' }}
                                 >
-                                  политикой конфиденциальности
+                                  {t('onboarding.consent.privacy', 'политикой конфиденциальности')}
                                 </Link>
                                 .
                               </Typography>
@@ -639,7 +640,7 @@ export default function OnboardingPage() {
                           variant='text'
                           onClick={() => openLegalDialog('summary')}
                       >
-                        Что это значит?
+                        {t('onboarding.consent.more', 'Что это значит?')}
                       </Button>
                     </Stack>
                   </Stack>
@@ -658,7 +659,7 @@ export default function OnboardingPage() {
                         disabled={!canContinue}
                         sx={{ minWidth: 180 }}
                     >
-                      Далее
+                      {t('onboarding.next', 'Далее')}
                     </Button>
                   </Box>
                 </Box>
@@ -675,7 +676,7 @@ export default function OnboardingPage() {
                       }}
                   >
                     <Chip
-                        label='Шаг 2 из 2'
+                        label={t('onboarding.step2', 'Шаг 2 из 2')}
                         color='default'
                         sx={{
                           fontWeight: 600,
@@ -685,8 +686,7 @@ export default function OnboardingPage() {
                         }}
                     />
                     <Typography color='text.secondary'>
-                      Выберите сценарий, чтобы мы подготовили нужные панели и
-                      доступы.
+                      {t('onboarding.step2.subtitle', 'Выберите сценарий, чтобы мы подготовили нужные панели и доступы.')}
                     </Typography>
 
                     {/* общий контейнер для двух плиток, строго по центру */}
@@ -704,7 +704,7 @@ export default function OnboardingPage() {
                           justifyContent='center'
                           alignItems='stretch'
                       >
-                        {ROLE_OPTIONS.map((option) => (
+                        {roleOptions.map((option) => (
                             <Grid
                                 size={{ xs: 12, sm: 6 }}
                                 key={option.type}
@@ -729,8 +729,8 @@ export default function OnboardingPage() {
                                     icon={option.icon}
                                     actionLabel={
                                       savingType === option.type
-                                          ? 'Сохраняем...'
-                                          : 'Выбрать'
+                                          ? t('onboarding.role.saving', 'Сохраняем...')
+                                          : t('onboarding.role.select', 'Выбрать')
                                     }
                                 />
                               </Box>
@@ -740,8 +740,7 @@ export default function OnboardingPage() {
                     </Box>
 
                     <Typography variant='body2' color='text.secondary'>
-                      Исполнители работают с задачами напрямую, а заказчики
-                      управляют командами и бюджетами.
+                      {t('onboarding.role.note', 'Исполнители работают с задачами напрямую, а заказчики управляют командами и бюджетами.')}
                     </Typography>
                   </Stack>
               )}
@@ -766,8 +765,7 @@ export default function OnboardingPage() {
                 }}
             >
               <Typography variant='body2' color='text.secondary'>
-                Все настройки можно обновить позже в профиле. После заполнения мы
-                мгновенно перенаправим вас в рабочее пространство.
+                {t('onboarding.footerNote', 'Все настройки можно обновить позже в профиле. После заполнения мы мгновенно перенаправим вас в рабочее пространство.')}
               </Typography>
             </Paper>
           </Box>
@@ -779,7 +777,7 @@ export default function OnboardingPage() {
             fullWidth
             maxWidth='md'
         >
-          <DialogTitle>Правовая информация</DialogTitle>
+          <DialogTitle>{t('onboarding.legal.title', 'Правовая информация')}</DialogTitle>
           <DialogContent dividers sx={{ p: 0 }}>
             <Tabs
                 value={legalTab}
@@ -788,10 +786,10 @@ export default function OnboardingPage() {
                 }
                 variant='fullWidth'
             >
-              <Tab label='Коротко' value='summary' />
-              <Tab label='Соглашение' value='agreement' />
-              <Tab label='Согласие' value='consent' />
-              <Tab label='Политика' value='privacy' />
+              <Tab label={t('onboarding.legal.tab.summary', 'Коротко')} value='summary' />
+              <Tab label={t('onboarding.legal.tab.agreement', 'Соглашение')} value='agreement' />
+              <Tab label={t('onboarding.legal.tab.consent', 'Согласие')} value='consent' />
+              <Tab label={t('onboarding.legal.tab.privacy', 'Политика')} value='privacy' />
             </Tabs>
             <Box
                 sx={{
@@ -808,23 +806,19 @@ export default function OnboardingPage() {
                     </Typography>
                     <Stack component='ul' spacing={1.5} sx={{ pl: 2, m: 0 }}>
                       <Typography component='li' variant='body2'>
-                        Данные (ФИО, телефон, email, регион) нужны для регистрации и работы
-                        сервиса.
+                        {t('onboarding.legal.summary.data', 'Данные (ФИО, телефон, email, регион) нужны для регистрации и работы сервиса.')}
                       </Typography>
                     <Typography component='li' variant='body2'>
-                      Контакты могут быть видны другим пользователям только в рамках
-                      задач или организации.
+                      {t('onboarding.legal.summary.contacts', 'Контакты могут быть видны другим пользователям только в рамках задач или организации.')}
                     </Typography>
                     <Typography component='li' variant='body2'>
-                      Сообщения и медиа в чате используются только для выполнения задач.
+                      {t('onboarding.legal.summary.chat', 'Сообщения и медиа в чате используются только для выполнения задач.')}
                     </Typography>
                     <Typography component='li' variant='body2'>
-                      Документы (сметы/заказы), загружаемые пользователем, могут
-                      содержать данные третьих лиц, ответственность за законность
-                      загрузки лежит на пользователе.
+                      {t('onboarding.legal.summary.docs', 'Документы (сметы/заказы), загружаемые пользователем, могут содержать данные третьих лиц, ответственность за законность загрузки лежит на пользователе.')}
                     </Typography>
                     <Typography component='li' variant='body2'>
-                      Данные хранятся на серверах в РФ.
+                      {t('onboarding.legal.summary.storage', 'Данные хранятся на серверах в РФ.')}
                     </Typography>
                     </Stack>
                   </Stack>
@@ -835,7 +829,7 @@ export default function OnboardingPage() {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setLegalDialogOpen(false)}>Закрыть</Button>
+            <Button onClick={() => setLegalDialogOpen(false)}>{t('common.close', 'Закрыть')}</Button>
           </DialogActions>
         </Dialog>
       </Box>

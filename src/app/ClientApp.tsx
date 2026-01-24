@@ -44,24 +44,15 @@ import NotificationBell from '@/features/messenger/NotificationBell';
 import MessengerTrigger from '@/features/messenger/MessengerTrigger';
 import RubleAmount from '@/features/shared/RubleAmount';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ru';
+import 'dayjs/locale/en';
 import { UI_RADIUS } from '@/config/uiTokens';
 import NextLink from 'next/link';
 import { withBasePath } from '@/utils/basePath';
-
-const getTransactionDescription = (source: string) => {
-  switch (source) {
-    case 'signup_bonus':
-      return 'Приветственный бонус за регистрацию';
-    case 'bid':
-      return 'Списание за отклик';
-    case 'manual_adjustment':
-      return 'Ручная корректировка';
-    default:
-      return source;
-  }
-};
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function ClientApp({ children }: { children: React.ReactNode }) {
+  const { t, locale, setLocale } = useI18n();
   const [mode, setMode] = useState<'light' | 'dark'>('light');
   const [profileSetupCompleted, setProfileSetupCompleted] = useState<boolean | null>(null);
   const [profileType, setProfileType] = useState<ProfileType | null>(null);
@@ -93,6 +84,19 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isOnboardingRoute = pathname === '/onboarding';
 
+  const getTransactionDescription = (source: string) => {
+    switch (source) {
+      case 'signup_bonus':
+        return t('wallet.transaction.signup_bonus', 'Приветственный бонус за регистрацию');
+      case 'bid':
+        return t('wallet.transaction.bid', 'Списание за отклик');
+      case 'manual_adjustment':
+        return t('wallet.transaction.manual_adjustment', 'Ручная корректировка');
+      default:
+        return source;
+    }
+  };
+
   useEffect(() => {
     const fetchUserRole = async () => {
       const data = await fetchUserContext();
@@ -116,6 +120,14 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
 
         setProfileSetupCompleted(normalizedSetupCompleted);
         setProfileType(resolvedProfileType ?? null);
+        const resolvedLocale = typeof data.locale === 'string'
+          ? data.locale
+          : typeof data.user?.locale === 'string'
+            ? data.user?.locale
+            : null;
+        if (resolvedLocale === 'ru' || resolvedLocale === 'en') {
+          setLocale(resolvedLocale);
+        }
         const onboardingCompleteRedirect =
           resolvedProfileType === 'employer' ? '/org/new' : '/';
 
@@ -132,7 +144,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
     };
 
     void fetchUserRole();
-  }, [router, pathname]);
+  }, [router, pathname, setLocale]);
 
   // Инициализация темы из localStorage
   useEffect(() => {
@@ -155,6 +167,10 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem('themeMode', mode);
   }, [mode]);
+
+  useEffect(() => {
+    dayjs.locale(locale === 'en' ? 'en' : 'ru');
+  }, [locale]);
 
   const theme = useMemo(
     () =>
@@ -273,7 +289,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
   const normalizeCurrency = (currency?: string) => (currency ?? 'RUB').toUpperCase();
 
   const formatForeignCurrency = (value: number, currency?: string) =>
-      new Intl.NumberFormat('ru-RU', {
+      new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'ru-RU', {
           style: 'currency',
           currency: normalizeCurrency(currency),
           maximumFractionDigits: 0,
@@ -299,7 +315,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
       if (!res.ok || !data || !isWalletPayload(data)) {
           setWalletInfo(null);
           setWalletError(
-              data && 'error' in data ? data.error : 'Не удалось загрузить кошелёк',
+              data && 'error' in data ? data.error : t('wallet.loadError', 'Не удалось загрузить кошелёк'),
           );
           setWalletLoading(false);
           return;
@@ -344,7 +360,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
           | null;
       if (!res.ok || !data || 'error' in (data ?? {}) || !data) {
           setTransactions([]);
-          setTransactionsError((data as { error?: string })?.error ?? 'Не удалось загрузить транзакции');
+          setTransactionsError((data as { error?: string })?.error ?? t('wallet.transactions.loadError', 'Не удалось загрузить транзакции'));
           setTransactionsLoading(false);
           return;
       }
@@ -525,7 +541,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                         onClick={toggleTheme}
                         color='inherit'
                         sx={toolbarIconButtonSx}
-                        aria-label='Переключить тему'
+                        aria-label={t('common.theme.toggle', 'Переключить тему')}
                       >
                         {mode === 'dark' ? (
                           <WbSunnyIcon fontSize='small' />
@@ -538,7 +554,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                         <IconButton
                           color='inherit'
                           sx={toolbarIconButtonSx}
-                          aria-label='Баланс'
+                          aria-label={t('common.balance', 'Баланс')}
                           onClick={handleWalletClick}
                         >
                           <AccountBalanceWalletIcon fontSize='small' />
@@ -581,7 +597,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                           }}
                         >
                           <Typography variant='subtitle1' sx={{ letterSpacing: '0.02em', fontWeight: 700 }}>
-                            Баланс
+                            {t('wallet.balance', 'Баланс')}
                           </Typography>
                           <Typography
                             variant='caption'
@@ -594,7 +610,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                         {walletLoading ? (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <CircularProgress size={18} />
-                            <Typography variant='body2'>Загрузка…</Typography>
+                            <Typography variant='body2'>{t('common.loading', 'Загрузка…')}</Typography>
                           </Box>
                         ) : walletError ? (
                           <Typography variant='body2' color='error'>
@@ -615,7 +631,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                               </Typography>
                             )}
                             <Typography variant='caption' color='text.secondary' sx={{ letterSpacing: '0.03em' }}>
-                              Основной баланс
+                              {t('wallet.mainBalance', 'Основной баланс')}
                             </Typography>
                           </Box>
                         ) : null}
@@ -630,17 +646,17 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                               void handleOpenTransactions();
                             }}
                           >
-                            Транзакции
+                            {t('common.transactions', 'Транзакции')}
                           </Button>
                           <Button
                             variant='outlined'
                             size='small'
                             fullWidth
                             onClick={() =>
-                              setWalletError((prev) => prev ?? 'Пополнение скоро будет доступно')
+                              setWalletError((prev) => prev ?? t('common.topUpSoon', 'Пополнение скоро будет доступно'))
                             }
                           >
-                            Пополнить
+                            {t('common.topUp', 'Пополнить')}
                           </Button>
                         </Box>
                       </Box>
@@ -651,17 +667,17 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                       fullWidth
                       maxWidth='sm'
                     >
-                      <DialogTitle>Транзакции баланса</DialogTitle>
+                      <DialogTitle>{t('wallet.transactions.title', 'Транзакции баланса')}</DialogTitle>
                       <DialogContent dividers>
                         {transactionsLoading ? (
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
                             <CircularProgress size={18} />
-                            <Typography variant='body2'>Загрузка…</Typography>
+                            <Typography variant='body2'>{t('wallet.transactions.loading', 'Загрузка…')}</Typography>
                           </Box>
                         ) : transactionsError ? (
                           <Typography color='error'>{transactionsError}</Typography>
                         ) : transactions.length === 0 ? (
-                          <Typography variant='body2'>Нет транзакций.</Typography>
+                          <Typography variant='body2'>{t('wallet.transactions.empty', 'Нет транзакций.')}</Typography>
                         ) : (
                           <List>
                             {transactions.map((tx) => {
@@ -670,7 +686,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                               const amountSign = tx.type === 'credit' ? 'positive' : 'negative';
                               const ts =
                                 tx.createdAt && dayjs(tx.createdAt).isValid()
-                                  ? dayjs(tx.createdAt).format('DD.MM.YYYY HH:mm')
+                                  ? dayjs(tx.createdAt).format(locale === 'en' ? 'MM/DD/YYYY HH:mm' : 'DD.MM.YYYY HH:mm')
                                   : '';
                               return (
                                 <ListItem
@@ -724,7 +740,7 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                         )}
                       </DialogContent>
                       <DialogActions>
-                        <Button onClick={handleCloseTransactions}>Закрыть</Button>
+                        <Button onClick={handleCloseTransactions}>{t('common.close', 'Закрыть')}</Button>
                       </DialogActions>
                     </Dialog>
                   </>
@@ -781,10 +797,10 @@ export default function ClientApp({ children }: { children: React.ReactNode }) {
                     >
                       <Stack direction='row' spacing={2} flexWrap='wrap' justifyContent='center'>
                         <Link component={NextLink} href='/privacy' color='text.secondary'>
-                          Политика конфиденциальности
+                          {t('footer.privacy', 'Политика конфиденциальности')}
                         </Link>
                         <Link component={NextLink} href='/consent' color='text.secondary'>
-                          Согласие на обработку ПДн
+                          {t('footer.consent', 'Согласие на обработку ПДн')}
                         </Link>
                       </Stack>
                       <Typography variant='body2' color='text.secondary'>

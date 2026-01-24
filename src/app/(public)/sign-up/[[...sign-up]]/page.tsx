@@ -17,8 +17,10 @@ import {
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { getClerkErrorMessage } from '@/utils/clerkErrorMessages';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function Page() {
+    const { t } = useI18n();
     const { isLoaded, signUp, setActive } = useSignUp();
     const router = useRouter();
     const [email, setEmail] = useState('');
@@ -87,7 +89,7 @@ export default function Page() {
             });
             setPendingVerification(true);
         } catch (signUpError) {
-            setError(getClerkErrorMessage(signUpError, 'Не удалось создать учетную запись.'));
+            setError(getClerkErrorMessage(signUpError, t('auth.signup.error.createFailed', 'Не удалось создать учетную запись.')));
         } finally {
             setIsSubmitting(false);
         }
@@ -113,9 +115,9 @@ export default function Page() {
                 return;
             }
 
-            setError('Не удалось подтвердить код. Попробуйте еще раз.');
+            setError(t('auth.signup.error.codeInvalid', 'Не удалось подтвердить код. Попробуйте еще раз.'));
         } catch (verifyError) {
-            setError(getClerkErrorMessage(verifyError, 'Не удалось подтвердить код.'));
+            setError(getClerkErrorMessage(verifyError, t('auth.signup.error.codeFailed', 'Не удалось подтвердить код.')));
         } finally {
             setIsSubmitting(false);
         }
@@ -135,24 +137,22 @@ export default function Page() {
                         CI Work
                     </span>
                     <h1 className="mt-5 inline-flex w-fit rounded-2xl bg-white/10 px-5 py-3 text-4xl font-semibold leading-[1.1] text-white drop-shadow-md md:text-5xl">
-                        РЕГИСТРАЦИЯ
+                        {t('auth.signup.hero.title', 'РЕГИСТРАЦИЯ')}
                     </h1>
                     <p className="mt-5 max-w-md border-l-2 border-white/30 pl-4 text-base font-medium text-white/85">
-                        Все проекты, задачи и статусы в одном пространстве —
-                        удобно и для команд, и для исполнителей. Для заказчиков —
-                        полный обзор задач, дедлайнов и загрузки команды.
+                        {t('auth.signup.hero.body1', 'Все проекты, задачи и статусы в одном пространстве — удобно и для команд, и для исполнителей. Для заказчиков — полный обзор задач, дедлайнов и загрузки команды.')}
                         <br />
-                        Для подрядчиков — все назначенные задачи и статусы в одном месте.
+                        {t('auth.signup.hero.body2', 'Для подрядчиков — все назначенные задачи и статусы в одном месте.')}
                     </p>
                     <div className="mt-8 flex flex-wrap gap-3 text-xs text-white/80">
                         <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
-                            Приглашения в проекты
+                            {t('auth.signup.hero.chip.invites', 'Приглашения в проекты')}
                         </span>
                         <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
-                            Быстрый онбординг
+                            {t('auth.signup.hero.chip.onboarding', 'Быстрый онбординг')}
                         </span>
                         <span className="auth-chip rounded-full border border-white/20 bg-white/10 px-3 py-1 shadow-sm">
-                            Уведомления о статусе
+                            {t('auth.signup.hero.chip.notifications', 'Уведомления о статусе')}
                         </span>
                     </div>
                 </section>
@@ -162,12 +162,12 @@ export default function Page() {
                         style={cardGlassStyle}
                     >
                         <h2 className="text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] text-slate-900 md:text-[36px]">
-                        Зарегистрироваться
+                        {t('auth.signup.title', 'Зарегистрироваться')}
                         </h2>
                         <p className="mt-2 text-sm text-slate-600">
                             {pendingVerification
-                                ? 'Код подтверждения отправлен на e-mail.'
-                                : 'Заполните почту и пароль, чтобы начать работу.'}
+                                ? t('auth.signup.verifySent', 'Код подтверждения отправлен на e-mail.')
+                                : t('auth.signup.prompt', 'Заполните почту и пароль, чтобы начать работу.')}
                         </p>
                         {!pendingVerification ? (
                             <form
@@ -176,7 +176,7 @@ export default function Page() {
                             >
                                 <TextField
                                     id="email"
-                                    label="Почта"
+                                    label={t('auth.signup.email', 'Почта')}
                                     variant="outlined"
                                     fullWidth
                                     value={email}
@@ -184,7 +184,7 @@ export default function Page() {
                                     autoComplete="email"
                                 />
                                 <FormControl variant="outlined" fullWidth>
-                                    <InputLabel htmlFor="password">Пароль</InputLabel>
+                                    <InputLabel htmlFor="password">{t('auth.signup.password', 'Пароль')}</InputLabel>
                                     <OutlinedInput
                                         id="password"
                                         type={showPassword ? 'text' : 'password'}
@@ -196,8 +196,8 @@ export default function Page() {
                                                 <IconButton
                                                     aria-label={
                                                         showPassword
-                                                            ? 'скрыть пароль'
-                                                            : 'показать пароль'
+                                                            ? t('auth.signup.password.hide', 'скрыть пароль')
+                                                            : t('auth.signup.password.show', 'показать пароль')
                                                     }
                                                     onClick={() => setShowPassword((prev) => !prev)}
                                                     onMouseDown={(event) => event.preventDefault()}
@@ -212,12 +212,12 @@ export default function Page() {
                                                 </IconButton>
                                             </InputAdornment>
                                         }
-                                        label="Пароль"
+                                        label={t('auth.signup.password', 'Пароль')}
                                     />
                                 </FormControl>
                                 <FormControl variant="outlined" fullWidth>
                                     <InputLabel htmlFor="confirm-password">
-                                        Подтвердите пароль
+                                        {t('auth.signup.passwordConfirm', 'Подтвердите пароль')}
                                     </InputLabel>
                                     <OutlinedInput
                                         id="confirm-password"
@@ -231,8 +231,8 @@ export default function Page() {
                                                 <IconButton
                                                     aria-label={
                                                         showPassword
-                                                            ? 'скрыть пароль'
-                                                            : 'показать пароль'
+                                                            ? t('auth.signup.password.hide', 'скрыть пароль')
+                                                            : t('auth.signup.password.show', 'показать пароль')
                                                     }
                                                     onClick={() => setShowPassword((prev) => !prev)}
                                                     onMouseDown={(event) => event.preventDefault()}
@@ -247,13 +247,13 @@ export default function Page() {
                                                 </IconButton>
                                             </InputAdornment>
                                         }
-                                        label="Подтвердите пароль"
+                                        label={t('auth.signup.passwordConfirm', 'Подтвердите пароль')}
                                         error={isPasswordMismatch}
                                     />
                                 </FormControl>
                                 {isPasswordMismatch ? (
                                     <Typography className="text-xs text-rose-600">
-                                        Пароли не совпадают.
+                                        {t('auth.signup.passwordMismatch', 'Пароли не совпадают.')}
                                     </Typography>
                                 ) : null}
                                 <div className="mt-1">
@@ -270,7 +270,7 @@ export default function Page() {
                                     size="large"
                                     disabled={isSubmitDisabled}
                                 >
-                                    {isSubmitting ? 'Создаем...' : 'Создать аккаунт'}
+                                    {isSubmitting ? t('auth.signup.submit.loading', 'Создаем...') : t('auth.signup.submit', 'Создать аккаунт')}
                                 </Button>
                             </form>
                         ) : (
@@ -280,7 +280,7 @@ export default function Page() {
                             >
                                 <TextField
                                     id="email-code"
-                                    label="Код из письма"
+                                    label={t('auth.signup.code', 'Код из письма')}
                                     variant="outlined"
                                     fullWidth
                                     value={verificationCode}
@@ -297,14 +297,14 @@ export default function Page() {
                                     size="large"
                                     disabled={isSubmitting || !isLoaded}
                                 >
-                                    {isSubmitting ? 'Проверяем...' : 'Подтвердить почту'}
+                                    {isSubmitting ? t('auth.signup.codeSubmit.loading', 'Проверяем...') : t('auth.signup.codeSubmit', 'Подтвердить почту')}
                                 </Button>
                             </form>
                         )}
                         <p className="mt-8 text-sm text-slate-600">
-                            Уже есть аккаунт?{' '}
+                            {t('auth.signup.haveAccount', 'Уже есть аккаунт?')}{' '}
                             <Link href="/sign-in" className="font-semibold text-blue-600">
-                                Войти
+                                {t('auth.signup.signin', 'Войти')}
                             </Link>
                         </p>
                     </div>
