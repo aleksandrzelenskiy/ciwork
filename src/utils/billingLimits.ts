@@ -12,14 +12,14 @@ export type PlanLimits = {
     projects: number | null;
     seats: number | null;
     publications: number | null;
-    tasksWeekly: number | null;
+    tasksMonth: number | null;
 };
 
 type SubscriptionLimitOverrides = {
     seats?: number | null;
     projectsLimit?: number | null;
     publicTasksLimit?: number | null;
-    tasksWeeklyLimit?: number | null;
+    tasksMonthLimit?: number | null;
 };
 
 type UsageKind = 'projects' | 'publications' | 'tasks';
@@ -44,7 +44,7 @@ const USAGE_FIELD_MAP: Record<UsageKind, UsageField> = {
 const LIMIT_FIELD_MAP: Record<UsageKind, LimitField> = {
     projects: 'projects',
     publications: 'publications',
-    tasks: 'tasksWeekly',
+    tasks: 'tasksMonth',
 };
 
 const normalizeLimit = (value?: number | null): number | null => {
@@ -62,7 +62,7 @@ export const resolveEffectivePlanLimits = (
         projects: normalizeLimit(planConfig.projectsLimit),
         seats: normalizeLimit(planConfig.seatsLimit),
         publications: normalizeLimit(planConfig.publicTasksMonthlyLimit),
-        tasksWeekly: normalizeLimit(planConfig.tasksWeeklyLimit),
+        tasksMonth: normalizeLimit(planConfig.tasksMonthLimit),
     };
 
     if (plan !== 'enterprise') {
@@ -73,7 +73,7 @@ export const resolveEffectivePlanLimits = (
         projects: normalizeLimit(overrides?.projectsLimit) ?? base.projects,
         seats: normalizeLimit(overrides?.seats) ?? base.seats,
         publications: normalizeLimit(overrides?.publicTasksLimit) ?? base.publications,
-        tasksWeekly: normalizeLimit(overrides?.tasksWeeklyLimit) ?? base.tasksWeekly,
+        tasksMonth: normalizeLimit(overrides?.tasksMonthLimit) ?? base.tasksMonth,
     };
 };
 
@@ -95,28 +95,13 @@ export const getBillingPeriod = (date: Date = new Date()): BillingPeriod => {
     return `${year}-${month}`;
 };
 
-const getIsoWeek = (date: Date) => {
-    const target = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-    const dayNumber = target.getUTCDay() || 7;
-    target.setUTCDate(target.getUTCDate() + 4 - dayNumber);
-    const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
-    const weekNo = Math.ceil((((target.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-    return { year: target.getUTCFullYear(), week: weekNo };
-};
-
-export const getWeeklyPeriod = (date: Date = new Date()): BillingPeriod => {
-    const { year, week } = getIsoWeek(date);
-    const weekStr = String(week).padStart(2, '0');
-    return `${year}-W${weekStr}`;
-};
-
 export const resolvePlanLimits = (
     plan: SubscriptionPlan,
     overrides?: {
         seats?: number | null;
         projectsLimit?: number | null;
         publicTasksLimit?: number | null;
-        tasksWeeklyLimit?: number | null;
+        tasksMonthLimit?: number | null;
     }
 ): PlanLimits => {
     if (plan === 'enterprise') {
@@ -124,7 +109,7 @@ export const resolvePlanLimits = (
             projects: normalizeLimit(overrides?.projectsLimit),
             seats: normalizeLimit(overrides?.seats),
             publications: normalizeLimit(overrides?.publicTasksLimit),
-            tasksWeekly: normalizeLimit(overrides?.tasksWeeklyLimit),
+            tasksMonth: normalizeLimit(overrides?.tasksMonthLimit),
         };
     }
 
@@ -132,7 +117,7 @@ export const resolvePlanLimits = (
         projects: normalizeLimit(overrides?.projectsLimit),
         seats: normalizeLimit(overrides?.seats),
         publications: normalizeLimit(overrides?.publicTasksLimit),
-        tasksWeekly: normalizeLimit(overrides?.tasksWeeklyLimit),
+        tasksMonth: normalizeLimit(overrides?.tasksMonthLimit),
     };
 };
 
@@ -146,7 +131,7 @@ export const loadPlanForOrg = async (
         seats: sub?.seats,
         projectsLimit: sub?.projectsLimit,
         publicTasksLimit: sub?.publicTasksLimit,
-        tasksWeeklyLimit: sub?.tasksWeeklyLimit,
+        tasksMonthLimit: sub?.tasksMonthLimit,
     });
 
     return { plan, limits };
@@ -194,9 +179,7 @@ export const consumeUsageSlot = async (
     const limitValue = limits[LIMIT_FIELD_MAP[kind]];
     const usageField = USAGE_FIELD_MAP[kind];
     const now = new Date();
-    const period =
-        options?.period ??
-        (kind === 'tasks' ? getWeeklyPeriod(now) : getBillingPeriod(now));
+    const period = options?.period ?? getBillingPeriod(now);
 
     const session = options?.session;
     const existingQuery = BillingUsageModel.findOne({ orgId, period });

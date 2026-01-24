@@ -13,7 +13,7 @@ import { splitAttachmentsAndDocuments } from '@/utils/taskFiles';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { addReverseRelations } from '@/app/utils/relatedTasksSync';
 import { ensureSubscriptionWriteAccess } from '@/utils/subscriptionBilling';
-import { ensureWeeklyTaskSlot } from '@/utils/taskLimits';
+import { ensureMonthlyTaskSlot } from '@/utils/taskLimits';
 
 
 export const runtime = 'nodejs';
@@ -359,10 +359,10 @@ export async function POST(
             );
         }
 
-        const taskLimit = await ensureWeeklyTaskSlot(orgObjId, { consume: true });
+        const taskLimit = await ensureMonthlyTaskSlot(orgObjId, { consume: true });
         if (!taskLimit.ok) {
             return NextResponse.json(
-                { error: taskLimit.reason || 'Лимит задач на неделю исчерпан' },
+                { error: taskLimit.reason || 'Лимит задач на месяц исчерпан' },
                 { status: 402 }
             );
         }

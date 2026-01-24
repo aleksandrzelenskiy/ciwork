@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import { requireOrgRole } from '@/server/org/permissions';
-import {
-    getBillingPeriod,
-    getWeeklyPeriod,
-    getUsageSnapshot,
-    loadPlanForOrg,
-} from '@/utils/billingLimits';
+import { getBillingPeriod, getUsageSnapshot, loadPlanForOrg } from '@/utils/billingLimits';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,7 +38,7 @@ export async function GET(
         ]);
 
         const now = new Date();
-        const tasksPeriod = getWeeklyPeriod(now);
+        const tasksPeriod = getBillingPeriod(now);
         const publicPeriod = getBillingPeriod(now);
 
         const [{ limits }, tasksUsage, publicUsage] = await Promise.all([
@@ -56,7 +51,7 @@ export async function GET(
             usage: {
                 tasksUsed: tasksUsage?.tasksUsed ?? 0,
                 publicTasksUsed: publicUsage?.publicationsUsed ?? 0,
-                tasksLimit: limits.tasksWeekly,
+                tasksLimit: limits.tasksMonth,
                 publicTasksLimit: limits.publications,
                 tasksPeriod,
                 publicPeriod,

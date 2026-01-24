@@ -32,7 +32,7 @@ type SubscriptionDTO = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
-    tasksWeeklyLimit?: number;
+    tasksMonthLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     periodStart?: ISODateString | null;
@@ -71,7 +71,7 @@ type GetSubResponse =
 type PatchBody = Partial<
     Pick<
         SubscriptionDTO,
-        'plan' | 'status' | 'seats' | 'projectsLimit' | 'publicTasksLimit' | 'tasksWeeklyLimit' | 'boostCredits' | 'storageLimitGb' | 'periodStart' | 'periodEnd' | 'note'
+        'plan' | 'status' | 'seats' | 'projectsLimit' | 'publicTasksLimit' | 'tasksMonthLimit' | 'boostCredits' | 'storageLimitGb' | 'periodStart' | 'periodEnd' | 'note'
     >
 > & {
     changeTiming?: PlanChangeTiming;
@@ -107,7 +107,7 @@ interface SubscriptionLean {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
-    tasksWeeklyLimit?: number;
+    tasksMonthLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     periodStart?: Date | string | null;
@@ -141,7 +141,7 @@ function toSubscriptionDTO(doc: SubscriptionLean, orgSlug: string): Subscription
         seats: doc.seats,
         projectsLimit: doc.projectsLimit,
         publicTasksLimit: doc.publicTasksLimit,
-        tasksWeeklyLimit: doc.tasksWeeklyLimit,
+        tasksMonthLimit: doc.tasksMonthLimit,
         boostCredits: doc.boostCredits,
         storageLimitGb: doc.storageLimitGb,
         periodStart: toISO(doc.periodStart),
@@ -167,7 +167,7 @@ function fallbackDTO(orgSlug: string, planConfig: PlanConfigDTO): SubscriptionDT
         seats: limits.seats ?? undefined,
         projectsLimit: limits.projects ?? undefined,
         publicTasksLimit: limits.publications ?? undefined,
-        tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
+        tasksMonthLimit: limits.tasksMonth ?? undefined,
         boostCredits: 0,
         storageLimitGb: storageLimitGb ?? undefined,
         periodStart: null,
@@ -263,7 +263,7 @@ export async function GET(
             seats: sub.seats,
             projectsLimit: sub.projectsLimit,
             publicTasksLimit: sub.publicTasksLimit,
-            tasksWeeklyLimit: sub.tasksWeeklyLimit,
+            tasksMonthLimit: sub.tasksMonthLimit,
         });
         const storageLimitGb = resolveEffectiveStorageLimit(sub.plan, planConfig, sub.storageLimitGb);
         const merged: SubscriptionLean = {
@@ -271,7 +271,7 @@ export async function GET(
             seats: limits.seats ?? undefined,
             projectsLimit: limits.projects ?? undefined,
             publicTasksLimit: limits.publications ?? undefined,
-            tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
+            tasksMonthLimit: limits.tasksMonth ?? undefined,
             storageLimitGb: storageLimitGb ?? undefined,
         };
 
@@ -319,7 +319,7 @@ export async function PATCH(
             seats?: number;
             projectsLimit?: number;
             publicTasksLimit?: number;
-            tasksWeeklyLimit?: number;
+            tasksMonthLimit?: number;
             boostCredits?: number;
             storageLimitGb?: number;
             periodStart?: Date | null;
@@ -335,7 +335,7 @@ export async function PATCH(
             ...('seats' in body ? { seats: body.seats } : {}),
             ...('projectsLimit' in body ? { projectsLimit: body.projectsLimit } : {}),
             ...('publicTasksLimit' in body ? { publicTasksLimit: body.publicTasksLimit } : {}),
-            ...('tasksWeeklyLimit' in body ? { tasksWeeklyLimit: body.tasksWeeklyLimit } : {}),
+            ...('tasksMonthLimit' in body ? { tasksMonthLimit: body.tasksMonthLimit } : {}),
             ...('boostCredits' in body ? { boostCredits: body.boostCredits } : {}),
             ...('storageLimitGb' in body ? { storageLimitGb: body.storageLimitGb } : {}),
             ...('periodStart' in body ? { periodStart: parsedPeriodStart ?? null } : {}),
@@ -429,7 +429,7 @@ export async function PATCH(
             seats: resolvedSubscription.seats,
             projectsLimit: resolvedSubscription.projectsLimit,
             publicTasksLimit: resolvedSubscription.publicTasksLimit,
-            tasksWeeklyLimit: resolvedSubscription.tasksWeeklyLimit,
+            tasksMonthLimit: resolvedSubscription.tasksMonthLimit,
         });
         const storageLimitGb = resolveEffectiveStorageLimit(
             resolvedSubscription.plan,
@@ -441,7 +441,7 @@ export async function PATCH(
             seats: limits.seats ?? undefined,
             projectsLimit: limits.projects ?? undefined,
             publicTasksLimit: limits.publications ?? undefined,
-            tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
+            tasksMonthLimit: limits.tasksMonth ?? undefined,
             storageLimitGb: storageLimitGb ?? undefined,
         };
 

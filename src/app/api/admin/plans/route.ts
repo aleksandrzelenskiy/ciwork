@@ -13,7 +13,7 @@ type PatchBody = {
     priceRubMonthly?: number;
     projectsLimit?: number | null;
     seatsLimit?: number | null;
-    tasksWeeklyLimit?: number | null;
+    tasksMonthLimit?: number | null;
     publicTasksMonthlyLimit?: number | null;
     storageIncludedGb?: number | null;
     storageOverageRubPerGbMonth?: number;
@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest) {
         ...(typeof body.priceRubMonthly === 'number' ? { priceRubMonthly: body.priceRubMonthly } : {}),
         ...('projectsLimit' in body ? { projectsLimit: body.projectsLimit } : {}),
         ...('seatsLimit' in body ? { seatsLimit: body.seatsLimit } : {}),
-        ...('tasksWeeklyLimit' in body ? { tasksWeeklyLimit: body.tasksWeeklyLimit } : {}),
+        ...('tasksMonthLimit' in body ? { tasksMonthLimit: body.tasksMonthLimit } : {}),
         ...('publicTasksMonthlyLimit' in body ? { publicTasksMonthlyLimit: body.publicTasksMonthlyLimit } : {}),
         ...('storageIncludedGb' in body ? { storageIncludedGb: body.storageIncludedGb } : {}),
         ...(typeof body.storageOverageRubPerGbMonth === 'number'

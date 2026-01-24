@@ -49,7 +49,7 @@ type OrganizationRow = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
-    tasksWeeklyLimit?: number;
+    tasksMonthLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     walletBalance?: number;
@@ -68,7 +68,7 @@ type AdminSubscriptionPayload = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
-    tasksWeeklyLimit?: number;
+    tasksMonthLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     periodStart?: string | null;
@@ -291,7 +291,7 @@ export default function OrganizationsAdmin() {
                               seats: payload.subscription.seats,
                               projectsLimit: payload.subscription.projectsLimit,
                               publicTasksLimit: payload.subscription.publicTasksLimit,
-                              tasksWeeklyLimit: payload.subscription.tasksWeeklyLimit,
+                              tasksMonthLimit: payload.subscription.tasksMonthLimit,
                               periodStart: payload.subscription.periodStart,
                               periodEnd: payload.subscription.periodEnd,
                               updatedAt: payload.subscription.updatedAt,
@@ -488,7 +488,7 @@ export default function OrganizationsAdmin() {
                                                     </Typography>
                                                     <Typography variant="body2">
                                                         Публикации: {org.publicTasksLimit ?? '—'} ·
-                                                        Задачи/нед: {org.tasksWeeklyLimit ?? '—'}
+                                                        Задачи/мес: {org.tasksMonthLimit ?? '—'}
                                                     </Typography>
                                                 </Stack>
                                             </TableCell>

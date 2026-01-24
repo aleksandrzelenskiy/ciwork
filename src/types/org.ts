@@ -32,7 +32,7 @@ export type PlanConfig = {
     plan: Plan;
     projectsLimit: number | null;
     seatsLimit: number | null;
-    tasksWeeklyLimit: number | null;
+    tasksMonthLimit: number | null;
     publicTasksMonthlyLimit: number | null;
 };
 
@@ -43,7 +43,7 @@ export type SubscriptionInfo = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
-    tasksWeeklyLimit?: number;
+    tasksMonthLimit?: number;
     periodStart?: string | null;
     periodEnd?: string | null;
     graceUntil?: string | null;

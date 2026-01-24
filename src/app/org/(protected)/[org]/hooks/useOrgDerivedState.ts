@@ -35,7 +35,7 @@ type UseOrgDerivedState = {
     subscriptionStatusDescription: string;
     subscriptionEndLabel: string | null;
     roleLabelRu: string;
-    tasksWeeklyLimitLabel: string;
+    tasksMonthLimitLabel: string;
     publicTasksLimitLabel: string;
     canEditOrgSettings: boolean;
     canRequestIntegrations: boolean;
@@ -94,11 +94,11 @@ export default function useOrgDerivedState({
             : typeof subscription?.seats === 'number'
                 ? subscription.seats
                 : null;
-    const resolvedTasksWeeklyLimit =
-        typeof currentPlanConfig?.tasksWeeklyLimit === 'number'
-            ? currentPlanConfig.tasksWeeklyLimit
-            : typeof subscription?.tasksWeeklyLimit === 'number'
-                ? subscription.tasksWeeklyLimit
+    const resolvedTasksMonthLimit =
+        typeof currentPlanConfig?.tasksMonthLimit === 'number'
+            ? currentPlanConfig.tasksMonthLimit
+            : typeof subscription?.tasksMonthLimit === 'number'
+                ? subscription.tasksMonthLimit
                 : null;
     const resolvedPublicTasksLimit =
         typeof currentPlanConfig?.publicTasksMonthlyLimit === 'number'
@@ -109,7 +109,7 @@ export default function useOrgDerivedState({
     const formatLimitLabel = (value: number | null) => (typeof value === 'number' ? String(value) : '∞');
     const projectsLimitLabel = formatLimitLabel(resolvedProjectsLimit);
     const seatsLabel = formatLimitLabel(resolvedSeatsLimit);
-    const tasksWeeklyLimitLabel = formatLimitLabel(resolvedTasksWeeklyLimit);
+    const tasksMonthLimitLabel = formatLimitLabel(resolvedTasksMonthLimit);
     const publicTasksLimitLabel = formatLimitLabel(resolvedPublicTasksLimit);
     const subscriptionStatusLabel = subscriptionLoading
         ? 'Проверяем…'
@@ -183,7 +183,7 @@ export default function useOrgDerivedState({
         subscriptionStatusDescription,
         subscriptionEndLabel,
         roleLabelRu: roleLabelRuLabel,
-        tasksWeeklyLimitLabel,
+        tasksMonthLimitLabel,
         publicTasksLimitLabel,
         canEditOrgSettings,
         canRequestIntegrations,

@@ -23,7 +23,7 @@ type AdminSubscriptionDTO = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
-    tasksWeeklyLimit?: number;
+    tasksMonthLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     periodStart?: string | null;
@@ -39,7 +39,7 @@ type PatchBody = Partial<{
     seats: number;
     projectsLimit: number;
     publicTasksLimit: number;
-    tasksWeeklyLimit: number;
+    tasksMonthLimit: number;
     boostCredits: number;
     storageLimitGb: number;
     periodStart: string | null;
@@ -117,13 +117,13 @@ export async function PATCH(
               seats: 'seats' in body ? body.seats : undefined,
               projectsLimit: 'projectsLimit' in body ? body.projectsLimit : undefined,
               publicTasksLimit: 'publicTasksLimit' in body ? body.publicTasksLimit : undefined,
-              tasksWeeklyLimit: 'tasksWeeklyLimit' in body ? body.tasksWeeklyLimit : undefined,
+              tasksMonthLimit: 'tasksMonthLimit' in body ? body.tasksMonthLimit : undefined,
           }
         : {
               seats: 'seats' in body ? body.seats : existingSubscription?.seats,
               projectsLimit: 'projectsLimit' in body ? body.projectsLimit : existingSubscription?.projectsLimit,
               publicTasksLimit: 'publicTasksLimit' in body ? body.publicTasksLimit : existingSubscription?.publicTasksLimit,
-              tasksWeeklyLimit: 'tasksWeeklyLimit' in body ? body.tasksWeeklyLimit : existingSubscription?.tasksWeeklyLimit,
+              tasksMonthLimit: 'tasksMonthLimit' in body ? body.tasksMonthLimit : existingSubscription?.tasksMonthLimit,
           };
 
     const planConfig = await getPlanConfig(nextPlan);
@@ -131,7 +131,7 @@ export async function PATCH(
         seats: limitOverrides.seats ?? planConfig.seatsLimit ?? undefined,
         projectsLimit: limitOverrides.projectsLimit ?? planConfig.projectsLimit ?? undefined,
         publicTasksLimit: limitOverrides.publicTasksLimit ?? planConfig.publicTasksMonthlyLimit ?? undefined,
-        tasksWeeklyLimit: 'tasksWeeklyLimit' in body ? body.tasksWeeklyLimit : planConfig.tasksWeeklyLimit ?? undefined,
+        tasksMonthLimit: 'tasksMonthLimit' in body ? body.tasksMonthLimit : planConfig.tasksMonthLimit ?? undefined,
     });
     const shouldUpdateLimits =
         planChanged ||
@@ -160,7 +160,7 @@ export async function PATCH(
                   seats: resolvedLimits.seats ?? planConfig.seatsLimit ?? undefined,
                   projectsLimit: resolvedLimits.projects ?? planConfig.projectsLimit ?? undefined,
                   publicTasksLimit: resolvedLimits.publications ?? planConfig.publicTasksMonthlyLimit ?? undefined,
-                  tasksWeeklyLimit: resolvedLimits.tasksWeekly ?? planConfig.tasksWeeklyLimit ?? undefined,
+                  tasksMonthLimit: resolvedLimits.tasksMonth ?? planConfig.tasksMonthLimit ?? undefined,
               }
             : {}),
         ...('boostCredits' in body ? { boostCredits: body.boostCredits } : {}),
@@ -197,7 +197,7 @@ export async function PATCH(
         seats: saved.seats,
         projectsLimit: saved.projectsLimit,
         publicTasksLimit: saved.publicTasksLimit,
-        tasksWeeklyLimit: saved.tasksWeeklyLimit,
+        tasksMonthLimit: saved.tasksMonthLimit,
     });
     const storageLimitGb = resolveEffectiveStorageLimit(
         saved.plan as Plan,
@@ -211,7 +211,7 @@ export async function PATCH(
         seats: limits.seats ?? undefined,
         projectsLimit: limits.projects ?? undefined,
         publicTasksLimit: limits.publications ?? undefined,
-        tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
+        tasksMonthLimit: limits.tasksMonth ?? undefined,
         boostCredits: saved.boostCredits,
         storageLimitGb: storageLimitGb ?? undefined,
         periodStart: toISO(saved.periodStart),

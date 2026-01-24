@@ -6,7 +6,7 @@ export type PlanConfigDTO = {
     priceRubMonthly: number;
     projectsLimit: number | null;
     seatsLimit: number | null;
-    tasksWeeklyLimit: number | null;
+    tasksMonthLimit: number | null;
     publicTasksMonthlyLimit: number | null;
     storageIncludedGb: number | null;
     storageOverageRubPerGbMonth: number;
@@ -22,7 +22,7 @@ export const DEFAULT_PLAN_CONFIGS: Record<PlanCode, PlanConfigDTO> = {
         priceRubMonthly: 0,
         projectsLimit: 1,
         seatsLimit: 5,
-        tasksWeeklyLimit: 10,
+        tasksMonthLimit: 10,
         publicTasksMonthlyLimit: 5,
         storageIncludedGb: 5,
         storageOverageRubPerGbMonth: 120,
@@ -31,7 +31,7 @@ export const DEFAULT_PLAN_CONFIGS: Record<PlanCode, PlanConfigDTO> = {
         features: [
             '1 проект',
             'До 5 активных рабочих мест',
-            'До 10 задач в неделю',
+            'До 10 задач в месяц',
             'Хранилище 5 GB включено',
         ],
     },
@@ -41,7 +41,7 @@ export const DEFAULT_PLAN_CONFIGS: Record<PlanCode, PlanConfigDTO> = {
         priceRubMonthly: 5490,
         projectsLimit: 20,
         seatsLimit: 50,
-        tasksWeeklyLimit: 100,
+        tasksMonthLimit: 100,
         publicTasksMonthlyLimit: 10,
         storageIncludedGb: 50,
         storageOverageRubPerGbMonth: 120,
@@ -50,7 +50,7 @@ export const DEFAULT_PLAN_CONFIGS: Record<PlanCode, PlanConfigDTO> = {
         features: [
             '20 проектов',
             'До 50 активных рабочих мест',
-            'До 100 задач в неделю',
+            'До 100 задач в месяц',
             'Хранилище 50 GB включено',
             'Базовые интеграции',
             'Экспорт',
@@ -63,7 +63,7 @@ export const DEFAULT_PLAN_CONFIGS: Record<PlanCode, PlanConfigDTO> = {
         priceRubMonthly: 9990,
         projectsLimit: 50,
         seatsLimit: 100,
-        tasksWeeklyLimit: 300,
+        tasksMonthLimit: 300,
         publicTasksMonthlyLimit: 20,
         storageIncludedGb: 100,
         storageOverageRubPerGbMonth: 120,
@@ -72,7 +72,7 @@ export const DEFAULT_PLAN_CONFIGS: Record<PlanCode, PlanConfigDTO> = {
         features: [
             '50 проектов',
             'До 100 активных рабочих мест',
-            'До 300 задач в неделю',
+            'До 300 задач в месяц',
             'Хранилище 100 GB включено',
             'Расширенные интеграции',
             'Аудит-лог',
@@ -85,7 +85,7 @@ export const DEFAULT_PLAN_CONFIGS: Record<PlanCode, PlanConfigDTO> = {
         priceRubMonthly: 0,
         projectsLimit: null,
         seatsLimit: null,
-        tasksWeeklyLimit: null,
+        tasksMonthLimit: null,
         publicTasksMonthlyLimit: null,
         storageIncludedGb: null,
         storageOverageRubPerGbMonth: 0,
@@ -116,7 +116,7 @@ const normalizePlanConfig = (plan: PlanCode, source?: Partial<PlanConfigDTO> | n
                 : fallback.priceRubMonthly,
         projectsLimit: normalizeLimit(source?.projectsLimit) ?? fallback.projectsLimit,
         seatsLimit: normalizeLimit(source?.seatsLimit) ?? fallback.seatsLimit,
-        tasksWeeklyLimit: normalizeLimit(source?.tasksWeeklyLimit) ?? fallback.tasksWeeklyLimit,
+        tasksMonthLimit: normalizeLimit(source?.tasksMonthLimit) ?? fallback.tasksMonthLimit,
         publicTasksMonthlyLimit: normalizeLimit(source?.publicTasksMonthlyLimit) ?? fallback.publicTasksMonthlyLimit,
         storageIncludedGb: normalizeLimit(source?.storageIncludedGb) ?? fallback.storageIncludedGb,
         storageOverageRubPerGbMonth:

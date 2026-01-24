@@ -388,7 +388,7 @@ export default function OrgSettingsPage() {
         inviteTooltip,
         projectsLimitLabel,
         seatsLabel,
-        tasksWeeklyLimitLabel,
+        tasksMonthLimitLabel,
         publicTasksLimitLabel,
         subscriptionStatusLabel,
         subscriptionStatusColor,
@@ -544,7 +544,7 @@ export default function OrgSettingsPage() {
                     seatsLabel={seatsLabel}
                     tasksUsedLabel={tasksUsedLabel}
                     publicTasksUsedLabel={publicTasksUsedLabel}
-                    tasksWeeklyLimitLabel={tasksWeeklyLimitLabel}
+                    tasksMonthLimitLabel={tasksMonthLimitLabel}
                     publicTasksLimitLabel={publicTasksLimitLabel}
                     subscriptionStatusLabel={subscriptionStatusLabel}
                     subscriptionStatusColor={subscriptionStatusColor}

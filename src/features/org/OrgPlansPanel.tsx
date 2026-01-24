@@ -33,7 +33,7 @@ type PlanConfig = {
     priceRubMonthly: number;
     projectsLimit: number | null;
     seatsLimit: number | null;
-    tasksWeeklyLimit: number | null;
+    tasksMonthLimit: number | null;
     storageIncludedGb: number | null;
     storageOverageRubPerGbMonth: number;
     storagePackageGb: number | null;
@@ -451,7 +451,7 @@ export default function OrgPlansPanel({ orgSlug, showClose = false, onClose }: O
                                     <Stack spacing={1.5}>
                                         <Typography variant="body2">Проекты: {formatLimit(plan.projectsLimit)}</Typography>
                                         <Typography variant="body2">Рабочие места: {formatLimit(plan.seatsLimit)}</Typography>
-                                        <Typography variant="body2">Задачи/нед: {formatLimit(plan.tasksWeeklyLimit)}</Typography>
+                                        <Typography variant="body2">Задачи/мес: {formatLimit(plan.tasksMonthLimit)}</Typography>
                                         <Typography variant="body2">
                                             Хранилище: {formatLimit(plan.storageIncludedGb, 'По договоренности')} GB
                                         </Typography>

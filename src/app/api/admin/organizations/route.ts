@@ -24,7 +24,7 @@ type AdminOrganizationDTO = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
-    tasksWeeklyLimit?: number;
+    tasksMonthLimit?: number;
     boostCredits?: number;
     storageLimitGb?: number;
     walletBalance?: number;
@@ -91,13 +91,13 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
                   seats: subscription?.seats,
                   projectsLimit: subscription?.projectsLimit,
                   publicTasksLimit: subscription?.publicTasksLimit,
-                  tasksWeeklyLimit: subscription?.tasksWeeklyLimit,
+                  tasksMonthLimit: subscription?.tasksMonthLimit,
               })
             : {
                   seats: subscription?.seats ?? null,
                   projects: subscription?.projectsLimit ?? null,
                   publications: subscription?.publicTasksLimit ?? null,
-                  tasksWeekly: subscription?.tasksWeeklyLimit ?? null,
+                  tasksMonth: subscription?.tasksMonthLimit ?? null,
               };
         const storageLimitGb = planConfig
             ? resolveEffectiveStorageLimit(plan, planConfig, subscription?.storageLimitGb)
@@ -112,7 +112,7 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             seats: limits.seats ?? undefined,
             projectsLimit: limits.projects ?? undefined,
             publicTasksLimit: limits.publications ?? undefined,
-            tasksWeeklyLimit: limits.tasksWeekly ?? undefined,
+            tasksMonthLimit: limits.tasksMonth ?? undefined,
             boostCredits: subscription?.boostCredits,
             storageLimitGb: storageLimitGb ?? undefined,
             walletBalance: wallet?.balance ?? 0,

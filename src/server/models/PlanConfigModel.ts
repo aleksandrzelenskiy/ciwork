@@ -10,7 +10,7 @@ export interface PlanConfig extends Document {
     priceRubMonthly: number;
     projectsLimit: number | null;
     seatsLimit: number | null;
-    tasksWeeklyLimit: number | null;
+    tasksMonthLimit: number | null;
     publicTasksMonthlyLimit?: number | null;
     storageIncludedGb: number | null;
     storageOverageRubPerGbMonth: number;
@@ -28,7 +28,7 @@ const PlanConfigSchema = new Schema<PlanConfig>(
         priceRubMonthly: { type: Number, required: true },
         projectsLimit: { type: Number, default: null },
         seatsLimit: { type: Number, default: null },
-        tasksWeeklyLimit: { type: Number, default: null },
+        tasksMonthLimit: { type: Number, default: null },
         publicTasksMonthlyLimit: { type: Number, default: null },
         storageIncludedGb: { type: Number, default: null },
         storageOverageRubPerGbMonth: { type: Number, default: 0 },

@@ -82,7 +82,7 @@ type SubscriptionInfo = {
     seats?: number;
     projectsLimit?: number;
     publicTasksLimit?: number;
-    tasksWeeklyLimit?: number;
+    tasksMonthLimit?: number;
     periodStart?: string | null;
     periodEnd?: string | null;
     graceUntil?: string | null;
@@ -253,7 +253,7 @@ export default function OrgProjectsPage() {
     const { usage, usageLoading } = useOrgUsage(orgSlug);
     const tasksUsedLabel = usageLoading || !usage ? '—' : String(usage.tasksUsed);
     const publicTasksUsedLabel = usageLoading || !usage ? '—' : String(usage.publicTasksUsed);
-    const tasksWeeklyLimitLabel = formatLimitLabel(usage?.tasksLimit);
+    const tasksMonthLimitLabel = formatLimitLabel(usage?.tasksLimit);
     const publicTasksLimitLabel = formatLimitLabel(usage?.publicTasksLimit);
 
     const theme = useTheme();
@@ -711,7 +711,7 @@ export default function OrgProjectsPage() {
                     seatsLabel={seatsLabel}
                     tasksUsedLabel={tasksUsedLabel}
                     publicTasksUsedLabel={publicTasksUsedLabel}
-                    tasksWeeklyLimitLabel={tasksWeeklyLimitLabel}
+                    tasksMonthLimitLabel={tasksMonthLimitLabel}
                     publicTasksLimitLabel={publicTasksLimitLabel}
                     subscriptionStatusLabel={subscriptionStatusLabel}
                     subscriptionStatusColor={subscriptionStatusColor}

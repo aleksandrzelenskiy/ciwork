@@ -56,7 +56,7 @@ type OrgOverviewPanelProps = {
     roleLabelRu: string;
     tasksUsedLabel: string;
     publicTasksUsedLabel: string;
-    tasksWeeklyLimitLabel: string;
+    tasksMonthLimitLabel: string;
     publicTasksLimitLabel: string;
     onOpenPlansDialog: () => void;
     subscriptionError: string | null;
@@ -117,7 +117,7 @@ export default function OrgOverviewPanel({
     roleLabelRu,
     tasksUsedLabel,
     publicTasksUsedLabel,
-    tasksWeeklyLimitLabel,
+    tasksMonthLimitLabel,
     publicTasksLimitLabel,
     onOpenPlansDialog,
     subscriptionError,
@@ -304,13 +304,13 @@ export default function OrgOverviewPanel({
                 </Box>
                 <Box sx={statCardCompactSx}>
                     <Typography variant="overline" sx={{ color: textSecondary, letterSpacing: 1 }}>
-                        Задач за неделю
+                        Задач за месяц
                     </Typography>
                     <Typography variant="h4" fontWeight={700} color={textPrimary}>
                         {tasksUsedLabel}
                     </Typography>
                     <Typography variant="body2" color={textSecondary}>
-                        из {tasksWeeklyLimitLabel} доступных
+                        из {tasksMonthLimitLabel} доступных
                     </Typography>
                 </Box>
                 <Box sx={statCardCompactSx}>

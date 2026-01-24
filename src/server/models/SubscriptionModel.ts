@@ -12,7 +12,7 @@ export interface Subscription extends Document {
     seats?: number;            // лимит мест
     projectsLimit?: number;    // лимит проектов
     publicTasksLimit?: number; // лимит публичных задач
-    tasksWeeklyLimit?: number; // лимит задач в неделю
+    tasksMonthLimit?: number; // лимит задач в месяц
     boostCredits?: number;     // кредиты на бусты
     storageLimitGb?: number;   // лимит хранилища
     periodStart?: Date;
@@ -36,7 +36,7 @@ const SubscriptionSchema = new Schema<Subscription>(
         seats: { type: Number },
         projectsLimit: { type: Number },
         publicTasksLimit: { type: Number },
-        tasksWeeklyLimit: { type: Number },
+        tasksMonthLimit: { type: Number },
         boostCredits: { type: Number, default: 0 },
         storageLimitGb: { type: Number },
         periodStart: { type: Date },

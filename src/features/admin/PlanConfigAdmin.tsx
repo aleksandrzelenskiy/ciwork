@@ -34,7 +34,7 @@ type PlanConfig = {
     priceRubMonthly: number;
     projectsLimit: number | null;
     seatsLimit: number | null;
-    tasksWeeklyLimit: number | null;
+    tasksMonthLimit: number | null;
     publicTasksMonthlyLimit: number | null;
     storageIncludedGb: number | null;
     storageOverageRubPerGbMonth: number;
@@ -258,7 +258,7 @@ export default function PlanConfigAdmin() {
                             <TableCell>Цена/мес</TableCell>
                             <TableCell>Проекты</TableCell>
                             <TableCell>Места</TableCell>
-                            <TableCell>Задачи/нед</TableCell>
+                            <TableCell>Задачи/мес</TableCell>
                             <TableCell>Хранилище, GB</TableCell>
                             <TableCell>Овередж/GB/мес</TableCell>
                             <TableCell>Пакет GB</TableCell>
@@ -273,7 +273,7 @@ export default function PlanConfigAdmin() {
                                 <TableCell>{plan.priceRubMonthly}</TableCell>
                                 <TableCell>{formatLimit(plan.projectsLimit)}</TableCell>
                                 <TableCell>{formatLimit(plan.seatsLimit)}</TableCell>
-                                <TableCell>{formatLimit(plan.tasksWeeklyLimit)}</TableCell>
+                                <TableCell>{formatLimit(plan.tasksMonthLimit)}</TableCell>
                                 <TableCell>{formatLimit(plan.storageIncludedGb)}</TableCell>
                                 <TableCell>{plan.storageOverageRubPerGbMonth}</TableCell>
                                 <TableCell>{formatLimit(plan.storagePackageGb)}</TableCell>
@@ -347,10 +347,10 @@ export default function PlanConfigAdmin() {
                                 fullWidth
                             />
                             <TextField
-                                label="Задачи в неделю"
+                                label="Задачи в месяц"
                                 type="number"
-                                value={selected.tasksWeeklyLimit ?? ''}
-                                onChange={(e) => updateField('tasksWeeklyLimit', e.target.value === '' ? null : Number(e.target.value))}
+                                value={selected.tasksMonthLimit ?? ''}
+                                onChange={(e) => updateField('tasksMonthLimit', e.target.value === '' ? null : Number(e.target.value))}
                                 fullWidth
                             />
                             <TextField
