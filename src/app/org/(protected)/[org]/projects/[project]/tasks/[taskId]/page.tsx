@@ -690,7 +690,7 @@ export default function TaskDetailsPage() {
     };
 
     const handleSelectAllSections = () => {
-        setVisibleSections(allowedSections);
+        setVisibleSections([...allowedSections]);
     };
 
     const handleClearSections = () => {
