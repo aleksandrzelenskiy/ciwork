@@ -767,18 +767,18 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 canReview={canReview}
                 reviewBlockReason={reviewBlockReason ?? undefined}
             />
-            <Snackbar
-                open={Boolean(message)}
-                autoHideDuration={4000}
-                onClose={() => setMessage(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                {message ? (
+            {message && (
+                <Snackbar
+                    open
+                    autoHideDuration={4000}
+                    onClose={() => setMessage(null)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
                     <Alert severity={message.type} onClose={() => setMessage(null)}>
                         {message.text}
                     </Alert>
-                ) : null}
-            </Snackbar>
+                </Snackbar>
+            )}
             <Snackbar
                 open={chatToast.open}
                 autoHideDuration={4000}
