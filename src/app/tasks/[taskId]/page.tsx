@@ -375,7 +375,6 @@ export default function TaskDetailPage() {
     const hasDocumentOutputs =
         task?.taskType === 'document' &&
         (documentReviewFiles.length > 0 || documentFinalFiles.length > 0 || documentFinalFormats.length > 0);
-    const canShowDocumentOutputs = task?.taskType === 'document' && (hasDocumentOutputs || isManager);
     const attachmentLinks = React.useMemo(
         () => (Array.isArray(task?.attachments) ? task.attachments.filter((url) => !isDocumentUrl(url)) : []),
         [task]
@@ -514,6 +513,8 @@ export default function TaskDetailPage() {
     };
 
     const isManager = Boolean(userRole && MANAGER_ROLES.includes(userRole));
+    const canShowDocumentOutputs =
+        task?.taskType === 'document' && (hasDocumentOutputs || isManager);
     const statusKeys = new Set(['status', 'publicStatus', 'publicModerationStatus']);
     const dateKeys = new Set([
         'createdAt',
