@@ -103,3 +103,43 @@ export async function POST(
         return NextResponse.json({ error: message }, { status: 500 });
     }
 }
+
+// DELETE /api/org/:org/members/request — отменить запрос на вступление
+export async function DELETE(
+    _req: NextRequest,
+    ctx: { params: Promise<{ org: string }> }
+): Promise<NextResponse<RequestResponse>> {
+    try {
+        await dbConnect();
+        const { org: orgSlug } = await ctx.params;
+
+        const me = await currentUser();
+        const requesterEmail = normalizeEmail(me?.emailAddresses?.[0]?.emailAddress);
+        if (!requesterEmail || !me?.id) {
+            return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+        }
+
+        const org = await Organization.findOne({ orgSlug }).lean<{
+            _id: Types.ObjectId;
+            name: string;
+            orgSlug: string;
+        }>();
+        if (!org) return NextResponse.json({ error: 'Организация не найдена' }, { status: 404 });
+
+        const membership = await Membership.findOne({
+            orgId: org._id,
+            userEmail: requesterEmail,
+            status: 'requested',
+        }).lean();
+        if (!membership) {
+            return NextResponse.json({ error: 'Активного запроса нет' }, { status: 404 });
+        }
+
+        await Membership.deleteOne({ _id: membership._id });
+
+        return NextResponse.json({ ok: true });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Server error';
+        return NextResponse.json({ error: message }, { status: 500 });
+    }
+}

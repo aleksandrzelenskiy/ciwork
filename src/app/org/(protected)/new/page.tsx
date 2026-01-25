@@ -30,6 +30,13 @@ type OrgSearchItem = {
     requestedAt?: string;
 };
 
+type RequestedOrgItem = {
+    orgId: string;
+    orgSlug: string;
+    name: string;
+    requestedAt: string;
+};
+
 // простая клиентская slugify (латиница/цифры/дефис, минимум 3 символа)
 function makeSlug(input: string): string {
     return input
@@ -56,6 +63,9 @@ export default function NewOrgPage() {
     const [selectedOrg, setSelectedOrg] = useState<OrgSearchItem | null>(null);
     const [joinLoading, setJoinLoading] = useState(false);
     const [joinAlert, setJoinAlert] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
+    const [requestedOrgs, setRequestedOrgs] = useState<RequestedOrgItem[]>([]);
+    const [requestedLoading, setRequestedLoading] = useState(false);
+    const [cancelingSlug, setCancelingSlug] = useState<string | null>(null);
     const router = useRouter();
 
     const formatRequestedAt = (value?: string | null) => formatDateShort(value) || null;
@@ -108,6 +118,27 @@ export default function NewOrgPage() {
             ctrl.abort();
         };
     }, [orgQuery]);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setRequestedLoading(true);
+            try {
+                const res = await fetch(withBasePath('/api/org/requests'), { cache: 'no-store' });
+                const data = (await res.json().catch(() => ({}))) as { requests?: RequestedOrgItem[] };
+                if (!cancelled) {
+                    setRequestedOrgs(Array.isArray(data.requests) ? data.requests : []);
+                }
+            } catch {
+                if (!cancelled) setRequestedOrgs([]);
+            } finally {
+                if (!cancelled) setRequestedLoading(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const handleCreate = async () => {
         setLoading(true);
@@ -180,6 +211,18 @@ export default function NewOrgPage() {
                         : org
                 )
             );
+            setRequestedOrgs((prev) => {
+                if (prev.some((item) => item.orgSlug === selectedOrg.orgSlug)) return prev;
+                return [
+                    ...prev,
+                    {
+                        orgId: selectedOrg._id,
+                        orgSlug: selectedOrg.orgSlug,
+                        name: selectedOrg.name,
+                        requestedAt,
+                    },
+                ];
+            });
             setTimeout(() => {
                 router.push('/');
             }, 3000);
@@ -188,6 +231,45 @@ export default function NewOrgPage() {
             setJoinAlert({ type: 'warning', message: msg });
         } finally {
             setJoinLoading(false);
+        }
+    };
+
+    const handleCancelRequest = async (orgSlug: string) => {
+        setCancelingSlug(orgSlug);
+        try {
+            const res = await fetch(withBasePath(`/api/org/${encodeURIComponent(orgSlug)}/members/request`), {
+                method: 'DELETE',
+            });
+            const data = (await res.json().catch(() => ({}))) as { ok?: true; error?: string };
+            if (!res.ok || !data.ok) {
+                setJoinAlert({
+                    type: 'warning',
+                    message: data.error || t('org.join.request.cancel.error', 'Не удалось отменить запрос'),
+                });
+                return;
+            }
+            setJoinAlert({
+                type: 'success',
+                message: t('org.join.request.cancel.success', 'Запрос отменён'),
+            });
+            setRequestedOrgs((prev) => prev.filter((item) => item.orgSlug !== orgSlug));
+            setOrgOptions((prev) =>
+                prev.map((org) =>
+                    org.orgSlug === orgSlug
+                        ? { ...org, membershipStatus: undefined, requestedAt: undefined }
+                        : org
+                )
+            );
+            setSelectedOrg((prev) =>
+                prev && prev.orgSlug === orgSlug
+                    ? { ...prev, membershipStatus: undefined, requestedAt: undefined }
+                    : prev
+            );
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
+            setJoinAlert({ type: 'warning', message: msg });
+        } finally {
+            setCancelingSlug(null);
         }
     };
 
@@ -453,18 +535,80 @@ export default function NewOrgPage() {
                                     )}
                                 />
 
+                                {requestedLoading ? (
+                                    <Alert severity="info" variant="outlined">
+                                        {t('org.join.request.pending.loading', 'Проверяем отправленные запросы…')}
+                                    </Alert>
+                                ) : requestedOrgs.length > 0 ? (
+                                    <Alert severity="info" variant="outlined">
+                                        <Stack spacing={0.5}>
+                                            <Typography variant="body2" fontWeight={600}>
+                                                {t('org.join.request.pending.title', 'Ваши запросы на вступление:')}
+                                            </Typography>
+                                            {requestedOrgs.map((request) => (
+                                                <Stack
+                                                    key={request.orgId}
+                                                    direction={{ xs: 'column', sm: 'row' }}
+                                                    spacing={1}
+                                                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                                    justifyContent="space-between"
+                                                >
+                                                    <Typography variant="body2">
+                                                        {t(
+                                                            'org.join.request.pending.item',
+                                                            '«{orgName}» — {date}',
+                                                            {
+                                                                orgName: request.name ?? request.orgSlug,
+                                                                date:
+                                                                    formatRequestedAt(request.requestedAt) ??
+                                                                    t('org.join.request.date.unknown', 'неизвестно'),
+                                                            }
+                                                        )}
+                                                    </Typography>
+                                                    <Button
+                                                        size="small"
+                                                        variant="text"
+                                                        onClick={() => void handleCancelRequest(request.orgSlug)}
+                                                        disabled={cancelingSlug === request.orgSlug}
+                                                    >
+                                                        {cancelingSlug === request.orgSlug
+                                                            ? t('org.join.request.cancel.loading', 'Отменяем…')
+                                                            : t('org.join.request.cancel.action', 'Отменить запрос')}
+                                                    </Button>
+                                                </Stack>
+                                            ))}
+                                        </Stack>
+                                    </Alert>
+                                ) : null}
+
                                 {selectedOrg?.membershipStatus === 'requested' && (
                                     <Alert severity="info" variant="outlined">
-                                        {t(
-                                            'org.join.request.sentInfo',
-                                            'Запрос в «{orgName}» отправлен {date}.',
-                                            {
-                                                orgName: selectedOrg.name ?? selectedOrg.orgSlug,
-                                                date:
-                                                    formatRequestedAt(selectedOrg.requestedAt) ??
-                                                    t('org.join.request.date.unknown', 'неизвестно'),
-                                            }
-                                        )}
+                                        <Stack spacing={1}>
+                                            <Typography variant="body2">
+                                                {t(
+                                                    'org.join.request.sentInfo',
+                                                    'Запрос в «{orgName}» отправлен {date}.',
+                                                    {
+                                                        orgName: selectedOrg.name ?? selectedOrg.orgSlug,
+                                                        date:
+                                                            formatRequestedAt(selectedOrg.requestedAt) ??
+                                                            t('org.join.request.date.unknown', 'неизвестно'),
+                                                    }
+                                                )}
+                                            </Typography>
+                                            <Box>
+                                                <Button
+                                                    size="small"
+                                                    variant="text"
+                                                    onClick={() => void handleCancelRequest(selectedOrg.orgSlug)}
+                                                    disabled={cancelingSlug === selectedOrg.orgSlug}
+                                                >
+                                                    {cancelingSlug === selectedOrg.orgSlug
+                                                        ? t('org.join.request.cancel.loading', 'Отменяем…')
+                                                        : t('org.join.request.cancel.action', 'Отменить запрос')}
+                                                </Button>
+                                            </Box>
+                                        </Stack>
                                     </Alert>
                                 )}
 
