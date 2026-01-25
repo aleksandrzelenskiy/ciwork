@@ -18,7 +18,7 @@ type OnboardingPayload = {
   consentAccepted?: boolean;
   consentVersion?: string;
   consentAcceptedAt?: string;
-  specializations?: ContractorSpecialization[];
+  specializations?: unknown[];
 };
 
 const REGION_CODES = new Set(RUSSIAN_REGIONS.map((region) => region.code));
@@ -53,6 +53,7 @@ export async function POST(request: Request) {
   const consentAcceptedAt = (body.consentAcceptedAt ?? '').trim();
   const specializations = Array.isArray(body.specializations)
     ? body.specializations
+        .filter((value): value is string => typeof value === 'string')
         .map((value) => (value === 'construction' ? 'installation' : value))
         .filter((value): value is ContractorSpecialization =>
           CONTRACTOR_SPECIALIZATIONS.includes(value as ContractorSpecialization)
