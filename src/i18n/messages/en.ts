@@ -186,6 +186,7 @@ const enMessages: Record<string, string> = {
     'onboarding.specializations.construction': 'Construction tasks',
     'onboarding.specializations.document': 'Design / documentation',
     'onboarding.specializations.error': 'Select at least one contractor specialization.',
+    'onboarding.specializations.confirm': 'Confirm',
     'onboarding.footerNote': 'You can update all settings later in your profile. After completion, we will redirect you to the workspace.',
     'onboarding.legal.title': 'Legal information',
     'onboarding.legal.tab.summary': 'Summary',

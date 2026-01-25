@@ -7,6 +7,8 @@ import {
   Typography,
   Button,
   Box,
+  Collapse,
+  Divider,
 } from '@mui/material';
 import { styled, alpha } from '@mui/material/styles';
 import { UI_RADIUS } from '@/config/uiTokens';
@@ -67,6 +69,8 @@ interface RoleCardProps {
   disabled?: boolean;
   selected?: boolean;
   icon?: React.ReactNode;
+  extraContent?: React.ReactNode;
+  showExtraContent?: boolean;
 }
 
 export default function RoleCard({
@@ -78,6 +82,8 @@ export default function RoleCard({
   disabled,
   selected,
   icon,
+  extraContent,
+  showExtraContent = false,
 }: RoleCardProps) {
   const handleCardClick = () => {
     if (disabled) return;
@@ -164,6 +170,23 @@ export default function RoleCard({
           {actionLabel}
         </Button>
       </CardActions>
+      {extraContent && (
+        <Collapse in={showExtraContent} timeout={300} unmountOnExit>
+          <Divider sx={{ mx: 3.5, opacity: 0.6 }} />
+          <Box
+            sx={(theme) => ({
+              px: 3.5,
+              py: 3,
+              background:
+                theme.palette.mode === 'dark'
+                  ? 'linear-gradient(180deg, rgba(12,16,26,0.6), rgba(15,20,30,0.75))'
+                  : 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(248,250,255,0.9))',
+            })}
+          >
+            {extraContent}
+          </Box>
+        </Collapse>
+      )}
     </HoverCard>
   );
 }

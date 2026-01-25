@@ -186,6 +186,7 @@ const ruMessages: Record<string, string> = {
     'onboarding.specializations.construction': 'Строительные задачи',
     'onboarding.specializations.document': 'Проектирование / документация',
     'onboarding.specializations.error': 'Выберите хотя бы одну специализацию исполнителя.',
+    'onboarding.specializations.confirm': 'Подтвердить',
     'onboarding.footerNote': 'Все настройки можно обновить позже в профиле. После заполнения мы мгновенно перенаправим вас в рабочее пространство.',
     'onboarding.legal.title': 'Правовая информация',
     'onboarding.legal.tab.summary': 'Коротко',

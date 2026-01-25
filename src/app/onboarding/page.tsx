@@ -257,19 +257,13 @@ export default function OnboardingPage() {
     setRoleStepVisible(true);
   };
 
-  const handleSelect = async (profileType: ProfileType) => {
+  const submitProfile = async (profileType: ProfileType) => {
     if (!consentAccepted) {
       setError(t('onboarding.error.consentRequired', 'Для продолжения примите согласие на обработку персональных данных.'));
       return;
     }
     const trimmedValues = getTrimmedFormValues();
     if (!trimmedValues) {
-      return;
-    }
-
-    if (profileType === 'contractor' && selectedType !== 'contractor') {
-      setSelectedType('contractor');
-      setError(null);
       return;
     }
 
@@ -316,6 +310,19 @@ export default function OnboardingPage() {
     } finally {
       setSavingType(null);
     }
+  };
+
+  const handleSelect = async (profileType: ProfileType) => {
+    if (profileType === 'contractor') {
+      setSelectedType('contractor');
+      setError(null);
+      return;
+    }
+    await submitProfile(profileType);
+  };
+
+  const handleConfirmContractor = async () => {
+    await submitProfile('contractor');
   };
 
   // ---- layout helpers ----
@@ -724,7 +731,78 @@ export default function OnboardingPage() {
                           justifyContent='center'
                           alignItems='stretch'
                       >
-                        {roleOptions.map((option) => (
+                        {roleOptions.map((option) => {
+                            const isContractorOption = option.type === 'contractor';
+                            const showSpecializations = isContractorOption && selectedType === 'contractor';
+                            const contractorExtraContent = isContractorOption ? (
+                                <Stack spacing={2} alignItems="stretch">
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t(
+                                            'onboarding.specializations.helper',
+                                            'Выберите направления, по которым готовы выполнять задачи.'
+                                        )}
+                                    </Typography>
+                                    <FormGroup>
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={specializations.includes('installation')}
+                                                    onChange={() => {
+                                                        setSpecializations((prev) =>
+                                                            prev.includes('installation')
+                                                                ? prev.filter((item) => item !== 'installation')
+                                                                : [...prev, 'installation']
+                                                        );
+                                                    }}
+                                                />
+                                            }
+                                            label={t('onboarding.specializations.installation', 'Монтаж / инсталляция')}
+                                        />
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={specializations.includes('construction')}
+                                                    onChange={() => {
+                                                        setSpecializations((prev) =>
+                                                            prev.includes('construction')
+                                                                ? prev.filter((item) => item !== 'construction')
+                                                                : [...prev, 'construction']
+                                                        );
+                                                    }}
+                                                />
+                                            }
+                                            label={t('onboarding.specializations.construction', 'Строительные задачи')}
+                                        />
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={specializations.includes('document')}
+                                                    onChange={() => {
+                                                        setSpecializations((prev) =>
+                                                            prev.includes('document')
+                                                                ? prev.filter((item) => item !== 'document')
+                                                                : [...prev, 'document']
+                                                        );
+                                                    }}
+                                                />
+                                            }
+                                            label={t('onboarding.specializations.document', 'Проектирование / документация')}
+                                        />
+                                    </FormGroup>
+                                    <Button
+                                        variant="contained"
+                                        onClick={handleConfirmContractor}
+                                        disabled={Boolean(savingType) || specializations.length === 0}
+                                        sx={{ borderRadius: UI_RADIUS.button }}
+                                    >
+                                        {savingType === 'contractor'
+                                            ? t('onboarding.role.saving', 'Сохраняем...')
+                                            : t('onboarding.specializations.confirm', 'Подтвердить')}
+                                    </Button>
+                                </Stack>
+                            ) : null;
+
+                            return (
                             <Grid
                                 size={{ xs: 12, sm: 6 }}
                                 key={option.type}
@@ -752,91 +830,15 @@ export default function OnboardingPage() {
                                           ? t('onboarding.role.saving', 'Сохраняем...')
                                           : t('onboarding.role.select', 'Выбрать')
                                     }
+                                    extraContent={contractorExtraContent}
+                                    showExtraContent={showSpecializations}
                                 />
                               </Box>
                             </Grid>
-                        ))}
+                            );
+                        })}
                       </Grid>
                     </Box>
-
-                    {selectedType === 'contractor' && (
-                        <Paper
-                            elevation={0}
-                            sx={{
-                              width: '100%',
-                              maxWidth: FIELD_MAX_WIDTH,
-                              mx: 'auto',
-                              px: { xs: 2, sm: 3 },
-                              py: { xs: 2, sm: 2.5 },
-                              borderRadius: UI_RADIUS.surface,
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              backgroundColor: (theme: Theme) =>
-                                  theme.palette.mode === 'dark'
-                                      ? 'rgba(15, 20, 30, 0.6)'
-                                      : 'rgba(255, 255, 255, 0.9)',
-                            }}
-                        >
-                          <Stack spacing={1.5} alignItems="flex-start">
-                            <Typography variant="subtitle1" fontWeight={600}>
-                              {t('onboarding.specializations.title', 'Специализация исполнителя')}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {t(
-                                  'onboarding.specializations.helper',
-                                  'Выберите направления, по которым готовы выполнять задачи.'
-                              )}
-                            </Typography>
-                            <FormGroup>
-                              <FormControlLabel
-                                  control={
-                                    <Checkbox
-                                        checked={specializations.includes('installation')}
-                                        onChange={() => {
-                                          setSpecializations((prev) =>
-                                              prev.includes('installation')
-                                                  ? prev.filter((item) => item !== 'installation')
-                                                  : [...prev, 'installation']
-                                          );
-                                        }}
-                                    />
-                                  }
-                                  label={t('onboarding.specializations.installation', 'Монтаж / инсталляция')}
-                              />
-                              <FormControlLabel
-                                  control={
-                                    <Checkbox
-                                        checked={specializations.includes('construction')}
-                                        onChange={() => {
-                                          setSpecializations((prev) =>
-                                              prev.includes('construction')
-                                                  ? prev.filter((item) => item !== 'construction')
-                                                  : [...prev, 'construction']
-                                          );
-                                        }}
-                                    />
-                                  }
-                                  label={t('onboarding.specializations.construction', 'Строительные задачи')}
-                              />
-                              <FormControlLabel
-                                  control={
-                                    <Checkbox
-                                        checked={specializations.includes('document')}
-                                        onChange={() => {
-                                          setSpecializations((prev) =>
-                                              prev.includes('document')
-                                                  ? prev.filter((item) => item !== 'document')
-                                                  : [...prev, 'document']
-                                          );
-                                        }}
-                                    />
-                                  }
-                                  label={t('onboarding.specializations.document', 'Проектирование / документация')}
-                              />
-                            </FormGroup>
-                          </Stack>
-                        </Paper>
-                    )}
 
                     <Typography variant='body2' color='text.secondary'>
                       {t('onboarding.role.note', 'Исполнители работают с задачами напрямую, а заказчики управляют командами и бюджетами.')}
