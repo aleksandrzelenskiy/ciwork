@@ -15,6 +15,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { useI18n } from '@/i18n/I18nProvider';
 
@@ -68,7 +69,30 @@ export default function ProfileEditForm({
         <Paper
             component="form"
             onSubmit={onSubmit}
-            sx={{ p: { xs: 3, sm: 4 }, mt: 3 }}
+            sx={(theme) => ({
+                p: { xs: 2.5, sm: 4 },
+                mt: { xs: 2.5, sm: 3 },
+                borderRadius: { xs: 0, sm: 4 },
+                border: '1px solid',
+                borderColor:
+                    theme.palette.mode === 'dark'
+                        ? alpha(theme.palette.common.white, 0.12)
+                        : alpha(theme.palette.common.black, 0.08),
+                boxShadow:
+                    theme.palette.mode === 'dark'
+                        ? '0 22px 60px rgba(0, 0, 0, 0.4)'
+                        : '0 20px 56px rgba(15, 23, 42, 0.1)',
+                background:
+                    theme.palette.mode === 'dark'
+                        ? `linear-gradient(180deg, ${alpha(
+                              theme.palette.grey[900],
+                              0.95
+                          )} 0%, ${alpha(theme.palette.grey[800], 0.98)} 100%)`
+                        : `linear-gradient(180deg, ${alpha(
+                              theme.palette.background.paper,
+                              0.98
+                          )} 0%, ${alpha(theme.palette.grey[50], 0.94)} 100%)`,
+            })}
         >
             <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>
                 {t('profile.edit.title', 'Данные профиля')}

@@ -332,10 +332,17 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     };
 
     return (
-        <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, maxWidth: 960, mx: 'auto' }}>
+        <Box
+            sx={{
+                px: { xs: 0, sm: 3, md: 4 },
+                py: { xs: 0, sm: 3, md: 4 },
+                maxWidth: { xs: '100%', md: 960 },
+                mx: { xs: 0, md: 'auto' },
+            }}
+        >
             <Paper
                 sx={(theme) => ({
-                    borderRadius: 4,
+                    borderRadius: { xs: 0, sm: 4 },
                     border: '1px solid',
                     borderColor:
                         theme.palette.mode === 'dark'
