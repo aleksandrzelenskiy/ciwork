@@ -52,9 +52,11 @@ export async function POST(request: Request) {
   const consentVersion = (body.consentVersion ?? '').trim();
   const consentAcceptedAt = (body.consentAcceptedAt ?? '').trim();
   const specializations = Array.isArray(body.specializations)
-    ? body.specializations.filter((value): value is ContractorSpecialization =>
-        CONTRACTOR_SPECIALIZATIONS.includes(value as ContractorSpecialization)
-      )
+    ? body.specializations
+        .map((value) => (value === 'construction' ? 'installation' : value))
+        .filter((value): value is ContractorSpecialization =>
+          CONTRACTOR_SPECIALIZATIONS.includes(value as ContractorSpecialization)
+        )
     : [];
 
   if (!consentAccepted) {

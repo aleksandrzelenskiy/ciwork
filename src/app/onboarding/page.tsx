@@ -756,22 +756,7 @@ export default function OnboardingPage() {
                                                     }}
                                                 />
                                             }
-                                            label={t('onboarding.specializations.installation', 'Монтаж / инсталляция')}
-                                        />
-                                        <FormControlLabel
-                                            control={
-                                                <Checkbox
-                                                    checked={specializations.includes('construction')}
-                                                    onChange={() => {
-                                                        setSpecializations((prev) =>
-                                                            prev.includes('construction')
-                                                                ? prev.filter((item) => item !== 'construction')
-                                                                : [...prev, 'construction']
-                                                        );
-                                                    }}
-                                                />
-                                            }
-                                            label={t('onboarding.specializations.construction', 'Строительные задачи')}
+                                            label={t('onboarding.specializations.installation', 'Монтаж / строительство')}
                                         />
                                         <FormControlLabel
                                             control={

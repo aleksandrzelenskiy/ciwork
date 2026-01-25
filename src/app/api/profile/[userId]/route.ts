@@ -128,7 +128,9 @@ export async function GET(
             regionCode: user.regionCode ?? '',
             profilePic: user.profilePic || '',
             profileType: user.profileType,
-            specializations: user.specializations ?? [],
+            specializations: Array.isArray(user.specializations)
+                ? user.specializations.map((spec) => (spec === 'construction' ? 'installation' : spec))
+                : [],
             platformRole: user.platformRole,
             viewerPlatformRole: viewer.data.platformRole,
             clerkUserId: user.clerkUserId,

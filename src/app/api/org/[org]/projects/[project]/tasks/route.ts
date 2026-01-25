@@ -91,7 +91,7 @@ type ProjectDocLean = {
     name?: string;
     regionCode?: string;
     operator?: string;
-    projectType?: 'construction' | 'installation' | 'document';
+    projectType?: 'installation' | 'document';
 };
 
 type OrgProjectRelOk = { orgDoc: OrgDocLean; projectDoc: ProjectDocLean };
@@ -167,7 +167,7 @@ type CreateTaskBody = {
     status?: string;
     priority?: 'urgent' | 'high' | 'medium' | 'low';
     dueDate?: string;
-    taskType?: 'construction' | 'installation' | 'document';
+    taskType?: 'installation' | 'document';
     requiredAttachments?: Array<'photo' | 'pdf' | 'doc' | 'xlsm' | 'xlsx' | 'dwg'>;
     orderUrl?: string;
     orderNumber?: string;
@@ -189,6 +189,13 @@ type CreateTaskBody = {
     relatedTasks?: unknown[];
     [extra: string]: unknown;
 };
+
+function normalizeTaskType(value?: string | null): 'installation' | 'document' | undefined {
+    if (!value) return undefined;
+    if (value === 'construction') return 'installation';
+    if (value === 'installation' || value === 'document') return value;
+    return undefined;
+}
 
 export async function GET(
     req: NextRequest,
@@ -356,11 +363,8 @@ export async function POST(
             ...rest
         } = body;
 
-        const projectType = rel.projectDoc?.projectType ?? 'installation';
-        const finalTaskType =
-            taskType && ['construction', 'installation', 'document'].includes(taskType)
-                ? taskType
-                : projectType;
+        const projectType = normalizeTaskType(rel.projectDoc?.projectType) ?? 'installation';
+        const finalTaskType = normalizeTaskType(taskType) ?? projectType;
 
         if (projectType === 'document' && finalTaskType !== 'document') {
             return NextResponse.json(

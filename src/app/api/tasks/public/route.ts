@@ -79,7 +79,15 @@ export async function GET(request: NextRequest) {
             ? context.data.user.specializations
             : [];
         if (specs.length > 0) {
-            const allowedTypes = new Set<string>(specs);
+            const normalizedSpecs = specs.map((spec) =>
+                spec === 'construction' ? 'installation' : spec
+            );
+            const allowedTypes = new Set<string>(
+                normalizedSpecs.filter((spec) => spec === 'installation' || spec === 'document')
+            );
+            if (allowedTypes.has('installation')) {
+                allowedTypes.add('construction');
+            }
             matchStage.$and = [
                 ...(Array.isArray(matchStage.$and) ? matchStage.$and : []),
                 {

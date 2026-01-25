@@ -462,7 +462,7 @@ export default function WorkspaceTaskDialog({
     const [percentEditorOpen, setPercentEditorOpen] = React.useState(false);
     const [workItemsDialogOpen, setWorkItemsDialogOpen] = React.useState(false);
 
-    const [projectMeta, setProjectMeta] = React.useState<{ regionCode?: string; operator?: string; projectType?: 'construction' | 'installation' | 'document' } | null>(null);
+    const [projectMeta, setProjectMeta] = React.useState<{ regionCode?: string; operator?: string; projectType?: 'installation' | 'document' } | null>(null);
     const isT2Operator = React.useMemo(() => projectMeta?.operator === '250020', [projectMeta?.operator]);
     const isBeelineOperator = React.useMemo(() => projectMeta?.operator === '250099', [projectMeta?.operator]);
     const isDocumentProject = projectMeta?.projectType === 'document';
@@ -523,10 +523,14 @@ export default function WorkspaceTaskDialog({
                 console.error('Failed to load project info:', extractErrorMessage(body, res.statusText));
                 return;
             }
+            const normalizedProjectType =
+                body.project?.projectType === 'construction'
+                    ? 'installation'
+                    : body.project?.projectType;
             setProjectMeta({
                 regionCode: body.project?.regionCode,
                 operator: body.project?.operator,
-                projectType: body.project?.projectType,
+                projectType: normalizedProjectType,
             });
         } catch (e: unknown) {
             setProjectMeta(null);

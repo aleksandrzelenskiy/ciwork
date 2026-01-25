@@ -32,7 +32,7 @@ export type ProjectDialogValues = {
     name: string;
     key: string;
     description?: string;
-    projectType: 'construction' | 'installation' | 'document';
+    projectType: 'installation' | 'document';
     regionCode: string;
     operator: string;
     managers: string[];
@@ -57,6 +57,12 @@ const REGION_OPTIONS = RUSSIAN_REGIONS;
 const PROJECT_KEY_PATTERN = /^[A-Z0-9-]+$/;
 
 const normalizeProjectKey = (value: string): string => value.trim().toUpperCase();
+const normalizeProjectTypeValue = (
+    value?: string | null
+): ProjectDialogValues['projectType'] => {
+    if (value === 'document') return 'document';
+    return 'installation';
+};
 
 const managerOptionLabel = (option: ProjectManagerOption) => {
     if (option.name && option.email) {
@@ -129,7 +135,7 @@ export default function ProjectDialog({
         setName(initialData?.name ?? '');
         setKey(initialData?.key ?? '');
         setDescription(initialData?.description ?? '');
-        setProjectType(initialData?.projectType ?? 'installation');
+        setProjectType(normalizeProjectTypeValue(initialData?.projectType));
         const normalizedRegion = resolveRegionCode(initialData?.regionCode);
         const fallbackRegion = REGION_OPTIONS[0]?.code ?? '';
         setRegionCode(normalizedRegion || fallbackRegion);
@@ -264,10 +270,7 @@ export default function ProjectDialog({
                         onChange={(e) => setProjectType(e.target.value as ProjectDialogValues['projectType'])}
                     >
                         <MenuItem value="installation">
-                            {t('project.type.installation', 'Инсталляция')}
-                        </MenuItem>
-                        <MenuItem value="construction">
-                            {t('project.type.construction', 'Строительство')}
+                            {t('project.type.installation', 'Монтаж / строительство')}
                         </MenuItem>
                         <MenuItem value="document">
                             {t('project.type.document', 'Документация')}

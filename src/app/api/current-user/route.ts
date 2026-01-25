@@ -35,12 +35,15 @@ export async function GET() {
     isSuperAdmin,
   } = response.data;
   const membershipRole = activeMembership?.role || null;
+  const normalizedSpecializations = Array.isArray(user.specializations)
+    ? user.specializations.map((spec) => (spec === 'construction' ? 'installation' : spec))
+    : [];
 
   return NextResponse.json({
     membershipRole,
     platformRole: user.platformRole,
     profileType: user.profileType,
-    specializations: user.specializations ?? [],
+    specializations: normalizedSpecializations,
     profileSetupCompleted: user.profileSetupCompleted,
     effectiveOrgRole,
     isSuperAdmin,

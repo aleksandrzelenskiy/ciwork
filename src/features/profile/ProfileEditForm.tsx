@@ -171,17 +171,7 @@ export default function ProfileEditForm({
                                             disabled={readOnly}
                                         />
                                     }
-                                    label={t('profile.edit.specializations.installation', 'Монтаж / инсталляция')}
-                                />
-                                <FormControlLabel
-                                    control={
-                                        <Checkbox
-                                            checked={specializations.includes('construction')}
-                                            onChange={() => toggleSpecialization('construction')}
-                                            disabled={readOnly}
-                                        />
-                                    }
-                                    label={t('profile.edit.specializations.construction', 'Строительные задачи')}
+                                    label={t('profile.edit.specializations.installation', 'Монтаж / строительство')}
                                 />
                                 <FormControlLabel
                                     control={

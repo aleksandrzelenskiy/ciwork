@@ -52,7 +52,7 @@ type ProjectDTO = {
     name: string;
     key: string;
     description?: string;
-    projectType: 'construction' | 'installation' | 'document';
+    projectType: 'installation' | 'document';
     regionCode: string;
     operator: string;
     managers?: string[];
@@ -62,7 +62,7 @@ type UpdateBody = {
     name?: string;
     key?: string;
     description?: string;
-    projectType?: 'construction' | 'installation' | 'document';
+    projectType?: 'installation' | 'document';
     regionCode?: string;
     operator?: string;
     managers?: string[];
@@ -76,10 +76,17 @@ type ProjectLean = {
     name: string;
     key: string;
     description?: string;
-    projectType?: 'construction' | 'installation' | 'document';
+    projectType?: 'installation' | 'document';
     regionCode: string;
     operator: string;
     managers?: string[];
+};
+
+const normalizeProjectType = (value?: string | null): 'installation' | 'document' | undefined => {
+    if (!value) return undefined;
+    if (value === 'construction') return 'installation';
+    if (value === 'installation' || value === 'document') return value;
+    return undefined;
 };
 
 function getProjectMatch(projectRef: string, orgId: Types.ObjectId) {
@@ -95,7 +102,7 @@ function toProjectDto(doc: ProjectLean): ProjectDTO {
         name: doc.name,
         key: doc.key,
         description: doc.description,
-        projectType: doc.projectType ?? 'installation',
+        projectType: normalizeProjectType(doc.projectType) ?? 'installation',
         regionCode: doc.regionCode,
         operator: doc.operator,
         managers: Array.isArray(doc.managers) ? doc.managers : undefined,
@@ -181,10 +188,11 @@ export async function PATCH(
         if (typeof body.key === 'string') update.key = body.key.trim().toUpperCase(); // нормализуем KEY
         if (typeof body.description === 'string') update.description = body.description;
         if (typeof body.projectType === 'string') {
-            if (!['construction', 'installation', 'document'].includes(body.projectType)) {
+            const normalizedType = normalizeProjectType(body.projectType);
+            if (!normalizedType) {
                 return NextResponse.json({ error: 'Некорректный тип проекта' }, { status: 400 });
             }
-            update.projectType = body.projectType;
+            update.projectType = normalizedType;
         }
 
         if (typeof body.regionCode === 'string') {

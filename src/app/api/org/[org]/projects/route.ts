@@ -37,7 +37,7 @@ type ProjectDTO = {
     name: string;
     key: string;
     description?: string;
-    projectType: 'construction' | 'installation' | 'document';
+    projectType: 'installation' | 'document';
     managers?: string[];
     managerEmail?: string | null;
     regionCode: string;
@@ -49,7 +49,7 @@ type CreateProjectBody = {
     name: string;
     key: string;
     description?: string;
-    projectType?: 'construction' | 'installation' | 'document';
+    projectType?: 'installation' | 'document';
     regionCode: string;
     operator: string;
     managers?: string[];
@@ -62,13 +62,20 @@ interface ProjectLean {
     name: string;
     key: string;
     description?: string;
-    projectType?: 'construction' | 'installation' | 'document';
+    projectType?: 'installation' | 'document';
     managers?: string[];
     regionCode: string;
     operator: string;
 }
 
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const normalizeProjectType = (value?: string | null): 'installation' | 'document' | undefined => {
+    if (!value) return undefined;
+    if (value === 'construction') return 'installation';
+    if (value === 'installation' || value === 'document') return value;
+    return undefined;
+};
 
 const normalizeEmailsArray = (value: unknown): string[] => {
     if (!Array.isArray(value)) return [];
@@ -146,7 +153,7 @@ export async function GET(
                 name: p.name,
                 key: p.key,
                 description: p.description,
-                projectType: p.projectType ?? 'installation',
+                projectType: normalizeProjectType(p.projectType) ?? 'installation',
                 managers,
                 managerEmail: managers[0] ?? null,
                 regionCode: p.regionCode,
@@ -193,8 +200,8 @@ export async function POST(
         const key = body?.key?.trim();
         const isValidRegion = RUSSIAN_REGIONS.some((region) => region.code === body.regionCode);
         const isValidOperator = OPERATORS.some((operator) => operator.value === body.operator);
-        const projectType = body.projectType ?? 'installation';
-        const isValidProjectType = ['construction', 'installation', 'document'].includes(projectType);
+        const projectType = normalizeProjectType(body.projectType) ?? 'installation';
+        const isValidProjectType = ['installation', 'document'].includes(projectType);
 
         if (!name || !key || !isValidRegion || !isValidOperator || !isValidProjectType) {
             return NextResponse.json(
@@ -255,7 +262,7 @@ export async function POST(
                     name: created.name,
                     key: created.key,
                     description: created.description,
-                    projectType: created.projectType ?? projectType,
+                    projectType: normalizeProjectType(created.projectType) ?? projectType,
                     managers: createdManagers,
                     managerEmail: createdManagers[0] ?? email,
                     regionCode: created.regionCode,

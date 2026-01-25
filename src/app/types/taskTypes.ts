@@ -14,7 +14,7 @@ export type CurrentStatus =
     | 'Agreed';
 
 // Тип задачи
-export type TaskType = 'construction' | 'installation' | 'document';
+export type TaskType = 'installation' | 'document';
 
 // Тип обязательных вложений
 export type RequiredAttachmentType = 'photo' | 'pdf' | 'doc' | 'dwg';
@@ -141,7 +141,7 @@ export interface Task {
   allowInstantClaim?: boolean;
   contractorPayment?: number;
 
-  taskType: TaskType; // construction | document
+  taskType: TaskType; // installation | document
   requiredAttachments?: RequiredAttachmentType[]; // например ['photo'] или ['pdf', 'dwg']
   relatedTasks?: (string | RelatedTaskRef)[]; // массив ObjectId связанных задач
   approvedBy?: string; // кто согласовал

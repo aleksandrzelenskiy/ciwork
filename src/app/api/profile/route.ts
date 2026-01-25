@@ -171,9 +171,11 @@ export async function PATCH(request: Request) {
             .slice(0, 20)
         : undefined;
     const specializations = Array.isArray(body.specializations)
-      ? body.specializations.filter((value): value is ContractorSpecialization =>
-          CONTRACTOR_SPECIALIZATIONS.includes(value as ContractorSpecialization)
-        )
+      ? body.specializations
+          .map((value) => (value === 'construction' ? 'installation' : value))
+          .filter((value): value is ContractorSpecialization =>
+            CONTRACTOR_SPECIALIZATIONS.includes(value as ContractorSpecialization)
+          )
       : undefined;
 
     if (typeof body.name !== 'undefined' && !nextName) {

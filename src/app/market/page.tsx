@@ -190,6 +190,13 @@ export default function MarketplacePage() {
         dayjs.locale(locale === 'en' ? 'en' : 'ru');
     }, [locale]);
 
+    const normalizeTaskTypeValue = (value?: string | null): TaskType | undefined => {
+        if (!value) return undefined;
+        if (value === 'construction') return 'installation';
+        if (value === 'installation' || value === 'document') return value;
+        return undefined;
+    };
+
     const mapMarketTaskToPublicTask = (task: MarketPublicTask): PublicTask => ({
         _id: task._id,
         taskName: task.taskName || t('tasks.defaultName', 'Задача'),
@@ -207,7 +214,7 @@ export default function MarketplacePage() {
         currency: task.currency,
         dueDate: task.dueDate,
         priority: task.priority,
-        taskType: task.taskType,
+        taskType: normalizeTaskTypeValue(task.taskType),
         attachments: task.attachments,
         workItems: task.workItems,
         publicDescription: task.publicDescription,
@@ -262,12 +269,11 @@ export default function MarketplacePage() {
         });
     };
 
-    const getTaskTypeLabel = (taskType?: TaskType) => {
-        switch (taskType) {
-            case 'construction':
-                return t('market.taskType.construction', 'Строительная');
+    const getTaskTypeLabel = (taskType?: string | null) => {
+        const normalized = normalizeTaskTypeValue(taskType);
+        switch (normalized) {
             case 'installation':
-                return t('market.taskType.installation', 'Инсталляционная');
+                return t('market.taskType.installation', 'Монтажная');
             case 'document':
                 return t('market.taskType.document', 'Документальная');
             default:
@@ -320,7 +326,7 @@ export default function MarketplacePage() {
             Array.from(
                 new Set(
                     tasks
-                        .map((task) => task.taskType)
+                        .map((task) => normalizeTaskTypeValue(task.taskType))
                         .filter((type): type is TaskType => Boolean(type))
                 )
             ),
@@ -366,7 +372,11 @@ export default function MarketplacePage() {
                 setError(data.error || t('market.error.loadTasks', 'Не удалось загрузить задачи'));
                 setTasks([]);
             } else {
-                setTasks(data.tasks || []);
+                const normalized = (data.tasks || []).map((task) => ({
+                    ...task,
+                    taskType: normalizeTaskTypeValue(task.taskType),
+                }));
+                setTasks(normalized);
             }
         } catch (e) {
             setError(e instanceof Error ? e.message : t('market.error.loadTasksGeneric', 'Ошибка загрузки задач'));
@@ -587,7 +597,8 @@ export default function MarketplacePage() {
             : true;
 
         const matchesStatus = filters.status ? task.publicStatus === filters.status : true;
-        const matchesType = filters.taskType ? task.taskType === filters.taskType : true;
+        const normalizedTaskType = normalizeTaskTypeValue(task.taskType);
+        const matchesType = filters.taskType ? normalizedTaskType === filters.taskType : true;
 
         return matchesOrganization && matchesProject && matchesStatus && matchesType;
     });
