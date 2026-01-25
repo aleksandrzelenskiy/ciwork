@@ -103,6 +103,7 @@ type TaskResponse = { tasks?: PublicTask[]; error?: string };
 
 type UserContext = {
     profileType?: 'employer' | 'contractor';
+    specializations?: string[];
     name?: string;
     email?: string;
     user?: { _id?: string };
@@ -499,6 +500,17 @@ export default function MarketplacePage() {
                 severity: 'error',
             });
             return;
+        }
+        if (selectedTask.taskType === 'document') {
+            const specs = Array.isArray(userContext.specializations) ? userContext.specializations : [];
+            if (!specs.includes('document')) {
+                setSnack({
+                    open: true,
+                    message: t('market.apply.onlyDocument', 'Откликаться на документальные задачи могут только проектировщики'),
+                    severity: 'error',
+                });
+                return;
+            }
         }
         const budgetValue = Number(applyBudget);
         if (!budgetValue || Number.isNaN(budgetValue) || budgetValue <= 0) {
