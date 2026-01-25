@@ -73,6 +73,7 @@ type Task = {
     _id: string;
     taskId: string;
     taskName: string;
+    taskType?: 'installation' | 'document';
     status?: string;
     projectKey?: string;
     dueDate?: string;
@@ -113,6 +114,34 @@ const formatDate = (iso?: string, locale?: string) => {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '—';
     return d.toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-US');
+};
+
+const getDocumentStatusHint = (
+    taskType: Task['taskType'],
+    status: string | undefined,
+    t: ReturnType<typeof useI18n>['t']
+) => {
+    if (taskType !== 'document') return null;
+    const normalized = normalizeStatusTitle(status);
+    switch (normalized) {
+        case 'Assigned':
+            return t('task.document.status.assigned', 'Назначена проектировщику');
+        case 'At work':
+            return t('task.document.status.atWork', 'Подготовка документации в работе');
+        case 'Pending':
+            return t('task.document.status.pending', 'PDF переданы на согласование');
+        case 'Issues':
+            return t('task.document.status.issues', 'Есть замечания, ждём исправления');
+        case 'Fixed':
+            return t('task.document.status.fixed', 'Исправления переданы на проверку');
+        case 'Agreed':
+            return t('task.document.status.agreed', 'Документация согласована');
+        case 'Done':
+            return t('task.document.status.done', 'Задача завершена');
+        case 'To do':
+        default:
+            return t('task.document.status.todo', 'Ожидает начала работ');
+    }
 };
 
 const getInitials = (s?: string) =>
@@ -511,16 +540,26 @@ const ProjectTaskListInner = (
 
                                     {columnVisibility.status && (
                                         <TableCell align="center">
-                                            <Chip
-                                                size="small"
-                                                label={getStatusLabel(statusTitle, t)}
-                                                variant="outlined"
-                                                sx={{
-                                                    backgroundColor: getStatusColor(statusTitle),
-                                                    color: '#fff',
-                                                    borderColor: 'transparent',
-                                                }}
-                                            />
+                                            {(() => {
+                                                const hint = getDocumentStatusHint(
+                                                    taskItem.taskType,
+                                                    taskItem.status,
+                                                    t
+                                                );
+                                                const chip = (
+                                                    <Chip
+                                                        size="small"
+                                                        label={getStatusLabel(statusTitle, t)}
+                                                        variant="outlined"
+                                                        sx={{
+                                                            backgroundColor: getStatusColor(statusTitle),
+                                                            color: '#fff',
+                                                            borderColor: 'transparent',
+                                                        }}
+                                                    />
+                                                );
+                                                return hint ? <Tooltip title={hint}>{chip}</Tooltip> : chip;
+                                            })()}
                                         </TableCell>
                                     )}
 

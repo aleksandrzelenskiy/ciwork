@@ -40,6 +40,7 @@ type Task = {
     _id: string;
     taskId: string;
     taskName: string;
+    taskType?: 'installation' | 'document';
     bsNumber?: string;
     projectKey?: string;
     createdAt?: string;
@@ -101,6 +102,31 @@ function TaskCard({
         : 'linear-gradient(175deg, rgba(255,255,255,0.96), rgba(248,250,255,0.92))';
     const cardBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)';
     const cardShadow = isDark ? '0 25px 60px rgba(0,0,0,0.55)' : '0 25px 60px rgba(15,23,42,0.15)';
+    const documentStatusHint =
+        task.taskType === 'document'
+            ? (() => {
+                  const normalized = normalizeStatusTitle(task.status);
+                  switch (normalized) {
+                      case 'Assigned':
+                          return t('task.document.status.assigned', 'Назначена проектировщику');
+                      case 'At work':
+                          return t('task.document.status.atWork', 'Подготовка документации в работе');
+                      case 'Pending':
+                          return t('task.document.status.pending', 'PDF переданы на согласование');
+                      case 'Issues':
+                          return t('task.document.status.issues', 'Есть замечания, ждём исправления');
+                      case 'Fixed':
+                          return t('task.document.status.fixed', 'Исправления переданы на проверку');
+                      case 'Agreed':
+                          return t('task.document.status.agreed', 'Документация согласована');
+                      case 'Done':
+                          return t('task.document.status.done', 'Задача завершена');
+                      case 'To do':
+                      default:
+                          return t('task.document.status.todo', 'Ожидает начала работ');
+                  }
+              })()
+            : null;
 
     return (
         <Card
@@ -175,11 +201,21 @@ function TaskCard({
                     gap: 1,
                 }}
             >
-                <Chip
-                    label={getStatusLabel(statusTitle, t)}
-                    size="small"
-                    sx={{ bgcolor: getStatusColor(statusTitle), color: '#fff' }}
-                />
+                {documentStatusHint ? (
+                    <Tooltip title={documentStatusHint}>
+                        <Chip
+                            label={getStatusLabel(statusTitle, t)}
+                            size="small"
+                            sx={{ bgcolor: getStatusColor(statusTitle), color: '#fff' }}
+                        />
+                    </Tooltip>
+                ) : (
+                    <Chip
+                        label={getStatusLabel(statusTitle, t)}
+                        size="small"
+                        sx={{ bgcolor: getStatusColor(statusTitle), color: '#fff' }}
+                    />
+                )}
 
                 <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center' }}>
                     {p && (
