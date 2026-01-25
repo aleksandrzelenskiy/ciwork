@@ -76,12 +76,12 @@ export async function GET(request: NextRequest) {
 
     if (context.success && context.data?.user?.profileType === 'contractor') {
         const specs = Array.isArray(context.data.user.specializations)
-            ? context.data.user.specializations
+            ? (context.data.user.specializations as unknown[])
             : [];
         if (specs.length > 0) {
-            const normalizedSpecs = specs.map((spec) =>
-                spec === 'construction' ? 'installation' : spec
-            );
+            const normalizedSpecs = specs
+                .filter((spec): spec is string => typeof spec === 'string')
+                .map((spec) => (spec === 'construction' ? 'installation' : spec));
             const allowedTypes = new Set<string>(
                 normalizedSpecs.filter((spec) => spec === 'installation' || spec === 'document')
             );
