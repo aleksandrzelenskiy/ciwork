@@ -40,7 +40,7 @@ export async function GET(): Promise<NextResponse<RequestsResponse>> {
         const orgs = await Organization.find(
             { _id: { $in: orgIds } },
             { name: 1, orgSlug: 1 }
-        ).lean<{ _id: Types.ObjectId; name: string; orgSlug: string }>();
+        ).lean<{ _id: Types.ObjectId; name: string; orgSlug: string }[]>();
 
         const orgById = new Map<string, { name: string; orgSlug: string }>();
         for (const org of orgs) {
