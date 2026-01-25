@@ -5,7 +5,7 @@ import WalletTransactionModel from '@/server/models/WalletTransactionModel';
 import { createNotification } from '@/server/notifications/service';
 import { getBillingConfig } from '@/utils/billingConfig';
 
-export const SIGNUP_BONUS_RUB = 5000;
+export const SIGNUP_BONUS_RUB = 3000;
 const DEFAULT_BID_COST_RUB = 50;
 
 type EnsureWalletResult = {
