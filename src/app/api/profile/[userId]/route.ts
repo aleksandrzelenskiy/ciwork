@@ -129,7 +129,9 @@ export async function GET(
             profilePic: user.profilePic || '',
             profileType: user.profileType,
             specializations: Array.isArray(user.specializations)
-                ? user.specializations.map((spec) => (spec === 'construction' ? 'installation' : spec))
+                ? (user.specializations as unknown[])
+                      .filter((spec): spec is string => typeof spec === 'string')
+                      .map((spec) => (spec === 'construction' ? 'installation' : spec))
                 : [],
             platformRole: user.platformRole,
             viewerPlatformRole: viewer.data.platformRole,
