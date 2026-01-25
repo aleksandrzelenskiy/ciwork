@@ -39,9 +39,11 @@ import { getStatusColor } from '@/utils/statusColors';
 import { useRouter } from 'next/navigation';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
 import { defaultTaskFilters, type TaskFilterOptions, type TaskFilters } from '@/app/types/taskFilters';
-import { getStatusLabel } from '@/utils/statusLabels';
+import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
+import type { Translator } from '@/i18n';
 
 interface TaskListPageProps {
   searchQuery?: string;
@@ -120,11 +122,13 @@ function Row({
   columnVisibility,
   authorProfile,
   onOpenProfile,
+  t,
 }: {
   task: Task;
   columnVisibility: Record<ColumnKey, boolean>;
   authorProfile?: UserProfile | null;
   onOpenProfile: (clerkUserId?: string | null) => void;
+  t: Translator;
 }) {
   const router = useRouter();
 
@@ -135,13 +139,37 @@ function Row({
     }
   };
 
-  const statusLabel = getStatusLabel(task.status);
+  const statusLabel = getStatusLabel(task.status, t);
   const priorityLabel = getPriorityLabelRu(task.priority) || 'Не задан';
   const authorName =
     authorProfile?.name?.trim() || task.authorName?.trim() || '';
   const authorEmail = task.authorEmail?.trim() || authorProfile?.email || '';
   const authorInitials = getInitials(authorName || authorEmail);
   const authorClerkId = authorProfile?.clerkUserId || task.authorId || '';
+  const documentStatusHint = task.taskType === 'document'
+    ? (() => {
+        const normalized = normalizeStatusTitle(task.status);
+        switch (normalized) {
+          case 'Assigned':
+            return t('task.document.status.assigned', 'Назначена проектировщику');
+          case 'At work':
+            return t('task.document.status.atWork', 'Подготовка документации в работе');
+          case 'Pending':
+            return t('task.document.status.pending', 'PDF переданы на согласование');
+          case 'Issues':
+            return t('task.document.status.issues', 'Есть замечания, ждём исправления');
+          case 'Fixed':
+            return t('task.document.status.fixed', 'Исправления переданы на проверку');
+          case 'Agreed':
+            return t('task.document.status.agreed', 'Документация согласована');
+          case 'Done':
+            return t('task.document.status.done', 'Задача завершена');
+          case 'To do':
+          default:
+            return t('task.document.status.todo', 'Ожидает начала работ');
+        }
+      })()
+    : null;
 
   return (
     <TableRow
@@ -231,15 +259,29 @@ function Row({
 
       {columnVisibility.status && (
         <TableCell align='center'>
-          <Chip
-            label={statusLabel}
-            size='small'
-            sx={{
-              backgroundColor: getStatusColor(task.status),
-              color: '#fff',
-              fontWeight: 600,
-            }}
-          />
+          {documentStatusHint ? (
+            <Tooltip title={documentStatusHint}>
+              <Chip
+                label={statusLabel}
+                size='small'
+                sx={{
+                  backgroundColor: getStatusColor(task.status),
+                  color: '#fff',
+                  fontWeight: 600,
+                }}
+              />
+            </Tooltip>
+          ) : (
+            <Chip
+              label={statusLabel}
+              size='small'
+              sx={{
+                backgroundColor: getStatusColor(task.status),
+                color: '#fff',
+                fontWeight: 600,
+              }}
+            />
+          )}
         </TableCell>
       )}
 
@@ -277,6 +319,7 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
   },
   ref
 ) {
+  const { t } = useI18n();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const tableBg = isDark ? 'rgba(10,13,20,0.92)' : '#ffffff';
@@ -647,6 +690,7 @@ const TaskListPage = forwardRef<TaskListPageHandle, TaskListPageProps>(function 
                     columnVisibility={columnVisibility}
                     authorProfile={emailKey ? userProfiles[emailKey] : undefined}
                     onOpenProfile={openProfileDialog}
+                    t={t}
                   />
                 );
               })}

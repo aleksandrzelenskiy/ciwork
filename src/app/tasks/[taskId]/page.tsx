@@ -515,6 +515,29 @@ export default function TaskDetailPage() {
     const isManager = Boolean(userRole && MANAGER_ROLES.includes(userRole));
     const canShowDocumentOutputs =
         task?.taskType === 'document' && (hasDocumentOutputs || isManager);
+    const documentStatusHint = React.useMemo(() => {
+        if (task?.taskType !== 'document') return null;
+        const normalized = normalizeStatusTitle(task?.status);
+        switch (normalized) {
+            case 'Assigned':
+                return t('task.document.status.assigned', 'Назначена проектировщику');
+            case 'At work':
+                return t('task.document.status.atWork', 'Подготовка документации в работе');
+            case 'Pending':
+                return t('task.document.status.pending', 'PDF переданы на согласование');
+            case 'Issues':
+                return t('task.document.status.issues', 'Есть замечания, ждём исправления');
+            case 'Fixed':
+                return t('task.document.status.fixed', 'Исправления переданы на проверку');
+            case 'Agreed':
+                return t('task.document.status.agreed', 'Документация согласована');
+            case 'Done':
+                return t('task.document.status.done', 'Задача завершена');
+            case 'To do':
+            default:
+                return t('task.document.status.todo', 'Ожидает начала работ');
+        }
+    }, [task?.status, task?.taskType, t]);
     const statusKeys = new Set(['status', 'publicStatus', 'publicModerationStatus']);
     const dateKeys = new Set([
         'createdAt',
@@ -1249,6 +1272,16 @@ export default function TaskDetailPage() {
                                             fontWeight: 500,
                                         }}
                                     />
+                                )}
+                                {documentStatusHint && (
+                                    <Tooltip title={documentStatusHint}>
+                                        <Chip
+                                            icon={<InfoOutlinedIcon fontSize="small" />}
+                                            label={t('task.document.status.hint', 'Статус документации')}
+                                            size="small"
+                                            variant="outlined"
+                                        />
+                                    </Tooltip>
                                 )}
                             </Stack>
 

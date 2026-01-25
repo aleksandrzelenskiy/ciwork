@@ -1125,6 +1125,29 @@ export default function TaskDetailsPage() {
         'Agreed',
     ].includes(normalizedStatus);
 
+    const documentStatusHint = React.useMemo(() => {
+        if (task?.taskType !== 'document') return null;
+        switch (normalizedStatus) {
+            case 'Assigned':
+                return t('task.document.status.assigned', 'Назначена проектировщику');
+            case 'At work':
+                return t('task.document.status.atWork', 'Подготовка документации в работе');
+            case 'Pending':
+                return t('task.document.status.pending', 'PDF переданы на согласование');
+            case 'Issues':
+                return t('task.document.status.issues', 'Есть замечания, ждём исправления');
+            case 'Fixed':
+                return t('task.document.status.fixed', 'Исправления переданы на проверку');
+            case 'Agreed':
+                return t('task.document.status.agreed', 'Документация согласована');
+            case 'Done':
+                return t('task.document.status.done', 'Задача завершена');
+            case 'To do':
+            default:
+                return t('task.document.status.todo', 'Ожидает начала работ');
+        }
+    }, [normalizedStatus, task?.taskType, t]);
+
     const openNcwCreator = () => {
         if (!task || !canCreateNcw) return;
         const address =
@@ -1911,6 +1934,16 @@ export default function TaskDetailsPage() {
                                             fontWeight: 500,
                                         }}
                                     />
+                                )}
+                                {documentStatusHint && (
+                                    <Tooltip title={documentStatusHint}>
+                                        <Chip
+                                            icon={<InfoOutlinedIcon fontSize="small" />}
+                                            label={t('task.document.status.hint', 'Статус документации')}
+                                            size="small"
+                                            variant="outlined"
+                                        />
+                                    </Tooltip>
                                 )}
                                 {isModerationPending && (
                                     <Chip

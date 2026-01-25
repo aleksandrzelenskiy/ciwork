@@ -32,8 +32,9 @@ import { fetchUserContext, resolveRoleFromContext } from '@/app/utils/userContex
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { isAdminRole } from '@/app/utils/roleGuards';
 import { defaultTaskFilters, type TaskFilters } from '@/app/types/taskFilters';
-import { getStatusLabel, STATUS_ORDER } from '@/utils/statusLabels';
+import { getStatusLabel, normalizeStatusTitle, STATUS_ORDER } from '@/utils/statusLabels';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 // Формат dd.mm.yyyy (ru-RU)
 const formatDateRU = (value?: Date | string) => {
@@ -66,7 +67,15 @@ interface TaskColumnPageProps {
   filters?: TaskFilters;
 }
 
-function DraggableTask({ task, role }: { task: Task; role: EffectiveOrgRole | null }) {
+function DraggableTask({
+  task,
+  role,
+  t,
+}: {
+  task: Task;
+  role: EffectiveOrgRole | null;
+  t: (key: string, fallback?: string) => string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -95,6 +104,31 @@ function DraggableTask({ task, role }: { task: Task; role: EffectiveOrgRole | nu
         return null;
     }
   };
+
+  const documentStatusHint = task.taskType === 'document'
+    ? (() => {
+        const normalized = normalizeStatusTitle(task.status);
+        switch (normalized) {
+          case 'Assigned':
+            return t('task.document.status.assigned', 'Назначена проектировщику');
+          case 'At work':
+            return t('task.document.status.atWork', 'Подготовка документации в работе');
+          case 'Pending':
+            return t('task.document.status.pending', 'PDF переданы на согласование');
+          case 'Issues':
+            return t('task.document.status.issues', 'Есть замечания, ждём исправления');
+          case 'Fixed':
+            return t('task.document.status.fixed', 'Исправления переданы на проверку');
+          case 'Agreed':
+            return t('task.document.status.agreed', 'Документация согласована');
+          case 'Done':
+            return t('task.document.status.done', 'Задача завершена');
+          case 'To do':
+          default:
+            return t('task.document.status.todo', 'Ожидает начала работ');
+        }
+      })()
+    : null;
 
   return (
     <Link
@@ -143,14 +177,27 @@ function DraggableTask({ task, role }: { task: Task; role: EffectiveOrgRole | nu
             alignItems: 'center',
           }}
         >
-          <Chip
-            label={getStatusLabel(task.status)}
-            sx={{
-              backgroundColor: getStatusColor(task.status),
-              color: '#fff',
-            }}
-            size='small'
-          />
+          {documentStatusHint ? (
+            <Tooltip title={documentStatusHint}>
+              <Chip
+                label={getStatusLabel(task.status)}
+                sx={{
+                  backgroundColor: getStatusColor(task.status),
+                  color: '#fff',
+                }}
+                size='small'
+              />
+            </Tooltip>
+          ) : (
+            <Chip
+              label={getStatusLabel(task.status)}
+              sx={{
+                backgroundColor: getStatusColor(task.status),
+                color: '#fff',
+              }}
+              size='small'
+            />
+          )}
           <Tooltip title={task.priority}>
             <Typography>{getPriorityIcon(task.priority)}</Typography>
           </Tooltip>
@@ -164,10 +211,12 @@ function DroppableColumn({
   status,
   tasks,
   role,
+  t,
 }: {
   status: CurrentStatus;
   tasks: Task[];
   role: EffectiveOrgRole | null;
+  t: (key: string, fallback?: string) => string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -237,7 +286,7 @@ function DroppableColumn({
         </Typography>
       </Box>
       {tasks.map((task) => (
-        <DraggableTask key={task.taskId} task={task} role={role} />
+        <DraggableTask key={task.taskId} task={task} role={role} t={t} />
       ))}
     </Box>
   );
@@ -249,6 +298,7 @@ export default function TaskColumnPage({
   refreshToken = 0,
   filters = defaultTaskFilters,
 }: TaskColumnPageProps) {
+  const { t } = useI18n();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -392,6 +442,7 @@ export default function TaskColumnPage({
             status={status}
             tasks={filteredTasks.filter((task) => task.status === status)}
             role={role}
+            t={t}
           />
         ))}
       </Box>
