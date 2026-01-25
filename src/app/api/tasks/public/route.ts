@@ -88,13 +88,13 @@ export async function GET(request: NextRequest) {
             if (allowedTypes.has('installation')) {
                 allowedTypes.add('construction');
             }
+            const allowUntyped = allowedTypes.has('installation');
             matchStage.$and = [
                 ...(Array.isArray(matchStage.$and) ? matchStage.$and : []),
                 {
                     $or: [
                         { taskType: { $in: Array.from(allowedTypes) } },
-                        { taskType: { $exists: false } },
-                        { taskType: null },
+                        ...(allowUntyped ? [{ taskType: { $exists: false } }, { taskType: null }] : []),
                     ],
                 },
             ];

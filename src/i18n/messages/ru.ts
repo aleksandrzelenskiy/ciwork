@@ -359,6 +359,7 @@ const ruMessages: Record<string, string> = {
     'market.apply.message': 'Сообщение (необязательно)',
     'market.apply.roleWarning': 'Для отправки отклика выберите роль «Исполнитель» в профиле.',
     'market.apply.onlyDocument': 'Откликаться на документальные задачи могут только проектировщики',
+    'market.apply.onlyInstallation': 'Откликаться на монтажные задачи могут только монтажники',
     'market.apply.sending': 'Отправляем…',
     'market.apply.send': 'Отправить',
     'market.details.title': 'Детали задачи',

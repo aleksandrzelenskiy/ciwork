@@ -359,6 +359,7 @@ const enMessages: Record<string, string> = {
     'market.apply.message': 'Message (optional)',
     'market.apply.roleWarning': 'To submit an application, choose the “Contractor” role in your profile.',
     'market.apply.onlyDocument': 'Only documentation specialists can apply to document tasks',
+    'market.apply.onlyInstallation': 'Only installers can apply to installation tasks',
     'market.apply.sending': 'Sending…',
     'market.apply.send': 'Send',
     'market.details.title': 'Task details',

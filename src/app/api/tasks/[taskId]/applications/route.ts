@@ -198,6 +198,15 @@ export async function POST(
                 { status: 403 }
             );
         }
+    } else {
+        const specializations = Array.isArray(user.specializations) ? user.specializations : [];
+        const normalized = specializations.map((spec) => (spec === 'construction' ? 'installation' : spec));
+        if (!normalized.includes('installation')) {
+            return NextResponse.json(
+                { error: 'Задача доступна только для монтажных исполнителей' },
+                { status: 403 }
+            );
+        }
     }
 
     const proposedBudget = typeof body.proposedBudget === 'number' ? body.proposedBudget : undefined;

@@ -521,6 +521,16 @@ export default function MarketplacePage() {
                 });
                 return;
             }
+        } else {
+            const specs = Array.isArray(userContext.specializations) ? userContext.specializations : [];
+            if (!specs.includes('installation')) {
+                setSnack({
+                    open: true,
+                    message: t('market.apply.onlyInstallation', 'Откликаться на монтажные задачи могут только монтажники'),
+                    severity: 'error',
+                });
+                return;
+            }
         }
         const budgetValue = Number(applyBudget);
         if (!budgetValue || Number.isNaN(budgetValue) || budgetValue <= 0) {
