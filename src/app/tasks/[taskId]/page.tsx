@@ -30,6 +30,8 @@ import {
     DialogTitle,
     Container,
     type PaperProps,
+    Snackbar,
+    Alert,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -190,6 +192,14 @@ export default function TaskDetailPage() {
     const uploadButtonRef = React.useRef<HTMLButtonElement | null>(null);
     const issuesSectionRef = React.useRef<HTMLDivElement | null>(null);
     const hasOpenedIssuesGuide = React.useRef(false);
+    const [documentReviewUploading, setDocumentReviewUploading] = React.useState(false);
+    const [documentFinalUploading, setDocumentFinalUploading] = React.useState(false);
+    const [documentSnackbar, setDocumentSnackbar] = React.useState<{
+        type: 'success' | 'error';
+        message: string;
+    } | null>(null);
+    const documentReviewInputRef = React.useRef<HTMLInputElement | null>(null);
+    const documentFinalInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const handleCompleteClick = React.useCallback(() => {
         setCompleteError(null);
@@ -270,6 +280,61 @@ export default function TaskDetailPage() {
         }
     }, [taskId, t]);
 
+    const handleDocumentFilesUpload = React.useCallback(
+        async (fileList: FileList | null, mode: 'document-review' | 'document-final') => {
+            if (!task?.taskId) return;
+            if (!fileList || fileList.length === 0) return;
+
+            const setUploading =
+                mode === 'document-review' ? setDocumentReviewUploading : setDocumentFinalUploading;
+            const inputRef =
+                mode === 'document-review' ? documentReviewInputRef : documentFinalInputRef;
+
+            setUploading(true);
+            try {
+                const fd = new FormData();
+                fd.append('subfolder', mode);
+                fd.append('taskId', task.taskId);
+
+                Array.from(fileList).forEach((file) => {
+                    fd.append('file', file, file.name);
+                });
+
+                const res = await fetch('/api/upload', { method: 'POST', body: fd });
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const message =
+                        body && typeof body === 'object' && 'error' in body
+                            ? String((body as { error?: unknown }).error || '')
+                            : '';
+                    setDocumentSnackbar({
+                        type: 'error',
+                        message:
+                            message ||
+                            t('task.document.outputs.uploadError', 'Не удалось загрузить файлы'),
+                    });
+                    return;
+                }
+
+                await loadTask();
+                setDocumentSnackbar({
+                    type: 'success',
+                    message: t('task.document.outputs.uploadSuccess', 'Файлы загружены'),
+                });
+            } catch (e) {
+                console.error(e);
+                setDocumentSnackbar({
+                    type: 'error',
+                    message: t('task.document.outputs.uploadError', 'Не удалось загрузить файлы'),
+                });
+            } finally {
+                setUploading(false);
+                if (inputRef.current) inputRef.current.value = '';
+            }
+        },
+        [loadTask, task?.taskId, t]
+    );
+
     React.useEffect(() => {
         const fetchUserRole = async () => {
             try {
@@ -310,6 +375,7 @@ export default function TaskDetailPage() {
     const hasDocumentOutputs =
         task?.taskType === 'document' &&
         (documentReviewFiles.length > 0 || documentFinalFiles.length > 0 || documentFinalFormats.length > 0);
+    const canShowDocumentOutputs = task?.taskType === 'document' && (hasDocumentOutputs || isManager);
     const attachmentLinks = React.useMemo(
         () => (Array.isArray(task?.attachments) ? task.attachments.filter((url) => !isDocumentUrl(url)) : []),
         [task]
@@ -1673,7 +1739,7 @@ export default function TaskDetailPage() {
                         </CardItem>
                     )}
 
-                    {hasDocumentOutputs && (
+                    {canShowDocumentOutputs && (
                         <CardItem sx={{ minWidth: 0 }}>
                             <Typography
                                 variant="body1"
@@ -1686,6 +1752,11 @@ export default function TaskDetailPage() {
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
                             <Stack spacing={1.5}>
+                                {!hasDocumentOutputs && (
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('task.document.outputs.empty', 'Файлы пока не загружены')}
+                                    </Typography>
+                                )}
                                 {documentReviewFiles.length > 0 && (
                                     <Box>
                                         <Typography variant="subtitle2" color="text.secondary">
@@ -1711,19 +1782,90 @@ export default function TaskDetailPage() {
                                                     {link}
                                                 </Link>
                                             ))}
-                                        </Stack>
-                                    </Box>
-                                )}
-                                {documentFinalFormats.length > 0 && (
-                                    <Box>
-                                        <Typography variant="subtitle2" color="text.secondary">
+                                            </Stack>
+                                        </Box>
+                                    )}
+                                    {documentFinalFormats.length > 0 && (
+                                        <Box>
+                                            <Typography variant="subtitle2" color="text.secondary">
                                             {t('task.document.outputs.formats', 'Форматы')}
                                         </Typography>
                                         <Stack spacing={0.5} direction="row" flexWrap="wrap">
                                             {documentFinalFormats.map((format, idx) => (
                                                 <Chip key={`${format}-${idx}`} label={format.toUpperCase()} size="small" />
                                             ))}
+                                            </Stack>
+                                        </Box>
+                                    )}
+                                {isManager && (
+                                    <Box>
+                                        <Typography variant="subtitle2" color="text.secondary">
+                                            {t('task.document.outputs.uploadTitle', 'Загрузка файлов')}
+                                        </Typography>
+                                        <Stack
+                                            direction={{ xs: 'column', sm: 'row' }}
+                                            spacing={1}
+                                            sx={{ mt: 1, alignItems: 'flex-start' }}
+                                        >
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                startIcon={<CloudUploadIcon />}
+                                                onClick={() => documentReviewInputRef.current?.click()}
+                                                disabled={documentReviewUploading}
+                                            >
+                                                {documentReviewUploading
+                                                    ? t('task.document.outputs.uploading', 'Загрузка…')
+                                                    : t(
+                                                        'task.document.outputs.uploadReview',
+                                                        'Загрузить PDF на согласование'
+                                                    )}
+                                            </Button>
+                                            <input
+                                                ref={documentReviewInputRef}
+                                                type="file"
+                                                hidden
+                                                multiple
+                                                accept=".pdf,application/pdf"
+                                                onChange={(e) =>
+                                                    handleDocumentFilesUpload(e.target.files, 'document-review')
+                                                }
+                                            />
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                startIcon={<CloudUploadIcon />}
+                                                onClick={() => documentFinalInputRef.current?.click()}
+                                                disabled={documentFinalUploading}
+                                            >
+                                                {documentFinalUploading
+                                                    ? t('task.document.outputs.uploading', 'Загрузка…')
+                                                    : t(
+                                                        'task.document.outputs.uploadFinal',
+                                                        'Загрузить финальные файлы'
+                                                    )}
+                                            </Button>
+                                            <input
+                                                ref={documentFinalInputRef}
+                                                type="file"
+                                                hidden
+                                                multiple
+                                                accept=".pdf,.dwg,application/pdf"
+                                                onChange={(e) =>
+                                                    handleDocumentFilesUpload(e.target.files, 'document-final')
+                                                }
+                                            />
                                         </Stack>
+                                        <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                            sx={{ display: 'block', mt: 1 }}
+                                        >
+                                            {t(
+                                                'task.document.outputs.uploadHint',
+                                                'PDF для проверки, после согласования — PDF и DWG'
+                                            )}
+                                        </Typography>
                                     </Box>
                                 )}
                             </Stack>
@@ -2315,6 +2457,21 @@ export default function TaskDetailPage() {
                 onClose={closeProfileDialog}
                 clerkUserId={profileUserId}
             />
+            <Snackbar
+                open={Boolean(documentSnackbar)}
+                autoHideDuration={5000}
+                onClose={() => setDocumentSnackbar(null)}
+            >
+                {documentSnackbar ? (
+                    <Alert
+                        onClose={() => setDocumentSnackbar(null)}
+                        severity={documentSnackbar.type}
+                        sx={{ width: '100%' }}
+                    >
+                        {documentSnackbar.message}
+                    </Alert>
+                ) : null}
+            </Snackbar>
         </Container>
     );
 }
