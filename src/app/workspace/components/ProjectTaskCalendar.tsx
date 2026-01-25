@@ -33,6 +33,7 @@ import ArrowForwardIos from '@mui/icons-material/ArrowForwardIos';
 import Today from '@mui/icons-material/Today';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { useI18n } from '@/i18n/I18nProvider';
+import { normalizeStatusTitle } from '@/utils/statusLabels';
 
 // Типы
 type Status = 'TO DO' | 'IN PROGRESS' | 'DONE';
@@ -43,6 +44,7 @@ type Task = {
     _id: string;
     taskId: string;
     taskName: string;
+    taskType?: 'installation' | 'document';
     bsNumber?: string;
     bsAddress?: string;
     projectKey?: string;
@@ -53,7 +55,12 @@ type Task = {
     priority?: Priority | string;
 };
 
-type CalendarEvent = RBCEvent<{ priority?: Priority | string; status?: Status | string; id: string }>;
+type CalendarEvent = RBCEvent<{
+    priority?: Priority | string;
+    status?: Status | string;
+    id: string;
+    taskType?: 'installation' | 'document';
+}>;
 
 const statusBg: Record<Status, string> = {
     'TO DO': '#9e9e9e',
@@ -172,9 +179,32 @@ export default function ProjectTaskCalendar({
                 title: `${t.taskName} | ${t.bsNumber || ''}`,
                 start: new Date(t.dueDate as string),
                 end: addHours(new Date(t.dueDate as string), 1),
-                resource: { priority: t.priority, status: t.status, id: t._id },
+                resource: { priority: t.priority, status: t.status, id: t._id, taskType: t.taskType },
             }));
     }, [items]);
+
+    const resolveDocumentStatusHint = (status?: string) => {
+        const normalized = normalizeStatusTitle(status);
+        switch (normalized) {
+            case 'Assigned':
+                return t('task.document.status.assigned', 'Назначена проектировщику');
+            case 'At work':
+                return t('task.document.status.atWork', 'Подготовка документации в работе');
+            case 'Pending':
+                return t('task.document.status.pending', 'PDF переданы на согласование');
+            case 'Issues':
+                return t('task.document.status.issues', 'Есть замечания, ждём исправления');
+            case 'Fixed':
+                return t('task.document.status.fixed', 'Исправления переданы на проверку');
+            case 'Agreed':
+                return t('task.document.status.agreed', 'Документация согласована');
+            case 'Done':
+                return t('task.document.status.done', 'Задача завершена');
+            case 'To do':
+            default:
+                return t('task.document.status.todo', 'Ожидает начала работ');
+        }
+    };
 
     if (loading) {
         return (
@@ -237,6 +267,12 @@ export default function ProjectTaskCalendar({
                 onNavigate={setCurrentDate}
                 onView={(v) => setView(v as ViewType)}
                 components={calendarComponents}
+                tooltipAccessor={(ev) => {
+                    if (ev.resource?.taskType === 'document') {
+                        return resolveDocumentStatusHint(String(ev.resource?.status || ''));
+                    }
+                    return ev.title;
+                }}
                 views={{ month: true, week: true, day: true }}
                 popup
                 style={{ height: '100%' }}
