@@ -168,7 +168,7 @@ export default function ProfileEditForm({
                 </Box>
 
                 {message && (
-                    <Alert severity={message.type} onClose={onMessageClose}>
+                    <Alert severity={message.type} variant="filled" onClose={onMessageClose}>
                         {message.text}
                     </Alert>
                 )}

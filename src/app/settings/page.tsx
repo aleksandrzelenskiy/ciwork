@@ -169,6 +169,22 @@ export default function SettingsPage() {
         setLanguage(locale);
     }, [locale]);
 
+    useEffect(() => {
+        if (!settingsMessage) return;
+        const timer = window.setTimeout(() => {
+            setSettingsMessage(null);
+        }, 5000);
+        return () => window.clearTimeout(timer);
+    }, [settingsMessage]);
+
+    useEffect(() => {
+        if (!message) return;
+        const timer = window.setTimeout(() => {
+            setMessage(null);
+        }, 5000);
+        return () => window.clearTimeout(timer);
+    }, [message]);
+
     const handleSave = async () => {
         setSettingsSaving(true);
         setSettingsMessage(null);
@@ -231,7 +247,13 @@ export default function SettingsPage() {
                 deriveNames(data.profile.name);
                 setBio(data.profile.bio || '');
             }
-            setMessage({ type: 'success', text: t('profile.update.success', 'Профиль обновлён') });
+            setMessage({
+                type: 'success',
+                text: t(
+                    'profile.update.success',
+                    'Профиль обновлён. Данные направлены на модерацию'
+                ),
+            });
         } catch (error) {
             setMessage({
                 type: 'error',
@@ -253,7 +275,7 @@ export default function SettingsPage() {
     if (currentUserError || profileError) {
         return (
             <Box sx={{ p: 4 }}>
-                <Alert severity="error">
+                <Alert severity="error" variant="filled">
                     {currentUserError || profileError || t('common.error.unknown', 'Неизвестная ошибка')}
                 </Alert>
             </Box>
@@ -353,7 +375,7 @@ export default function SettingsPage() {
                     </Box>
 
                     {settingsMessage && (
-                        <Alert sx={{ mt: 2 }} severity={settingsMessage.severity}>
+                        <Alert sx={{ mt: 2 }} severity={settingsMessage.severity} variant="filled">
                             {settingsMessage.text}
                         </Alert>
                     )}

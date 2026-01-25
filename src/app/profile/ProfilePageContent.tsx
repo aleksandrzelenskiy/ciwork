@@ -217,7 +217,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     if (error || !profile) {
         return (
             <Box sx={{ p: 4, maxWidth: 640, mx: 'auto' }}>
-                <Alert severity="error" sx={{ mb: 2 }}>
+                <Alert severity="error" variant="filled" sx={{ mb: 2 }}>
                     {error || t('profile.error.load', 'Не удалось загрузить профиль')}
                 </Alert>
                 <Button variant="contained" onClick={loadProfile}>
@@ -617,7 +617,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     <Box sx={{ px: { xs: 3, sm: 4 }, pt: 2 }}>
                         {profile.moderationStatus === 'rejected' &&
                             profile.moderationComment && (
-                                <Alert severity="warning" sx={{ mb: 1.5 }}>
+                                <Alert severity="warning" variant="filled" sx={{ mb: 1.5 }}>
                                     {profile.moderationComment}
                                 </Alert>
                             )}
@@ -777,18 +777,18 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             {message && (
                 <Snackbar
                     open
-                    autoHideDuration={4000}
+                    autoHideDuration={5000}
                     onClose={() => setMessage(null)}
                     anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 >
-                    <Alert severity={message.type} onClose={() => setMessage(null)}>
+                    <Alert severity={message.type} variant="filled" onClose={() => setMessage(null)}>
                         {message.text}
                     </Alert>
                 </Snackbar>
             )}
             <Snackbar
                 open={chatToast.open}
-                autoHideDuration={4000}
+                autoHideDuration={5000}
                 onClose={() =>
                     setChatToast((prev) => ({
                         ...prev,
@@ -799,6 +799,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             >
                 <Alert
                     severity={chatToast.severity}
+                    variant="filled"
                     onClose={() =>
                         setChatToast((prev) => ({
                             ...prev,
