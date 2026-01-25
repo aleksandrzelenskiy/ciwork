@@ -85,6 +85,7 @@ type ProjectLean = {
 const normalizeProjectType = (value?: string | null): 'installation' | 'document' | undefined => {
     if (!value) return undefined;
     if (value === 'construction') return 'installation';
+    if (value === 'documents') return 'document';
     if (value === 'installation' || value === 'document') return value;
     return undefined;
 };

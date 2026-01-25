@@ -60,7 +60,8 @@ const normalizeProjectKey = (value: string): string => value.trim().toUpperCase(
 const normalizeProjectTypeValue = (
     value?: string | null
 ): ProjectDialogValues['projectType'] => {
-    if (value === 'document') return 'document';
+    if (value === 'document' || value === 'documents') return 'document';
+    if (value === 'construction') return 'installation';
     return 'installation';
 };
 
