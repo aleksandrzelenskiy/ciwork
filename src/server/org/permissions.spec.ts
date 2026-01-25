@@ -62,6 +62,7 @@ describe('org permissions', () => {
                 orgId: 'org1',
                 userEmail: 'user@example.com',
                 role: 'owner',
+                status: 'active',
             }),
         } as never);
 
@@ -69,5 +70,24 @@ describe('org permissions', () => {
 
         expect(result.org.orgSlug).toBe('org');
         expect(result.membership.role).toBe('owner');
+    });
+
+    it('requireOrgRole throws when membership not active', async () => {
+        mockedOrg.findOne.mockReturnValue({
+            lean: jest.fn().mockResolvedValue({ _id: 'org1', orgSlug: 'org' }),
+        } as never);
+        mockedMembership.findOne.mockReturnValue({
+            lean: jest.fn().mockResolvedValue({
+                _id: 'mem1',
+                orgId: 'org1',
+                userEmail: 'user@example.com',
+                role: 'manager',
+                status: 'requested',
+            }),
+        } as never);
+
+        await expect(
+            requireOrgRole('org', 'user@example.com', ['manager'])
+        ).rejects.toThrow('Членство не активно');
     });
 });

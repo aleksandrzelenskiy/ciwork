@@ -32,7 +32,7 @@ export async function GET(): Promise<NextResponse<GetOrganizationsResponse>> {
         if (!email) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
         const memberships = await Membership.find(
-            { userEmail: email },
+            { userEmail: email, status: 'active' },
             { orgId: 1 } // проекция
         ).lean();
 

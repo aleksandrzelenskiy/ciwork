@@ -39,7 +39,7 @@ export async function GET(
 
         // скрываем существование организации для не-членов
         const membership = await Membership.findOne(
-            { orgId: orgDoc._id, userEmail: email },
+            { orgId: orgDoc._id, userEmail: email, status: 'active' },
             { role: 1 }
         ).lean();
         if (!membership) return NextResponse.json({ error: 'Org not found' }, { status: 404 });

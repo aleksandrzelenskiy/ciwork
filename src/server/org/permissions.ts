@@ -43,6 +43,10 @@ export async function requireOrgRole(
     const membership = await Membership.findOne({ orgId: org._id, userEmail: normalizedEmail }).lean<MembershipLean>();
     if (!membership) throw new Error('Нет членства в этой организации');
 
+    if (membership.status && membership.status !== 'active') {
+        throw new Error('Членство не активно');
+    }
+
     if (!allowed.includes(membership.role)) {
         throw new Error('Недостаточно прав');
     }
