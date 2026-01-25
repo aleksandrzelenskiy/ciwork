@@ -51,6 +51,7 @@ type Project = {
     name: string;
     key: string;
     description?: string;
+    projectType?: 'installation' | 'document';
     managers?: string[];
     managerEmail?: string;
     regionCode: string;
@@ -459,6 +460,7 @@ export default function OrgProjectsPage() {
                 name: values.name,
                 key: values.key,
                 description: values.description,
+                projectType: values.projectType,
                 regionCode: values.regionCode,
                 operator: values.operator,
                 managers: values.managers,
