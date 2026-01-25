@@ -242,6 +242,9 @@ export default function NewOrgPage() {
                         <Typography variant="h3" fontWeight={700}>
                             {t('org.create.title', 'Создайте организацию')}
                         </Typography>
+                        <Typography variant="h3" fontWeight={700}>
+                            {t('org.create.subtitle', 'или присоединитесь к существующей.')}
+                        </Typography>
                     </Stack>
 
                     <Stack spacing={4} sx={{ mt: { xs: 3, md: 5 } }}>
@@ -287,7 +290,10 @@ export default function NewOrgPage() {
                                         setTouchedSlug(true);
                                         setSlug(makeSlug(e.target.value));
                                     }}
-                                    helperText={slugError ?? t('org.create.slug.helper', 'Идентификатор названия на латинице')}
+                                    helperText={
+                                        slugError ??
+                                        t('org.create.slug.helper', 'Выберите короткий идентификатор организации на латинице')
+                                    }
                                     error={Boolean(slugError)}
                                     fullWidth
                                 />
@@ -303,16 +309,49 @@ export default function NewOrgPage() {
                                         size="large"
                                         disabled={loading || name.trim().length < 2 || Boolean(slugError)}
                                     >
-                                        {loading ? t('org.create.creating', 'Создаём…') : t('org.create.submit', 'Создать')}
+                                        {loading
+                                            ? t('org.create.creating', 'Создаём…')
+                                            : t('org.create.submit', 'Создать организацию')}
                                     </Button>
                                 </Box>
+                                <Typography variant="body2" color="text.secondary">
+                                    {t(
+                                        'org.create.renameHint',
+                                        'Организацию можно переименовать позже: все изменения синхронизируются с рабочим пространством и приглашениями.'
+                                    )}
+                                </Typography>
                             </Stack>
                         </Paper>
 
-                        <Stack spacing={1} alignItems="center">
-                            <Typography variant="overline" color="text.secondary">
+                        <Stack direction="row" alignItems="center" spacing={2} sx={{ px: { xs: 1, md: 2 } }}>
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    height: 1,
+                                    bgcolor: (theme) =>
+                                        theme.palette.mode === 'dark'
+                                            ? 'rgba(255,255,255,0.12)'
+                                            : 'rgba(15,23,42,0.12)',
+                                }}
+                            />
+                            <Typography
+                                variant="overline"
+                                fontWeight={700}
+                                letterSpacing="0.2em"
+                                color="text.secondary"
+                            >
                                 {t('org.create.or', 'ИЛИ')}
                             </Typography>
+                            <Box
+                                sx={{
+                                    flex: 1,
+                                    height: 1,
+                                    bgcolor: (theme) =>
+                                        theme.palette.mode === 'dark'
+                                            ? 'rgba(255,255,255,0.12)'
+                                            : 'rgba(15,23,42,0.12)',
+                                }}
+                            />
                         </Stack>
 
                         <Paper
@@ -426,29 +465,6 @@ export default function NewOrgPage() {
                             </Stack>
                         </Paper>
 
-                        <Paper
-                            variant="outlined"
-                            sx={{
-                                borderRadius: UI_RADIUS.tooltip,
-                                p: { xs: 2.5, md: 3 },
-                                textAlign: 'center',
-                                backgroundColor: (theme) =>
-                                    theme.palette.mode === 'dark'
-                                        ? 'rgba(15, 20, 30, 0.6)'
-                                        : 'rgba(255,255,255,0.85)',
-                                borderColor: (theme) =>
-                                    theme.palette.mode === 'dark'
-                                        ? 'rgba(255,255,255,0.08)'
-                                        : 'rgba(15,23,42,0.08)',
-                            }}
-                        >
-                            <Typography variant="body2" color="text.secondary">
-                                {t(
-                                    'org.create.footerHint',
-                                    'Организацию можно переименовать позже: все изменения синхронизируются с рабочим пространством и приглашениями.'
-                                )}
-                            </Typography>
-                        </Paper>
                     </Stack>
                 </Box>
             </Container>
