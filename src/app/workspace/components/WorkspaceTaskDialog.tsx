@@ -562,7 +562,9 @@ export default function WorkspaceTaskDialog({
             const normalizedProjectType =
                 body.project?.projectType === 'construction'
                     ? 'installation'
-                    : body.project?.projectType;
+                    : body.project?.projectType === 'documents'
+                        ? 'document'
+                        : body.project?.projectType;
             setProjectMeta({
                 regionCode: body.project?.regionCode,
                 operator: body.project?.operator,
