@@ -2471,7 +2471,7 @@ export default function TaskDetailPage() {
                     >
                         {documentSnackbar.message}
                     </Alert>
-                ) : null}
+                ) : undefined}
             </Snackbar>
         </Container>
     );
