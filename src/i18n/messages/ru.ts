@@ -73,6 +73,7 @@ const ruMessages: Record<string, string> = {
     'task.document.outputs.finalHelper': 'Ссылки на PDF/DWG и другие файлы, по одной в строке',
     'task.document.outputs.formats': 'Форматы',
     'task.document.outputs.formatsHelper': 'Например: PDF, DWG — по одному в строке',
+    'task.workItems.disabledForDocument': 'Недоступно для документальных задач',
     'wallet.balance': 'Баланс',
     'wallet.mainBalance': 'Основной баланс',
     'wallet.transactions.title': 'Транзакции баланса',

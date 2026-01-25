@@ -2231,13 +2231,15 @@ export default function WorkspaceTaskDialog({
                                     variant="outlined"
                                     startIcon={<TableRowsIcon />}
                                     onClick={openWorkItemsDialog}
-                                    disabled={saving || uploading}
+                                    disabled={saving || uploading || isDocumentProject}
                                     sx={{ borderRadius: UI_RADIUS.item }}
                                 >
                                     Состав работ
                                 </Button>
                                 <Typography variant="body2" color="text.secondary">
-                                    {workItems.length > 0
+                                    {isDocumentProject
+                                        ? t('task.workItems.disabledForDocument', 'Недоступно для документальных задач')
+                                        : workItems.length > 0
                                         ? `${workItems.length} поз. добавлено`
                                         : 'Заполните таблицу в отдельном окне'}
                                 </Typography>
@@ -2829,12 +2831,14 @@ export default function WorkspaceTaskDialog({
                     />
                 )}
 
-                <WorkItemsEditorDialog
-                    open={workItemsDialogOpen}
-                    initialItems={workItems}
-                    onClose={closeWorkItemsDialog}
-                    onSave={handleWorkItemsSave}
-                />
+                {!isDocumentProject && (
+                    <WorkItemsEditorDialog
+                        open={workItemsDialogOpen}
+                        initialItems={workItems}
+                        onClose={closeWorkItemsDialog}
+                        onSave={handleWorkItemsSave}
+                    />
+                )}
 
             </Drawer>
         </LocalizationProvider>

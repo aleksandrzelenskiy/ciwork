@@ -180,6 +180,13 @@ type Task = {
     comments?: TaskComment[];
     relatedTasks?: RelatedTaskRef[];
     photoReports?: PhotoReport[];
+    documentInputNotes?: string;
+    documentInputLinks?: string[];
+    documentInputPhotos?: string[];
+    documentStages?: string[];
+    documentReviewFiles?: string[];
+    documentFinalFiles?: string[];
+    documentFinalFormats?: string[];
 };
 
 type DocumentItem = {
@@ -792,13 +799,15 @@ export default function TaskDetailsPage() {
         return items;
     }, [documentLinks, task?.ncwUrl, task?.orderNumber, task?.orderUrl, t]);
 
-    const hasWorkItems = Array.isArray(task?.workItems) && task.workItems.length > 0;
+    const hasWorkItems =
+        task?.taskType !== 'document' && Array.isArray(task?.workItems) && task.workItems.length > 0;
     const hasDocuments = documentItems.length > 0;
     const hasAttachments =
         !!task &&
         ((Array.isArray(task.files) && task.files.length > 0) ||
             attachmentLinks.length > 0);
     const photoReportItems = React.useMemo(() => {
+        if (task?.taskType === 'document') return [];
         if (!Array.isArray(task?.photoReports)) return [];
         return task.photoReports
             .map((report) => {
@@ -814,8 +823,8 @@ export default function TaskDetailsPage() {
             })
             .filter((report) => report.baseId && report.totalCount > 0)
             .sort((a, b) => a.baseId.localeCompare(b.baseId));
-    }, [task?.photoReports]);
-    const hasPhotoReports = photoReportItems.length > 0;
+    }, [task?.photoReports, task?.taskType]);
+    const hasPhotoReports = task?.taskType !== 'document' && photoReportItems.length > 0;
 
     const orderCompletionDate = React.useMemo(() => {
         if (!task?.orderSignDate) return null;
@@ -2656,7 +2665,9 @@ export default function TaskDetailsPage() {
                         )}
 
                         {/* Work items */}
-                        {isSectionVisible('work') && (hasWorkItems || Array.isArray(task.workItems)) && (
+                        {task.taskType !== 'document' &&
+                            isSectionVisible('work') &&
+                            (hasWorkItems || Array.isArray(task.workItems)) && (
                             <CardItem sx={{ minWidth: 0 }}>
                                 <Accordion
                                     defaultExpanded
@@ -2753,7 +2764,10 @@ export default function TaskDetailsPage() {
                             </CardItem>
                         )}
 
-                        {isSectionVisible('photoReports') && hasPhotoReports && task.taskId && (
+                        {task.taskType !== 'document' &&
+                            isSectionVisible('photoReports') &&
+                            hasPhotoReports &&
+                            task.taskId && (
                             <CardItem sx={{ minWidth: 0 }}>
                                 <Typography
                                     variant="subtitle1"

@@ -293,7 +293,8 @@ export default function TaskDetailPage() {
         void loadTask();
     }, [loadTask]);
 
-    const hasWorkItems = Array.isArray(task?.workItems) && task.workItems.length > 0;
+    const hasWorkItems =
+        task?.taskType !== 'document' && Array.isArray(task?.workItems) && task.workItems.length > 0;
     const documentInputLinks = Array.isArray(task?.documentInputLinks) ? task.documentInputLinks : [];
     const documentInputPhotos = Array.isArray(task?.documentInputPhotos) ? task.documentInputPhotos : [];
     const documentStages = Array.isArray(task?.documentStages) ? task.documentStages : [];
@@ -321,6 +322,7 @@ export default function TaskDetailPage() {
     );
     const reportTaskId = (task?.taskId || taskId).trim();
     const issueReports = React.useMemo(() => {
+        if (task?.taskType === 'document') return [];
         if (!Array.isArray(task?.photoReports)) return [];
         return task.photoReports
             .map((report) => {
@@ -335,7 +337,7 @@ export default function TaskDetailPage() {
                 const db = new Date(b.createdAt).getTime();
                 return db - da;
             });
-    }, [task?.photoReports]);
+    }, [task?.photoReports, task?.taskType]);
 
     const sortedEvents = React.useMemo(() => {
         if (!task?.events) return [];
@@ -665,6 +667,7 @@ export default function TaskDetailPage() {
     };
 
     const getHasPhotoReport = React.useCallback((target: Task | null | undefined) => {
+        if (target?.taskType === 'document') return false;
         if (!Array.isArray(target?.photoReports)) return false;
         return target.photoReports.some((report) => {
             const filesCount = Array.isArray(report.files) ? report.files.length : 0;
@@ -682,10 +685,13 @@ export default function TaskDetailPage() {
         () => hasSummaryReports || getHasPhotoReport(task),
         [getHasPhotoReport, hasSummaryReports, task]
     );
-    const showReportActions = ['Done', 'Pending', 'Issues', 'Fixed', 'Agreed'].includes(task?.status ?? '');
-    const isReportReadOnly = (task?.status ?? '') === 'Agreed';
+    const showReportActions =
+        task?.taskType !== 'document' &&
+        ['Done', 'Pending', 'Issues', 'Fixed', 'Agreed'].includes(task?.status ?? '');
+    const isReportReadOnly = task?.taskType !== 'document' && (task?.status ?? '') === 'Agreed';
     const shouldFocusIssues = searchParams?.get('focus') === 'issues';
     const reportSummaryItems = React.useMemo(() => {
+        if (task?.taskType === 'document') return [];
         if (reportSummaries.length > 0) {
             return reportSummaries.filter((report) => report.filesCount + report.fixedCount > 0);
         }
@@ -711,7 +717,7 @@ export default function TaskDetailPage() {
                     report !== null
             )
             .sort((a, b) => a.baseId.localeCompare(b.baseId, 'ru'));
-    }, [reportSummaries, task?.photoReports]);
+    }, [reportSummaries, task?.photoReports, task?.taskType]);
 
     const orgTasksHref = React.useMemo(() => {
         if (task?.projectKey && task?.orgId) {
@@ -1728,7 +1734,7 @@ export default function TaskDetailPage() {
                         <TaskGeoLocation locations={task.bsLocation} />
                     </CardItem>
 
-                    {(hasWorkItems || Array.isArray(task.workItems)) && (
+                    {task?.taskType !== 'document' && (hasWorkItems || Array.isArray(task.workItems)) && (
                         <CardItem sx={{ minWidth: 0 }}>
                             <Accordion defaultExpanded disableGutters elevation={0} sx={accordionSx}>
                                 <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={accordionSummarySx}>
@@ -1954,23 +1960,25 @@ export default function TaskDetailPage() {
                 </Box>
             </Box>
 
-            <PhotoReportUploader
-                open={uploadDialogOpen}
-                onClose={handleCloseUploadDialog}
-                taskId={task.taskId || taskId}
-                taskName={task.taskName}
-                bsLocations={task.bsLocation}
-                photoReports={task.photoReports}
-                onUploaded={() => {
-                    void loadTask();
-                    void refreshReportSummaries();
-                }}
-                onSubmitted={() => {
-                    void loadTask();
-                    void refreshReportSummaries();
-                }}
-                readOnly={isReportReadOnly}
-            />
+            {task.taskType !== 'document' && (
+                <PhotoReportUploader
+                    open={uploadDialogOpen}
+                    onClose={handleCloseUploadDialog}
+                    taskId={task.taskId || taskId}
+                    taskName={task.taskName}
+                    bsLocations={task.bsLocation}
+                    photoReports={task.photoReports}
+                    onUploaded={() => {
+                        void loadTask();
+                        void refreshReportSummaries();
+                    }}
+                    onSubmitted={() => {
+                        void loadTask();
+                        void refreshReportSummaries();
+                    }}
+                    readOnly={isReportReadOnly}
+                />
+            )}
 
             {photoGuideOpen && guideRect && (
                 <Box

@@ -73,6 +73,7 @@ const enMessages: Record<string, string> = {
     'task.document.outputs.finalHelper': 'PDF/DWG and other file links, one per line',
     'task.document.outputs.formats': 'Formats',
     'task.document.outputs.formatsHelper': 'Example: PDF, DWG — one per line',
+    'task.workItems.disabledForDocument': 'Not available for document tasks',
     'wallet.balance': 'Balance',
     'wallet.mainBalance': 'Main balance',
     'wallet.transactions.title': 'Balance transactions',
