@@ -864,13 +864,32 @@ export default function TaskDetailsPage() {
             documentInputLinks.length > 0 ||
             documentInputPhotos.length > 0 ||
             documentStages.length > 0);
-    const documentReviewFiles = Array.isArray(task?.documentReviewFiles) ? task.documentReviewFiles : [];
-    const documentFinalFiles = Array.isArray(task?.documentFinalFiles) ? task.documentFinalFiles : [];
+    const documentReviewFiles = React.useMemo(
+        () => (Array.isArray(task?.documentReviewFiles) ? task.documentReviewFiles : []),
+        [task?.documentReviewFiles]
+    );
+    const documentFinalFiles = React.useMemo(
+        () => (Array.isArray(task?.documentFinalFiles) ? task.documentFinalFiles : []),
+        [task?.documentFinalFiles]
+    );
     const documentFinalFormats = Array.isArray(task?.documentFinalFormats) ? task.documentFinalFormats : [];
     const hasDocumentOutputs =
         task?.taskType === 'document' &&
         (documentReviewFiles.length > 0 || documentFinalFiles.length > 0 || documentFinalFormats.length > 0);
     const canShowDocumentOutputs = task?.taskType === 'document' && (hasDocumentOutputs || isManager);
+    const normalizedStatus = normalizeStatusTitle(task?.status);
+    const documentOutputRequirement = React.useMemo(() => {
+        if (task?.taskType !== 'document') return null;
+        const hasPdf = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.pdf'));
+        const hasDwg = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.dwg'));
+        if (normalizedStatus === 'Pending' && !hasPdf(documentReviewFiles)) {
+            return t('task.document.require.review', 'Для согласования загрузите PDF-файлы');
+        }
+        if (normalizedStatus === 'Agreed' && (!hasPdf(documentFinalFiles) || !hasDwg(documentFinalFiles))) {
+            return t('task.document.require.final', 'Для согласования нужны финальные PDF и DWG');
+        }
+        return null;
+    }, [documentFinalFiles, documentReviewFiles, normalizedStatus, task?.taskType, t]);
 
     const toEditWorkItems = (list: Task['workItems']): ParsedWorkItem[] | undefined => {
         if (!Array.isArray(list)) return undefined;
@@ -1113,7 +1132,6 @@ export default function TaskDetailsPage() {
 
     const canCreateNcw = projectOperator === '250020';
     const executorAssigned = Boolean(task?.executorId || task?.executorName || task?.executorEmail);
-    const normalizedStatus = normalizeStatusTitle(task?.status);
     const publicModerationStatus = task?.publicModerationStatus;
     const isModerationPending = publicModerationStatus === 'pending';
     const isModerationRejected = publicModerationStatus === 'rejected';
@@ -2722,6 +2740,9 @@ export default function TaskDetailsPage() {
                                 </Typography>
                                 <Divider sx={{ mb: 1.5 }} />
                                 <Stack spacing={1.5}>
+                                    {documentOutputRequirement && (
+                                        <Alert severity="warning">{documentOutputRequirement}</Alert>
+                                    )}
                                     {!hasDocumentOutputs && (
                                         <Typography variant="body2" color="text.secondary">
                                             {t('task.document.outputs.empty', 'Файлы пока не загружены')}

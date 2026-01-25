@@ -88,6 +88,8 @@ const ruMessages: Record<string, string> = {
     'task.document.status.fixed': 'Исправления переданы на проверку',
     'task.document.status.agreed': 'Документация согласована',
     'task.document.status.done': 'Задача завершена',
+    'task.document.require.review': 'Для согласования загрузите PDF-файлы',
+    'task.document.require.final': 'Для согласования нужны финальные PDF и DWG',
     'task.workItems.disabledForDocument': 'Недоступно для документальных задач',
     'wallet.balance': 'Баланс',
     'wallet.mainBalance': 'Основной баланс',

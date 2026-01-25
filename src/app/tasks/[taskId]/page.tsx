@@ -369,8 +369,14 @@ export default function TaskDetailPage() {
             documentInputLinks.length > 0 ||
             documentInputPhotos.length > 0 ||
             documentStages.length > 0);
-    const documentReviewFiles = Array.isArray(task?.documentReviewFiles) ? task.documentReviewFiles : [];
-    const documentFinalFiles = Array.isArray(task?.documentFinalFiles) ? task.documentFinalFiles : [];
+    const documentReviewFiles = React.useMemo(
+        () => (Array.isArray(task?.documentReviewFiles) ? task.documentReviewFiles : []),
+        [task?.documentReviewFiles]
+    );
+    const documentFinalFiles = React.useMemo(
+        () => (Array.isArray(task?.documentFinalFiles) ? task.documentFinalFiles : []),
+        [task?.documentFinalFiles]
+    );
     const documentFinalFormats = Array.isArray(task?.documentFinalFormats) ? task.documentFinalFormats : [];
     const hasDocumentOutputs =
         task?.taskType === 'document' &&
@@ -515,6 +521,19 @@ export default function TaskDetailPage() {
     const isManager = Boolean(userRole && MANAGER_ROLES.includes(userRole));
     const canShowDocumentOutputs =
         task?.taskType === 'document' && (hasDocumentOutputs || isManager);
+    const documentOutputRequirement = React.useMemo(() => {
+        if (task?.taskType !== 'document') return null;
+        const hasPdf = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.pdf'));
+        const hasDwg = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.dwg'));
+        const normalized = normalizeStatusTitle(task?.status);
+        if (normalized === 'Pending' && !hasPdf(documentReviewFiles)) {
+            return t('task.document.require.review', 'Для согласования загрузите PDF-файлы');
+        }
+        if (normalized === 'Agreed' && (!hasPdf(documentFinalFiles) || !hasDwg(documentFinalFiles))) {
+            return t('task.document.require.final', 'Для согласования нужны финальные PDF и DWG');
+        }
+        return null;
+    }, [documentFinalFiles, documentReviewFiles, task?.status, task?.taskType, t]);
     const documentStatusHint = React.useMemo(() => {
         if (task?.taskType !== 'document') return null;
         const normalized = normalizeStatusTitle(task?.status);
@@ -1786,6 +1805,9 @@ export default function TaskDetailPage() {
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
                             <Stack spacing={1.5}>
+                                {documentOutputRequirement && (
+                                    <Alert severity="warning">{documentOutputRequirement}</Alert>
+                                )}
                                 {!hasDocumentOutputs && (
                                     <Typography variant="body2" color="text.secondary">
                                         {t('task.document.outputs.empty', 'Файлы пока не загружены')}

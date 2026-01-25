@@ -88,6 +88,8 @@ const enMessages: Record<string, string> = {
     'task.document.status.fixed': 'Fixes sent for review',
     'task.document.status.agreed': 'Documentation approved',
     'task.document.status.done': 'Task completed',
+    'task.document.require.review': 'Please upload PDF files for review',
+    'task.document.require.final': 'Final PDF and DWG are required for approval',
     'task.workItems.disabledForDocument': 'Not available for document tasks',
     'wallet.balance': 'Balance',
     'wallet.mainBalance': 'Main balance',
