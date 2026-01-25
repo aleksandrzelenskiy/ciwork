@@ -70,24 +70,13 @@ const findValueByLabelMatcherInRows = (
             if (typeof value !== 'string') continue;
             if (!matcher(normalizeText(value))) continue;
 
-            const entries = Object.entries(row);
-            const labelIndex = entries.findIndex(([entryKey]) => entryKey === key);
-            const candidatesAfter: Array<string | number> = [];
-            const candidatesBefore: Array<string | number> = [];
-
-            for (let i = 0; i < entries.length; i += 1) {
-                if (i === labelIndex) continue;
-                const entryValue = entries[i][1];
-                if (typeof entryValue !== 'string' && typeof entryValue !== 'number') continue;
-                if (labelIndex >= 0 && i > labelIndex) {
-                    candidatesAfter.push(entryValue);
-                } else {
-                    candidatesBefore.push(entryValue);
+            const candidates: Array<string | number> = [];
+            for (const [entryKey, entryValue] of Object.entries(row)) {
+                if (entryKey === key) continue;
+                if (typeof entryValue === 'string' || typeof entryValue === 'number') {
+                    candidates.push(entryValue);
                 }
             }
-
-            const candidates =
-                candidatesAfter.length > 0 ? candidatesAfter : candidatesBefore;
 
             for (const candidate of candidates) {
                 if (prefer === 'number') {
@@ -107,6 +96,37 @@ const findValueByLabelMatcherInRows = (
     return null;
 };
 
+const findValueByLabelMatcherInRowsAfter = (
+    rows: ExcelRow[],
+    matcher: (text: string) => boolean,
+    prefer: 'number' | 'string' | 'any' = 'any'
+): string | number | null => {
+    for (const row of rows) {
+        const entries = Object.entries(row);
+        for (let i = 0; i < entries.length; i += 1) {
+            const value = entries[i][1];
+            if (typeof value !== 'string') continue;
+            if (!matcher(normalizeText(value))) continue;
+
+            for (let j = i + 1; j < entries.length; j += 1) {
+                const entryValue = entries[j][1];
+                if (prefer === 'number') {
+                    const num = toNumber(entryValue);
+                    if (num !== null) return num;
+                } else if (prefer === 'string') {
+                    if (typeof entryValue === 'string' && entryValue.trim()) return entryValue;
+                    if (typeof entryValue === 'number' && Number.isFinite(entryValue)) {
+                        return String(entryValue);
+                    }
+                } else if (typeof entryValue === 'string' || typeof entryValue === 'number') {
+                    return entryValue;
+                }
+            }
+        }
+    }
+    return null;
+};
+
 const findValueByLabelMatcher = (
     data: ExcelData,
     matcher: (text: string) => boolean,
@@ -114,6 +134,18 @@ const findValueByLabelMatcher = (
 ): string | number | null => {
     for (const sheet of Object.values(data)) {
         const value = findValueByLabelMatcherInRows(sheet, matcher, prefer);
+        if (value !== null) return value;
+    }
+    return null;
+};
+
+const findValueByLabelMatcherAfter = (
+    data: ExcelData,
+    matcher: (text: string) => boolean,
+    prefer: 'number' | 'string' | 'any' = 'any'
+): string | number | null => {
+    for (const sheet of Object.values(data)) {
+        const value = findValueByLabelMatcherInRowsAfter(sheet, matcher, prefer);
         if (value !== null) return value;
     }
     return null;
@@ -199,9 +231,9 @@ const BeIdParser: React.FC<Props> = ({ open, onClose, onApply, operatorLabel }) 
             [(text) => text.includes('долгота')],
             'number'
         ) as number | null;
-        const desc = findValueByLabelMatchers(
+        const desc = findValueByLabelMatcherAfter(
             data,
-            [(text) => text.includes('доп. информация')],
+            (text) => text.includes('доп. информация'),
             'string'
         ) as string | null;
 

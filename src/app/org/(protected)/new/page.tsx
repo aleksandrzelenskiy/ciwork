@@ -242,7 +242,7 @@ export default function NewOrgPage() {
                         <Typography variant="h3" fontWeight={700}>
                             {t('org.create.title', 'Создайте организацию')}
                         </Typography>
-                        <Typography variant="h3" fontWeight={700}>
+                        <Typography variant="h6" fontWeight={700}>
                             {t('org.create.subtitle', 'или присоединитесь к существующей.')}
                         </Typography>
                     </Stack>

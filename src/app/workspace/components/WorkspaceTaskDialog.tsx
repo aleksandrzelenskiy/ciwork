@@ -2494,7 +2494,7 @@ export default function WorkspaceTaskDialog({
 
                             {estimateFile && (
                                 <Alert severity="info" sx={{ bgcolor: alertInfoBg }}>
-                                    Смета «{estimateFile.name}» будет сохранена в документы задачи и
+                                    Файл «{estimateFile.name}» будет сохранён в документы задачи и
                                     не попадёт в вложения.
                                 </Alert>
                             )}
