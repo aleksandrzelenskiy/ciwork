@@ -36,7 +36,9 @@ export async function GET() {
   } = response.data;
   const membershipRole = activeMembership?.role || null;
   const normalizedSpecializations = Array.isArray(user.specializations)
-    ? user.specializations.map((spec) => (spec === 'construction' ? 'installation' : spec))
+    ? (user.specializations as unknown[])
+        .filter((spec): spec is string => typeof spec === 'string')
+        .map((spec) => (spec === 'construction' ? 'installation' : spec))
     : [];
 
   return NextResponse.json({
