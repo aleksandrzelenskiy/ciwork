@@ -243,6 +243,7 @@ export default function MembersDialog({
                                         <TableCell>{t('org.members.table.name', 'Имя')}</TableCell>
                                         <TableCell>{t('org.members.table.email', 'E-mail')}</TableCell>
                                         <TableCell>{t('org.members.table.role', 'Роль')}</TableCell>
+                                        <TableCell>{t('org.members.table.specialization', 'Специализация')}</TableCell>
                                         <TableCell>{t('org.members.table.status', 'Статус')}</TableCell>
                                         <TableCell align="right">{t('common.actions', 'Действия')}</TableCell>
                                     </TableRow>
@@ -298,6 +299,33 @@ export default function MembersDialog({
                                                 </TableCell>
                                                 <TableCell>{member.userEmail}</TableCell>
                                                 <TableCell>{roleLabel(member.role, t)}</TableCell>
+                                                <TableCell>
+                                                    {member.profileType === 'contractor' &&
+                                                    Array.isArray(member.specializations) &&
+                                                    member.specializations.length > 0 ? (
+                                                        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                                            {member.specializations.map((spec) => (
+                                                                <Chip
+                                                                    key={spec}
+                                                                    size="small"
+                                                                    label={
+                                                                        spec === 'document'
+                                                                            ? t(
+                                                                                'specializations.document',
+                                                                                'Документация'
+                                                                            )
+                                                                            : t(
+                                                                                'specializations.installation',
+                                                                                'Монтаж'
+                                                                            )
+                                                                    }
+                                                                />
+                                                            ))}
+                                                        </Stack>
+                                                    ) : (
+                                                        '—'
+                                                    )}
+                                                </TableCell>
                                                 <TableCell>
                                                     <Stack direction="row" spacing={1} alignItems="center">
                                                         {statusChip(member.status, t)}

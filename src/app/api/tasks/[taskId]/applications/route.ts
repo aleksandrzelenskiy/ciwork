@@ -59,6 +59,13 @@ async function loadTask(taskId: string) {
 const isPublicApproved = (task?: { publicModerationStatus?: string | null }) =>
     !task?.publicModerationStatus || task.publicModerationStatus === 'approved';
 
+const normalizeSpecializations = (value?: string[] | null): Array<'installation' | 'document'> => {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) => (item === 'construction' ? 'installation' : item))
+        .filter((item): item is 'installation' | 'document' => item === 'installation' || item === 'document');
+};
+
 async function resolveStorageScope(task: {
     orgId?: unknown;
     projectId?: unknown;
@@ -191,7 +198,7 @@ export async function POST(
         return NextResponse.json({ error: 'Задача недоступна для откликов' }, { status: 404 });
     }
     if (task.taskType === 'document') {
-        const specializations = Array.isArray(user.specializations) ? user.specializations : [];
+        const specializations = normalizeSpecializations(user.specializations);
         if (!specializations.includes('document')) {
             return NextResponse.json(
                 { error: 'Задача доступна только для исполнителей по документации' },
@@ -199,9 +206,8 @@ export async function POST(
             );
         }
     } else {
-        const specializations = Array.isArray(user.specializations) ? user.specializations : [];
-        const normalized = specializations.map((spec) => (spec === 'construction' ? 'installation' : spec));
-        if (!normalized.includes('installation')) {
+        const specializations = normalizeSpecializations(user.specializations);
+        if (!specializations.includes('installation')) {
             return NextResponse.json(
                 { error: 'Задача доступна только для монтажных исполнителей' },
                 { status: 403 }
@@ -452,6 +458,20 @@ export async function PATCH(
         if (body.status === 'accepted') {
             if (!contractor) {
                 return NextResponse.json({ error: 'Подрядчик не найден' }, { status: 404 });
+            }
+            if (contractor.profileType !== 'contractor') {
+                return NextResponse.json(
+                    { error: 'Исполнитель не найден или не является подрядчиком' },
+                    { status: 400 }
+                );
+            }
+            const allowedSpecs = normalizeSpecializations(contractor.specializations);
+            const requiredSpec = task.taskType === 'document' ? 'document' : 'installation';
+            if (!allowedSpecs.includes(requiredSpec)) {
+                return NextResponse.json(
+                    { error: 'Выбранный исполнитель не подходит по специализации' },
+                    { status: 400 }
+                );
             }
 
             if (task.orgId && contractor.email) {
