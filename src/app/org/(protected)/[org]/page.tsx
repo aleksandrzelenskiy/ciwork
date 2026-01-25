@@ -208,6 +208,7 @@ export default function OrgSettingsPage() {
         removeMember,
         approveJoinRequest,
         declineJoinRequest,
+        pendingJoinRequest,
         removeProject,
         removeApplication,
     } = useOrgMutations({
@@ -753,6 +754,7 @@ export default function OrgSettingsPage() {
                 canApproveRequests={canApproveRequests}
                 onApproveRequest={(member) => void approveJoinRequest(member._id)}
                 onDeclineRequest={(member) => void declineJoinRequest(member._id)}
+                pendingJoinRequest={pendingJoinRequest}
                 onInviteLinkCopied={() =>
                     setSnack({ open: true, msg: t('common.copied', 'Ссылка скопирована'), sev: 'info' })
                 }

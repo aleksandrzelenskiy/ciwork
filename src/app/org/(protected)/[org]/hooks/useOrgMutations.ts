@@ -19,6 +19,7 @@ type UseOrgMutationsState = {
     removeMember: (memberId: string) => Promise<boolean>;
     approveJoinRequest: (memberId: string) => Promise<boolean>;
     declineJoinRequest: (memberId: string) => Promise<boolean>;
+    pendingJoinRequest: { memberId: string; action: 'approve' | 'decline' } | null;
     removeProject: (projectId: string) => Promise<boolean>;
     removeApplication: (applicationId: string) => Promise<boolean>;
 };
@@ -32,6 +33,10 @@ export default function useOrgMutations({
     refreshApplications,
 }: UseOrgMutationsArgs): UseOrgMutationsState {
     const { t } = useI18n();
+    const [pendingJoinRequest, setPendingJoinRequest] = React.useState<{
+        memberId: string;
+        action: 'approve' | 'decline';
+    } | null>(null);
     const updateMemberRole = React.useCallback(
         async (memberId: string, role: OrgRole) => {
             if (!org || !memberId) return false;
@@ -90,6 +95,7 @@ export default function useOrgMutations({
     const approveJoinRequest = React.useCallback(
         async (memberId: string) => {
             if (!org || !memberId) return false;
+            setPendingJoinRequest({ memberId, action: 'approve' });
             try {
                 const res = await fetch(
                     `/api/org/${encodeURIComponent(org)}/members/requests/${encodeURIComponent(memberId)}`,
@@ -111,6 +117,8 @@ export default function useOrgMutations({
                 const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
                 setSnack({ open: true, msg, sev: 'error' });
                 return false;
+            } finally {
+                setPendingJoinRequest(null);
             }
         },
         [org, setSnack, refreshMembers, t]
@@ -119,6 +127,7 @@ export default function useOrgMutations({
     const declineJoinRequest = React.useCallback(
         async (memberId: string) => {
             if (!org || !memberId) return false;
+            setPendingJoinRequest({ memberId, action: 'decline' });
             try {
                 const res = await fetch(
                     `/api/org/${encodeURIComponent(org)}/members/requests/${encodeURIComponent(memberId)}`,
@@ -140,6 +149,8 @@ export default function useOrgMutations({
                 const msg = error instanceof Error ? error.message : t('common.error.network', 'Ошибка сети');
                 setSnack({ open: true, msg, sev: 'error' });
                 return false;
+            } finally {
+                setPendingJoinRequest(null);
             }
         },
         [org, setSnack, refreshMembers, t]
@@ -203,6 +214,7 @@ export default function useOrgMutations({
         removeMember,
         approveJoinRequest,
         declineJoinRequest,
+        pendingJoinRequest,
         removeProject,
         removeApplication,
     };

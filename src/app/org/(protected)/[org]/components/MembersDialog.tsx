@@ -72,6 +72,7 @@ type MembersDialogProps = {
     canApproveRequests: boolean;
     onApproveRequest: (member: MemberDTO) => void;
     onDeclineRequest: (member: MemberDTO) => void;
+    pendingJoinRequest: { memberId: string; action: 'approve' | 'decline' } | null;
     cardBaseSx: SxProps<Theme>;
     cardHeaderSx: SxProps<Theme>;
     cardContentSx: SxProps<Theme>;
@@ -116,6 +117,7 @@ export default function MembersDialog({
     canApproveRequests,
     onApproveRequest,
     onDeclineRequest,
+    pendingJoinRequest,
     cardBaseSx,
     cardHeaderSx,
     cardContentSx,
@@ -256,6 +258,9 @@ export default function MembersDialog({
                                             isInvited && member.inviteToken
                                                 ? (frontendBase ? makeAbsoluteUrl(frontendBase, invitePath) : invitePath)
                                                 : undefined;
+                                        const isPendingRequest = pendingJoinRequest?.memberId === member._id;
+                                        const isApproving = isPendingRequest && pendingJoinRequest?.action === 'approve';
+                                        const isDeclining = isPendingRequest && pendingJoinRequest?.action === 'decline';
 
                                         return (
                                             <TableRow
@@ -332,13 +337,19 @@ export default function MembersDialog({
                                                     {isRequested && canApproveRequests && (
                                                         <>
                                                             <Tooltip title={t('org.members.request.approve', 'Одобрить запрос')}>
-                                                                <IconButton onClick={() => onApproveRequest(member)}>
-                                                                    <CheckCircleOutlineIcon fontSize="small" />
+                                                                <IconButton onClick={() => onApproveRequest(member)} disabled={isPendingRequest}>
+                                                                    {isApproving
+                                                                        ? <CircularProgress size={16} />
+                                                                        : <CheckCircleOutlineIcon fontSize="small" />
+                                                                    }
                                                                 </IconButton>
                                                             </Tooltip>
                                                             <Tooltip title={t('org.members.request.decline', 'Отклонить запрос')}>
-                                                                <IconButton onClick={() => onDeclineRequest(member)}>
-                                                                    <HighlightOffIcon fontSize="small" />
+                                                                <IconButton onClick={() => onDeclineRequest(member)} disabled={isPendingRequest}>
+                                                                    {isDeclining
+                                                                        ? <CircularProgress size={16} />
+                                                                        : <HighlightOffIcon fontSize="small" />
+                                                                    }
                                                                 </IconButton>
                                                             </Tooltip>
                                                         </>

@@ -1,19 +1,11 @@
 'use client';
 
-import {
-    ChangeEvent,
-    FormEvent,
-    useCallback,
-    useEffect,
-    useRef,
-    useState,
-} from 'react';
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Avatar,
     Box,
     Button,
-    Collapse,
     CircularProgress,
     Paper,
     Rating,
@@ -26,10 +18,10 @@ import { alpha } from '@mui/material/styles';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import type { PlatformRole } from '@/app/types/roles';
 import SendIcon from '@mui/icons-material/Send';
-import ProfileEditForm from '@/features/profile/ProfileEditForm';
 import ReviewDialog from '@/features/profile/ReviewDialog';
 import { withBasePath } from '@/utils/basePath';
 import { useI18n } from '@/i18n/I18nProvider';
+import { useRouter } from 'next/navigation';
 
 type ProfileResponse = {
     id?: string;
@@ -69,17 +61,13 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     const { t } = useI18n();
     const [profile, setProfile] = useState<ProfileResponse | null>(null);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [message, setMessage] = useState<MessageState>(null);
     const [error, setError] = useState<string | null>(null);
     const [canEdit, setCanEdit] = useState(mode === 'self');
-    const [showEditForm, setShowEditForm] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [bio, setBio] = useState('');
     const [reviewOpen, setReviewOpen] = useState(false);
+    const router = useRouter();
     const [chatToast, setChatToast] = useState<{
         open: boolean;
         message: string;
@@ -89,26 +77,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
 
     const isPublicView = mode === 'public';
     const readOnly = !canEdit;
-
-    const deriveNames = useCallback((fullName?: string) => {
-        const parts = (fullName ?? '')
-            .split(' ')
-            .map((chunk) => chunk.trim())
-            .filter(Boolean);
-        if (!parts.length) {
-            setFirstName('');
-            setLastName('');
-            return;
-        }
-        setFirstName(parts[0] ?? '');
-        setLastName(parts.slice(1).join(' '));
-    }, []);
-
-    const buildFullName = useCallback(
-        (first?: string, last?: string) =>
-            [first?.trim(), last?.trim()].filter(Boolean).join(' ').trim(),
-        []
-    );
 
     const loadProfile = useCallback(async () => {
         if (isPublicView && !userId) {
@@ -145,14 +113,12 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
 
             setProfile(payload);
             setCanEdit(mode === 'self' ? true : Boolean(data.canEdit));
-            deriveNames(payload.name);
-            setBio(payload.bio || '');
         } catch (err) {
             setError(err instanceof Error ? err.message : t('common.error.unknown', 'Неизвестная ошибка'));
         } finally {
             setLoading(false);
         }
-    }, [deriveNames, isPublicView, mode, t, userId]);
+    }, [isPublicView, mode, t, userId]);
 
     useEffect(() => {
         void loadProfile();
@@ -190,50 +156,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
             window.removeEventListener('messenger:direct:result', handleChatResult);
         };
     }, [chatToast.targetEmail, t]);
-
-    const handleSubmit = async (event: FormEvent) => {
-        event.preventDefault();
-        if (!profile || readOnly) return;
-
-        setSaving(true);
-        setMessage(null);
-
-        try {
-            const res = await fetch(withBasePath('/api/profile'), {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: buildFullName(firstName, lastName),
-                    phone: profile.phone,
-                    regionCode: profile.regionCode,
-                    bio,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                setMessage({
-                    type: 'error',
-                    text: data.error || t('profile.update.error', 'Не удалось обновить профиль'),
-                });
-                return;
-            }
-            if (data.profile) {
-                setProfile((prev) =>
-                    prev ? { ...prev, ...data.profile } : data.profile
-                );
-                deriveNames(data.profile.name);
-                setBio(data.profile.bio || '');
-            }
-            setMessage({ type: 'success', text: t('profile.update.success', 'Профиль обновлён') });
-        } catch (err) {
-            setMessage({
-                type: 'error',
-                text: err instanceof Error ? err.message : t('common.error.unknown', 'Неизвестная ошибка'),
-            });
-        } finally {
-            setSaving(false);
-        }
-    };
 
     const handleAvatarUpload = async (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -392,6 +314,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
     const ratingValue = typeof profile.rating === 'number' ? profile.rating : 0;
     const ratingLabel =
         typeof profile.rating === 'number' ? profile.rating.toFixed(1) : '—';
+    const profileBio = profile.bio ?? '';
 
     const handleOpenMessage = () => {
         if (!profile.email || typeof window === 'undefined') return;
@@ -578,12 +501,10 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                 {canEdit && (
                                     <Button
                                         variant="outlined"
-                                        onClick={() => setShowEditForm((prev) => !prev)}
+                                        onClick={() => router.push(withBasePath('/settings'))}
                                         sx={{ textTransform: 'none', borderRadius: 999 }}
                                     >
-                                        {showEditForm
-                                            ? t('profile.actions.hideEdit', 'Скрыть редактирование')
-                                            : t('profile.actions.edit', 'Редактировать')}
+                                        {t('profile.actions.edit', 'Редактировать')}
                                     </Button>
                                 )}
                             </Stack>
@@ -770,7 +691,7 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                                 color="text.secondary"
                                 sx={{ whiteSpace: 'pre-line' }}
                             >
-                                {bio || t('profile.about.empty', 'Пока нет описания.')}
+                                {profileBio || t('profile.about.empty', 'Пока нет описания.')}
                             </Typography>
                             {isAdminViewer && profile.phone && (
                                 <Typography variant="body2" color="text.secondary">
@@ -837,59 +758,6 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                     )}
                 </Box>
             </Paper>
-            {canEdit && (
-                <Collapse in={showEditForm} timeout={300} unmountOnExit>
-                    <ProfileEditForm
-                        firstName={firstName}
-                        lastName={lastName}
-                        phone={profile.phone}
-                        regionCode={profile.regionCode}
-                        email={profile.email}
-                        bio={bio}
-                        isContractor={isContractor}
-                        readOnly={readOnly}
-                        saving={saving}
-                        uploading={uploading}
-                        canEdit={canEdit}
-                        message={message}
-                        onSubmit={handleSubmit}
-                        onFirstNameChange={(value) => {
-                            setFirstName(value);
-                            setProfile((prev) =>
-                                prev
-                                    ? {
-                                        ...prev,
-                                        name: buildFullName(value, lastName),
-                                    }
-                                    : prev
-                            );
-                        }}
-                        onLastNameChange={(value) => {
-                            setLastName(value);
-                            setProfile((prev) =>
-                                prev
-                                    ? {
-                                        ...prev,
-                                        name: buildFullName(firstName, value),
-                                    }
-                                    : prev
-                            );
-                        }}
-                        onPhoneChange={(value) =>
-                            setProfile((prev) =>
-                                prev ? { ...prev, phone: value } : prev
-                            )
-                        }
-                        onRegionChange={(value) =>
-                            setProfile((prev) =>
-                                prev ? { ...prev, regionCode: value } : prev
-                            )
-                        }
-                        onBioChange={(value) => setBio(value)}
-                        onMessageClose={() => setMessage(null)}
-                    />
-                </Collapse>
-            )}
             <ReviewDialog
                 open={reviewOpen}
                 onClose={() => setReviewOpen(false)}
@@ -899,6 +767,18 @@ export default function ProfilePageContent({ mode, userId }: ProfilePageContentP
                 canReview={canReview}
                 reviewBlockReason={reviewBlockReason ?? undefined}
             />
+            <Snackbar
+                open={Boolean(message)}
+                autoHideDuration={4000}
+                onClose={() => setMessage(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                {message ? (
+                    <Alert severity={message.type} onClose={() => setMessage(null)}>
+                        {message.text}
+                    </Alert>
+                ) : null}
+            </Snackbar>
             <Snackbar
                 open={chatToast.open}
                 autoHideDuration={4000}
