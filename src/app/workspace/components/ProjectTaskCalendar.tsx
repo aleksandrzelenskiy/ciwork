@@ -215,8 +215,16 @@ export default function ProjectTaskCalendar({
     }
     if (error) return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>;
 
+    const Event = ({ event }: { event: CalendarEvent }) => {
+        const tooltip = event.resource?.taskType === 'document'
+            ? resolveDocumentStatusHint(String(event.resource?.status || ''))
+            : event.title;
+        return <span title={tooltip}>{event.title}</span>;
+    };
+
     const calendarComponents = {
         toolbar: Toolbar,
+        event: Event,
     } as unknown as CalendarProps<CalendarEvent>['components'];
 
     return (
@@ -267,12 +275,6 @@ export default function ProjectTaskCalendar({
                 onNavigate={setCurrentDate}
                 onView={(v) => setView(v as ViewType)}
                 components={calendarComponents}
-                tooltipAccessor={(ev) => {
-                    if (ev.resource?.taskType === 'document') {
-                        return resolveDocumentStatusHint(String(ev.resource?.status || ''));
-                    }
-                    return ev.title;
-                }}
                 views={{ month: true, week: true, day: true }}
                 popup
                 style={{ height: '100%' }}
