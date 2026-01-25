@@ -294,6 +294,21 @@ export default function TaskDetailPage() {
     }, [loadTask]);
 
     const hasWorkItems = Array.isArray(task?.workItems) && task.workItems.length > 0;
+    const documentInputLinks = Array.isArray(task?.documentInputLinks) ? task.documentInputLinks : [];
+    const documentInputPhotos = Array.isArray(task?.documentInputPhotos) ? task.documentInputPhotos : [];
+    const documentStages = Array.isArray(task?.documentStages) ? task.documentStages : [];
+    const hasDocumentInputs =
+        task?.taskType === 'document' &&
+        (Boolean(task?.documentInputNotes) ||
+            documentInputLinks.length > 0 ||
+            documentInputPhotos.length > 0 ||
+            documentStages.length > 0);
+    const documentReviewFiles = Array.isArray(task?.documentReviewFiles) ? task.documentReviewFiles : [];
+    const documentFinalFiles = Array.isArray(task?.documentFinalFiles) ? task.documentFinalFiles : [];
+    const documentFinalFormats = Array.isArray(task?.documentFinalFormats) ? task.documentFinalFormats : [];
+    const hasDocumentOutputs =
+        task?.taskType === 'document' &&
+        (documentReviewFiles.length > 0 || documentFinalFiles.length > 0 || documentFinalFormats.length > 0);
     const attachmentLinks = React.useMemo(
         () => (Array.isArray(task?.attachments) ? task.attachments.filter((url) => !isDocumentUrl(url)) : []),
         [task]
@@ -1582,6 +1597,130 @@ export default function TaskDetailPage() {
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
                             <Typography sx={{ whiteSpace: 'pre-wrap' }}>{task.taskDescription}</Typography>
+                        </CardItem>
+                    )}
+
+                    {hasDocumentInputs && (
+                        <CardItem sx={{ minWidth: 0 }}>
+                            <Typography
+                                variant="body1"
+                                fontWeight={600}
+                                gutterBottom
+                                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                            >
+                                <DescriptionOutlinedIcon fontSize="small" />
+                                {t('task.document.inputs.title', 'Исходные данные для документации')}
+                            </Typography>
+                            <Divider sx={{ mb: 1.5 }} />
+                            <Stack spacing={1.5}>
+                                {task?.documentInputNotes && (
+                                    <Box>
+                                        <Typography variant="subtitle2" color="text.secondary">
+                                            {t('task.document.inputs.notes', 'Техническое задание / примечания')}
+                                        </Typography>
+                                        <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                                            {task.documentInputNotes}
+                                        </Typography>
+                                    </Box>
+                                )}
+                                {documentStages.length > 0 && (
+                                    <Box>
+                                        <Typography variant="subtitle2" color="text.secondary">
+                                            {t('task.document.inputs.stages', 'Этапы / стадии')}
+                                        </Typography>
+                                        <Stack spacing={0.5}>
+                                            {documentStages.map((stage, idx) => (
+                                                <Typography key={`${stage}-${idx}`}>• {stage}</Typography>
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                )}
+                                {documentInputLinks.length > 0 && (
+                                    <Box>
+                                        <Typography variant="subtitle2" color="text.secondary">
+                                            {t('task.document.inputs.links', 'Ссылки на исходные материалы')}
+                                        </Typography>
+                                        <Stack spacing={0.5}>
+                                            {documentInputLinks.map((link, idx) => (
+                                                <Link key={`${link}-${idx}`} href={link} target="_blank" rel="noreferrer">
+                                                    {link}
+                                                </Link>
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                )}
+                                {documentInputPhotos.length > 0 && (
+                                    <Box>
+                                        <Typography variant="subtitle2" color="text.secondary">
+                                            {t('task.document.inputs.photos', 'Фото / архивы / ссылки на сервер')}
+                                        </Typography>
+                                        <Stack spacing={0.5}>
+                                            {documentInputPhotos.map((link, idx) => (
+                                                <Link key={`${link}-${idx}`} href={link} target="_blank" rel="noreferrer">
+                                                    {link}
+                                                </Link>
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                )}
+                            </Stack>
+                        </CardItem>
+                    )}
+
+                    {hasDocumentOutputs && (
+                        <CardItem sx={{ minWidth: 0 }}>
+                            <Typography
+                                variant="body1"
+                                fontWeight={600}
+                                gutterBottom
+                                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                            >
+                                <DescriptionOutlinedIcon fontSize="small" />
+                                {t('task.document.outputs.title', 'Результаты документации')}
+                            </Typography>
+                            <Divider sx={{ mb: 1.5 }} />
+                            <Stack spacing={1.5}>
+                                {documentReviewFiles.length > 0 && (
+                                    <Box>
+                                        <Typography variant="subtitle2" color="text.secondary">
+                                            {t('task.document.outputs.review', 'PDF на согласование')}
+                                        </Typography>
+                                        <Stack spacing={0.5}>
+                                            {documentReviewFiles.map((link, idx) => (
+                                                <Link key={`${link}-${idx}`} href={link} target="_blank" rel="noreferrer">
+                                                    {link}
+                                                </Link>
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                )}
+                                {documentFinalFiles.length > 0 && (
+                                    <Box>
+                                        <Typography variant="subtitle2" color="text.secondary">
+                                            {t('task.document.outputs.final', 'Финальные файлы')}
+                                        </Typography>
+                                        <Stack spacing={0.5}>
+                                            {documentFinalFiles.map((link, idx) => (
+                                                <Link key={`${link}-${idx}`} href={link} target="_blank" rel="noreferrer">
+                                                    {link}
+                                                </Link>
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                )}
+                                {documentFinalFormats.length > 0 && (
+                                    <Box>
+                                        <Typography variant="subtitle2" color="text.secondary">
+                                            {t('task.document.outputs.formats', 'Форматы')}
+                                        </Typography>
+                                        <Stack spacing={0.5} direction="row" flexWrap="wrap">
+                                            {documentFinalFormats.map((format, idx) => (
+                                                <Chip key={`${format}-${idx}`} label={format.toUpperCase()} size="small" />
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                )}
+                            </Stack>
                         </CardItem>
                     )}
 

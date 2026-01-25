@@ -446,6 +446,14 @@ export async function PUT(
         const unsetPatch: Record<string, 1> = {};
         const changed: Record<string, { from: unknown; to: unknown }> = {};
 
+        const normalizeStringArray = (value: unknown): string[] | null => {
+            if (!Array.isArray(value)) return null;
+            return value
+                .filter((item): item is string => typeof item === 'string')
+                .map((item) => item.trim())
+                .filter(Boolean);
+        };
+
 
         function markChange(field: string, from: unknown, to: unknown) {
             if (isSameValue(from, to)) return;
@@ -473,6 +481,48 @@ export async function PUT(
             const trimmed = body.taskDescription.trim();
             markChange('taskDescription', currentTask.taskDescription, trimmed || undefined);
             allowedPatch.taskDescription = trimmed || undefined;
+        }
+
+        if (typeof body.documentInputNotes === 'string') {
+            const trimmed = body.documentInputNotes.trim();
+            markChange('documentInputNotes', currentTask.documentInputNotes, trimmed || undefined);
+            allowedPatch.documentInputNotes = trimmed || undefined;
+        }
+
+        const documentInputLinks = normalizeStringArray(body.documentInputLinks);
+        if (documentInputLinks !== null) {
+            markChange('documentInputLinks', currentTask.documentInputLinks ?? [], documentInputLinks);
+            allowedPatch.documentInputLinks = documentInputLinks;
+        }
+
+        const documentInputPhotos = normalizeStringArray(body.documentInputPhotos);
+        if (documentInputPhotos !== null) {
+            markChange('documentInputPhotos', currentTask.documentInputPhotos ?? [], documentInputPhotos);
+            allowedPatch.documentInputPhotos = documentInputPhotos;
+        }
+
+        const documentStages = normalizeStringArray(body.documentStages);
+        if (documentStages !== null) {
+            markChange('documentStages', currentTask.documentStages ?? [], documentStages);
+            allowedPatch.documentStages = documentStages;
+        }
+
+        const documentReviewFiles = normalizeStringArray(body.documentReviewFiles);
+        if (documentReviewFiles !== null) {
+            markChange('documentReviewFiles', currentTask.documentReviewFiles ?? [], documentReviewFiles);
+            allowedPatch.documentReviewFiles = documentReviewFiles;
+        }
+
+        const documentFinalFiles = normalizeStringArray(body.documentFinalFiles);
+        if (documentFinalFiles !== null) {
+            markChange('documentFinalFiles', currentTask.documentFinalFiles ?? [], documentFinalFiles);
+            allowedPatch.documentFinalFiles = documentFinalFiles;
+        }
+
+        const documentFinalFormats = normalizeStringArray(body.documentFinalFormats);
+        if (documentFinalFormats !== null) {
+            markChange('documentFinalFormats', currentTask.documentFinalFormats ?? [], documentFinalFormats);
+            allowedPatch.documentFinalFormats = documentFinalFormats;
         }
 
         if (typeof body.initiatorName === 'string') {
@@ -731,6 +781,40 @@ export async function PUT(
             }
         }
 
+        if (status && currentTask.taskType === 'document') {
+            const nextAttachments = Array.isArray(currentTask.attachments)
+                ? currentTask.attachments
+                : [];
+            if ((status === 'At work' || status === 'Pending' || status === 'Agreed') && nextAttachments.length === 0) {
+                return NextResponse.json(
+                    { error: 'Для документальной задачи необходимо загрузить ТЗ и исходные материалы' },
+                    { status: 400 }
+                );
+            }
+
+            const reviewFiles =
+                (allowedPatch.documentReviewFiles as string[] | undefined) ??
+                (currentTask.documentReviewFiles ?? []);
+            const finalFiles =
+                (allowedPatch.documentFinalFiles as string[] | undefined) ??
+                (currentTask.documentFinalFiles ?? []);
+            const hasPdf = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.pdf'));
+            const hasDwg = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.dwg'));
+
+            if (status === 'Pending' && !hasPdf(reviewFiles)) {
+                return NextResponse.json(
+                    { error: 'Для согласования загрузите PDF-файлы' },
+                    { status: 400 }
+                );
+            }
+
+            if (status === 'Agreed' && (!hasPdf(finalFiles) || !hasDwg(finalFiles))) {
+                return NextResponse.json(
+                    { error: 'Для согласования загрузите финальные PDF и DWG' },
+                    { status: 400 }
+                );
+            }
+        }
 
         if (Array.isArray(body.relatedTasks)) {
             const normalizedPayloadIds = Array.from(

@@ -165,10 +165,12 @@ export default function MarketplacePage() {
         organization: string;
         project: string;
         status: PublicTaskStatus | '';
+        taskType: TaskType | '';
     }>({
         organization: '',
         project: '',
         status: '',
+        taskType: '',
     });
     const [applyMessage, setApplyMessage] = useState('');
     const [applyBudget, setApplyBudget] = useState('');
@@ -308,6 +310,17 @@ export default function MarketplacePage() {
                     tasks
                         .map((task) => task.publicStatus)
                         .filter((status): status is PublicTaskStatus => Boolean(status))
+                )
+            ),
+        [tasks]
+    );
+    const availableTaskTypes = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    tasks
+                        .map((task) => task.taskType)
+                        .filter((type): type is TaskType => Boolean(type))
                 )
             ),
         [tasks]
@@ -458,6 +471,12 @@ export default function MarketplacePage() {
         }
     }, [availableStatuses, filters.status]);
 
+    useEffect(() => {
+        if (filters.taskType && !availableTaskTypes.includes(filters.taskType)) {
+            setFilters((prev) => ({ ...prev, taskType: '' }));
+        }
+    }, [availableTaskTypes, filters.taskType]);
+
     const includesQuery = (value: string | undefined | null, query: string) =>
         value?.toLowerCase().includes(query.toLowerCase()) ?? false;
 
@@ -466,6 +485,7 @@ export default function MarketplacePage() {
             organization: '',
             project: '',
             status: '',
+            taskType: '',
         });
         setFiltersDialogOpen(false);
     };
@@ -539,7 +559,8 @@ export default function MarketplacePage() {
     const isFiltersApplied =
         Boolean(filters.organization) ||
         Boolean(filters.project) ||
-        Boolean(filters.status);
+        Boolean(filters.status) ||
+        Boolean(filters.taskType);
 
     const filteredTasks = tasks.filter((task) => {
         const matchesOrganization = filters.organization
@@ -554,8 +575,9 @@ export default function MarketplacePage() {
             : true;
 
         const matchesStatus = filters.status ? task.publicStatus === filters.status : true;
+        const matchesType = filters.taskType ? task.taskType === filters.taskType : true;
 
-        return matchesOrganization && matchesProject && matchesStatus;
+        return matchesOrganization && matchesProject && matchesStatus && matchesType;
     });
 
     const selectedFilterChips = [
@@ -589,6 +611,17 @@ export default function MarketplacePage() {
                       setFilters((prev) => ({
                           ...prev,
                           status: '',
+                      })),
+              }
+            : null,
+        filters.taskType
+            ? {
+                  key: 'taskType',
+                  label: t('market.filters.taskTypeChip', 'Тип задачи: {value}', { value: getTaskTypeLabel(filters.taskType) }),
+                  onDelete: () =>
+                      setFilters((prev) => ({
+                          ...prev,
+                          taskType: '',
                       })),
               }
             : null,
@@ -1027,6 +1060,25 @@ export default function MarketplacePage() {
                             {availableStatuses.map((status) => (
                                 <MenuItem key={status} value={status}>
                                     {statusChipMap[status]?.label}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                        <TextField
+                            select
+                            label={t('market.filters.taskType', 'Тип задачи')}
+                            value={filters.taskType}
+                            onChange={(e) =>
+                                setFilters((prev) => ({
+                                    ...prev,
+                                    taskType: e.target.value as TaskType | '',
+                                }))
+                            }
+                            fullWidth
+                        >
+                            <MenuItem value="">{t('market.filters.allTypes', 'Все типы')}</MenuItem>
+                            {availableTaskTypes.map((type) => (
+                                <MenuItem key={type} value={type}>
+                                    {getTaskTypeLabel(type)}
                                 </MenuItem>
                             ))}
                         </TextField>

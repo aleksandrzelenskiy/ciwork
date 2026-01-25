@@ -18,6 +18,7 @@ import { alpha } from '@mui/material/styles';
 import ProfileEditForm from '@/features/profile/ProfileEditForm';
 import { withBasePath } from '@/utils/basePath';
 import { useI18n } from '@/i18n/I18nProvider';
+import type { ContractorSpecialization } from '@/app/types/specializations';
 
 interface CurrentUserResponse {
     name?: string;
@@ -34,6 +35,7 @@ interface EditableProfileResponse {
     regionCode: string;
     profileType?: 'employer' | 'contractor';
     bio?: string;
+    specializations?: ContractorSpecialization[];
 }
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
@@ -56,6 +58,7 @@ export default function SettingsPage() {
     const [bio, setBio] = useState('');
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<MessageState>(null);
+    const [specializations, setSpecializations] = useState<ContractorSpecialization[]>([]);
     const tRef = useRef(t);
 
     useEffect(() => {
@@ -144,6 +147,7 @@ export default function SettingsPage() {
                 setProfileError(null);
                 deriveNames(payload.name);
                 setBio(payload.bio || '');
+                setSpecializations(Array.isArray(payload.specializations) ? payload.specializations : []);
             } catch (error) {
                 if (!active) return;
                 setProfileError(
@@ -224,6 +228,13 @@ export default function SettingsPage() {
         setMessage(null);
 
         try {
+            if (isContractor && specializations.length === 0) {
+                setMessage({
+                    type: 'error',
+                    text: t('profile.edit.specializations.error', 'Выберите хотя бы одну специализацию'),
+                });
+                return;
+            }
             const res = await fetch(withBasePath('/api/profile'), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -232,6 +243,7 @@ export default function SettingsPage() {
                     phone: profile.phone,
                     regionCode: profile.regionCode,
                     bio,
+                    specializations,
                 }),
             });
             const data = await res.json();
@@ -246,6 +258,7 @@ export default function SettingsPage() {
                 setProfile((prev) => (prev ? { ...prev, ...data.profile } : data.profile));
                 deriveNames(data.profile.name);
                 setBio(data.profile.bio || '');
+                setSpecializations(Array.isArray(data.profile.specializations) ? data.profile.specializations : []);
             }
             setMessage({
                 type: 'success',
@@ -394,6 +407,7 @@ export default function SettingsPage() {
                     uploading={false}
                     canEdit
                     message={message}
+                    specializations={specializations}
                     onSubmit={handleSubmit}
                     onFirstNameChange={(value) => {
                         setFirstName(value);
@@ -424,6 +438,7 @@ export default function SettingsPage() {
                         setProfile((prev) => (prev ? { ...prev, regionCode: value } : prev))
                     }
                     onBioChange={(value) => setBio(value)}
+                    onSpecializationsChange={setSpecializations}
                     onMessageClose={() => setMessage(null)}
                 />
             </Box>

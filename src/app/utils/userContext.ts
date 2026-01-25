@@ -1,6 +1,7 @@
 // src/app/utils/userContext.ts
 
 import type { EffectiveOrgRole, OrgRole, PlatformRole } from '@/app/types/roles';
+import type { ContractorSpecialization } from '@/app/types/specializations';
 import { withBasePath } from '@/utils/basePath';
 
 export interface ActiveMembership {
@@ -18,6 +19,7 @@ export interface UserContextResponse {
   membershipRole?: OrgRole | null;
   isSuperAdmin?: boolean;
   profileType?: 'employer' | 'contractor';
+  specializations?: ContractorSpecialization[];
   profileSetupCompleted?: boolean;
   name?: string;
   email?: string;

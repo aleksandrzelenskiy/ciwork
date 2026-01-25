@@ -20,6 +20,7 @@ export type ProjectDTO = {
     name: string;
     key: string;
     description?: string;
+    projectType?: 'construction' | 'installation' | 'document';
     managers?: string[];
     managerEmail?: string;
     regionCode: string;

@@ -35,7 +35,7 @@ export async function getOrgAndProjectByRef(orgSlug: string, projectRef: string)
 
     if (isId) {
         projectDoc = await Project.findOne({ _id: trimmedProjectRef, orgId: orgDoc._id })
-            .select('_id name orgId key regionCode operator')
+            .select('_id name orgId key regionCode operator projectType')
             .lean();
     } else {
         const normalizedProjectKey = trimmedProjectRef.toUpperCase();
@@ -43,7 +43,7 @@ export async function getOrgAndProjectByRef(orgSlug: string, projectRef: string)
             key: normalizedProjectKey,
             orgId: orgDoc._id,
         })
-            .select('_id name orgId key regionCode operator')
+            .select('_id name orgId key regionCode operator projectType')
             .lean();
 
         if (!projectDoc && trimmedProjectRef.length > 0) {
@@ -52,7 +52,7 @@ export async function getOrgAndProjectByRef(orgSlug: string, projectRef: string)
                 orgId: orgDoc._id,
             };
             projectDoc = await Project.findOne(projectCaseInsensitiveFilter)
-                .select('_id name orgId key regionCode operator')
+                .select('_id name orgId key regionCode operator projectType')
                 .lean();
         }
     }

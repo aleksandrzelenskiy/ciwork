@@ -5,6 +5,7 @@ import dbConnect from '@/server/db/mongoose';
 import UserModel, { type ProfileType } from '@/server/models/UserModel';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { ensureWalletWithBonus } from '@/utils/wallet';
+import { CONTRACTOR_SPECIALIZATIONS, type ContractorSpecialization } from '@/app/types/specializations';
 
 const VALID_PROFILE_TYPES: ProfileType[] = ['employer', 'contractor'];
 
@@ -17,6 +18,7 @@ type OnboardingPayload = {
   consentAccepted?: boolean;
   consentVersion?: string;
   consentAcceptedAt?: string;
+  specializations?: ContractorSpecialization[];
 };
 
 const REGION_CODES = new Set(RUSSIAN_REGIONS.map((region) => region.code));
@@ -49,6 +51,11 @@ export async function POST(request: Request) {
   const consentAccepted = body.consentAccepted === true;
   const consentVersion = (body.consentVersion ?? '').trim();
   const consentAcceptedAt = (body.consentAcceptedAt ?? '').trim();
+  const specializations = Array.isArray(body.specializations)
+    ? body.specializations.filter((value): value is ContractorSpecialization =>
+        CONTRACTOR_SPECIALIZATIONS.includes(value as ContractorSpecialization)
+      )
+    : [];
 
   if (!consentAccepted) {
     return NextResponse.json(
@@ -87,7 +94,14 @@ export async function POST(request: Request) {
   };
 
   if (profileType === 'contractor') {
+    if (!specializations.length) {
+      return NextResponse.json(
+        { error: 'Выберите специализацию исполнителя' },
+        { status: 400 }
+      );
+    }
     setPayload.activeOrgId = null;
+    setPayload.specializations = specializations;
   }
 
   const updatedUser = await UserModel.findOneAndUpdate(

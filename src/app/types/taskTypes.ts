@@ -147,6 +147,14 @@ export interface Task {
   approvedBy?: string; // кто согласовал
   approvedAt?: Date; // когда согласовали
 
+  documentInputNotes?: string;
+  documentInputLinks?: string[];
+  documentInputPhotos?: string[]; // архивы/ссылки на фото для проектирования
+  documentStages?: string[]; // этапы/стадии по требованиям проекта
+  documentReviewFiles?: string[]; // PDF для проверки
+  documentFinalFiles?: string[]; // финальные PDF/DWG и др.
+  documentFinalFormats?: string[]; // например ['pdf','dwg']
+
   attachments?: string[];
   documents?: string[];
 

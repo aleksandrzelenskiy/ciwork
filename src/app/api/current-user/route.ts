@@ -40,6 +40,7 @@ export async function GET() {
     membershipRole,
     platformRole: user.platformRole,
     profileType: user.profileType,
+    specializations: user.specializations ?? [],
     profileSetupCompleted: user.profileSetupCompleted,
     effectiveOrgRole,
     isSuperAdmin,

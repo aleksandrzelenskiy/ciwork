@@ -190,6 +190,15 @@ export async function POST(
     if (!task || task.visibility !== 'public' || !isPublicApproved(task)) {
         return NextResponse.json({ error: 'Задача недоступна для откликов' }, { status: 404 });
     }
+    if (task.taskType === 'document') {
+        const specializations = Array.isArray(user.specializations) ? user.specializations : [];
+        if (!specializations.includes('document')) {
+            return NextResponse.json(
+                { error: 'Задача доступна только для исполнителей по документации' },
+                { status: 403 }
+            );
+        }
+    }
 
     const proposedBudget = typeof body.proposedBudget === 'number' ? body.proposedBudget : undefined;
     if (!proposedBudget || proposedBudget <= 0) {

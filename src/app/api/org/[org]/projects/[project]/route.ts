@@ -10,6 +10,7 @@ import { Types } from 'mongoose';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
 import { syncProjectsUsage } from '@/utils/billingLimits';
+import { deleteStoragePrefix } from '@/utils/s3';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,6 +52,7 @@ type ProjectDTO = {
     name: string;
     key: string;
     description?: string;
+    projectType: 'construction' | 'installation' | 'document';
     regionCode: string;
     operator: string;
     managers?: string[];
@@ -60,6 +62,7 @@ type UpdateBody = {
     name?: string;
     key?: string;
     description?: string;
+    projectType?: 'construction' | 'installation' | 'document';
     regionCode?: string;
     operator?: string;
     managers?: string[];
@@ -73,6 +76,7 @@ type ProjectLean = {
     name: string;
     key: string;
     description?: string;
+    projectType?: 'construction' | 'installation' | 'document';
     regionCode: string;
     operator: string;
     managers?: string[];
@@ -91,6 +95,7 @@ function toProjectDto(doc: ProjectLean): ProjectDTO {
         name: doc.name,
         key: doc.key,
         description: doc.description,
+        projectType: doc.projectType ?? 'installation',
         regionCode: doc.regionCode,
         operator: doc.operator,
         managers: Array.isArray(doc.managers) ? doc.managers : undefined,
@@ -175,6 +180,12 @@ export async function PATCH(
         if (typeof body.name === 'string') update.name = body.name.trim();
         if (typeof body.key === 'string') update.key = body.key.trim().toUpperCase(); // нормализуем KEY
         if (typeof body.description === 'string') update.description = body.description;
+        if (typeof body.projectType === 'string') {
+            if (!['construction', 'installation', 'document'].includes(body.projectType)) {
+                return NextResponse.json({ error: 'Некорректный тип проекта' }, { status: 400 });
+            }
+            update.projectType = body.projectType;
+        }
 
         if (typeof body.regionCode === 'string') {
             if (!RUSSIAN_REGIONS.some((region) => region.code === body.regionCode)) {
@@ -239,6 +250,15 @@ export async function DELETE(
 
         if (!deleted) {
             return NextResponse.json({ error: 'Проект не найден' }, { status: 404 });
+        }
+
+        try {
+            if (org.orgSlug && deleted.key) {
+                const projectPrefix = `uploads/${org.orgSlug}/${deleted.key}/`;
+                await deleteStoragePrefix(projectPrefix);
+            }
+        } catch (storageError) {
+            console.warn('Failed to delete project storage folder', storageError);
         }
 
         try {

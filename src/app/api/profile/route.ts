@@ -8,6 +8,7 @@ import OrganizationModel from '@/server/models/OrganizationModel';
 import ProjectModel from '@/server/models/ProjectModel';
 import TaskModel from '@/server/models/TaskModel';
 import { checkReviewEligibility } from '@/server/reviews/permissions';
+import { CONTRACTOR_SPECIALIZATIONS, type ContractorSpecialization } from '@/app/types/specializations';
 
 const sanitizeString = (value?: string | null) => value?.trim() ?? '';
 
@@ -100,6 +101,7 @@ export async function GET() {
       regionCode: user.regionCode ?? '',
       profilePic: user.profilePic || clerkUser.imageUrl || '',
       profileType: user.profileType,
+      specializations: user.specializations ?? [],
       platformRole: user.platformRole,
       viewerPlatformRole: user.platformRole,
       clerkUserId: user.clerkUserId,
@@ -134,6 +136,7 @@ type ProfilePatchPayload = {
   desiredRate?: number | null;
   bio?: string;
   portfolioLinks?: string[];
+  specializations?: ContractorSpecialization[];
 };
 
 export async function PATCH(request: Request) {
@@ -167,6 +170,11 @@ export async function PATCH(request: Request) {
             .filter(Boolean)
             .slice(0, 20)
         : undefined;
+    const specializations = Array.isArray(body.specializations)
+      ? body.specializations.filter((value): value is ContractorSpecialization =>
+          CONTRACTOR_SPECIALIZATIONS.includes(value as ContractorSpecialization)
+        )
+      : undefined;
 
     if (typeof body.name !== 'undefined' && !nextName) {
       return NextResponse.json(
@@ -210,6 +218,10 @@ export async function PATCH(request: Request) {
       updatePayload.portfolioLinks = portfolioLinks;
       shouldMarkPending = true;
     }
+    if (typeof specializations !== 'undefined') {
+      updatePayload.specializations = specializations;
+      shouldMarkPending = true;
+    }
     if (shouldMarkPending) {
       updatePayload.profileStatus = 'pending';
       updatePayload.moderationComment = '';
@@ -243,6 +255,7 @@ export async function PATCH(request: Request) {
         regionCode: updatedUser.regionCode ?? '',
         profilePic: updatedUser.profilePic || clerkUser.imageUrl || '',
         profileType: updatedUser.profileType,
+        specializations: updatedUser.specializations ?? [],
         platformRole: updatedUser.platformRole,
         viewerPlatformRole: updatedUser.platformRole,
         clerkUserId: updatedUser.clerkUserId,

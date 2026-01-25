@@ -8,6 +8,7 @@ import {
     Button,
     Box,
     Autocomplete,
+    MenuItem,
     Stack,
     Typography,
 } from '@mui/material';
@@ -16,6 +17,7 @@ import TopicIcon from '@mui/icons-material/Topic';
 import { RUSSIAN_REGIONS, REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
 
@@ -30,6 +32,7 @@ export type ProjectDialogValues = {
     name: string;
     key: string;
     description?: string;
+    projectType: 'construction' | 'installation' | 'document';
     regionCode: string;
     operator: string;
     managers: string[];
@@ -71,6 +74,7 @@ export default function ProjectDialog({
     onClose,
     onSubmit,
 }: Props) {
+    const { t } = useI18n();
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
     const dialogPaperBg = isDarkMode ? 'rgba(12,16,26,0.92)' : 'rgba(255,255,255,0.85)';
@@ -92,6 +96,7 @@ export default function ProjectDialog({
     const [name, setName] = React.useState('');
     const [key, setKey] = React.useState('');
     const [description, setDescription] = React.useState('');
+    const [projectType, setProjectType] = React.useState<ProjectDialogValues['projectType']>('installation');
     const [regionCode, setRegionCode] = React.useState<string>(REGION_OPTIONS[0]?.code ?? '');
     const [operator, setOperator] = React.useState<string>('');
     const [managerOptions, setManagerOptions] = React.useState<ProjectManagerOption[]>([]);
@@ -124,6 +129,7 @@ export default function ProjectDialog({
         setName(initialData?.name ?? '');
         setKey(initialData?.key ?? '');
         setDescription(initialData?.description ?? '');
+        setProjectType(initialData?.projectType ?? 'installation');
         const normalizedRegion = resolveRegionCode(initialData?.regionCode);
         const fallbackRegion = REGION_OPTIONS[0]?.code ?? '';
         setRegionCode(normalizedRegion || fallbackRegion);
@@ -143,7 +149,7 @@ export default function ProjectDialog({
     const normalizedKeyUpper = normalizeProjectKey(key);
     const isKeyValid = normalizedKey ? PROJECT_KEY_PATTERN.test(normalizedKeyUpper) : false;
     const isSubmitDisabled =
-        !name.trim() || !normalizedKey || !isKeyValid || !regionCode || !operator || busy;
+        !name.trim() || !normalizedKey || !isKeyValid || !regionCode || !operator || !projectType || busy;
     const keyHelperText = !normalizedKey
         ? 'Только латинские A-Z, цифры и дефис. Пример: ALPHA-1.'
         : isKeyValid
@@ -168,6 +174,7 @@ export default function ProjectDialog({
                 name: name.trim(),
                 key: normalizedKeyUpper,
                 description: description.trim(),
+                projectType,
                 regionCode,
                 operator,
                 managers: Array.from(
@@ -246,6 +253,27 @@ export default function ProjectDialog({
                     disabled={busy}
                     onChange={(e) => setDescription(e.target.value)}
                 />
+                <Box sx={{ mt: 2 }}>
+                    <TextField
+                        select
+                        label={t('project.type.label', 'Тип проекта')}
+                        fullWidth
+                        sx={glassInputSx}
+                        value={projectType}
+                        disabled={busy}
+                        onChange={(e) => setProjectType(e.target.value as ProjectDialogValues['projectType'])}
+                    >
+                        <MenuItem value="installation">
+                            {t('project.type.installation', 'Инсталляция')}
+                        </MenuItem>
+                        <MenuItem value="construction">
+                            {t('project.type.construction', 'Строительство')}
+                        </MenuItem>
+                        <MenuItem value="document">
+                            {t('project.type.document', 'Документация')}
+                        </MenuItem>
+                    </TextField>
+                </Box>
                 <Box sx={{ mt: 3 }}>
                     <Autocomplete
                         options={REGION_OPTIONS}

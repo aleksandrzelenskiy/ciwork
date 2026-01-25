@@ -112,6 +112,16 @@ export async function PATCH(
         return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
     }
 
+    if (payload.visibility === 'public' && task.taskType === 'document') {
+        const attachments = Array.isArray(task.attachments) ? task.attachments : [];
+        if (attachments.length === 0) {
+            return NextResponse.json(
+                { error: 'Для публикации документальной задачи загрузите ТЗ и исходные материалы' },
+                { status: 400 }
+            );
+        }
+    }
+
     const update: Record<string, unknown> = {};
 
     if ('budget' in payload) {

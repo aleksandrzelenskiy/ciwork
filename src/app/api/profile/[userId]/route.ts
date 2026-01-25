@@ -128,6 +128,7 @@ export async function GET(
             regionCode: user.regionCode ?? '',
             profilePic: user.profilePic || '',
             profileType: user.profileType,
+            specializations: user.specializations ?? [],
             platformRole: user.platformRole,
             viewerPlatformRole: viewer.data.platformRole,
             clerkUserId: user.clerkUserId,

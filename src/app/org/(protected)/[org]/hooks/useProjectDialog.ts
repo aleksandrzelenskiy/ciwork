@@ -76,6 +76,7 @@ export default function useProjectDialog({
                 name: values.name,
                 key: values.key,
                 description: values.description,
+                projectType: values.projectType,
                 regionCode: values.regionCode,
                 operator: values.operator,
                 managers: values.managers,

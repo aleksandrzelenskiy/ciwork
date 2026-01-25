@@ -6,10 +6,13 @@ import {
     Box,
     Button,
     CircularProgress,
+    FormGroup,
     FormControl,
+    FormControlLabel,
     InputLabel,
     MenuItem,
     Paper,
+    Checkbox,
     Select,
     Stack,
     TextField,
@@ -18,6 +21,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { useI18n } from '@/i18n/I18nProvider';
+import type { ContractorSpecialization } from '@/app/types/specializations';
 
 type MessageState = { type: 'success' | 'error'; text: string } | null;
 
@@ -29,6 +33,7 @@ type ProfileEditFormProps = {
     email: string;
     bio: string;
     isContractor: boolean;
+    specializations: ContractorSpecialization[];
     readOnly: boolean;
     saving: boolean;
     uploading: boolean;
@@ -40,6 +45,7 @@ type ProfileEditFormProps = {
     onPhoneChange: (value: string) => void;
     onRegionChange: (value: string) => void;
     onBioChange: (value: string) => void;
+    onSpecializationsChange: (value: ContractorSpecialization[]) => void;
     onMessageClose: () => void;
 };
 
@@ -51,6 +57,7 @@ export default function ProfileEditForm({
     email,
     bio,
     isContractor,
+    specializations,
     readOnly,
     saving,
     uploading,
@@ -62,9 +69,17 @@ export default function ProfileEditForm({
     onPhoneChange,
     onRegionChange,
     onBioChange,
+    onSpecializationsChange,
     onMessageClose,
 }: ProfileEditFormProps) {
     const { t } = useI18n();
+    const toggleSpecialization = (value: ContractorSpecialization) => {
+        onSpecializationsChange(
+            specializations.includes(value)
+                ? specializations.filter((item) => item !== value)
+                : [...specializations, value]
+        );
+    };
     return (
         <Paper
             component="form"
@@ -143,6 +158,33 @@ export default function ProfileEditForm({
                         <Typography variant="subtitle1" fontWeight={600}>
                             {t('profile.edit.contractor', 'Профиль подрядчика')}
                         </Typography>
+                        <Box>
+                            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                                {t('profile.edit.specializations', 'Специализация')}
+                            </Typography>
+                            <FormGroup>
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={specializations.includes('installation')}
+                                            onChange={() => toggleSpecialization('installation')}
+                                            disabled={readOnly}
+                                        />
+                                    }
+                                    label={t('profile.edit.specializations.installation', 'Монтаж / инсталляция')}
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
+                                            checked={specializations.includes('document')}
+                                            onChange={() => toggleSpecialization('document')}
+                                            disabled={readOnly}
+                                        />
+                                    }
+                                    label={t('profile.edit.specializations.document', 'Проектирование / документация')}
+                                />
+                            </FormGroup>
+                        </Box>
                         <TextField
                             label={t('profile.edit.bio', 'О себе')}
                             multiline

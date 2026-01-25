@@ -37,6 +37,7 @@ type ProjectDTO = {
     name: string;
     key: string;
     description?: string;
+    projectType: 'construction' | 'installation' | 'document';
     managers?: string[];
     managerEmail?: string | null;
     regionCode: string;
@@ -48,6 +49,7 @@ type CreateProjectBody = {
     name: string;
     key: string;
     description?: string;
+    projectType?: 'construction' | 'installation' | 'document';
     regionCode: string;
     operator: string;
     managers?: string[];
@@ -60,6 +62,7 @@ interface ProjectLean {
     name: string;
     key: string;
     description?: string;
+    projectType?: 'construction' | 'installation' | 'document';
     managers?: string[];
     regionCode: string;
     operator: string;
@@ -133,7 +136,7 @@ export async function GET(
 
         const rows = await Project.find(
             projectFilter,
-            { name: 1, key: 1, description: 1, managers: 1, regionCode: 1, operator: 1 }
+            { name: 1, key: 1, description: 1, projectType: 1, managers: 1, regionCode: 1, operator: 1 }
         ).lean<ProjectLean[]>();
 
         const projects: ProjectDTO[] = rows.map((p: ProjectLean) => {
@@ -143,6 +146,7 @@ export async function GET(
                 name: p.name,
                 key: p.key,
                 description: p.description,
+                projectType: p.projectType ?? 'installation',
                 managers,
                 managerEmail: managers[0] ?? null,
                 regionCode: p.regionCode,
@@ -189,9 +193,14 @@ export async function POST(
         const key = body?.key?.trim();
         const isValidRegion = RUSSIAN_REGIONS.some((region) => region.code === body.regionCode);
         const isValidOperator = OPERATORS.some((operator) => operator.value === body.operator);
+        const projectType = body.projectType ?? 'installation';
+        const isValidProjectType = ['construction', 'installation', 'document'].includes(projectType);
 
-        if (!name || !key || !isValidRegion || !isValidOperator) {
-            return NextResponse.json({ error: 'Укажите name, key, regionCode и operator' }, { status: 400 });
+        if (!name || !key || !isValidRegion || !isValidOperator || !isValidProjectType) {
+            return NextResponse.json(
+                { error: 'Укажите name, key, regionCode, operator и тип проекта' },
+                { status: 400 }
+            );
         }
 
         const normalizedManagers = normalizeEmailsArray(body.managers);
@@ -224,6 +233,7 @@ export async function POST(
                             name,
                             key: key.toUpperCase(),
                             description: body?.description,
+                            projectType,
                             managers: managerEmails,
                             createdByEmail: email,
                             regionCode: body.regionCode,
@@ -245,6 +255,7 @@ export async function POST(
                     name: created.name,
                     key: created.key,
                     description: created.description,
+                    projectType: created.projectType ?? projectType,
                     managers: createdManagers,
                     managerEmail: createdManagers[0] ?? email,
                     regionCode: created.regionCode,

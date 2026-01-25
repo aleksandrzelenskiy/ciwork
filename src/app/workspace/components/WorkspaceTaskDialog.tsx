@@ -59,6 +59,7 @@ import type { RelatedTaskRef } from '@/app/types/taskTypes';
 import WorkItemsEditorDialog from '@/app/workspace/components/WorkItemsEditorDialog';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 
 
@@ -98,6 +99,13 @@ export type TaskForEdit = {
     bsNumber?: string;
     bsAddress?: string;
     taskDescription?: string;
+    documentInputNotes?: string;
+    documentInputLinks?: string[];
+    documentInputPhotos?: string[];
+    documentStages?: string[];
+    documentReviewFiles?: string[];
+    documentFinalFiles?: string[];
+    documentFinalFormats?: string[];
     bsLatitude?: number;
     bsLongitude?: number;
     totalCost?: number;
@@ -188,6 +196,13 @@ function getFileNameFromUrl(url?: string): string {
     } catch {
         return url;
     }
+}
+
+function splitLinesToArray(raw: string): string[] {
+    return raw
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean);
 }
 
 const YMAPS_API_KEY = process.env.NEXT_PUBLIC_YMAPS_API_KEY || '1c3860d8-3994-4e6e-841b-31ad57f69c78';
@@ -357,6 +372,7 @@ export default function WorkspaceTaskDialog({
                                                 mode = 'create',
                                                 initialTask = null,
                                             }: Props) {
+    const { t } = useI18n();
     const isEdit = mode === 'edit';
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
@@ -429,6 +445,13 @@ export default function WorkspaceTaskDialog({
         },
     ]);
     const [taskDescription, setTaskDescription] = React.useState('');
+    const [documentInputNotes, setDocumentInputNotes] = React.useState('');
+    const [documentInputLinks, setDocumentInputLinks] = React.useState('');
+    const [documentInputPhotos, setDocumentInputPhotos] = React.useState('');
+    const [documentStages, setDocumentStages] = React.useState('');
+    const [documentReviewFiles, setDocumentReviewFiles] = React.useState('');
+    const [documentFinalFiles, setDocumentFinalFiles] = React.useState('');
+    const [documentFinalFormats, setDocumentFinalFormats] = React.useState('');
     const [priority, setPriority] = React.useState<Priority>('medium');
     const [dueDate, setDueDate] = React.useState<Date | null>(new Date());
 
@@ -439,9 +462,10 @@ export default function WorkspaceTaskDialog({
     const [percentEditorOpen, setPercentEditorOpen] = React.useState(false);
     const [workItemsDialogOpen, setWorkItemsDialogOpen] = React.useState(false);
 
-    const [projectMeta, setProjectMeta] = React.useState<{ regionCode?: string; operator?: string } | null>(null);
+    const [projectMeta, setProjectMeta] = React.useState<{ regionCode?: string; operator?: string; projectType?: 'construction' | 'installation' | 'document' } | null>(null);
     const isT2Operator = React.useMemo(() => projectMeta?.operator === '250020', [projectMeta?.operator]);
     const isBeelineOperator = React.useMemo(() => projectMeta?.operator === '250099', [projectMeta?.operator]);
+    const isDocumentProject = projectMeta?.projectType === 'document';
 
     const [members, setMembers] = React.useState<MemberOption[]>([]);
     const [membersLoading, setMembersLoading] = React.useState(false);
@@ -502,6 +526,7 @@ export default function WorkspaceTaskDialog({
             setProjectMeta({
                 regionCode: body.project?.regionCode,
                 operator: body.project?.operator,
+                projectType: body.project?.projectType,
             });
         } catch (e: unknown) {
             setProjectMeta(null);
@@ -697,6 +722,37 @@ export default function WorkspaceTaskDialog({
         setPriority(['urgent', 'high', 'medium', 'low'].includes(pr) ? pr : 'medium');
         setDueDate(initialTask.dueDate ? new Date(initialTask.dueDate) : null);
         setTaskDescription(initialTask.taskDescription ?? '');
+        setDocumentInputNotes(initialTask.documentInputNotes ?? '');
+        setDocumentInputLinks(
+            Array.isArray(initialTask.documentInputLinks)
+                ? initialTask.documentInputLinks.join('\n')
+                : ''
+        );
+        setDocumentInputPhotos(
+            Array.isArray(initialTask.documentInputPhotos)
+                ? initialTask.documentInputPhotos.join('\n')
+                : ''
+        );
+        setDocumentStages(
+            Array.isArray(initialTask.documentStages)
+                ? initialTask.documentStages.join('\n')
+                : ''
+        );
+        setDocumentReviewFiles(
+            Array.isArray(initialTask.documentReviewFiles)
+                ? initialTask.documentReviewFiles.join('\n')
+                : ''
+        );
+        setDocumentFinalFiles(
+            Array.isArray(initialTask.documentFinalFiles)
+                ? initialTask.documentFinalFiles.join('\n')
+                : ''
+        );
+        setDocumentFinalFormats(
+            Array.isArray(initialTask.documentFinalFormats)
+                ? initialTask.documentFinalFormats.join('\n')
+                : ''
+        );
         setInitiatorName(initialTask.initiatorName ?? '');
         setInitiatorEmail(initialTask.initiatorEmail ?? '');
         setShowInitiatorFields(Boolean(initialTask.initiatorName || initialTask.initiatorEmail));
@@ -1261,6 +1317,13 @@ export default function WorkspaceTaskDialog({
     const reset = () => {
         setTaskName('');
         setTaskDescription('');
+        setDocumentInputNotes('');
+        setDocumentInputLinks('');
+        setDocumentInputPhotos('');
+        setDocumentStages('');
+        setDocumentReviewFiles('');
+        setDocumentFinalFiles('');
+        setDocumentFinalFormats('');
         setPriority('medium');
         setDueDate(new Date());
         setSelectedExecutor(null);
@@ -1506,6 +1569,14 @@ export default function WorkspaceTaskDialog({
                 bsNumber: taskBsNumber,
                 bsAddress: taskBsAddress,
                 taskDescription: taskDescription?.trim() || undefined,
+                taskType: projectMeta?.projectType,
+                documentInputNotes: isDocumentProject ? documentInputNotes.trim() || undefined : undefined,
+                documentInputLinks: isDocumentProject ? splitLinesToArray(documentInputLinks) : undefined,
+                documentInputPhotos: isDocumentProject ? splitLinesToArray(documentInputPhotos) : undefined,
+                documentStages: isDocumentProject ? splitLinesToArray(documentStages) : undefined,
+                documentReviewFiles: isDocumentProject ? splitLinesToArray(documentReviewFiles) : undefined,
+                documentFinalFiles: isDocumentProject ? splitLinesToArray(documentFinalFiles) : undefined,
+                documentFinalFormats: isDocumentProject ? splitLinesToArray(documentFinalFormats) : undefined,
                 status: 'To do',
                 priority,
                 dueDate: dueDate ? dueDate.toISOString() : undefined,
@@ -1569,6 +1640,14 @@ export default function WorkspaceTaskDialog({
                 bsNumber: taskBsNumber,
                 bsAddress: taskBsAddress,
                 taskDescription: taskDescription?.trim() || undefined,
+                taskType: projectMeta?.projectType,
+                documentInputNotes: isDocumentProject ? documentInputNotes.trim() || undefined : undefined,
+                documentInputLinks: isDocumentProject ? splitLinesToArray(documentInputLinks) : undefined,
+                documentInputPhotos: isDocumentProject ? splitLinesToArray(documentInputPhotos) : undefined,
+                documentStages: isDocumentProject ? splitLinesToArray(documentStages) : undefined,
+                documentReviewFiles: isDocumentProject ? splitLinesToArray(documentReviewFiles) : undefined,
+                documentFinalFiles: isDocumentProject ? splitLinesToArray(documentFinalFiles) : undefined,
+                documentFinalFormats: isDocumentProject ? splitLinesToArray(documentFinalFormats) : undefined,
                 priority,
                 dueDate: dueDate ? dueDate.toISOString() : undefined,
                 bsLatitude: typeof primaryCoords.lat === 'number' ? primaryCoords.lat : undefined,
@@ -2058,6 +2137,90 @@ export default function WorkspaceTaskDialog({
                                 fullWidth
                                 sx={glassInputSx}
                             />
+
+                            {isDocumentProject && (
+                                <Stack spacing={2}>
+                                    <Typography variant="subtitle1" fontWeight={600}>
+                                        {t('task.document.inputs.title', 'Исходные данные для документации')}
+                                    </Typography>
+                                    <TextField
+                                        label={t('task.document.inputs.notes', 'Техническое задание / примечания')}
+                                        value={documentInputNotes}
+                                        onChange={(e) => setDocumentInputNotes(e.target.value)}
+                                        multiline
+                                        minRows={3}
+                                        maxRows={10}
+                                        fullWidth
+                                        sx={glassInputSx}
+                                    />
+                                    <TextField
+                                        label={t('task.document.inputs.stages', 'Этапы / стадии')}
+                                        value={documentStages}
+                                        onChange={(e) => setDocumentStages(e.target.value)}
+                                        helperText={t('task.document.inputs.stagesHelper', 'По одному этапу в строке')}
+                                        multiline
+                                        minRows={2}
+                                        maxRows={6}
+                                        fullWidth
+                                        sx={glassInputSx}
+                                    />
+                                    <TextField
+                                        label={t('task.document.inputs.links', 'Ссылки на исходные материалы')}
+                                        value={documentInputLinks}
+                                        onChange={(e) => setDocumentInputLinks(e.target.value)}
+                                        helperText={t('task.document.inputs.linksHelper', 'По одной ссылке в строке')}
+                                        multiline
+                                        minRows={2}
+                                        maxRows={6}
+                                        fullWidth
+                                        sx={glassInputSx}
+                                    />
+                                    <TextField
+                                        label={t('task.document.inputs.photos', 'Фото / архивы / ссылки на сервер')}
+                                        value={documentInputPhotos}
+                                        onChange={(e) => setDocumentInputPhotos(e.target.value)}
+                                        helperText={t('task.document.inputs.photosHelper', 'По одной ссылке в строке')}
+                                        multiline
+                                        minRows={2}
+                                        maxRows={6}
+                                        fullWidth
+                                        sx={glassInputSx}
+                                    />
+                                    <TextField
+                                        label={t('task.document.outputs.review', 'PDF на согласование')}
+                                        value={documentReviewFiles}
+                                        onChange={(e) => setDocumentReviewFiles(e.target.value)}
+                                        helperText={t('task.document.outputs.reviewHelper', 'Ссылки на PDF, по одной в строке')}
+                                        multiline
+                                        minRows={2}
+                                        maxRows={6}
+                                        fullWidth
+                                        sx={glassInputSx}
+                                    />
+                                    <TextField
+                                        label={t('task.document.outputs.final', 'Финальные файлы')}
+                                        value={documentFinalFiles}
+                                        onChange={(e) => setDocumentFinalFiles(e.target.value)}
+                                        helperText={t('task.document.outputs.finalHelper', 'Ссылки на PDF/DWG и другие файлы, по одной в строке')}
+                                        multiline
+                                        minRows={2}
+                                        maxRows={6}
+                                        fullWidth
+                                        sx={glassInputSx}
+                                    />
+                                    <TextField
+                                        label={t('task.document.outputs.formats', 'Форматы')}
+                                        value={documentFinalFormats}
+                                        onChange={(e) => setDocumentFinalFormats(e.target.value)}
+                                        helperText={t('task.document.outputs.formatsHelper', 'Например: PDF, DWG — по одному в строке')}
+                                        multiline
+                                        minRows={2}
+                                        maxRows={4}
+                                        fullWidth
+                                        sx={glassInputSx}
+                                    />
+                                </Stack>
+                            )}
 
                             <Stack
                                 direction={{ xs: 'column', sm: 'row' }}

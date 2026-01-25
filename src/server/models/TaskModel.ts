@@ -167,6 +167,15 @@ const TaskSchema = new Schema<Task & Document>({
       required: false,
     },
   ],
+
+  // Документация: входные данные и результаты
+  documentInputNotes: { type: String },
+  documentInputLinks: [{ type: String }],
+  documentInputPhotos: [{ type: String }],
+  documentStages: [{ type: String }],
+  documentReviewFiles: [{ type: String }],
+  documentFinalFiles: [{ type: String }],
+  documentFinalFormats: [{ type: String }],
 });
 
 TaskSchema.pre('save', function preSave(next) {

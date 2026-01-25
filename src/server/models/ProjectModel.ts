@@ -11,6 +11,7 @@ export interface Project extends Document {
     name: string;
     key: string;
     description?: string;
+    projectType: 'construction' | 'installation' | 'document';
     managers: string[];
     createdByEmail: string;
     regionCode: typeof RUSSIAN_REGIONS[number]['code'];
@@ -25,6 +26,12 @@ const ProjectSchema = new Schema<Project>(
         name: { type: String, required: true },
         key:  { type: String, required: true },
         description: { type: String },
+        projectType: {
+            type: String,
+            enum: ['construction', 'installation', 'document'],
+            default: 'installation',
+            required: true,
+        },
         managers: { type: [String], default: [] },
         regionCode: {
             type: String,

@@ -91,6 +91,7 @@ type ProjectDocLean = {
     name?: string;
     regionCode?: string;
     operator?: string;
+    projectType?: 'construction' | 'installation' | 'document';
 };
 
 type OrgProjectRelOk = { orgDoc: OrgDocLean; projectDoc: ProjectDocLean };
@@ -173,6 +174,13 @@ type CreateTaskBody = {
     orderDate?: string;
     orderSignDate?: string;
     taskDescription?: string;
+    documentInputNotes?: string;
+    documentInputLinks?: string[];
+    documentInputPhotos?: string[];
+    documentStages?: string[];
+    documentReviewFiles?: string[];
+    documentFinalFiles?: string[];
+    documentFinalFormats?: string[];
     initiatorName?: string;
     initiatorEmail?: string;
     executorId?: string;
@@ -332,6 +340,13 @@ export async function POST(
             orderDate,
             orderSignDate,
             taskDescription,
+            documentInputNotes,
+            documentInputLinks,
+            documentInputPhotos,
+            documentStages,
+            documentReviewFiles,
+            documentFinalFiles,
+            documentFinalFormats,
             initiatorName,
             initiatorEmail,
             executorId,
@@ -340,6 +355,25 @@ export async function POST(
             relatedTasks,
             ...rest
         } = body;
+
+        const projectType = rel.projectDoc?.projectType ?? 'installation';
+        const finalTaskType =
+            taskType && ['construction', 'installation', 'document'].includes(taskType)
+                ? taskType
+                : projectType;
+
+        if (projectType === 'document' && finalTaskType !== 'document') {
+            return NextResponse.json(
+                { error: 'Документальные задачи доступны только в документальных проектах' },
+                { status: 400 }
+            );
+        }
+        if (finalTaskType === 'document' && projectType !== 'document') {
+            return NextResponse.json(
+                { error: 'Документальные задачи можно создавать только в документальных проектах' },
+                { status: 400 }
+            );
+        }
 
         const normalizedBsLocation = sanitizeBsLocationAddresses(bsLocation, bsAddress);
         const finalBsAddress = buildBsAddressFromLocations(normalizedBsLocation, bsAddress);
@@ -440,13 +474,32 @@ export async function POST(
             priority,
             dueDate: dueDate ? new Date(dueDate) : undefined,
 
-            taskType,
+            taskType: finalTaskType,
             requiredAttachments,
             orderUrl,
             orderNumber,
             orderDate: orderDate ? new Date(orderDate) : undefined,
             orderSignDate: orderSignDate ? new Date(orderSignDate) : undefined,
             taskDescription,
+            documentInputNotes: typeof documentInputNotes === 'string' ? documentInputNotes.trim() : undefined,
+            documentInputLinks: Array.isArray(documentInputLinks)
+                ? documentInputLinks.filter((item) => item.trim())
+                : undefined,
+            documentInputPhotos: Array.isArray(documentInputPhotos)
+                ? documentInputPhotos.filter((item) => item.trim())
+                : undefined,
+            documentStages: Array.isArray(documentStages)
+                ? documentStages.filter((item) => item.trim())
+                : undefined,
+            documentReviewFiles: Array.isArray(documentReviewFiles)
+                ? documentReviewFiles.filter((item) => item.trim())
+                : undefined,
+            documentFinalFiles: Array.isArray(documentFinalFiles)
+                ? documentFinalFiles.filter((item) => item.trim())
+                : undefined,
+            documentFinalFormats: Array.isArray(documentFinalFormats)
+                ? documentFinalFormats.filter((item) => item.trim())
+                : undefined,
 
             authorId: user.id,
             authorEmail: user.emailAddresses?.[0]?.emailAddress,
