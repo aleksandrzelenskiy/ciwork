@@ -109,6 +109,7 @@ export default function ProjectDialog({
     const [managerOptions, setManagerOptions] = React.useState<ProjectManagerOption[]>([]);
     const [selectedManagers, setSelectedManagers] = React.useState<ProjectManagerOption[]>([]);
     const [submitting, setSubmitting] = React.useState(false);
+    const hasInitializedRef = React.useRef(false);
 
     React.useEffect(() => {
         setManagerOptions(members);
@@ -132,7 +133,12 @@ export default function ProjectDialog({
     );
 
     React.useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            hasInitializedRef.current = false;
+            return;
+        }
+        if (hasInitializedRef.current) return;
+        hasInitializedRef.current = true;
         setName(initialData?.name ?? '');
         setKey(initialData?.key ?? '');
         setDescription(initialData?.description ?? '');
@@ -149,6 +155,18 @@ export default function ProjectDialog({
         });
         setSelectedManagers(resolved);
     }, [open, initialData, members, resolveRegionCode]);
+
+    React.useEffect(() => {
+        if (!open || members.length === 0 || selectedManagers.length === 0) return;
+        const mapped = selectedManagers.map((option) => {
+            const resolved = members.find((item) => item.email === option.email);
+            return resolved ?? option;
+        });
+        const hasChanges = mapped.some((option, index) => option !== selectedManagers[index]);
+        if (hasChanges) {
+            setSelectedManagers(mapped);
+        }
+    }, [open, members, selectedManagers]);
 
     const isCreate = mode === 'create';
     const busy = submitting || loading;
