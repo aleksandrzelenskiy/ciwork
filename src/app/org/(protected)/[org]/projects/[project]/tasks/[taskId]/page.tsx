@@ -697,11 +697,13 @@ export default function TaskDetailsPage() {
         setVisibleSections([]);
     };
 
-    const allowedSections = React.useMemo(() => {
+    const allowedSections = React.useMemo<TaskSectionKey[]>(() => {
         if (task?.taskType === 'document') {
-            return TASK_SECTION_KEYS.filter((key) => key !== 'work' && key !== 'photoReports');
+            return TASK_SECTION_KEYS.filter(
+                (key) => key !== 'work' && key !== 'photoReports'
+            ) as TaskSectionKey[];
         }
-        return TASK_SECTION_KEYS;
+        return [...TASK_SECTION_KEYS];
     }, [task?.taskType]);
 
     React.useEffect(() => {
