@@ -77,6 +77,13 @@ function buildAuthorName(user: Awaited<ReturnType<typeof currentUser>>, dbName?:
   );
 }
 
+const normalizeSpecializations = (value?: string[] | null): Array<'installation' | 'document'> => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (item === 'construction' ? 'installation' : item))
+    .filter((item): item is 'installation' | 'document' => item === 'installation' || item === 'document');
+};
+
 async function resolveStorageScope(task: { orgId?: unknown; projectId?: unknown }) {
   const scope: { orgSlug?: string; projectKey?: string } = {};
 
@@ -421,6 +428,20 @@ export async function PATCH(
           clerkUserId: updateData.executorId,
         });
         if (executor) {
+          if (executor.profileType !== 'contractor') {
+            return NextResponse.json(
+              { error: 'Исполнитель не найден или не является подрядчиком' },
+              { status: 400 }
+            );
+          }
+          const allowedSpecs = normalizeSpecializations(executor.specializations);
+          const requiredSpec = task.taskType === 'document' ? 'document' : 'installation';
+          if (!allowedSpecs.includes(requiredSpec)) {
+            return NextResponse.json(
+              { error: 'Выбранный исполнитель не подходит по специализации' },
+              { status: 400 }
+            );
+          }
           executorAssigned = true;
           task.executorId = executor.clerkUserId;
           task.executorName = executor.name;

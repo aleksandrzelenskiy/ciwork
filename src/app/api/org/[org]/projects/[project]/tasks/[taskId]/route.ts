@@ -31,6 +31,7 @@ import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { addReverseRelations, removeReverseRelations } from '@/app/utils/relatedTasksSync';
 import ReportModel from '@/server/models/ReportModel';
 import { deleteReport } from '@/server/reports/base';
+import UserModel from '@/server/models/UserModel';
 
 
 export const runtime = 'nodejs';
@@ -105,6 +106,13 @@ function parseCoordinatesPair(value?: string | null): { lat?: number; lon?: numb
         lat: Number.isFinite(lat) ? Number(lat.toFixed(6)) : undefined,
         lon: Number.isFinite(lon) ? Number(lon.toFixed(6)) : undefined,
     };
+}
+
+function normalizeSpecializations(value?: string[] | null): Array<'installation' | 'document'> {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) => (item === 'construction' ? 'installation' : item))
+        .filter((item): item is 'installation' | 'document' => item === 'installation' || item === 'document');
 }
 
 type WorkItemInput = { workType: string; quantity: number; unit: string; note?: string };
@@ -677,6 +685,27 @@ export async function PUT(
             const trimmedId = body.executorId.trim();
             const hadExecutorBefore = !!currentTask.executorId;
             const isSameExecutor = previousExecutorId === trimmedId;
+
+            if (!isSameExecutor) {
+                const executorUser = await UserModel.findOne({ clerkUserId: trimmedId })
+                    .select('profileType specializations')
+                    .lean();
+                if (!executorUser || executorUser.profileType !== 'contractor') {
+                    return NextResponse.json(
+                        { error: 'Исполнитель не найден или не является подрядчиком' },
+                        { status: 400 }
+                    );
+                }
+
+                const allowedSpecs = normalizeSpecializations(executorUser.specializations);
+                const requiredSpec = currentTask.taskType === 'document' ? 'document' : 'installation';
+                if (!allowedSpecs.includes(requiredSpec)) {
+                    return NextResponse.json(
+                        { error: 'Выбранный исполнитель не подходит по специализации' },
+                        { status: 400 }
+                    );
+                }
+            }
 
             markChange('executorId', currentTask.executorId, trimmedId);
             allowedPatch.executorId = trimmedId;

@@ -14,6 +14,7 @@ import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { addReverseRelations } from '@/app/utils/relatedTasksSync';
 import { ensureSubscriptionWriteAccess } from '@/utils/subscriptionBilling';
 import { ensureMonthlyTaskSlot } from '@/utils/taskLimits';
+import UserModel from '@/server/models/UserModel';
 
 
 export const runtime = 'nodejs';
@@ -42,6 +43,13 @@ function normalizeStatus(input?: string) {
     if (s === 'fixed') return 'Fixed';
     if (['agreed', 'approved'].includes(s)) return 'Agreed';
     return 'To do';
+}
+
+function normalizeSpecializations(value?: string[] | null): Array<'installation' | 'document'> {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) => (item === 'construction' ? 'installation' : item))
+        .filter((item): item is 'installation' | 'document' => item === 'installation' || item === 'document');
 }
 
 const SAFE_SORT_FIELDS = new Set([
@@ -406,6 +414,26 @@ export async function POST(
         }
 
         const hasExecutor = typeof executorId === 'string' && executorId.trim().length > 0;
+        if (hasExecutor) {
+            const executorClerkId = executorId.trim();
+            const executorUser = await UserModel.findOne({ clerkUserId: executorClerkId })
+                .select('profileType specializations')
+                .lean();
+            if (!executorUser || executorUser.profileType !== 'contractor') {
+                return NextResponse.json(
+                    { error: 'Исполнитель не найден или не является подрядчиком' },
+                    { status: 400 }
+                );
+            }
+            const allowedSpecs = normalizeSpecializations(executorUser.specializations);
+            const requiredSpec = finalTaskType === 'document' ? 'document' : 'installation';
+            if (!allowedSpecs.includes(requiredSpec)) {
+                return NextResponse.json(
+                    { error: 'Выбранный исполнитель не подходит по специализации' },
+                    { status: 400 }
+                );
+            }
+        }
         const finalStatus = hasExecutor ? 'Assigned' : normalizeStatus(status);
         const sanitizedWorkItems = finalTaskType === 'document' ? [] : sanitizeWorkItems(workItems);
 
