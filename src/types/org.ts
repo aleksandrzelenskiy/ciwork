@@ -10,6 +10,8 @@ export type MemberDTO = {
     role: OrgRole;
     status: MemberStatus;
     clerkId?: string;
+    profileType?: 'employer' | 'contractor';
+    specializations?: Array<'installation' | 'document'>;
     inviteToken?: string;
     inviteExpiresAt?: string;
     requestedAt?: string;

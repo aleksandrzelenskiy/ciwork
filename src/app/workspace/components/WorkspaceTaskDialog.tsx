@@ -71,10 +71,20 @@ type MemberOption = {
     email: string;
     profilePic?: string;
     clerkId?: string;
+    profileType?: 'employer' | 'contractor';
+    specializations?: Array<'installation' | 'document'>;
 };
 
 type MembersApi = {
-    members: Array<{ _id: string; userName?: string; userEmail: string; profilePic?: string; clerkId?: string }>;
+    members: Array<{
+        _id: string;
+        userName?: string;
+        userEmail: string;
+        profilePic?: string;
+        clerkId?: string;
+        profileType?: 'employer' | 'contractor';
+        specializations?: Array<'installation' | 'document'>;
+    }>;
     error?: string;
 };
 
@@ -139,6 +149,13 @@ function genId(len = 5) {
     for (let i = 0; i < len; i++) s += ID_ALPHABET[Math.floor(Math.random() * ID_ALPHABET.length)];
     return s;
 }
+
+const normalizeSpecializations = (value?: string[] | null): Array<'installation' | 'document'> => {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item) => (item === 'construction' ? 'installation' : item))
+        .filter((item): item is 'installation' | 'document' => item === 'installation' || item === 'document');
+};
 
 function extractErrorMessage(payload: unknown, fallback: string): string {
     const err = (payload as { error?: unknown })?.error;
@@ -471,6 +488,25 @@ export default function WorkspaceTaskDialog({
     const [membersLoading, setMembersLoading] = React.useState(false);
     const [membersError, setMembersError] = React.useState<string | null>(null);
     const [selectedExecutor, setSelectedExecutor] = React.useState<MemberOption | null>(null);
+
+    const requiredSpecialization: 'installation' | 'document' = isDocumentProject ? 'document' : 'installation';
+    const eligibleMembers = React.useMemo(
+        () =>
+            members.filter((member) =>
+                Array.isArray(member.specializations)
+                    ? member.specializations.includes(requiredSpecialization)
+                    : false
+            ),
+        [members, requiredSpecialization]
+    );
+    const selectedExecutorMismatch = React.useMemo(() => {
+        if (!selectedExecutor) return false;
+        return !eligibleMembers.some((member) => member.id === selectedExecutor.id);
+    }, [eligibleMembers, selectedExecutor]);
+    const executorOptions = React.useMemo(() => {
+        if (!selectedExecutorMismatch || !selectedExecutor) return eligibleMembers;
+        return [selectedExecutor, ...eligibleMembers];
+    }, [eligibleMembers, selectedExecutor, selectedExecutorMismatch]);
 
     const [initiatorName, setInitiatorName] = React.useState('');
     const [initiatorEmail, setInitiatorEmail] = React.useState('');
@@ -922,6 +958,8 @@ export default function WorkspaceTaskDialog({
                     name: m.userName || m.userEmail,
                     email: m.userEmail,
                     profilePic: m.profilePic,
+                    profileType: m.profileType,
+                    specializations: normalizeSpecializations(m.specializations),
                 }));
 
                 if (!aborted) setMembers(opts);
@@ -1569,6 +1607,17 @@ export default function WorkspaceTaskDialog({
         if (!orgSlug || !projectRef) return;
         if (hasInvalidCoords) return;
         if (!taskBsAddress) return;
+        if (selectedExecutorMismatch) {
+            setSnackbarMsg(
+                t(
+                    'tasks.executor.specializationMismatch',
+                    'Выбранный исполнитель не подходит по специализации'
+                )
+            );
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+            return;
+        }
         setSaving(true);
         const newTaskId = genId();
         const bsLocation = buildBsLocation();
@@ -1642,6 +1691,17 @@ export default function WorkspaceTaskDialog({
         if (!orgSlug || !projectRef) return;
         if (hasInvalidCoords) return;
         if (!taskBsAddress) return;
+        if (selectedExecutorMismatch) {
+            setSnackbarMsg(
+                t(
+                    'tasks.executor.specializationMismatch',
+                    'Выбранный исполнитель не подходит по специализации'
+                )
+            );
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
+            return;
+        }
         setSaving(true);
         const bsLocation = buildBsLocation();
         const primaryCoords = getPrimaryCoords();
@@ -1773,7 +1833,8 @@ export default function WorkspaceTaskDialog({
         !taskName ||
         !hasAtLeastOneBsNumber ||
         !taskBsAddress ||
-        hasInvalidCoords;
+        hasInvalidCoords ||
+        selectedExecutorMismatch;
 
     const savingIndicator = (saving || uploading) ? (
         <CircularProgress
@@ -2447,13 +2508,13 @@ export default function WorkspaceTaskDialog({
                             )}
 
                             <Autocomplete<MemberOption>
-                                options={members}
+                                options={executorOptions}
                                 value={selectedExecutor}
                                 onChange={(_e, val) => setSelectedExecutor(val)}
                                 getOptionLabel={(opt) => opt?.name || opt?.email || ''}
                                 loading={membersLoading}
                                 noOptionsText={
-                                    membersError ? `Ошибка: ${membersError}` : 'Нет активных участников'
+                                    membersError ? `Ошибка: ${membersError}` : 'Нет подходящих участников'
                                 }
                                 renderInput={(params) => (
                                     <TextField
@@ -2464,6 +2525,14 @@ export default function WorkspaceTaskDialog({
                                         }
                                         fullWidth
                                         sx={glassInputSx}
+                                        helperText={
+                                            selectedExecutorMismatch
+                                                ? t(
+                                                    'tasks.executor.specializationMismatch',
+                                                    'Выбранный исполнитель не подходит по специализации'
+                                                )
+                                                : undefined
+                                        }
                                         InputProps={{
                                             ...params.InputProps,
                                             endAdornment: (

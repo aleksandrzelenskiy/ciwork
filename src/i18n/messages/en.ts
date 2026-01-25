@@ -290,6 +290,7 @@ const enMessages: Record<string, string> = {
     'priority.low': 'Low',
     'priority.unknown': 'Not specified',
     'tasks.defaultName': 'Task',
+    'tasks.executor.specializationMismatch': 'Selected executor does not match the specialization',
     'market.status.open': 'Open',
     'market.status.inReview': 'In review',
     'market.status.assigned': 'Assigned',

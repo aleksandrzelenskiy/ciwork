@@ -5,6 +5,7 @@ import { currentUser } from '@clerk/nextjs/server';
 import dbConnect from '@/server/db/mongoose';
 import Membership, { OrgRole } from '@/server/models/MembershipModel';
 import { requireOrgRole } from '@/server/org/permissions';
+import type { ContractorSpecialization } from '@/app/types/specializations';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,8 @@ type MemberDTO = {
     role: OrgRole;
     status: 'active' | 'invited' | 'requested';
     clerkId?: string;
+    profileType?: 'employer' | 'contractor';
+    specializations?: ContractorSpecialization[];
 
     /** аватар из users.profilePic */
     profilePic?: string;
@@ -60,7 +63,20 @@ type AggRow = {
     inviteExpiresAt?: Date;
     profilePic?: string | null;
     clerkId?: string | null;
+    profileType?: 'employer' | 'contractor' | null;
+    specializations?: string[] | null;
     createdAt?: Date;
+};
+
+const normalizeSpecializations = (
+    value?: string[] | null
+): ContractorSpecialization[] | undefined => {
+    if (!Array.isArray(value)) return undefined;
+    const normalized = value.map((item) => (item === 'construction' ? 'installation' : item));
+    const filtered = normalized.filter(
+        (item): item is ContractorSpecialization => item === 'installation' || item === 'document'
+    );
+    return filtered.length > 0 ? filtered : [];
 };
 
 
@@ -135,6 +151,8 @@ export async function GET(
                     createdAt: 1,
                     profilePic: '$user.profilePic',
                     clerkId: '$user.clerkUserId',
+                    profileType: '$user.profileType',
+                    specializations: '$user.specializations',
                 },
             },
             { $sort: { userName: 1, userEmail: 1 } },
@@ -150,6 +168,8 @@ export async function GET(
                 status: row.status,
                 profilePic: row.profilePic ?? undefined,
                 clerkId: row.clerkId ?? undefined,
+                profileType: row.profileType ?? undefined,
+                specializations: normalizeSpecializations(row.specializations),
             };
 
             if (includeInviteSecrets && row.status === 'invited') {

@@ -290,6 +290,7 @@ const ruMessages: Record<string, string> = {
     'priority.low': 'Низкий',
     'priority.unknown': 'Не указан',
     'tasks.defaultName': 'Задача',
+    'tasks.executor.specializationMismatch': 'Выбранный исполнитель не подходит по специализации',
     'market.status.open': 'Открыта',
     'market.status.inReview': 'На рассмотрении',
     'market.status.assigned': 'Назначена',
