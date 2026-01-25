@@ -382,6 +382,8 @@ const ruMessages: Record<string, string> = {
     'org.join.request.cancel.loading': 'Отменяем…',
     'org.join.request.cancel.success': 'Запрос отменён',
     'org.join.request.cancel.error': 'Не удалось отменить запрос',
+    'org.join.request.cancel.title': 'Отменить запрос?',
+    'org.join.request.cancel.body': 'Вы уверены, что хотите отменить запрос в «{orgName}»?',
     'org.members.counts': 'Активных: {active}, приглашённых: {invited}, запросов: {requested}.',
     'org.members.status.requested': 'Ожидает подтверждения',
     'org.members.request.approve': 'Одобрить запрос',

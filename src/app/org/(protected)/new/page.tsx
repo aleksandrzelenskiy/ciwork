@@ -12,6 +12,10 @@ import {
     Stack,
     Container,
     CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
 } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import { useRouter } from 'next/navigation';
@@ -66,6 +70,9 @@ export default function NewOrgPage() {
     const [requestedOrgs, setRequestedOrgs] = useState<RequestedOrgItem[]>([]);
     const [requestedLoading, setRequestedLoading] = useState(false);
     const [cancelingSlug, setCancelingSlug] = useState<string | null>(null);
+    const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+    const [cancelTarget, setCancelTarget] = useState<{ slug: string; name: string } | null>(null);
+    const [hasActiveOrg, setHasActiveOrg] = useState(false);
     const router = useRouter();
 
     const formatRequestedAt = (value?: string | null) => formatDateShort(value) || null;
@@ -133,6 +140,24 @@ export default function NewOrgPage() {
                 if (!cancelled) setRequestedOrgs([]);
             } finally {
                 if (!cancelled) setRequestedLoading(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch(withBasePath('/api/org'), { cache: 'no-store' });
+                const data = (await res.json().catch(() => ({}))) as { orgs?: { _id: string }[] };
+                if (!cancelled) {
+                    setHasActiveOrg(Boolean(Array.isArray(data.orgs) && data.orgs.length > 0));
+                }
+            } catch {
+                if (!cancelled) setHasActiveOrg(false);
             }
         })();
         return () => {
@@ -535,11 +560,11 @@ export default function NewOrgPage() {
                                     )}
                                 />
 
-                                {requestedLoading ? (
+                                {!hasActiveOrg && requestedLoading ? (
                                     <Alert severity="info" variant="outlined">
                                         {t('org.join.request.pending.loading', 'Проверяем отправленные запросы…')}
                                     </Alert>
-                                ) : requestedOrgs.length > 0 ? (
+                                ) : !hasActiveOrg && requestedOrgs.length > 0 ? (
                                     <Alert severity="info" variant="outlined">
                                         <Stack spacing={0.5}>
                                             <Typography variant="body2" fontWeight={600}>
@@ -568,7 +593,13 @@ export default function NewOrgPage() {
                                                     <Button
                                                         size="small"
                                                         variant="text"
-                                                        onClick={() => void handleCancelRequest(request.orgSlug)}
+                                                        onClick={() => {
+                                                            setCancelTarget({
+                                                                slug: request.orgSlug,
+                                                                name: request.name ?? request.orgSlug,
+                                                            });
+                                                            setCancelConfirmOpen(true);
+                                                        }}
                                                         disabled={cancelingSlug === request.orgSlug}
                                                     >
                                                         {cancelingSlug === request.orgSlug
@@ -600,7 +631,13 @@ export default function NewOrgPage() {
                                                 <Button
                                                     size="small"
                                                     variant="text"
-                                                    onClick={() => void handleCancelRequest(selectedOrg.orgSlug)}
+                                                    onClick={() => {
+                                                        setCancelTarget({
+                                                            slug: selectedOrg.orgSlug,
+                                                            name: selectedOrg.name ?? selectedOrg.orgSlug,
+                                                        });
+                                                        setCancelConfirmOpen(true);
+                                                    }}
                                                     disabled={cancelingSlug === selectedOrg.orgSlug}
                                                 >
                                                     {cancelingSlug === selectedOrg.orgSlug
@@ -617,6 +654,43 @@ export default function NewOrgPage() {
                                         {joinAlert.message}
                                     </Alert>
                                 )}
+
+                                <Dialog
+                                    open={cancelConfirmOpen}
+                                    onClose={() => setCancelConfirmOpen(false)}
+                                    maxWidth="xs"
+                                    fullWidth
+                                >
+                                    <DialogTitle>
+                                        {t('org.join.request.cancel.title', 'Отменить запрос?')}
+                                    </DialogTitle>
+                                    <DialogContent>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t(
+                                                'org.join.request.cancel.body',
+                                                'Вы уверены, что хотите отменить запрос в «{orgName}»?',
+                                                { orgName: cancelTarget?.name ?? '' }
+                                            )}
+                                        </Typography>
+                                    </DialogContent>
+                                    <DialogActions>
+                                        <Button onClick={() => setCancelConfirmOpen(false)}>
+                                            {t('common.cancel', 'Отмена')}
+                                        </Button>
+                                        <Button
+                                            onClick={() => {
+                                                if (cancelTarget) {
+                                                    void handleCancelRequest(cancelTarget.slug);
+                                                }
+                                                setCancelConfirmOpen(false);
+                                            }}
+                                            variant="contained"
+                                            color="error"
+                                        >
+                                            {t('org.join.request.cancel.action', 'Отменить запрос')}
+                                        </Button>
+                                    </DialogActions>
+                                </Dialog>
 
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                                     <Button

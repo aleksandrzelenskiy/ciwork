@@ -382,6 +382,8 @@ const enMessages: Record<string, string> = {
     'org.join.request.cancel.loading': 'Cancelling…',
     'org.join.request.cancel.success': 'Request cancelled',
     'org.join.request.cancel.error': 'Failed to cancel the request',
+    'org.join.request.cancel.title': 'Cancel request?',
+    'org.join.request.cancel.body': 'Are you sure you want to cancel the request to "{orgName}"?',
     'org.members.counts': 'Active: {active}, invited: {invited}, requests: {requested}.',
     'org.members.status.requested': 'requested',
     'org.members.request.approve': 'Approve request',

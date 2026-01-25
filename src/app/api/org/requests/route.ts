@@ -30,7 +30,7 @@ export async function GET(): Promise<NextResponse<RequestsResponse>> {
         const memberships = await Membership.find(
             { userEmail: email, status: 'requested' },
             { orgId: 1, createdAt: 1 }
-        ).lean<{ orgId: Types.ObjectId; createdAt?: Date }>();
+        ).lean<{ orgId: Types.ObjectId; createdAt?: Date }[]>();
 
         if (memberships.length === 0) {
             return NextResponse.json({ requests: [] });
