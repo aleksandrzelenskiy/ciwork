@@ -136,7 +136,7 @@ type ProfilePatchPayload = {
   desiredRate?: number | null;
   bio?: string;
   portfolioLinks?: string[];
-  specializations?: ContractorSpecialization[];
+  specializations?: unknown[];
 };
 
 export async function PATCH(request: Request) {
@@ -172,6 +172,7 @@ export async function PATCH(request: Request) {
         : undefined;
     const specializations = Array.isArray(body.specializations)
       ? body.specializations
+          .filter((value): value is string => typeof value === 'string')
           .map((value) => (value === 'construction' ? 'installation' : value))
           .filter((value): value is ContractorSpecialization =>
             CONTRACTOR_SPECIALIZATIONS.includes(value as ContractorSpecialization)
