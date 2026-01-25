@@ -102,7 +102,7 @@ export default function RoleCard({
       onClick={handleCardClick}
       sx={{
         borderColor: selected ? 'primary.main' : undefined,
-        height: '100%',
+        height: 'auto',
         maxWidth: 360,
         width: '100%',
         display: 'flex',

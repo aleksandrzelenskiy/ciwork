@@ -729,7 +729,7 @@ export default function OnboardingPage() {
                           container
                           spacing={2.5}
                           justifyContent='center'
-                          alignItems='stretch'
+                          alignItems='flex-start'
                       >
                         {roleOptions.map((option) => {
                             const isContractorOption = option.type === 'contractor';
