@@ -384,6 +384,7 @@ const ruMessages: Record<string, string> = {
     'org.members.request.declineSuccess': 'Запрос отклонён',
     'org.members.request.declineError': 'Не удалось отклонить запрос',
     'org.members.requestedAt': 'с {date}',
+    'org.members.requestedAtLabel': 'Запрос от {date}',
     'dashboard.pending.title': 'Заявка отправлена',
     'dashboard.pending.body': 'Заявка направлена в организацию {orgName}. После рассмотрения и подтверждения вы получите полный доступ к функционалу системы.',
     'dashboard.pending.orgFallback': 'организацию',

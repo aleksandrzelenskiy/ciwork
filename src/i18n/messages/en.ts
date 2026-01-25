@@ -384,6 +384,7 @@ const enMessages: Record<string, string> = {
     'org.members.request.declineSuccess': 'Request declined',
     'org.members.request.declineError': 'Failed to decline request',
     'org.members.requestedAt': 'since {date}',
+    'org.members.requestedAtLabel': 'Requested on {date}',
     'dashboard.pending.title': 'Request sent',
     'dashboard.pending.body': 'Your request has been sent to {orgName}. After review and approval you will get full access to the system.',
     'dashboard.pending.orgFallback': 'the organization',

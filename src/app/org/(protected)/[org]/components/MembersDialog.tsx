@@ -36,6 +36,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import type { MemberDTO, MemberStatus } from '@/types/org';
 import { makeAbsoluteUrl, roleLabel } from '@/utils/org';
+import { formatDateShort } from '@/utils/date';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 import { useI18n } from '@/i18n/I18nProvider';
 
@@ -90,16 +91,6 @@ function statusChip(status: MemberStatus, t: TranslateFn) {
     }
     return <Chip label={t('org.members.status.requested', 'requested')} size="small" color="info" variant="outlined" />;
 }
-
-const formatShortDate = (iso?: string | null) => {
-    if (!iso) return '';
-    const date = new Date(iso);
-    if (Number.isNaN(date.getTime())) return '';
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-};
 
 export default function MembersDialog({
     open,
@@ -319,7 +310,7 @@ export default function MembersDialog({
                                                                 size="small"
                                                                 variant="outlined"
                                                                 label={t('org.members.requestedAt', 'с {date}', {
-                                                                    date: formatShortDate(member.requestedAt),
+                                                                    date: formatDateShort(member.requestedAt),
                                                                 })}
                                                             />
                                                         )}

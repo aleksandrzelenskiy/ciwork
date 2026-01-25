@@ -16,6 +16,7 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 
 import type { MemberDTO } from '@/types/org';
 import { roleLabel } from '@/utils/org';
+import { formatDateShort } from '@/utils/date';
 import { UI_RADIUS } from '@/config/uiTokens';
 import ProfileDialog from '@/features/profile/ProfileDialog';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -156,6 +157,13 @@ export default function OrgMembersCard({
                                         <Typography variant="caption" color="text.secondary">
                                             {member.userEmail || '—'}
                                         </Typography>
+                                        {member.status === 'requested' && member.requestedAt && (
+                                            <Typography variant="caption" color="info.main">
+                                                {t('org.members.requestedAtLabel', 'Запрос от {date}', {
+                                                    date: formatDateShort(member.requestedAt),
+                                                })}
+                                            </Typography>
+                                        )}
                                     </Box>
                                 </Stack>
                             </Box>

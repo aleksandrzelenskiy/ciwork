@@ -17,6 +17,7 @@ import Autocomplete from '@mui/material/Autocomplete';
 import { useRouter } from 'next/navigation';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { withBasePath } from '@/utils/basePath';
+import { formatDateShort } from '@/utils/date';
 import { useI18n } from '@/i18n/I18nProvider';
 
 type CreateOrgSuccess = { ok: true; org: { orgSlug: string } };
@@ -57,15 +58,7 @@ export default function NewOrgPage() {
     const [joinAlert, setJoinAlert] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
     const router = useRouter();
 
-    const formatRequestedAt = (value?: string | null) => {
-        if (!value) return null;
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return null;
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
-        return `${day}.${month}.${year}`;
-    };
+    const formatRequestedAt = (value?: string | null) => formatDateShort(value) || null;
 
     // автогенерация slug из name, если пользователь не редактировал вручную
     useEffect(() => {
