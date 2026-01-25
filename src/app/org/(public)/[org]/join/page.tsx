@@ -15,6 +15,7 @@ import {
     Paper,
 } from '@mui/material';
 import { UI_RADIUS } from '@/config/uiTokens';
+import { formatDateShort } from '@/utils/date';
 import { useI18n } from '@/i18n/I18nProvider';
 
 type ApiOk = { ok: true };
@@ -25,7 +26,7 @@ type InvitePreview =
     | { error: string };
 
 export default function OrgJoinPage() {
-    const { t, locale } = useI18n();
+    const { t } = useI18n();
     const params = useParams() as Record<string, string> | null;
     const org = params?.org ?? null;
 
@@ -309,10 +310,8 @@ export default function OrgJoinPage() {
                                     )}
                                     {inviteInfo?.expiresAt && (
                                         <Alert severity="info" variant="outlined">
-                                            {t('org.join.expiresAt', 'Приглашение действительно до')} {' '}
-                                            {new Date(inviteInfo.expiresAt).toLocaleString(
-                                                locale === 'ru' ? 'ru-RU' : 'en-US'
-                                            )}
+                                            {t('org.join.expiresAt', 'Приглашение действительно до')}{' '}
+                                            {formatDateShort(inviteInfo.expiresAt)}
                                         </Alert>
                                     )}
                                     {actionResult && (

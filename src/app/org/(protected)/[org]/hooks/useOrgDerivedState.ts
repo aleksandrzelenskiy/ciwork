@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import type { OrgRole, PlanConfig, SubscriptionBillingInfo, SubscriptionInfo } from '@/types/org';
 import { DAY_MS, roleLabel } from '@/utils/org';
+import { formatDateShort } from '@/utils/date';
 import { useI18n } from '@/i18n/I18nProvider';
 
 type UseOrgDerivedStateArgs = {
@@ -162,10 +163,7 @@ export default function useOrgDerivedState({
             ? t('org.integrations.permissions.superAdmin', 'Доступно только супер-администратору')
             : t('org.integrations.actions.generateKey', 'Создать ключ для интеграций');
     const formatExpire = (iso?: string) => {
-        if (!iso) return '';
-        const date = new Date(iso);
-        if (isNaN(date.getTime())) return '';
-        return date.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' });
+        return formatDateShort(iso);
     };
 
     return {
