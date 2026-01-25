@@ -770,14 +770,16 @@ export async function PUT(
             }
         }
 
-        const newWorkItems = sanitizeWorkItems(body.workItems);
-        if (newWorkItems !== null) {
-            const prevWorkItemsNormalized =
-                sanitizeWorkItems(currentTask.workItems as unknown) ?? [];
+        if (currentTask.taskType !== 'document') {
+            const newWorkItems = sanitizeWorkItems(body.workItems);
+            if (newWorkItems !== null) {
+                const prevWorkItemsNormalized =
+                    sanitizeWorkItems(currentTask.workItems as unknown) ?? [];
 
-            if (!isSameValue(prevWorkItemsNormalized, newWorkItems)) {
-                markChange('workItems', prevWorkItemsNormalized, newWorkItems);
-                allowedPatch.workItems = newWorkItems;
+                if (!isSameValue(prevWorkItemsNormalized, newWorkItems)) {
+                    markChange('workItems', prevWorkItemsNormalized, newWorkItems);
+                    allowedPatch.workItems = newWorkItems;
+                }
             }
         }
 

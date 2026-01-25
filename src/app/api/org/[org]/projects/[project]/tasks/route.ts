@@ -403,7 +403,7 @@ export async function POST(
 
         const hasExecutor = typeof executorId === 'string' && executorId.trim().length > 0;
         const finalStatus = hasExecutor ? 'Assigned' : normalizeStatus(status);
-        const sanitizedWorkItems = sanitizeWorkItems(workItems);
+        const sanitizedWorkItems = finalTaskType === 'document' ? [] : sanitizeWorkItems(workItems);
 
         const creatorName =
             user.fullName || user.username || user.emailAddresses?.[0]?.emailAddress || 'User';
@@ -469,7 +469,9 @@ export async function POST(
                     : contractorPayment
                         ? Number(contractorPayment)
                         : undefined,
-            workItems: sanitizedWorkItems ?? undefined,
+            workItems: finalTaskType === 'document'
+                ? []
+                : sanitizedWorkItems ?? undefined,
             status: finalStatus,
             priority,
             dueDate: dueDate ? new Date(dueDate) : undefined,
