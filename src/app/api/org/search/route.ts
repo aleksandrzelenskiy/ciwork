@@ -13,6 +13,7 @@ type OrgSearchItem = {
     name: string;
     orgSlug: string;
     membershipStatus?: 'active' | 'invited' | 'requested';
+    requestedAt?: string;
 };
 
 type SearchResponse = { orgs: OrgSearchItem[] } | { error: string };
@@ -46,19 +47,30 @@ export async function GET(req: NextRequest): Promise<NextResponse<SearchResponse
         const orgIds = orgsRaw.map((org) => org._id);
         const memberships = await Membership.find(
             { orgId: { $in: orgIds }, userEmail: email },
-            { orgId: 1, status: 1 }
+            { orgId: 1, status: 1, createdAt: 1 }
         ).lean();
 
-        const statusByOrgId = new Map<string, OrgSearchItem['membershipStatus']>();
+        const statusByOrgId = new Map<
+            string,
+            { status: OrgSearchItem['membershipStatus']; requestedAt?: string }
+        >();
         for (const membership of memberships) {
-            statusByOrgId.set(String(membership.orgId), membership.status);
+            const requestedAt =
+                membership.status === 'requested' && membership.createdAt
+                    ? new Date(membership.createdAt).toISOString()
+                    : undefined;
+            statusByOrgId.set(String(membership.orgId), {
+                status: membership.status,
+                requestedAt,
+            });
         }
 
         const orgs: OrgSearchItem[] = orgsRaw.map((org) => ({
             _id: String(org._id),
             name: org.name,
             orgSlug: org.orgSlug,
-            membershipStatus: statusByOrgId.get(String(org._id)),
+            membershipStatus: statusByOrgId.get(String(org._id))?.status,
+            requestedAt: statusByOrgId.get(String(org._id))?.requestedAt,
         }));
 
         return NextResponse.json({ orgs });

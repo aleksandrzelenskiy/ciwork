@@ -12,6 +12,7 @@ export type MemberDTO = {
     clerkId?: string;
     inviteToken?: string;
     inviteExpiresAt?: string;
+    requestedAt?: string;
 };
 
 export type ProjectDTO = {

@@ -29,6 +29,7 @@ type MemberDTO = {
     inviteToken?: string;
     inviteExpiresAt?: string; // ISO
     invitedByEmail?: string;
+    requestedAt?: string; // ISO
 };
 
 type MembersResponse = { members: MemberDTO[] } | { error: string };
@@ -44,6 +45,7 @@ type MembershipLean = {
     invitedByEmail?: string;
     inviteToken?: string;
     inviteExpiresAt?: Date;
+    createdAt?: Date;
 };
 
 /** Тип строки после aggregate + $project */
@@ -58,6 +60,7 @@ type AggRow = {
     inviteExpiresAt?: Date;
     profilePic?: string | null;
     clerkId?: string | null;
+    createdAt?: Date;
 };
 
 
@@ -129,6 +132,7 @@ export async function GET(
                     invitedByEmail: 1,
                     inviteToken: 1,
                     inviteExpiresAt: 1,
+                    createdAt: 1,
                     profilePic: '$user.profilePic',
                     clerkId: '$user.clerkUserId',
                 },
@@ -154,6 +158,9 @@ export async function GET(
                 if (row.inviteExpiresAt instanceof Date && !isNaN(row.inviteExpiresAt.getTime())) {
                     dto.inviteExpiresAt = row.inviteExpiresAt.toISOString();
                 }
+            }
+            if (row.status === 'requested' && row.createdAt instanceof Date && !isNaN(row.createdAt.getTime())) {
+                dto.requestedAt = row.createdAt.toISOString();
             }
             return dto;
         });

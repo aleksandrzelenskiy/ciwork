@@ -91,6 +91,16 @@ function statusChip(status: MemberStatus, t: TranslateFn) {
     return <Chip label={t('org.members.status.requested', 'requested')} size="small" color="info" variant="outlined" />;
 }
 
+const formatShortDate = (iso?: string | null) => {
+    if (!iso) return '';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+};
+
 export default function MembersDialog({
     open,
     onClose,
@@ -301,6 +311,15 @@ export default function MembersDialog({
                                                                 variant="outlined"
                                                                 label={t('org.members.invite.expires', 'до {date}', {
                                                                     date: formatExpire(member.inviteExpiresAt),
+                                                                })}
+                                                            />
+                                                        )}
+                                                        {isRequested && member.requestedAt && (
+                                                            <Chip
+                                                                size="small"
+                                                                variant="outlined"
+                                                                label={t('org.members.requestedAt', 'с {date}', {
+                                                                    date: formatShortDate(member.requestedAt),
                                                                 })}
                                                             />
                                                         )}

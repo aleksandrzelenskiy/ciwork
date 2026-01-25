@@ -26,6 +26,7 @@ type OrgSearchItem = {
     name: string;
     orgSlug: string;
     membershipStatus?: 'active' | 'invited' | 'requested';
+    requestedAt?: string;
 };
 
 // простая клиентская slugify (латиница/цифры/дефис, минимум 3 символа)
@@ -55,6 +56,16 @@ export default function NewOrgPage() {
     const [joinLoading, setJoinLoading] = useState(false);
     const [joinAlert, setJoinAlert] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
     const router = useRouter();
+
+    const formatRequestedAt = (value?: string | null) => {
+        if (!value) return null;
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}.${month}.${year}`;
+    };
 
     // автогенерация slug из name, если пользователь не редактировал вручную
     useEffect(() => {
@@ -167,11 +178,12 @@ export default function NewOrgPage() {
                 type: 'success',
                 message: t('org.join.request.success', 'Запрос отправлен. Владелец организации получит уведомление.'),
             });
-            setSelectedOrg((prev) => (prev ? { ...prev, membershipStatus: 'requested' } : prev));
+            const requestedAt = new Date().toISOString();
+            setSelectedOrg((prev) => (prev ? { ...prev, membershipStatus: 'requested', requestedAt } : prev));
             setOrgOptions((prev) =>
                 prev.map((org) =>
                     org.orgSlug === selectedOrg.orgSlug
-                        ? { ...org, membershipStatus: 'requested' }
+                        ? { ...org, membershipStatus: 'requested', requestedAt }
                         : org
                 )
             );
@@ -404,12 +416,20 @@ export default function NewOrgPage() {
                                     }
                                     renderOption={(props, option) => {
                                         const { key, ...liProps } = props as React.HTMLAttributes<HTMLLIElement> & { key?: string };
+                                        const isRequested = option.membershipStatus === 'requested';
                                         return (
                                             <li key={key} {...liProps}>
                                                 <Stack spacing={0.5}>
-                                                    <Typography variant="body2" fontWeight={600}>
-                                                        {option.name}
-                                                    </Typography>
+                                                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                                                        <Typography variant="body2" fontWeight={600}>
+                                                            {option.name}
+                                                        </Typography>
+                                                        {isRequested && (
+                                                            <Typography variant="caption" color="info.main">
+                                                                {t('org.join.request.option.requested', 'Запрос отправлен')}
+                                                            </Typography>
+                                                        )}
+                                                    </Stack>
                                                     <Typography variant="caption" color="text.secondary">
                                                         {option.orgSlug}
                                                     </Typography>
@@ -439,6 +459,21 @@ export default function NewOrgPage() {
                                         />
                                     )}
                                 />
+
+                                {selectedOrg?.membershipStatus === 'requested' && (
+                                    <Alert severity="info" variant="outlined">
+                                        {t(
+                                            'org.join.request.sentInfo',
+                                            'Запрос в «{orgName}» отправлен {date}.',
+                                            {
+                                                orgName: selectedOrg.name ?? selectedOrg.orgSlug,
+                                                date:
+                                                    formatRequestedAt(selectedOrg.requestedAt) ??
+                                                    t('org.join.request.date.unknown', 'неизвестно'),
+                                            }
+                                        )}
+                                    </Alert>
+                                )}
 
                                 {joinAlert && (
                                     <Alert variant="filled" severity={joinAlert.type === 'success' ? 'success' : 'warning'}>
