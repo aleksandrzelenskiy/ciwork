@@ -2264,27 +2264,29 @@ export default function TaskDetailPage() {
                 </DialogActions>
             </Dialog>
 
-            <Dialog fullScreen open={workItemsFullScreen} onClose={() => setWorkItemsFullScreen(false)}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        p: 2,
-                        borderBottom: 1,
-                        borderColor: 'divider',
-                    }}
-                >
-                    <Typography variant="h6" fontWeight={600}>
-                        {t('market.workItems.title', 'Состав работ')}
-                    </Typography>
-                    <IconButton onClick={() => setWorkItemsFullScreen(false)}>
-                        <CloseFullscreenIcon />
-                    </IconButton>
-                </Box>
+            {task.taskType !== 'document' && (
+                <Dialog fullScreen open={workItemsFullScreen} onClose={() => setWorkItemsFullScreen(false)}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            p: 2,
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                        }}
+                    >
+                        <Typography variant="h6" fontWeight={600}>
+                            {t('market.workItems.title', 'Состав работ')}
+                        </Typography>
+                        <IconButton onClick={() => setWorkItemsFullScreen(false)}>
+                            <CloseFullscreenIcon />
+                        </IconButton>
+                    </Box>
 
-                <Box sx={{ p: 2 }}>{renderWorkItemsTable('calc(100vh - 80px)')}</Box>
-            </Dialog>
+                    <Box sx={{ p: 2 }}>{renderWorkItemsTable('calc(100vh - 80px)')}</Box>
+                </Dialog>
+            )}
 
             <Dialog fullScreen open={commentsFullScreen} onClose={() => setCommentsFullScreen(false)}>
                 <Box

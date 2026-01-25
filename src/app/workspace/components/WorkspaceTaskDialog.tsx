@@ -1548,6 +1548,16 @@ export default function WorkspaceTaskDialog({
         setWorkItemsDialogOpen(false);
     }, []);
 
+    React.useEffect(() => {
+        if (!isDocumentProject) return;
+        if (workItems.length > 0) {
+            setWorkItems([]);
+        }
+        if (workItemsDialogOpen) {
+            setWorkItemsDialogOpen(false);
+        }
+    }, [isDocumentProject, workItems.length, workItemsDialogOpen]);
+
     const hasAtLeastOneBsNumber = !!taskBsNumber;
 
     async function handleCreate() {
@@ -1590,7 +1600,7 @@ export default function WorkspaceTaskDialog({
                 initiatorEmail: initiatorEmailValue || undefined,
                 totalCost: totalCost.trim() ? Number(totalCost.trim()) : undefined,
                 contractorPayment: contractorPayment.trim() ? Number(contractorPayment.trim()) : undefined,
-                workItems,
+                workItems: isDocumentProject ? [] : workItems,
                 relatedTasks: relatedTasksSelected.map((t) => t.id),
             };
 
@@ -1660,7 +1670,7 @@ export default function WorkspaceTaskDialog({
                 initiatorEmail: initiatorEmailValue || undefined,
                 totalCost: totalCost.trim() ? Number(totalCost.trim()) : undefined,
                 contractorPayment: contractorPayment.trim() ? Number(contractorPayment.trim()) : undefined,
-                workItems,
+                workItems: isDocumentProject ? [] : workItems,
                 relatedTasks: relatedTasksSelected.map((t) => t.id),
             };
 

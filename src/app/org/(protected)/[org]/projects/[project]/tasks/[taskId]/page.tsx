@@ -690,21 +690,33 @@ export default function TaskDetailsPage() {
     };
 
     const handleSelectAllSections = () => {
-        setVisibleSections([...TASK_SECTION_KEYS]);
+        setVisibleSections(allowedSections);
     };
 
     const handleClearSections = () => {
         setVisibleSections([]);
     };
 
+    const allowedSections = React.useMemo(() => {
+        if (task?.taskType === 'document') {
+            return TASK_SECTION_KEYS.filter((key) => key !== 'work' && key !== 'photoReports');
+        }
+        return TASK_SECTION_KEYS;
+    }, [task?.taskType]);
+
+    React.useEffect(() => {
+        setVisibleSections((prev) => prev.filter((section) => allowedSections.includes(section)));
+    }, [allowedSections]);
+
     const isSectionVisible = React.useCallback(
-        (section: TaskSectionKey) => visibleSections.includes(section),
-        [visibleSections]
+        (section: TaskSectionKey) =>
+            allowedSections.includes(section) && visibleSections.includes(section),
+        [allowedSections, visibleSections]
     );
 
     const hasCustomVisibility = React.useMemo(
-        () => TASK_SECTION_KEYS.some((key) => !visibleSections.includes(key)),
-        [visibleSections]
+        () => allowedSections.some((key) => !visibleSections.includes(key)),
+        [allowedSections, visibleSections]
     );
 
     const attachmentLinks = React.useMemo(
@@ -3222,7 +3234,7 @@ export default function TaskDetailsPage() {
                     </IconButton>
                 </DialogTitle>
                 <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {TASK_SECTION_KEYS.map((section) => (
+                    {allowedSections.map((section) => (
                         <FormControlLabel
                             key={section}
                             control={
@@ -3494,33 +3506,35 @@ export default function TaskDetailsPage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog
-                fullScreen
-                open={workItemsFullScreen}
-                onClose={() => setWorkItemsFullScreen(false)}
-            >
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        p: 2,
-                        borderBottom: 1,
-                        borderColor: 'divider',
-                    }}
+            {task?.taskType !== 'document' && (
+                <Dialog
+                    fullScreen
+                    open={workItemsFullScreen}
+                    onClose={() => setWorkItemsFullScreen(false)}
                 >
-                    <Typography variant="h6" fontWeight={600}>
-                        {t('task.sections.work', 'Состав работ')}
-                    </Typography>
-                    <IconButton onClick={() => setWorkItemsFullScreen(false)}>
-                        <CloseFullscreenIcon />
-                    </IconButton>
-                </Box>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            p: 2,
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                        }}
+                    >
+                        <Typography variant="h6" fontWeight={600}>
+                            {t('task.sections.work', 'Состав работ')}
+                        </Typography>
+                        <IconButton onClick={() => setWorkItemsFullScreen(false)}>
+                            <CloseFullscreenIcon />
+                        </IconButton>
+                    </Box>
 
-                <Box sx={{ p: 2 }}>
-                    {renderWorkItemsTable('calc(100vh - 80px)')}
-                </Box>
-            </Dialog>
+                    <Box sx={{ p: 2 }}>
+                        {renderWorkItemsTable('calc(100vh - 80px)')}
+                    </Box>
+                </Dialog>
+            )}
 
             <Dialog
                 fullScreen
