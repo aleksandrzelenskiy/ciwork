@@ -620,6 +620,7 @@ export default function BSMap(): React.ReactElement {
                 body: JSON.stringify({
                     id: deletingStation._id,
                     operator: deletingOperator,
+                    region: (deletingStation.region ?? selectedRegionCode) || null,
                 }),
             });
             const payload = (await response.json().catch(() => null)) as { success?: boolean; error?: string } | null;
@@ -636,7 +637,7 @@ export default function BSMap(): React.ReactElement {
         } finally {
             setDeleteDialogLoading(false);
         }
-    }, [closeDeleteDialog, deletingStation, operator]);
+    }, [closeDeleteDialog, deletingStation, operator, selectedRegionCode]);
 
     const handleCreateSave = React.useCallback(async () => {
         if (!operator) {

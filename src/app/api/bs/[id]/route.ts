@@ -1,6 +1,7 @@
 // app/api/bs/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getDefaultBsCoordinateModel, normalizeBsNumber } from '@/server/models/BsCoordinateModel';
+import { getBsCoordinateModel, normalizeBsNumber } from '@/server/models/BsCoordinateModel';
+import { resolveBsCollectionName } from '@/app/utils/bsCollections';
 import dbConnect from '@/server/db/mongoose';
 
 export async function PUT(req: NextRequest) {
@@ -9,6 +10,15 @@ export async function PUT(req: NextRequest) {
     // Получаем ID из URL вручную
     const url = new URL(req.url);
     const id = url.pathname.split('/').pop();
+    const region = url.searchParams.get('region');
+    const operator = url.searchParams.get('operator');
+    const collectionName = resolveBsCollectionName(region, operator);
+    if (!collectionName) {
+      return NextResponse.json(
+        { message: 'Не указан регион или оператор' },
+        { status: 400 }
+      );
+    }
 
     if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
       return NextResponse.json(
@@ -19,7 +29,7 @@ export async function PUT(req: NextRequest) {
 
     const body = await req.json();
 
-    const Model = getDefaultBsCoordinateModel();
+    const Model = getBsCoordinateModel(collectionName);
     const existingStation = await Model.findById(id);
     if (!existingStation) {
       return NextResponse.json(
@@ -58,6 +68,15 @@ export async function DELETE(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const id = url.pathname.split('/').pop();
+    const region = url.searchParams.get('region');
+    const operator = url.searchParams.get('operator');
+    const collectionName = resolveBsCollectionName(region, operator);
+    if (!collectionName) {
+      return NextResponse.json(
+        { message: 'Не указан регион или оператор' },
+        { status: 400 }
+      );
+    }
 
     if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
       return NextResponse.json(
@@ -66,7 +85,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const Model = getDefaultBsCoordinateModel();
+    const Model = getBsCoordinateModel(collectionName);
     const deletedStation = await Model.findByIdAndDelete(id);
     if (!deletedStation) {
       return NextResponse.json(

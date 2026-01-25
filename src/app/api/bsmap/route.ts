@@ -3,18 +3,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/server/db/mongoose';
 import { getBsCoordinateModel } from '@/server/models/BsCoordinateModel';
+import { resolveBsCollectionName } from '@/app/utils/bsCollections';
 import { OPERATORS, OperatorCode, normalizeOperatorCode } from '@/app/utils/operators';
 import { Types } from 'mongoose';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const OPERATOR_COLLECTIONS = Object.fromEntries(
-    OPERATORS.map((operator) => [
-        operator.value,
-        { collection: `38-${operator.value}-bs-coords`, label: operator.name },
-    ])
-) as Record<OperatorCode, { collection: string; label: string }>;
 
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -29,8 +23,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         const operator =
             normalizeOperatorCode(operatorParam) ??
             (OPERATORS[0]?.value as OperatorCode);
-        const { collection } = OPERATOR_COLLECTIONS[operator];
         const regionValue = typeof regionParam === 'string' ? regionParam.trim() : '';
+        const collection = resolveBsCollectionName(regionValue, operator);
+        if (!collection) {
+            return NextResponse.json({ operator, stations: [] });
+        }
         const searchValue = typeof searchParam === 'string' ? searchParam.trim() : '';
         const query: Record<string, unknown> = {};
         if (regionValue) {
@@ -125,7 +122,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const operatorKey =
             normalizeOperatorCode(body.operator) ??
             (OPERATORS[0]?.value as OperatorCode);
-        const collectionEntry = OPERATOR_COLLECTIONS[operatorKey];
         const stationName = resolveStationName(body.name);
         if (!stationName) {
             return NextResponse.json({ error: 'Не указан номер БС' }, { status: 400 });
@@ -135,9 +131,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         if (!regionValue) {
             return NextResponse.json({ error: 'Не указан регион' }, { status: 400 });
         }
+        const collectionName = resolveBsCollectionName(regionValue, operatorKey);
+        if (!collectionName) {
+            return NextResponse.json({ error: 'Не удалось определить коллекцию' }, { status: 400 });
+        }
 
         await dbConnect();
-        const Model = getBsCoordinateModel(collectionEntry.collection);
+        const Model = getBsCoordinateModel(collectionName);
         const createdDoc = await Model.create({
             op: operatorKey,
             operatorCode: operatorKey,
@@ -177,19 +177,24 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         const operatorKey =
             normalizeOperatorCode(body.operator) ??
             (OPERATORS[0]?.value as OperatorCode);
-        const collectionEntry = OPERATOR_COLLECTIONS[operatorKey];
 
         if (typeof body.lat !== 'number' || Number.isNaN(body.lat) || typeof body.lon !== 'number' || Number.isNaN(body.lon)) {
             return NextResponse.json({ error: 'Некорректные координаты' }, { status: 400 });
         }
 
+        const regionValue =
+            typeof body.region === 'string' && body.region.trim().length > 0
+                ? body.region.trim()
+                : null;
+        const collectionName = resolveBsCollectionName(regionValue, operatorKey);
+        if (!collectionName) {
+            return NextResponse.json({ error: 'Не указан регион' }, { status: 400 });
+        }
+
         const updatePayload: Partial<StationPayload> = {
             lat: body.lat,
             lon: body.lon,
-            region:
-                typeof body.region === 'string' && body.region.trim().length > 0
-                    ? body.region.trim()
-                    : undefined,
+            region: regionValue ?? undefined,
         };
 
         const resolvedName = resolveStationName(body.name);
@@ -204,7 +209,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         }
 
         await dbConnect();
-        const Model = getBsCoordinateModel(collectionEntry.collection);
+        const Model = getBsCoordinateModel(collectionName);
         const updated = (await Model.findByIdAndUpdate(body.id, { $set: updatePayload }, { new: true, lean: true })) as
             | StationDocument
             | null;
@@ -222,7 +227,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
     try {
-        const body = (await request.json().catch(() => null)) as { id?: string; operator?: string } | null;
+        const body = (await request.json().catch(() => null)) as
+            | { id?: string; operator?: string; region?: string | null }
+            | null;
 
         if (!body?.id) {
             return NextResponse.json({ error: 'Не указан идентификатор базовой станции' }, { status: 400 });
@@ -231,10 +238,17 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
         const operatorKey =
             normalizeOperatorCode(body.operator) ??
             (OPERATORS[0]?.value as OperatorCode);
-        const collectionEntry = OPERATOR_COLLECTIONS[operatorKey];
+        const regionValue =
+            typeof body.region === 'string' && body.region.trim().length > 0
+                ? body.region.trim()
+                : null;
+        const collectionName = resolveBsCollectionName(regionValue, operatorKey);
+        if (!collectionName) {
+            return NextResponse.json({ error: 'Не указан регион' }, { status: 400 });
+        }
 
         await dbConnect();
-        const Model = getBsCoordinateModel(collectionEntry.collection);
+        const Model = getBsCoordinateModel(collectionName);
         const deleted = (await Model.findByIdAndDelete(body.id).lean()) as StationDocument | null;
 
         if (!deleted) {

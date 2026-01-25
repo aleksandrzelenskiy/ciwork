@@ -3,9 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/server/db/mongoose';
 import mongoose from 'mongoose';
 import { getBsCoordinateModel, normalizeBsNumber } from '@/server/models/BsCoordinateModel';
-import { BASE_STATION_COLLECTIONS } from '@/app/constants/baseStations';
-import { normalizeOperatorCode } from '@/app/utils/operators';
-import { REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
+import { resolveBsCollectionName } from '@/app/utils/bsCollections';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,33 +14,6 @@ type StationDoc = {
     address?: string;
     lat?: number | null;
     lon?: number | null;
-};
-
-const normalizeRegionCode = (input?: string | null): string | null => {
-    if (!input) return null;
-    const trimmed = input.trim();
-    if (!trimmed) return null;
-
-    const directMatch = REGION_MAP.get(trimmed);
-    if (directMatch) return directMatch.code;
-
-    const isoMatch = REGION_ISO_MAP.get(trimmed);
-    if (isoMatch) return isoMatch.code;
-
-    return trimmed;
-};
-
-const findCollectionName = (region?: string | null, operator?: string | null): string | null => {
-    const normalizedRegion = normalizeRegionCode(region);
-    if (!normalizedRegion || !operator) return null;
-    const normalizedOperator = normalizeOperatorCode(operator) ?? operator.trim();
-    if (!normalizedOperator) return null;
-
-    const entry = BASE_STATION_COLLECTIONS.find(
-        (item) => item.region === normalizedRegion && item.operator === normalizedOperator
-    );
-
-    return entry?.collection ?? `${normalizedRegion}-${normalizedOperator}-bs-coords`;
 };
 
 const mapStation = (doc: StationDoc) => {
@@ -67,7 +38,7 @@ export async function GET(req: NextRequest) {
         const region = searchParams.get('region');
         const operator = searchParams.get('operator');
 
-        const collectionName = findCollectionName(region, operator);
+        const collectionName = resolveBsCollectionName(region, operator);
         if (!collectionName) {
             return NextResponse.json({ objects: [] });
         }

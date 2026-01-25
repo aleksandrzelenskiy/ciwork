@@ -1,7 +1,7 @@
 // src/app/utils/syncBsCoords.ts
 
 import mongoose, { Types } from 'mongoose';
-import { BASE_STATION_COLLECTIONS } from '@/app/constants/baseStations';
+import { resolveBsCollectionName } from '@/app/utils/bsCollections';
 import { normalizeOperatorCode } from '@/app/utils/operators';
 
 export interface BsLocationItem {
@@ -52,22 +52,6 @@ function coordsEqual(a?: number, b?: number): boolean {
  *  - если есть и отсутствуют координаты или адрес → дополняет
  *  - если координаты или адрес отличаются → обновляет
  */
-function resolveCollectionName(region?: string | null, operatorCode?: string | null): string | null {
-    const normalizedRegion = region?.toString().trim();
-    const normalizedOperator = normalizeOperatorCode(operatorCode) ?? operatorCode?.toString().trim();
-    if (!normalizedRegion || !normalizedOperator) return null;
-
-    const mapping = BASE_STATION_COLLECTIONS.find(
-        (entry) => entry.region === normalizedRegion && entry.operator === normalizedOperator
-    );
-
-    if (mapping?.collection) {
-        return mapping.collection;
-    }
-
-    return `${normalizedRegion}-${normalizedOperator}-bs-coords`;
-}
-
 export async function syncBsCoordsForProject(params: SyncBsCoordsParams): Promise<void> {
     const {
         region,
@@ -94,7 +78,7 @@ export async function syncBsCoordsForProject(params: SyncBsCoordsParams): Promis
     }
 
     // пример: "38-250020-bs-coords"
-    const collectionName = resolveCollectionName(normalizedRegion, op);
+    const collectionName = resolveBsCollectionName(normalizedRegion, op);
     if (!collectionName) return;
     const col = db.collection(collectionName);
 
