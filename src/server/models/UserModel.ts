@@ -59,7 +59,7 @@ const UserSchema = new Schema<IUser>(
         },
         specializations: {
             type: [String],
-            enum: ['installation', 'document'],
+            enum: ['installation', 'construction', 'document'],
             default: [],
         },
         profileSetupCompleted: {

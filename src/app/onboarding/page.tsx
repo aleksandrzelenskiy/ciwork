@@ -799,6 +799,21 @@ export default function OnboardingPage() {
                           <FormControlLabel
                               control={
                                 <Checkbox
+                                    checked={specializations.includes('construction')}
+                                    onChange={() => {
+                                      setSpecializations((prev) =>
+                                          prev.includes('construction')
+                                              ? prev.filter((item) => item !== 'construction')
+                                              : [...prev, 'construction']
+                                      );
+                                    }}
+                                />
+                              }
+                              label={t('onboarding.specializations.construction', 'Строительные задачи')}
+                          />
+                          <FormControlLabel
+                              control={
+                                <Checkbox
                                     checked={specializations.includes('document')}
                                     onChange={() => {
                                       setSpecializations((prev) =>

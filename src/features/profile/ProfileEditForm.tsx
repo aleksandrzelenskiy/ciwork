@@ -176,6 +176,16 @@ export default function ProfileEditForm({
                                 <FormControlLabel
                                     control={
                                         <Checkbox
+                                            checked={specializations.includes('construction')}
+                                            onChange={() => toggleSpecialization('construction')}
+                                            disabled={readOnly}
+                                        />
+                                    }
+                                    label={t('profile.edit.specializations.construction', 'Строительные задачи')}
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
                                             checked={specializations.includes('document')}
                                             onChange={() => toggleSpecialization('document')}
                                             disabled={readOnly}

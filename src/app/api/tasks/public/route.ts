@@ -74,6 +74,25 @@ export async function GET(request: NextRequest) {
         ];
     }
 
+    if (context.success && context.data?.user?.profileType === 'contractor') {
+        const specs = Array.isArray(context.data.user.specializations)
+            ? context.data.user.specializations
+            : [];
+        if (specs.length > 0) {
+            const allowedTypes = new Set<string>(specs);
+            matchStage.$and = [
+                ...(Array.isArray(matchStage.$and) ? matchStage.$and : []),
+                {
+                    $or: [
+                        { taskType: { $in: Array.from(allowedTypes) } },
+                        { taskType: { $exists: false } },
+                        { taskType: null },
+                    ],
+                },
+            ];
+        }
+    }
+
     const pipeline: mongoose.PipelineStage[] = [
         { $match: matchStage },
         {
