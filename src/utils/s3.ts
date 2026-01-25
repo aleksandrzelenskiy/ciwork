@@ -157,7 +157,9 @@ export type TaskFileSubfolder =
   | 'order'
   | 'comments'
   | 'ncw'
-  | 'documents';
+  | 'documents'
+  | 'document-review'
+  | 'document-final';
 
 export function buildTaskFileKey(
     taskId: string,

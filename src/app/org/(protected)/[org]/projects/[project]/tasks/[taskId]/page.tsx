@@ -361,6 +361,8 @@ export default function TaskDetailsPage() {
     const [orderFormError, setOrderFormError] = React.useState<string | null>(null);
     const [ncwDialogOpen, setNcwDialogOpen] = React.useState(false);
     const [ncwDefaults, setNcwDefaults] = React.useState<NcwDefaults | null>(null);
+    const [documentReviewUploading, setDocumentReviewUploading] = React.useState(false);
+    const [documentFinalUploading, setDocumentFinalUploading] = React.useState(false);
     const [documentSnackbar, setDocumentSnackbar] = React.useState<{
         type: 'success' | 'error';
         message: string;
@@ -396,6 +398,8 @@ export default function TaskDetailsPage() {
         sev: 'success' | 'error';
     }>({ open: false, message: '', sev: 'success' });
     const orderFileInputRef = React.useRef<HTMLInputElement | null>(null);
+    const documentReviewInputRef = React.useRef<HTMLInputElement | null>(null);
+    const documentFinalInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const asText = (x: unknown): string => {
         if (x === null || typeof x === 'undefined') return '—';
@@ -849,6 +853,7 @@ export default function TaskDetailsPage() {
         () => normalizeRelatedTasks(task?.relatedTasks),
         [task?.relatedTasks]
     );
+    const isManager = Boolean(userRole && MANAGER_ROLES.includes(userRole));
 
     const documentInputLinks = Array.isArray(task?.documentInputLinks) ? task.documentInputLinks : [];
     const documentInputPhotos = Array.isArray(task?.documentInputPhotos) ? task.documentInputPhotos : [];
@@ -865,6 +870,7 @@ export default function TaskDetailsPage() {
     const hasDocumentOutputs =
         task?.taskType === 'document' &&
         (documentReviewFiles.length > 0 || documentFinalFiles.length > 0 || documentFinalFormats.length > 0);
+    const canShowDocumentOutputs = task?.taskType === 'document' && (hasDocumentOutputs || isManager);
 
     const toEditWorkItems = (list: Task['workItems']): ParsedWorkItem[] | undefined => {
         if (!Array.isArray(list)) return undefined;
@@ -1281,6 +1287,63 @@ export default function TaskDetailsPage() {
         }
     };
 
+    const handleDocumentFilesUpload = async (
+        fileList: FileList | null,
+        mode: 'document-review' | 'document-final'
+    ) => {
+        if (!task?.taskId) return;
+        if (!fileList || fileList.length === 0) return;
+
+        const setUploading =
+            mode === 'document-review' ? setDocumentReviewUploading : setDocumentFinalUploading;
+        const inputRef =
+            mode === 'document-review' ? documentReviewInputRef : documentFinalInputRef;
+
+        setUploading(true);
+        try {
+            const fd = new FormData();
+            fd.append('subfolder', mode);
+            fd.append('taskId', task.taskId);
+            if (org) fd.append('orgSlug', org);
+            if (projectKey) fd.append('projectKey', projectKey);
+
+            Array.from(fileList).forEach((file) => {
+                fd.append('file', file, file.name);
+            });
+
+            const res = await fetch('/api/upload', { method: 'POST', body: fd });
+            const body = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                const message =
+                    body && typeof body === 'object' && 'error' in body
+                        ? String((body as { error?: unknown }).error || '')
+                        : '';
+                setDocumentSnackbar({
+                    type: 'error',
+                    message:
+                        message ||
+                        t('task.document.outputs.uploadError', 'Не удалось загрузить файлы'),
+                });
+                return;
+            }
+
+            await load();
+            setDocumentSnackbar({
+                type: 'success',
+                message: t('task.document.outputs.uploadSuccess', 'Файлы загружены'),
+            });
+        } catch (e) {
+            console.error(e);
+            setDocumentSnackbar({
+                type: 'error',
+                message: t('task.document.outputs.uploadError', 'Не удалось загрузить файлы'),
+            });
+        } finally {
+            setUploading(false);
+            if (inputRef.current) inputRef.current.value = '';
+        }
+    };
+
     const handleDocumentSnackbarClose = () => setDocumentSnackbar(null);
 
     const handleAcceptApplication = async (applicationId: string) => {
@@ -1517,7 +1580,6 @@ export default function TaskDetailsPage() {
         return '—';
     };
 
-    const isManager = Boolean(userRole && MANAGER_ROLES.includes(userRole));
     const statusKeys = new Set(['status', 'publicStatus', 'publicModerationStatus']);
     const dateKeys = new Set([
         'createdAt',
@@ -2614,7 +2676,7 @@ export default function TaskDetailsPage() {
                             </CardItem>
                         )}
 
-                        {hasDocumentOutputs && (
+                        {canShowDocumentOutputs && (
                             <CardItem sx={{ minWidth: 0 }}>
                                 <Typography
                                     variant="body1"
@@ -2627,6 +2689,11 @@ export default function TaskDetailsPage() {
                                 </Typography>
                                 <Divider sx={{ mb: 1.5 }} />
                                 <Stack spacing={1.5}>
+                                    {!hasDocumentOutputs && (
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('task.document.outputs.empty', 'Файлы пока не загружены')}
+                                        </Typography>
+                                    )}
                                     {documentReviewFiles.length > 0 && (
                                         <Box>
                                             <Typography variant="subtitle2" color="text.secondary">
@@ -2665,6 +2732,77 @@ export default function TaskDetailsPage() {
                                                     <Chip key={`${format}-${idx}`} label={format.toUpperCase()} size="small" />
                                                 ))}
                                             </Stack>
+                                        </Box>
+                                    )}
+                                    {isManager && (
+                                        <Box>
+                                            <Typography variant="subtitle2" color="text.secondary">
+                                                {t('task.document.outputs.uploadTitle', 'Загрузка файлов')}
+                                            </Typography>
+                                            <Stack
+                                                direction={{ xs: 'column', sm: 'row' }}
+                                                spacing={1}
+                                                sx={{ mt: 1, alignItems: 'flex-start' }}
+                                            >
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    startIcon={<CloudUploadOutlinedIcon />}
+                                                    onClick={() => documentReviewInputRef.current?.click()}
+                                                    disabled={documentReviewUploading}
+                                                >
+                                                    {documentReviewUploading
+                                                        ? t('task.document.outputs.uploading', 'Загрузка…')
+                                                        : t(
+                                                            'task.document.outputs.uploadReview',
+                                                            'Загрузить PDF на согласование'
+                                                        )}
+                                                </Button>
+                                                <input
+                                                    ref={documentReviewInputRef}
+                                                    type="file"
+                                                    hidden
+                                                    multiple
+                                                    accept=".pdf,application/pdf"
+                                                    onChange={(e) =>
+                                                        handleDocumentFilesUpload(e.target.files, 'document-review')
+                                                    }
+                                                />
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    startIcon={<CloudUploadOutlinedIcon />}
+                                                    onClick={() => documentFinalInputRef.current?.click()}
+                                                    disabled={documentFinalUploading}
+                                                >
+                                                    {documentFinalUploading
+                                                        ? t('task.document.outputs.uploading', 'Загрузка…')
+                                                        : t(
+                                                            'task.document.outputs.uploadFinal',
+                                                            'Загрузить финальные файлы'
+                                                        )}
+                                                </Button>
+                                                <input
+                                                    ref={documentFinalInputRef}
+                                                    type="file"
+                                                    hidden
+                                                    multiple
+                                                    accept=".pdf,.dwg,application/pdf"
+                                                    onChange={(e) =>
+                                                        handleDocumentFilesUpload(e.target.files, 'document-final')
+                                                    }
+                                                />
+                                            </Stack>
+                                            <Typography
+                                                variant="caption"
+                                                color="text.secondary"
+                                                sx={{ display: 'block', mt: 1 }}
+                                            >
+                                                {t(
+                                                    'task.document.outputs.uploadHint',
+                                                    'PDF для проверки, после согласования — PDF и DWG'
+                                                )}
+                                            </Typography>
                                         </Box>
                                     )}
                                 </Stack>

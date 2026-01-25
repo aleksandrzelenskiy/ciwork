@@ -84,6 +84,12 @@ export async function DELETE(request: NextRequest) {
         if (mode === 'documents') {
             pullQuery.documents = url;
         }
+        if (mode === 'document-review') {
+            pullQuery.documentReviewFiles = url;
+        }
+        if (mode === 'document-final') {
+            pullQuery.documentFinalFiles = url;
+        }
         await TaskModel.updateOne({ taskId }, { $pull: pullQuery }).exec();
 
         // удаляем сам файл
@@ -120,6 +126,8 @@ export async function POST(request: NextRequest) {
         'comments',
         'ncw',
         'documents',
+        'document-review',
+        'document-final',
     ];
     const subfolder: TaskFileSubfolder =
         allowedSubfolders.includes(rawSubfolder as TaskFileSubfolder)
@@ -167,7 +175,14 @@ export async function POST(request: NextRequest) {
         const scope = await resolveStorageScope(task);
         const uploadedUrls: string[] = [];
         let totalBytes = 0;
-        const targetField = subfolder === 'documents' ? 'documents' : 'attachments';
+        const targetField =
+            subfolder === 'documents'
+                ? 'documents'
+                : subfolder === 'document-review'
+                    ? 'documentReviewFiles'
+                    : subfolder === 'document-final'
+                        ? 'documentFinalFiles'
+                        : 'attachments';
 
         for (const f of files) {
             const filename = safeBasename(f.filename || 'file');
