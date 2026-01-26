@@ -8,7 +8,8 @@ import dbConnect from '@/server/db/mongoose';
 import TaskModel from '@/server/models/TaskModel';
 import UserModel from '@/server/models/UserModel';
 import { currentUser } from '@clerk/nextjs/server';
-import type { PriorityLevel } from '@/app/types/taskTypes';
+import type { PriorityLevel, Task } from '@/app/types/taskTypes';
+import type { HydratedDocument } from 'mongoose';
 import { generateClosingDocumentsExcel } from '@/utils/generateExcel';
 import { uploadTaskFile, deleteTaskFile } from '@/utils/s3';
 import {
@@ -48,7 +49,7 @@ interface UpdateData {
   reject?: boolean | string;
 }
 
-type TaskDocument = Awaited<ReturnType<typeof TaskModel['findOne']>>;
+type TaskDocument = HydratedDocument<Task>;
 
 function toBool(x: unknown): boolean {
   if (typeof x === 'boolean') return x;
