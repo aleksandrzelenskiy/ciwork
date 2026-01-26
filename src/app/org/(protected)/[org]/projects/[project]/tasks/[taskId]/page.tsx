@@ -361,8 +361,6 @@ export default function TaskDetailsPage() {
     const [orderFormError, setOrderFormError] = React.useState<string | null>(null);
     const [ncwDialogOpen, setNcwDialogOpen] = React.useState(false);
     const [ncwDefaults, setNcwDefaults] = React.useState<NcwDefaults | null>(null);
-    const [documentReviewUploading, setDocumentReviewUploading] = React.useState(false);
-    const [documentFinalUploading, setDocumentFinalUploading] = React.useState(false);
     const [documentSnackbar, setDocumentSnackbar] = React.useState<{
         type: 'success' | 'error';
         message: string;
@@ -398,8 +396,6 @@ export default function TaskDetailsPage() {
         sev: 'success' | 'error';
     }>({ open: false, message: '', sev: 'success' });
     const orderFileInputRef = React.useRef<HTMLInputElement | null>(null);
-    const documentReviewInputRef = React.useRef<HTMLInputElement | null>(null);
-    const documentFinalInputRef = React.useRef<HTMLInputElement | null>(null);
 
     const asText = (x: unknown): string => {
         if (x === null || typeof x === 'undefined') return '—';
@@ -864,32 +860,7 @@ export default function TaskDetailsPage() {
             documentInputLinks.length > 0 ||
             documentInputPhotos.length > 0 ||
             documentStages.length > 0);
-    const documentReviewFiles = React.useMemo(
-        () => (Array.isArray(task?.documentReviewFiles) ? task.documentReviewFiles : []),
-        [task?.documentReviewFiles]
-    );
-    const documentFinalFiles = React.useMemo(
-        () => (Array.isArray(task?.documentFinalFiles) ? task.documentFinalFiles : []),
-        [task?.documentFinalFiles]
-    );
-    const documentFinalFormats = Array.isArray(task?.documentFinalFormats) ? task.documentFinalFormats : [];
-    const hasDocumentOutputs =
-        task?.taskType === 'document' &&
-        (documentReviewFiles.length > 0 || documentFinalFiles.length > 0 || documentFinalFormats.length > 0);
-    const canShowDocumentOutputs = task?.taskType === 'document' && (hasDocumentOutputs || isManager);
     const normalizedStatus = normalizeStatusTitle(task?.status);
-    const documentOutputRequirement = React.useMemo(() => {
-        if (task?.taskType !== 'document') return null;
-        const hasPdf = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.pdf'));
-        const hasDwg = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.dwg'));
-        if (normalizedStatus === 'Pending' && !hasPdf(documentReviewFiles)) {
-            return t('task.document.require.review', 'Для согласования загрузите PDF-файлы');
-        }
-        if (normalizedStatus === 'Agreed' && (!hasPdf(documentFinalFiles) || !hasDwg(documentFinalFiles))) {
-            return t('task.document.require.final', 'Для согласования нужны финальные PDF и DWG');
-        }
-        return null;
-    }, [documentFinalFiles, documentReviewFiles, normalizedStatus, task?.taskType, t]);
 
     const toEditWorkItems = (list: Task['workItems']): ParsedWorkItem[] | undefined => {
         if (!Array.isArray(list)) return undefined;
@@ -1325,63 +1296,6 @@ export default function TaskDetailsPage() {
             setDocumentSnackbar({ type: 'error', message: t('task.order.error.upload', 'Не удалось загрузить заказ') });
         } finally {
             setOrderUploading(false);
-        }
-    };
-
-    const handleDocumentFilesUpload = async (
-        fileList: FileList | null,
-        mode: 'document-review' | 'document-final'
-    ) => {
-        if (!task?.taskId) return;
-        if (!fileList || fileList.length === 0) return;
-
-        const setUploading =
-            mode === 'document-review' ? setDocumentReviewUploading : setDocumentFinalUploading;
-        const inputRef =
-            mode === 'document-review' ? documentReviewInputRef : documentFinalInputRef;
-
-        setUploading(true);
-        try {
-            const fd = new FormData();
-            fd.append('subfolder', mode);
-            fd.append('taskId', task.taskId);
-            if (org) fd.append('orgSlug', org);
-            if (projectKey) fd.append('projectKey', projectKey);
-
-            Array.from(fileList).forEach((file) => {
-                fd.append('file', file, file.name);
-            });
-
-            const res = await fetch('/api/upload', { method: 'POST', body: fd });
-            const body = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                const message =
-                    body && typeof body === 'object' && 'error' in body
-                        ? String((body as { error?: unknown }).error || '')
-                        : '';
-                setDocumentSnackbar({
-                    type: 'error',
-                    message:
-                        message ||
-                        t('task.document.outputs.uploadError', 'Не удалось загрузить файлы'),
-                });
-                return;
-            }
-
-            await load();
-            setDocumentSnackbar({
-                type: 'success',
-                message: t('task.document.outputs.uploadSuccess', 'Файлы загружены'),
-            });
-        } catch (e) {
-            console.error(e);
-            setDocumentSnackbar({
-                type: 'error',
-                message: t('task.document.outputs.uploadError', 'Не удалось загрузить файлы'),
-            });
-        } finally {
-            setUploading(false);
-            if (inputRef.current) inputRef.current.value = '';
         }
     };
 
@@ -2721,142 +2635,6 @@ export default function TaskDetailsPage() {
                                                     </Link>
                                                 ))}
                                             </Stack>
-                                        </Box>
-                                    )}
-                                </Stack>
-                            </CardItem>
-                        )}
-
-                        {canShowDocumentOutputs && (
-                            <CardItem sx={{ minWidth: 0 }}>
-                                <Typography
-                                    variant="body1"
-                                    fontWeight={600}
-                                    gutterBottom
-                                    sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                                >
-                                    <DescriptionOutlinedIcon fontSize="small" />
-                                    {t('task.document.outputs.title', 'Результаты документации')}
-                                </Typography>
-                                <Divider sx={{ mb: 1.5 }} />
-                                <Stack spacing={1.5}>
-                                    {documentOutputRequirement && (
-                                        <Alert severity="warning">{documentOutputRequirement}</Alert>
-                                    )}
-                                    {!hasDocumentOutputs && (
-                                        <Typography variant="body2" color="text.secondary">
-                                            {t('task.document.outputs.empty', 'Файлы пока не загружены')}
-                                        </Typography>
-                                    )}
-                                    {documentReviewFiles.length > 0 && (
-                                        <Box>
-                                            <Typography variant="subtitle2" color="text.secondary">
-                                                {t('task.document.outputs.review', 'PDF на согласование')}
-                                            </Typography>
-                                            <Stack spacing={0.5}>
-                                                {documentReviewFiles.map((link, idx) => (
-                                                    <Link key={`${link}-${idx}`} href={link} target="_blank" rel="noreferrer">
-                                                        {link}
-                                                    </Link>
-                                                ))}
-                                            </Stack>
-                                        </Box>
-                                    )}
-                                    {documentFinalFiles.length > 0 && (
-                                        <Box>
-                                            <Typography variant="subtitle2" color="text.secondary">
-                                                {t('task.document.outputs.final', 'Финальные файлы')}
-                                            </Typography>
-                                            <Stack spacing={0.5}>
-                                                {documentFinalFiles.map((link, idx) => (
-                                                    <Link key={`${link}-${idx}`} href={link} target="_blank" rel="noreferrer">
-                                                        {link}
-                                                    </Link>
-                                                ))}
-                                            </Stack>
-                                        </Box>
-                                    )}
-                                    {documentFinalFormats.length > 0 && (
-                                        <Box>
-                                            <Typography variant="subtitle2" color="text.secondary">
-                                                {t('task.document.outputs.formats', 'Форматы')}
-                                            </Typography>
-                                            <Stack spacing={0.5} direction="row" flexWrap="wrap">
-                                                {documentFinalFormats.map((format, idx) => (
-                                                    <Chip key={`${format}-${idx}`} label={format.toUpperCase()} size="small" />
-                                                ))}
-                                            </Stack>
-                                        </Box>
-                                    )}
-                                    {isManager && (
-                                        <Box>
-                                            <Typography variant="subtitle2" color="text.secondary">
-                                                {t('task.document.outputs.uploadTitle', 'Загрузка файлов')}
-                                            </Typography>
-                                            <Stack
-                                                direction={{ xs: 'column', sm: 'row' }}
-                                                spacing={1}
-                                                sx={{ mt: 1, alignItems: 'flex-start' }}
-                                            >
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    startIcon={<CloudUploadOutlinedIcon />}
-                                                    onClick={() => documentReviewInputRef.current?.click()}
-                                                    disabled={documentReviewUploading}
-                                                >
-                                                    {documentReviewUploading
-                                                        ? t('task.document.outputs.uploading', 'Загрузка…')
-                                                        : t(
-                                                            'task.document.outputs.uploadReview',
-                                                            'Загрузить PDF на согласование'
-                                                        )}
-                                                </Button>
-                                                <input
-                                                    ref={documentReviewInputRef}
-                                                    type="file"
-                                                    hidden
-                                                    multiple
-                                                    accept=".pdf,application/pdf"
-                                                    onChange={(e) =>
-                                                        handleDocumentFilesUpload(e.target.files, 'document-review')
-                                                    }
-                                                />
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    startIcon={<CloudUploadOutlinedIcon />}
-                                                    onClick={() => documentFinalInputRef.current?.click()}
-                                                    disabled={documentFinalUploading}
-                                                >
-                                                    {documentFinalUploading
-                                                        ? t('task.document.outputs.uploading', 'Загрузка…')
-                                                        : t(
-                                                            'task.document.outputs.uploadFinal',
-                                                            'Загрузить финальные файлы'
-                                                        )}
-                                                </Button>
-                                                <input
-                                                    ref={documentFinalInputRef}
-                                                    type="file"
-                                                    hidden
-                                                    multiple
-                                                    accept=".pdf,.dwg,application/pdf"
-                                                    onChange={(e) =>
-                                                        handleDocumentFilesUpload(e.target.files, 'document-final')
-                                                    }
-                                                />
-                                            </Stack>
-                                            <Typography
-                                                variant="caption"
-                                                color="text.secondary"
-                                                sx={{ display: 'block', mt: 1 }}
-                                            >
-                                                {t(
-                                                    'task.document.outputs.uploadHint',
-                                                    'PDF для проверки, после согласования — PDF и DWG'
-                                                )}
-                                            </Typography>
                                         </Box>
                                     )}
                                 </Stack>

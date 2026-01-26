@@ -519,25 +519,24 @@ export default function TaskDetailPage() {
     };
 
     const isManager = Boolean(userRole && MANAGER_ROLES.includes(userRole));
+    const normalizedStatus = normalizeStatusTitle(task?.status);
     const canShowDocumentOutputs =
-        task?.taskType === 'document' && (hasDocumentOutputs || isManager);
+        task?.taskType === 'document' && normalizedStatus === 'Done';
     const documentOutputRequirement = React.useMemo(() => {
         if (task?.taskType !== 'document') return null;
         const hasPdf = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.pdf'));
         const hasDwg = (files: string[]) => files.some((file) => file.toLowerCase().endsWith('.dwg'));
-        const normalized = normalizeStatusTitle(task?.status);
-        if (normalized === 'Pending' && !hasPdf(documentReviewFiles)) {
+        if (normalizedStatus === 'Pending' && !hasPdf(documentReviewFiles)) {
             return t('task.document.require.review', 'Для согласования загрузите PDF-файлы');
         }
-        if (normalized === 'Agreed' && (!hasPdf(documentFinalFiles) || !hasDwg(documentFinalFiles))) {
+        if (normalizedStatus === 'Agreed' && (!hasPdf(documentFinalFiles) || !hasDwg(documentFinalFiles))) {
             return t('task.document.require.final', 'Для согласования нужны финальные PDF и DWG');
         }
         return null;
-    }, [documentFinalFiles, documentReviewFiles, task?.status, task?.taskType, t]);
+    }, [documentFinalFiles, documentReviewFiles, normalizedStatus, task?.taskType, t]);
     const documentStatusHint = React.useMemo(() => {
         if (task?.taskType !== 'document') return null;
-        const normalized = normalizeStatusTitle(task?.status);
-        switch (normalized) {
+        switch (normalizedStatus) {
             case 'Assigned':
                 return t('task.document.status.assigned', 'Назначена проектировщику');
             case 'At work':
@@ -556,7 +555,7 @@ export default function TaskDetailPage() {
             default:
                 return t('task.document.status.todo', 'Ожидает начала работ');
         }
-    }, [task?.status, task?.taskType, t]);
+    }, [normalizedStatus, task?.taskType, t]);
     const statusKeys = new Set(['status', 'publicStatus', 'publicModerationStatus']);
     const dateKeys = new Set([
         'createdAt',
@@ -1853,77 +1852,75 @@ export default function TaskDetailPage() {
                                             </Stack>
                                         </Box>
                                     )}
-                                {isManager && (
-                                    <Box>
-                                        <Typography variant="subtitle2" color="text.secondary">
-                                            {t('task.document.outputs.uploadTitle', 'Загрузка файлов')}
-                                        </Typography>
-                                        <Stack
-                                            direction={{ xs: 'column', sm: 'row' }}
-                                            spacing={1}
-                                            sx={{ mt: 1, alignItems: 'flex-start' }}
+                                <Box>
+                                    <Typography variant="subtitle2" color="text.secondary">
+                                        {t('task.document.outputs.uploadTitle', 'Загрузка файлов')}
+                                    </Typography>
+                                    <Stack
+                                        direction={{ xs: 'column', sm: 'row' }}
+                                        spacing={1}
+                                        sx={{ mt: 1, alignItems: 'flex-start' }}
+                                    >
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            startIcon={<CloudUploadIcon />}
+                                            onClick={() => documentReviewInputRef.current?.click()}
+                                            disabled={documentReviewUploading}
                                         >
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                startIcon={<CloudUploadIcon />}
-                                                onClick={() => documentReviewInputRef.current?.click()}
-                                                disabled={documentReviewUploading}
-                                            >
-                                                {documentReviewUploading
-                                                    ? t('task.document.outputs.uploading', 'Загрузка…')
-                                                    : t(
-                                                        'task.document.outputs.uploadReview',
-                                                        'Загрузить PDF на согласование'
-                                                    )}
-                                            </Button>
-                                            <input
-                                                ref={documentReviewInputRef}
-                                                type="file"
-                                                hidden
-                                                multiple
-                                                accept=".pdf,application/pdf"
-                                                onChange={(e) =>
-                                                    handleDocumentFilesUpload(e.target.files, 'document-review')
-                                                }
-                                            />
-                                            <Button
-                                                size="small"
-                                                variant="outlined"
-                                                startIcon={<CloudUploadIcon />}
-                                                onClick={() => documentFinalInputRef.current?.click()}
-                                                disabled={documentFinalUploading}
-                                            >
-                                                {documentFinalUploading
-                                                    ? t('task.document.outputs.uploading', 'Загрузка…')
-                                                    : t(
-                                                        'task.document.outputs.uploadFinal',
-                                                        'Загрузить финальные файлы'
-                                                    )}
-                                            </Button>
-                                            <input
-                                                ref={documentFinalInputRef}
-                                                type="file"
-                                                hidden
-                                                multiple
-                                                accept=".pdf,.dwg,application/pdf"
-                                                onChange={(e) =>
-                                                    handleDocumentFilesUpload(e.target.files, 'document-final')
-                                                }
-                                            />
-                                        </Stack>
-                                        <Typography
-                                            variant="caption"
-                                            color="text.secondary"
-                                            sx={{ display: 'block', mt: 1 }}
+                                            {documentReviewUploading
+                                                ? t('task.document.outputs.uploading', 'Загрузка…')
+                                                : t(
+                                                    'task.document.outputs.uploadReview',
+                                                    'Загрузить PDF на согласование'
+                                                )}
+                                        </Button>
+                                        <input
+                                            ref={documentReviewInputRef}
+                                            type="file"
+                                            hidden
+                                            multiple
+                                            accept=".pdf,application/pdf"
+                                            onChange={(e) =>
+                                                handleDocumentFilesUpload(e.target.files, 'document-review')
+                                            }
+                                        />
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            startIcon={<CloudUploadIcon />}
+                                            onClick={() => documentFinalInputRef.current?.click()}
+                                            disabled={documentFinalUploading}
                                         >
-                                            {t(
-                                                'task.document.outputs.uploadHint',
-                                                'PDF для проверки, после согласования — PDF и DWG'
-                                            )}
-                                        </Typography>
-                                    </Box>
-                                )}
+                                            {documentFinalUploading
+                                                ? t('task.document.outputs.uploading', 'Загрузка…')
+                                                : t(
+                                                    'task.document.outputs.uploadFinal',
+                                                    'Загрузить финальные файлы'
+                                                )}
+                                        </Button>
+                                        <input
+                                            ref={documentFinalInputRef}
+                                            type="file"
+                                            hidden
+                                            multiple
+                                            accept=".pdf,.dwg,application/pdf"
+                                            onChange={(e) =>
+                                                handleDocumentFilesUpload(e.target.files, 'document-final')
+                                            }
+                                        />
+                                    </Stack>
+                                    <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        sx={{ display: 'block', mt: 1 }}
+                                    >
+                                        {t(
+                                            'task.document.outputs.uploadHint',
+                                            'PDF для проверки, после согласования — PDF и DWG'
+                                        )}
+                                    </Typography>
+                                </Box>
                             </Stack>
                         </CardItem>
                     )}
