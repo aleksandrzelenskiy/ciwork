@@ -215,14 +215,10 @@ function getFileNameFromUrl(url?: string): string {
     }
 }
 
-function splitLinesToArray(raw: string): string[] {
-    return raw
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean);
-}
-
-const YMAPS_API_KEY = process.env.NEXT_PUBLIC_YMAPS_API_KEY || '1c3860d8-3994-4e6e-841b-31ad57f69c78';
+const YMAPS_API_KEY =
+    process.env.NEXT_PUBLIC_YANDEX_MAPS_APIKEY ??
+    process.env.NEXT_PUBLIC_YMAPS_API_KEY ??
+    '';
 
 function isLatValueValid(v: string): boolean {
     const trimmed = v.trim();
@@ -462,13 +458,6 @@ export default function WorkspaceTaskDialog({
         },
     ]);
     const [taskDescription, setTaskDescription] = React.useState('');
-    const [documentInputNotes, setDocumentInputNotes] = React.useState('');
-    const [documentInputLinks, setDocumentInputLinks] = React.useState('');
-    const [documentInputPhotos, setDocumentInputPhotos] = React.useState('');
-    const [documentStages, setDocumentStages] = React.useState('');
-    const [documentReviewFiles, setDocumentReviewFiles] = React.useState('');
-    const [documentFinalFiles, setDocumentFinalFiles] = React.useState('');
-    const [documentFinalFormats, setDocumentFinalFormats] = React.useState('');
     const [priority, setPriority] = React.useState<Priority>('medium');
     const [dueDate, setDueDate] = React.useState<Date | null>(new Date());
 
@@ -764,37 +753,6 @@ export default function WorkspaceTaskDialog({
         setPriority(['urgent', 'high', 'medium', 'low'].includes(pr) ? pr : 'medium');
         setDueDate(initialTask.dueDate ? new Date(initialTask.dueDate) : null);
         setTaskDescription(initialTask.taskDescription ?? '');
-        setDocumentInputNotes(initialTask.documentInputNotes ?? '');
-        setDocumentInputLinks(
-            Array.isArray(initialTask.documentInputLinks)
-                ? initialTask.documentInputLinks.join('\n')
-                : ''
-        );
-        setDocumentInputPhotos(
-            Array.isArray(initialTask.documentInputPhotos)
-                ? initialTask.documentInputPhotos.join('\n')
-                : ''
-        );
-        setDocumentStages(
-            Array.isArray(initialTask.documentStages)
-                ? initialTask.documentStages.join('\n')
-                : ''
-        );
-        setDocumentReviewFiles(
-            Array.isArray(initialTask.documentReviewFiles)
-                ? initialTask.documentReviewFiles.join('\n')
-                : ''
-        );
-        setDocumentFinalFiles(
-            Array.isArray(initialTask.documentFinalFiles)
-                ? initialTask.documentFinalFiles.join('\n')
-                : ''
-        );
-        setDocumentFinalFormats(
-            Array.isArray(initialTask.documentFinalFormats)
-                ? initialTask.documentFinalFormats.join('\n')
-                : ''
-        );
         setInitiatorName(initialTask.initiatorName ?? '');
         setInitiatorEmail(initialTask.initiatorEmail ?? '');
         setShowInitiatorFields(Boolean(initialTask.initiatorName || initialTask.initiatorEmail));
@@ -1295,12 +1253,11 @@ export default function WorkspaceTaskDialog({
             }
 
             if (sourceFile) {
-                setEstimateFile((prev) => {
-                    const sameFile = prev && prev.name === sourceFile.name && prev.size === sourceFile.size;
-                    return sameFile ? prev : sourceFile;
+                setAttachments((prev) => {
+                    const key = `${sourceFile.name}:${sourceFile.size}`;
+                    const existing = new Set(prev.map((f) => `${f.name}:${f.size}`));
+                    return existing.has(key) ? prev : [...prev, sourceFile];
                 });
-            } else {
-                setEstimateFile(null);
             }
         },
         [loadBsOptions, autoFillParsedBsNumbers]
@@ -1449,6 +1406,7 @@ export default function WorkspaceTaskDialog({
     };
 
     async function uploadEstimateDocument(taskShortId: string): Promise<void> {
+        if (isBeelineOperator) return;
         if (!estimateFile) return;
         try {
         const fd = new FormData();
@@ -1635,13 +1593,13 @@ export default function WorkspaceTaskDialog({
                 bsAddress: taskBsAddress,
                 taskDescription: taskDescription?.trim() || undefined,
                 taskType: projectMeta?.projectType,
-                documentInputNotes: isDocumentProject ? documentInputNotes.trim() || undefined : undefined,
-                documentInputLinks: isDocumentProject ? splitLinesToArray(documentInputLinks) : undefined,
-                documentInputPhotos: isDocumentProject ? splitLinesToArray(documentInputPhotos) : undefined,
-                documentStages: isDocumentProject ? splitLinesToArray(documentStages) : undefined,
-                documentReviewFiles: isDocumentProject ? splitLinesToArray(documentReviewFiles) : undefined,
-                documentFinalFiles: isDocumentProject ? splitLinesToArray(documentFinalFiles) : undefined,
-                documentFinalFormats: isDocumentProject ? splitLinesToArray(documentFinalFormats) : undefined,
+                documentInputNotes: undefined,
+                documentInputLinks: undefined,
+                documentInputPhotos: undefined,
+                documentStages: undefined,
+                documentReviewFiles: undefined,
+                documentFinalFiles: undefined,
+                documentFinalFormats: undefined,
                 status: 'To do',
                 priority,
                 dueDate: dueDate ? dueDate.toISOString() : undefined,
@@ -1717,13 +1675,13 @@ export default function WorkspaceTaskDialog({
                 bsAddress: taskBsAddress,
                 taskDescription: taskDescription?.trim() || undefined,
                 taskType: projectMeta?.projectType,
-                documentInputNotes: isDocumentProject ? documentInputNotes.trim() || undefined : undefined,
-                documentInputLinks: isDocumentProject ? splitLinesToArray(documentInputLinks) : undefined,
-                documentInputPhotos: isDocumentProject ? splitLinesToArray(documentInputPhotos) : undefined,
-                documentStages: isDocumentProject ? splitLinesToArray(documentStages) : undefined,
-                documentReviewFiles: isDocumentProject ? splitLinesToArray(documentReviewFiles) : undefined,
-                documentFinalFiles: isDocumentProject ? splitLinesToArray(documentFinalFiles) : undefined,
-                documentFinalFormats: isDocumentProject ? splitLinesToArray(documentFinalFormats) : undefined,
+                documentInputNotes: undefined,
+                documentInputLinks: undefined,
+                documentInputPhotos: undefined,
+                documentStages: undefined,
+                documentReviewFiles: undefined,
+                documentFinalFiles: undefined,
+                documentFinalFormats: undefined,
                 priority,
                 dueDate: dueDate ? dueDate.toISOString() : undefined,
                 bsLatitude: typeof primaryCoords.lat === 'number' ? primaryCoords.lat : undefined,
@@ -2216,87 +2174,11 @@ export default function WorkspaceTaskDialog({
                             />
 
                             {isDocumentProject && (
-                                <Stack spacing={2}>
-                                    <Typography variant="subtitle1" fontWeight={600}>
-                                        {t('task.document.inputs.title', 'Исходные данные для документации')}
-                                    </Typography>
-                                    <TextField
-                                        label={t('task.document.inputs.notes', 'Техническое задание / примечания')}
-                                        value={documentInputNotes}
-                                        onChange={(e) => setDocumentInputNotes(e.target.value)}
-                                        multiline
-                                        minRows={3}
-                                        maxRows={10}
-                                        fullWidth
-                                        sx={glassInputSx}
-                                    />
-                                    <TextField
-                                        label={t('task.document.inputs.stages', 'Этапы / стадии')}
-                                        value={documentStages}
-                                        onChange={(e) => setDocumentStages(e.target.value)}
-                                        helperText={t('task.document.inputs.stagesHelper', 'По одному этапу в строке')}
-                                        multiline
-                                        minRows={2}
-                                        maxRows={6}
-                                        fullWidth
-                                        sx={glassInputSx}
-                                    />
-                                    <TextField
-                                        label={t('task.document.inputs.links', 'Ссылки на исходные материалы')}
-                                        value={documentInputLinks}
-                                        onChange={(e) => setDocumentInputLinks(e.target.value)}
-                                        helperText={t('task.document.inputs.linksHelper', 'По одной ссылке в строке')}
-                                        multiline
-                                        minRows={2}
-                                        maxRows={6}
-                                        fullWidth
-                                        sx={glassInputSx}
-                                    />
-                                    <TextField
-                                        label={t('task.document.inputs.photos', 'Фото / архивы / ссылки на сервер')}
-                                        value={documentInputPhotos}
-                                        onChange={(e) => setDocumentInputPhotos(e.target.value)}
-                                        helperText={t('task.document.inputs.photosHelper', 'По одной ссылке в строке')}
-                                        multiline
-                                        minRows={2}
-                                        maxRows={6}
-                                        fullWidth
-                                        sx={glassInputSx}
-                                    />
-                                    <TextField
-                                        label={t('task.document.outputs.review', 'PDF на согласование')}
-                                        value={documentReviewFiles}
-                                        onChange={(e) => setDocumentReviewFiles(e.target.value)}
-                                        helperText={t('task.document.outputs.reviewHelper', 'Ссылки на PDF, по одной в строке')}
-                                        multiline
-                                        minRows={2}
-                                        maxRows={6}
-                                        fullWidth
-                                        sx={glassInputSx}
-                                    />
-                                    <TextField
-                                        label={t('task.document.outputs.final', 'Финальные файлы')}
-                                        value={documentFinalFiles}
-                                        onChange={(e) => setDocumentFinalFiles(e.target.value)}
-                                        helperText={t('task.document.outputs.finalHelper', 'Ссылки на PDF/DWG и другие файлы, по одной в строке')}
-                                        multiline
-                                        minRows={2}
-                                        maxRows={6}
-                                        fullWidth
-                                        sx={glassInputSx}
-                                    />
-                                    <TextField
-                                        label={t('task.document.outputs.formats', 'Форматы')}
-                                        value={documentFinalFormats}
-                                        onChange={(e) => setDocumentFinalFormats(e.target.value)}
-                                        helperText={t('task.document.outputs.formatsHelper', 'Например: PDF, DWG — по одному в строке')}
-                                        multiline
-                                        minRows={2}
-                                        maxRows={4}
-                                        fullWidth
-                                        sx={glassInputSx}
-                                    />
-                                </Stack>
+                                <Alert severity="info" sx={{ bgcolor: alertInfoBg }}>
+                                    Для документальных задач укажите ТЗ в описании и приложите официальный файл
+                                    ТЗ во вложения. PDF на согласование и финальные файлы загружает исполнитель
+                                    после завершения работ.
+                                </Alert>
                             )}
 
                             <Stack
@@ -2749,6 +2631,12 @@ export default function WorkspaceTaskDialog({
                                 </Alert>
                             )}
 
+                            <Alert severity="info" sx={{ bgcolor: alertInfoBg }}>
+                                {isBeelineOperator
+                                    ? 'Для Билайн файл ТЗ берётся из ID и будет добавлен во вложения. Добавьте сюда остальные файлы.'
+                                    : 'Загрузите ТЗ и исходные материалы во вложения задачи.'}
+                            </Alert>
+
                             <Box
                                 onDragOver={onDragOver}
                                 onDragLeave={onDragLeave}
@@ -2781,8 +2669,13 @@ export default function WorkspaceTaskDialog({
                                     Перетащите файлы или нажмите, чтобы выбрать
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                    Вложения будут сохранены как <b>attachments</b> этой задачи
+                                    Вложения сохраняются как <b>attachments</b> этой задачи
                                 </Typography>
+                                {isBeelineOperator && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                        Файл ТЗ из ID для Билайн будет добавлен сюда автоматически.
+                                    </Typography>
+                                )}
                                 <input
                                     ref={inputRef}
                                     type="file"
