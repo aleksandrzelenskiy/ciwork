@@ -17,6 +17,7 @@ import {
     notifyTaskUnassignment,
 } from '@/server/tasks/notifications';
 import { splitAttachmentsAndDocuments } from '@/utils/taskFiles';
+import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import { createNotification } from '@/server/notifications/service';
 import { sendEmail } from '@/server/email/mailer';
 import OrganizationModel from '@/server/models/OrganizationModel';
@@ -46,6 +47,8 @@ interface UpdateData {
   accept?: boolean | string;
   reject?: boolean | string;
 }
+
+type TaskDocument = Awaited<ReturnType<typeof TaskModel['findOne']>>;
 
 function toBool(x: unknown): boolean {
   if (typeof x === 'boolean') return x;
@@ -833,26 +836,40 @@ export async function PATCH(
       }
     }
 
-    const responseTask =
-        typeof (updatedTask as typeof task & { toObject?: () => unknown }).toObject === 'function'
-            ? (updatedTask as typeof task & { toObject: () => unknown }).toObject()
-            : updatedTask;
-    const { attachments: respAttachments, documents: respDocuments } = splitAttachmentsAndDocuments(
-        (responseTask as { attachments?: unknown }).attachments,
-        (responseTask as { documents?: unknown }).documents
-    );
+    const responseTask = await prepareTaskForResponse(updatedTask);
 
     return NextResponse.json({
-      task: {
-        ...responseTask,
-        attachments: respAttachments,
-        documents: respDocuments,
-      },
+      task: responseTask,
     });
   } catch (err) {
     console.error('Error updating task:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+async function prepareTaskForResponse(taskDoc: TaskDocument | null) {
+  if (!taskDoc) return null;
+  await taskDoc.populate({
+    path: 'relatedTasks',
+    select: 'taskId taskName bsNumber status priority',
+  });
+  const rawTask =
+    typeof (taskDoc as { toObject?: () => unknown }).toObject === 'function'
+      ? (taskDoc as { toObject: () => unknown }).toObject()
+      : taskDoc;
+  const normalizedRelated = normalizeRelatedTasks(
+    (rawTask as { relatedTasks?: unknown }).relatedTasks
+  );
+  const { attachments, documents } = splitAttachmentsAndDocuments(
+    (rawTask as { attachments?: unknown }).attachments,
+    (rawTask as { documents?: unknown }).documents
+  );
+  return {
+    ...rawTask,
+    relatedTasks: normalizedRelated,
+    attachments,
+    documents,
+  };
 }
 
 export async function DELETE(
@@ -901,29 +918,9 @@ export async function DELETE(
           { new: true, runValidators: false }
       );
 
-      const respTask =
-          updatedTask && typeof updatedTask.toObject === 'function'
-              ? updatedTask.toObject()
-              : updatedTask;
-      let attachments: string[] = [];
-      let documents: string[] = [];
-      if (respTask && typeof respTask === 'object') {
-        const split = splitAttachmentsAndDocuments(
-            (respTask as { attachments?: unknown }).attachments,
-            (respTask as { documents?: unknown }).documents
-        );
-        attachments = split.attachments;
-        documents = split.documents;
-      }
-
+      const responseTask = await prepareTaskForResponse(updatedTask);
       return NextResponse.json({
-        task: respTask
-            ? {
-              ...respTask,
-              attachments,
-              documents,
-            }
-            : null,
+        task: responseTask,
       });
     }
 
@@ -957,29 +954,10 @@ export async function DELETE(
         { new: true, runValidators: false }
     );
 
-    const respTask =
-        updatedTask && typeof updatedTask.toObject === 'function'
-            ? updatedTask.toObject()
-            : updatedTask;
-    let attachments: string[] = [];
-    let documents: string[] = [];
-    if (respTask && typeof respTask === 'object') {
-      const split = splitAttachmentsAndDocuments(
-          (respTask as { attachments?: unknown }).attachments,
-          (respTask as { documents?: unknown }).documents
-      );
-      attachments = split.attachments;
-      documents = split.documents;
-    }
+    const responseTask = await prepareTaskForResponse(updatedTask);
 
     return NextResponse.json({
-      task: respTask
-          ? {
-            ...respTask,
-            attachments,
-            documents,
-          }
-          : null,
+      task: responseTask,
     });
   } catch (err) {
     console.error('Error deleting order/ncw file:', err);
