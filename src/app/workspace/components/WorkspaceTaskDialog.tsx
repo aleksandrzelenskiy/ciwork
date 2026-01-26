@@ -1318,13 +1318,6 @@ export default function WorkspaceTaskDialog({
     const reset = () => {
         setTaskName('');
         setTaskDescription('');
-        setDocumentInputNotes('');
-        setDocumentInputLinks('');
-        setDocumentInputPhotos('');
-        setDocumentStages('');
-        setDocumentReviewFiles('');
-        setDocumentFinalFiles('');
-        setDocumentFinalFormats('');
         setPriority('medium');
         setDueDate(new Date());
         setSelectedExecutor(null);
