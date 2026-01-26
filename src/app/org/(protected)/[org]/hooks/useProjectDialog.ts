@@ -81,12 +81,6 @@ export default function useProjectDialog({
                 operator: values.operator,
                 managers: values.managers,
             };
-            console.log('[project-dialog] submit', {
-                mode: projectDialogMode,
-                org,
-                projectRef: projectToEdit?.key || projectToEdit?._id,
-                payload,
-            });
             const projectRef = projectToEdit?.key || projectToEdit?._id;
             const url =
                 projectDialogMode === 'edit' && projectRef

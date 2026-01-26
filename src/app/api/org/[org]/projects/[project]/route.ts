@@ -183,7 +183,6 @@ export async function PATCH(
         const { org } = await requireOrgRole(orgSlug, email, ['owner', 'org_admin', 'manager']);
 
         const body = (await request.json()) as UpdateBody;
-        console.log('[projects PATCH] raw body', body);
         const update: Record<string, unknown> = {};
 
         if (typeof body.name === 'string') update.name = body.name.trim();
@@ -194,7 +193,6 @@ export async function PATCH(
             if (!normalizedType) {
                 return NextResponse.json({ error: 'Некорректный тип проекта' }, { status: 400 });
             }
-            console.log('[projects PATCH] normalized', { projectType: normalizedType, raw: body.projectType });
             update.projectType = normalizedType;
         }
 

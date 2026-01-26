@@ -197,13 +197,11 @@ export async function POST(
         }
 
         const body = (await request.json()) as CreateProjectBody;
-        console.log('[projects POST] raw body', body);
         const name = body?.name?.trim();
         const key = body?.key?.trim();
         const isValidRegion = RUSSIAN_REGIONS.some((region) => region.code === body.regionCode);
         const isValidOperator = OPERATORS.some((operator) => operator.value === body.operator);
         const projectType = normalizeProjectType(body.projectType) ?? 'installation';
-        console.log('[projects POST] normalized', { projectType, raw: body.projectType });
         const isValidProjectType = ['installation', 'document'].includes(projectType);
 
         if (!name || !key || !isValidRegion || !isValidOperator || !isValidProjectType) {
