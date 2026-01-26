@@ -151,6 +151,17 @@ function getRegionLabel(code?: string) {
     return region?.label || '';
 }
 
+function getAttachmentLabel(link: string) {
+    try {
+        const url = new URL(link);
+        const pathname = url.pathname.replace(/\/+$/, '');
+        return decodeURIComponent(pathname.split('/').pop() || link);
+    } catch {
+        const trimmed = link.split('?')[0]?.split('#')[0] ?? link;
+        return trimmed.replace(/\/+$/, '').split('/').pop() || link;
+    }
+}
+
 export default function MarketplacePage() {
     const { t, locale } = useI18n();
     const [tasks, setTasks] = useState<PublicTask[]>([]);
@@ -1487,7 +1498,7 @@ export default function MarketplacePage() {
                                 {detailsTask?.attachments && detailsTask.attachments.length > 0 ? (
                                     <CardItem sx={{ minWidth: 0 }}>
                                         <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                                            {t('market.details.attachments', 'Аттачменты')}
+                                            {t('market.details.attachments', 'Вложения')}
                                         </Typography>
                                         <Divider sx={{ mb: 1.5 }} />
                                         <Stack spacing={1}>
@@ -1504,7 +1515,7 @@ export default function MarketplacePage() {
                                                         textTransform: 'none',
                                                     }}
                                                 >
-                                                    {link}
+                                                    {getAttachmentLabel(link)}
                                                 </Button>
                                             ))}
                                         </Stack>
