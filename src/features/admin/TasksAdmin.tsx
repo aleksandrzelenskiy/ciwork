@@ -13,6 +13,7 @@ import {
     DialogContent,
     DialogTitle,
     FormControl,
+    FormControlLabel,
     InputAdornment,
     InputLabel,
     IconButton,
@@ -28,15 +29,18 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    TablePagination,
     TextField,
     Tooltip,
     Typography,
+    Checkbox,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { withBasePath } from '@/utils/basePath';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -283,9 +287,11 @@ function CalendarToolbar({ label, view, date, onNavigate, onView }: ToolbarProps
 function AdminTaskTable({
     items,
     onOpenProfile,
+    onDelete,
 }: {
     items: AdminTask[];
     onOpenProfile: (clerkUserId?: string | null) => void;
+    onDelete: (task: AdminTask) => void;
 }) {
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
@@ -310,6 +316,7 @@ function AdminTaskTable({
                         <TableCell align="center">Срок</TableCell>
                         <TableCell align="center">Статус</TableCell>
                         <TableCell align="center">Приоритет</TableCell>
+                        <TableCell align="center">Действия</TableCell>
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -444,6 +451,19 @@ function AdminTaskTable({
                                     ) : (
                                         '—'
                                     )}
+                                </TableCell>
+                                <TableCell align="center">
+                                    <Tooltip title="Удалить задачу">
+                                        <span>
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={() => onDelete(task)}
+                                            >
+                                                <DeleteOutlineIcon fontSize="small" />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
                                 </TableCell>
                             </TableRow>
                         );
@@ -838,6 +858,12 @@ export default function TasksAdmin() {
     const [moderationComment, setModerationComment] = React.useState('');
     const [moderationError, setModerationError] = React.useState<string | null>(null);
     const [moderationLoading, setModerationLoading] = React.useState(false);
+    const [deleteTarget, setDeleteTarget] = React.useState<AdminTask | null>(null);
+    const [deleteReports, setDeleteReports] = React.useState(true);
+    const [deleteError, setDeleteError] = React.useState<string | null>(null);
+    const [deleteLoading, setDeleteLoading] = React.useState(false);
+    const [page, setPage] = React.useState(0);
+    const [rowsPerPage, setRowsPerPage] = React.useState(20);
 
     const load = React.useCallback(async () => {
         try {
@@ -981,6 +1007,20 @@ export default function TasksAdmin() {
         });
     }, [filters, items, q]);
 
+    React.useEffect(() => {
+        setPage(0);
+    }, [filters, q, tab]);
+
+    React.useEffect(() => {
+        const maxPage = Math.max(0, Math.ceil(filteredItems.length / rowsPerPage) - 1);
+        if (page > maxPage) setPage(maxPage);
+    }, [filteredItems.length, page, rowsPerPage]);
+
+    const pagedItems = React.useMemo(() => {
+        const start = page * rowsPerPage;
+        return filteredItems.slice(start, start + rowsPerPage);
+    }, [filteredItems, page, rowsPerPage]);
+
     const moderationItems = React.useMemo(
         () => items.filter((task) => task.publicModerationStatus === 'pending'),
         [items]
@@ -1121,6 +1161,56 @@ export default function TasksAdmin() {
             setModerationError(err instanceof Error ? err.message : 'Ошибка сети');
         } finally {
             setModerationLoading(false);
+        }
+    };
+
+    const openDeleteDialog = (task: AdminTask) => {
+        setDeleteTarget(task);
+        setDeleteReports(true);
+        setDeleteError(null);
+    };
+
+    const closeDeleteDialog = () => {
+        if (deleteLoading) return;
+        setDeleteTarget(null);
+        setDeleteError(null);
+    };
+
+    const submitDelete = async () => {
+        if (!deleteTarget) return;
+        const orgSlug = deleteTarget.orgSlug;
+        const projectRef = deleteTarget.projectKey || deleteTarget.projectId;
+        const taskRef = deleteTarget.taskId || deleteTarget._id;
+
+        if (!orgSlug || !projectRef || !taskRef) {
+            setDeleteError('Не удалось определить организацию, проект или ID задачи');
+            return;
+        }
+
+        setDeleteLoading(true);
+        setDeleteError(null);
+        try {
+            const res = await fetch(
+                `/api/org/${encodeURIComponent(orgSlug)}/projects/${encodeURIComponent(
+                    projectRef
+                )}/tasks/${encodeURIComponent(taskRef)}?deleteReports=${deleteReports ? 'true' : 'false'}`,
+                { method: 'DELETE' }
+            );
+            const payload = (await res.json().catch(() => null)) as
+                | { ok?: boolean; error?: string }
+                | null;
+
+            if (!res.ok || !payload?.ok) {
+                setDeleteError(payload?.error || `Не удалось удалить задачу (${res.status})`);
+                return;
+            }
+
+            setItems((prev) => prev.filter((item) => item._id !== deleteTarget._id));
+            closeDeleteDialog();
+        } catch (err) {
+            setDeleteError(err instanceof Error ? err.message : 'Ошибка сети');
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -1572,10 +1662,29 @@ export default function TasksAdmin() {
                     ) : (
                         <>
                             {tab === 'list' && (
-                                <AdminTaskTable
-                                    items={filteredItems}
-                                    onOpenProfile={openProfileDialog}
-                                />
+                                <Stack spacing={2}>
+                                    <AdminTaskTable
+                                        items={pagedItems}
+                                        onOpenProfile={openProfileDialog}
+                                        onDelete={openDeleteDialog}
+                                    />
+                                    <TablePagination
+                                        component="div"
+                                        count={filteredItems.length}
+                                        page={page}
+                                        onPageChange={(_, nextPage) => setPage(nextPage)}
+                                        rowsPerPage={rowsPerPage}
+                                        onRowsPerPageChange={(event) => {
+                                            setRowsPerPage(Number(event.target.value));
+                                            setPage(0);
+                                        }}
+                                        rowsPerPageOptions={[10, 20, 50, 100]}
+                                        labelRowsPerPage="Строк на странице"
+                                        labelDisplayedRows={({ from, to, count }) =>
+                                            `${from}-${to} из ${count !== -1 ? count : `больше ${to}`}`
+                                        }
+                                    />
+                                </Stack>
                             )}
                             {tab === 'board' && (
                                 <AdminTaskBoard
@@ -1688,6 +1797,46 @@ export default function TasksAdmin() {
                         disabled={moderationLoading}
                     >
                         {moderationLoading ? 'Сохранение...' : 'Подтвердить'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={Boolean(deleteTarget)} onClose={closeDeleteDialog} fullWidth maxWidth="sm">
+                <DialogTitle>Удаление задачи</DialogTitle>
+                <DialogContent sx={{ pt: 1 }}>
+                    {deleteTarget && (
+                        <Stack spacing={2} sx={{ mt: 1 }}>
+                            <Typography variant="subtitle2">
+                                {deleteTarget.taskName || 'Задача'} · {deleteTarget.taskId || '—'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Организация: {deleteTarget.orgName || deleteTarget.orgSlug || '—'} ·
+                                Проект: {deleteTarget.projectName || deleteTarget.projectKey || '—'}
+                            </Typography>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={deleteReports}
+                                        onChange={(event) => setDeleteReports(event.target.checked)}
+                                    />
+                                }
+                                label="Удалить связанные отчеты и файлы"
+                            />
+                            {deleteError && <Alert severity="error">{deleteError}</Alert>}
+                        </Stack>
+                    )}
+                </DialogContent>
+                <DialogActions sx={{ px: 3, py: 2 }}>
+                    <Button onClick={closeDeleteDialog} disabled={deleteLoading}>
+                        Отмена
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={submitDelete}
+                        disabled={deleteLoading}
+                    >
+                        {deleteLoading ? 'Удаление...' : 'Удалить'}
                     </Button>
                 </DialogActions>
             </Dialog>
