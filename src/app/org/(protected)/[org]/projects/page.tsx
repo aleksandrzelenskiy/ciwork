@@ -928,6 +928,7 @@ export default function OrgProjectsPage() {
                             name: projectToEdit.name,
                             key: projectToEdit.key,
                             description: projectToEdit.description ?? '',
+                            projectType: projectToEdit.projectType,
                             regionCode: normalizeRegionCode(projectToEdit.regionCode),
                             operator: projectToEdit.operator,
                             managers: projectToEdit.managers ?? [],
