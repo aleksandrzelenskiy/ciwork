@@ -753,9 +753,13 @@ export default function WorkspaceTaskDialog({
         setPriority(['urgent', 'high', 'medium', 'low'].includes(pr) ? pr : 'medium');
         setDueDate(initialTask.dueDate ? new Date(initialTask.dueDate) : null);
         setTaskDescription(initialTask.taskDescription ?? '');
-        setInitiatorName(initialTask.initiatorName ?? '');
-        setInitiatorEmail(initialTask.initiatorEmail ?? '');
-        setShowInitiatorFields(Boolean(initialTask.initiatorName || initialTask.initiatorEmail));
+        const initialInitiatorName =
+            typeof initialTask.initiatorName === 'string' ? initialTask.initiatorName.trim() : '';
+        const initialInitiatorEmail =
+            typeof initialTask.initiatorEmail === 'string' ? initialTask.initiatorEmail.trim() : '';
+        setInitiatorName(initialInitiatorName);
+        setInitiatorEmail(initialInitiatorEmail);
+        setShowInitiatorFields(Boolean(initialInitiatorName || initialInitiatorEmail));
 
         // стоимость
         setTotalCost(
@@ -982,6 +986,53 @@ export default function WorkspaceTaskDialog({
             aborted = true;
         };
     }, [open, orgSlug, projectRef, apiPath]);
+
+    const initiatorHydrationRef = React.useRef<string | null>(null);
+
+    React.useEffect(() => {
+        if (!open || !isEdit || !initialTask || !orgSlug || !projectRef) return;
+        const taskId = initialTask.taskId?.trim();
+        if (!taskId) return;
+        const hasInitiator =
+            (typeof initialTask.initiatorName === 'string' && initialTask.initiatorName.trim()) ||
+            (typeof initialTask.initiatorEmail === 'string' && initialTask.initiatorEmail.trim());
+        if (hasInitiator) return;
+        if (initiatorHydrationRef.current === taskId) return;
+        initiatorHydrationRef.current = taskId;
+
+        let aborted = false;
+
+        const hydrateInitiator = async () => {
+            try {
+                const res = await fetch(
+                    apiPath(
+                        `/projects/${encodeURIComponent(projectRef)}/tasks/${encodeURIComponent(taskId)}`
+                    ),
+                    { method: 'GET', cache: 'no-store' }
+                );
+                const body = await res.json().catch(() => ({}));
+                if (!res.ok) return;
+                const task = (body as { task?: { initiatorName?: string; initiatorEmail?: string } })
+                    ?.task ?? body;
+                const name =
+                    typeof task?.initiatorName === 'string' ? task.initiatorName.trim() : '';
+                const email =
+                    typeof task?.initiatorEmail === 'string' ? task.initiatorEmail.trim() : '';
+                if (aborted || (!name && !email)) return;
+                setInitiatorName((prev) => (prev.trim() ? prev : name));
+                setInitiatorEmail((prev) => (prev.trim() ? prev : email));
+                setShowInitiatorFields(true);
+            } catch {
+                // optional enrichment only
+            }
+        };
+
+        void hydrateInitiator();
+
+        return () => {
+            aborted = true;
+        };
+    }, [open, isEdit, initialTask, orgSlug, projectRef, apiPath]);
 
     React.useEffect(() => {
         const currentName = initiatorName.trim();

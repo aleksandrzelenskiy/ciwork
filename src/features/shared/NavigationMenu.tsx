@@ -539,6 +539,8 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                 display: 'flex',
                 flexDirection: 'column',
                 gap: 2,
+                maxHeight: '100vh',
+                overflow: 'hidden',
             }}
         >
             <Box
@@ -639,7 +641,19 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
             </Box>
             <List
                 disablePadding
-                sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: 'auto',
+                    scrollbarWidth: 'none',
+                    '&::-webkit-scrollbar': {
+                        width: 0,
+                        height: 0,
+                    },
+                }}
             >
                 {navLoading ? (
                     <Box
@@ -670,9 +684,10 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                         childActive ||
                         pathname === item.path ||
                         pathname.startsWith(`${item.path}/`);
+                    const controlledExpanded = expandedItems[item.label];
                     const isExpanded =
                         hasChildren &&
-                        ((expandedItems[item.label] ?? false) || childActive);
+                        (controlledExpanded ?? childActive);
                     const isOrgItem = item.path === '/org/new' || item.path.startsWith('/org/');
                     const isDisabled = isEmployerNoOrg && !isOrgItem;
                     const handleItemClick = () => {
@@ -681,10 +696,14 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                             onNavigateAction(item.path);
                             return;
                         }
-                        setExpandedItems((prev) => ({
-                            ...prev,
-                            [item.label]: !(prev[item.label] ?? false),
-                        }));
+                        setExpandedItems((prev) => {
+                            const current = prev[item.label];
+                            const nextExpanded = !(current ?? childActive);
+                            return {
+                                ...prev,
+                                [item.label]: nextExpanded,
+                            };
+                        });
                     };
                     return (
                         <React.Fragment key={item.label}>
