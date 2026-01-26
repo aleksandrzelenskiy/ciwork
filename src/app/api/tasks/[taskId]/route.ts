@@ -854,16 +854,19 @@ async function prepareTaskForResponse(taskDoc: TaskDocument | null) {
     path: 'relatedTasks',
     select: 'taskId taskName bsNumber status priority',
   });
+  type SerializableTask = Task & {
+    relatedTasks?: unknown;
+    attachments?: unknown;
+    documents?: unknown;
+  };
   const rawTask =
-    typeof (taskDoc as { toObject?: () => unknown }).toObject === 'function'
-      ? (taskDoc as { toObject: () => unknown }).toObject()
-      : taskDoc;
-  const normalizedRelated = normalizeRelatedTasks(
-    (rawTask as { relatedTasks?: unknown }).relatedTasks
-  );
+    typeof (taskDoc as { toObject?: () => SerializableTask }).toObject === 'function'
+      ? (taskDoc as { toObject: () => SerializableTask }).toObject()
+      : (taskDoc as SerializableTask);
+  const normalizedRelated = normalizeRelatedTasks(rawTask.relatedTasks);
   const { attachments, documents } = splitAttachmentsAndDocuments(
-    (rawTask as { attachments?: unknown }).attachments,
-    (rawTask as { documents?: unknown }).documents
+    rawTask.attachments,
+    rawTask.documents
   );
   return {
     ...rawTask,
