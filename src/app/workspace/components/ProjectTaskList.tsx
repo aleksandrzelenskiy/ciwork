@@ -437,7 +437,9 @@ const ProjectTaskListInner = (
                     borderRadius: UI_RADIUS.tooltip,
                     border: `1px solid ${cellBorder}`,
                     boxShadow: tableShadow,
-                    overflow: 'hidden',
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    WebkitOverflowScrolling: 'touch',
                 }}
             >
                 <Table size="small">
