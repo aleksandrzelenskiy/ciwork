@@ -44,6 +44,7 @@ type UserRow = {
     name?: string;
     email?: string;
     role?: string;
+    platformeRole?: string;
     profilePic?: string;
     walletBalance?: number;
     walletCurrency?: string;
@@ -585,9 +586,9 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
                                             </TableCell>
                                             <TableCell>{normalizeValue(user.email) || '—'}</TableCell>
                                             <TableCell>
-                                                {normalizeValue(user.role) ? (
+                                                {normalizeValue(user.platformeRole) ? (
                                                     <Typography fontWeight={600}>
-                                                        {normalizeValue(user.role)}
+                                                        {normalizeValue(user.platformeRole)}
                                                     </Typography>
                                                 ) : (
                                                     '—'
