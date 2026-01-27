@@ -18,6 +18,7 @@ type AdminUserDTO = {
     moderationStatus?: 'pending' | 'approved' | 'rejected';
     moderationComment?: string;
     profileType?: string;
+    regionCode?: string;
 };
 
 type ResponsePayload = {
@@ -34,16 +35,17 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
     const users = await UserModel.find(
         {},
         {
-            name: 1,
-            email: 1,
-            profilePic: 1,
-            clerkUserId: 1,
-            platformRole: 1,
-            profileStatus: 1,
-            moderationComment: 1,
-            profileType: 1,
-        }
-    ).lean();
+        name: 1,
+        email: 1,
+        profilePic: 1,
+        clerkUserId: 1,
+        platformRole: 1,
+        profileStatus: 1,
+        moderationComment: 1,
+        profileType: 1,
+        regionCode: 1,
+    }
+).lean();
     const userIds = users.map((user) => user._id);
     const wallets = await WalletModel.find({ contractorId: { $in: userIds } }).lean();
     const walletMap = new Map<string, typeof wallets[number]>();
@@ -68,6 +70,7 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             moderationStatus: user.profileStatus ?? 'pending',
             moderationComment: user.moderationComment ?? '',
             profileType: user.profileType ?? undefined,
+            regionCode: user.regionCode ?? undefined,
         };
     });
 
