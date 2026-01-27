@@ -50,6 +50,7 @@ type UserRow = {
     walletCurrency?: string;
     moderationStatus?: 'pending' | 'approved' | 'rejected';
     moderationComment?: string;
+    regionCode?: string;
     profileType?: string;
 };
 
@@ -478,7 +479,8 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
                                 <TableRow sx={{ '& th': { bgcolor: headBg, borderColor: cellBorder } }}>
                                     <TableCell>Пользователь</TableCell>
                                     <TableCell>Email</TableCell>
-                                    <TableCell>Роль</TableCell>
+                                    <TableCell>Регион</TableCell>
+                                    <TableCell>Тип</TableCell>
                                     <TableCell>Модерация</TableCell>
                                     <TableCell>Баланс</TableCell>
                                     <TableCell align="right">Действия</TableCell>
@@ -487,7 +489,7 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} align="center">
+                                        <TableCell colSpan={7} align="center">
                                             <Stack
                                                 direction="row"
                                                 spacing={1}
@@ -501,7 +503,7 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
                                     </TableRow>
                                 ) : filteredUsers.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} align="center">
+                                        <TableCell colSpan={7} align="center">
                                             Нет пользователей
                                         </TableCell>
                                     </TableRow>
@@ -585,10 +587,11 @@ export default function UsersAdmin({ focusUserId }: UsersAdminProps) {
                                                 </ButtonBase>
                                             </TableCell>
                                             <TableCell>{normalizeValue(user.email) || '—'}</TableCell>
+                                            <TableCell>{normalizeValue(user.regionCode) || '—'}</TableCell>
                                             <TableCell>
-                                                {normalizeValue(user.platformRole) ? (
+                                                {normalizeValue(user.profileType) ? (
                                                     <Typography fontWeight={600}>
-                                                        {normalizeValue(user.platformRole)}
+                                                        {normalizeValue(user.profileType)}
                                                     </Typography>
                                                 ) : (
                                                     '—'
