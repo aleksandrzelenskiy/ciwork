@@ -72,7 +72,7 @@ const resolveNamesForReview = async (review?: InstanceType<typeof DocumentReview
         });
     });
 
-    review.versions?.forEach((version) => {
+    review.versions?.forEach((version: { createdById?: string; createdByName?: string }) => {
         if (version?.createdById) clerkIds.add(version.createdById);
     });
 
