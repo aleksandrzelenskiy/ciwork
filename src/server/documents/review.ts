@@ -97,7 +97,7 @@ const resolveNamesForReview = async (review?: InstanceType<typeof DocumentReview
     });
 
     review.versions?.forEach((version: { createdById?: string; createdByName?: string }) => {
-        const authorName = nameMap.get(version.createdById) || '';
+        const authorName = version.createdById ? nameMap.get(version.createdById) || '' : '';
         if (!normalizeUserName(version.createdByName) || looksLikeUserId(version.createdByName)) {
             if (authorName) version.createdByName = authorName;
         }
