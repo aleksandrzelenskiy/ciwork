@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Avatar,
+    Badge,
     Box,
     Button,
     CircularProgress,
@@ -83,9 +84,21 @@ export default function OrgMembersCard({
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
                     <Stack direction="row" spacing={1} alignItems="center">
                         <GroupIcon fontSize="small" />
-                        <Typography variant="subtitle1" fontWeight={600}>
-                            {t('org.members.title', 'Участники')}
-                        </Typography>
+                        {requestedMembersCount > 0 ? (
+                            <Badge
+                                badgeContent={requestedMembersCount}
+                                color="error"
+                                sx={{ '& .MuiBadge-badge': { fontSize: 11, minWidth: 18, height: 18 } }}
+                            >
+                                <Typography variant="subtitle1" fontWeight={600}>
+                                    {t('org.members.title', 'Участники')}
+                                </Typography>
+                            </Badge>
+                        ) : (
+                            <Typography variant="subtitle1" fontWeight={600}>
+                                {t('org.members.title', 'Участники')}
+                            </Typography>
+                        )}
                     </Stack>
                     <Stack direction="row" spacing={1}>
                         <Tooltip title={t('common.openList', 'Открыть список')}>

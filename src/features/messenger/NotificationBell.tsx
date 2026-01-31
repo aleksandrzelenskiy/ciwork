@@ -146,6 +146,14 @@ const getNotificationLink = (
     notification: NotificationDTO,
     userContext: UserContextResponse | null
 ) => {
+    if (notification.type === 'org_join_request') {
+        const metadata = notification.metadata || {};
+        const membershipId = normalizeMetadataValue(metadata.membershipId);
+        if (notification.orgSlug && membershipId) {
+            return `/org/${encodeURIComponent(notification.orgSlug)}/requests/${encodeURIComponent(membershipId)}`;
+        }
+    }
+
     const isTaskNotification =
         notification.type === 'task_assigned' ||
         notification.type === 'task_unassigned' ||

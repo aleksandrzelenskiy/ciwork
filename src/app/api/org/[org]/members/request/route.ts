@@ -59,7 +59,7 @@ export async function POST(
         const requesterDoc = await UserModel.findOne({ email: requesterEmail }, { name: 1 })
             .lean<{ name?: string }>();
 
-        await Membership.create({
+        const membership = await Membership.create({
             orgId: org._id,
             userEmail: requesterEmail,
             userName: requesterDoc?.name ?? me?.fullName ?? me?.username ?? requesterEmail,
@@ -76,12 +76,16 @@ export async function POST(
             const requesterName = requesterDoc?.name || me?.fullName || me?.username || requesterEmail;
             const orgName = org.name ?? org.orgSlug;
             try {
+                const membershipId = membership?._id ? String(membership._id) : '';
+                const requestLink = membershipId
+                    ? `/org/${encodeURIComponent(org.orgSlug)}/requests/${encodeURIComponent(membershipId)}`
+                    : `/org/${encodeURIComponent(org.orgSlug)}`;
                 await createNotification({
                     recipientUserId: owner._id,
                     type: 'org_join_request',
                     title: 'Запрос на присоединение',
                     message: `${requesterName} хочет присоединиться к «${orgName}» как менеджер проекта.`,
-                    link: `/org/${encodeURIComponent(org.orgSlug)}`,
+                    link: requestLink,
                     orgId: org._id,
                     orgSlug: org.orgSlug,
                     orgName,
@@ -90,6 +94,7 @@ export async function POST(
                     metadata: {
                         role: requestedRole,
                         requesterEmail,
+                        membershipId,
                     },
                 });
             } catch (notifyError) {

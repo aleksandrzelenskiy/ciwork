@@ -8,6 +8,8 @@ import {
     Box,
     Button,
     Chip,
+    Card,
+    CardContent,
     Dialog,
     DialogActions,
     DialogContent,
@@ -41,6 +43,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import TaskOutlinedIcon from '@mui/icons-material/TaskOutlined';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { withBasePath } from '@/utils/basePath';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -638,43 +641,86 @@ function AdminTaskBoard({
                     {(grouped[status] || []).map((task) => {
                         const taskHref = getTaskHref(task);
                         const executorLabel = getExecutorLabel(task);
-                        const regionLabel = getRegionLabel(task.projectRegionCode);
-                        const operatorLabel = getOperatorLabel(task.projectOperator) || task.projectOperator;
+                        const executorTooltip =
+                            task.executorName && task.executorEmail
+                                ? `${task.executorName} • ${task.executorEmail}`
+                                : executorLabel;
+                        const priority = normalizePriority(task.priority);
                         return (
-                            <Paper
+                            <Card
                                 key={task._id}
                                 component={taskHref ? Link : 'div'}
                                 href={taskHref ?? undefined}
                                 sx={{
                                     mb: 2,
-                                    p: 2,
+                                    position: 'relative',
                                     cursor: taskHref ? 'pointer' : 'default',
                                     textDecoration: 'none',
                                     color: 'inherit',
                                     background: cardBg,
                                     border: `1px solid ${cardBorder}`,
                                     boxShadow: cardShadow,
+                                    overflow: 'hidden',
                                     '&:hover': taskHref
                                         ? { transform: 'translateY(-1px)', transition: '150ms ease' }
                                         : undefined,
                                 }}
                             >
-                                <Typography variant="caption" color="text.secondary">
-                                    {task.taskId} • {formatDateRU(task.createdAt)}
-                                </Typography>
-                                <Typography variant="subtitle1" sx={{ mt: 0.5 }}>
-                                    {task.taskName}
-                                </Typography>
-                                <Typography variant="body2">БС: {task.bsNumber || '—'}</Typography>
-                                <Typography variant="body2">
-                                    {task.orgName || task.orgSlug || '—'} •{' '}
-                                    {task.projectName || task.projectKey || '—'}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {regionLabel}
-                                    {operatorLabel ? ` • ${operatorLabel}` : ''}
-                                </Typography>
-                                <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
+                                <Box sx={{ mt: '5px', ml: '5px' }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                        <TaskOutlinedIcon sx={{ fontSize: 15, mb: 0.5, mr: 0.5 }} />
+                                        {task.taskId} {task.createdAt ? formatDateRU(task.createdAt) : ''}
+                                    </Typography>
+                                </Box>
+
+                                <CardContent sx={{ pb: 6 }}>
+                                    <Typography variant="subtitle1" gutterBottom>
+                                        {task.taskName}
+                                    </Typography>
+                                    <Typography variant="body2">БС: {task.bsNumber || '—'}</Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Проект: {task.projectName || task.projectKey || '—'}
+                                    </Typography>
+
+                                    <Box sx={{ mt: 0.5, minHeight: 28 }}>
+                                        {executorLabel ? (
+                                            <Tooltip title={executorTooltip}>
+                                                <Chip
+                                                    size="small"
+                                                    label={executorLabel}
+                                                    variant="outlined"
+                                                    sx={{ maxWidth: '100%' }}
+                                                    onClick={(event) => {
+                                                        if (!task.executorClerkUserId) return;
+                                                        event.preventDefault();
+                                                        event.stopPropagation();
+                                                        onOpenProfile(task.executorClerkUserId);
+                                                    }}
+                                                />
+                                            </Tooltip>
+                                        ) : (
+                                            <Typography variant="caption" color="text.secondary">
+                                                Исполнитель: —
+                                            </Typography>
+                                        )}
+                                    </Box>
+
+                                    <Typography variant="caption">
+                                        Срок: {formatDateRU(task.dueDate)}
+                                    </Typography>
+                                </CardContent>
+
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        left: 8,
+                                        right: 8,
+                                        bottom: 8,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                    }}
+                                >
                                     <Chip
                                         label={getStatusLabel(status)}
                                         size="small"
@@ -683,22 +729,17 @@ function AdminTaskBoard({
                                             color: '#fff',
                                         }}
                                     />
-                                    {executorLabel ? (
-                                        <Chip
-                                            label={executorLabel}
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={(event) => {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                onOpenProfile(task.executorClerkUserId);
-                                            }}
-                                        />
-                                    ) : (
-                                        <Chip label="Исполнитель: —" size="small" variant="outlined" />
-                                    )}
-                                </Stack>
-                            </Paper>
+                                    <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center' }}>
+                                        {priority && (
+                                            <Tooltip title={getPriorityLabelRu(priority)}>
+                                                <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                                                    {getPriorityIcon(priority, { fontSize: 20 })}
+                                                </Box>
+                                            </Tooltip>
+                                        )}
+                                    </Box>
+                                </Box>
+                            </Card>
                         );
                     })}
                 </Box>
