@@ -58,7 +58,9 @@ export default function OrgJoinRequestPage() {
             );
             const data = (await res.json().catch(() => ({}))) as { members?: MemberDTO[]; error?: string };
             if (!res.ok) {
-                setError(data?.error || res.statusText);
+                const message = data?.error || res.statusText;
+                setError(message);
+                setSnack({ open: true, msg: message, sev: 'error' });
                 setMember(null);
                 return;
             }
@@ -66,18 +68,20 @@ export default function OrgJoinRequestPage() {
                 ? data.members.find((item) => String(item._id) === String(memberId))
                 : null;
             if (!match) {
-                setError(
-                    t(
-                        'org.join.request.owner.notFound',
-                        'Запрос не найден или уже обработан.'
-                    )
+                const message = t(
+                    'org.join.request.owner.notFound',
+                    'Запрос не найден или уже обработан.'
                 );
+                setError(message);
+                setSnack({ open: true, msg: message, sev: 'error' });
                 setMember(null);
                 return;
             }
             setMember(match);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Network error');
+            const message = err instanceof Error ? err.message : 'Network error';
+            setError(message);
+            setSnack({ open: true, msg: message, sev: 'error' });
             setMember(null);
         } finally {
             setLoading(false);
@@ -99,22 +103,21 @@ export default function OrgJoinRequestPage() {
             );
             const data = (await res.json().catch(() => ({}))) as { error?: string };
             if (!res.ok) {
-                setSnack({
-                    open: true,
-                    msg: data?.error || t('org.members.request.approveError', 'Ошибка одобрения запроса'),
-                    sev: 'error',
-                });
+                const message = data?.error || t('org.members.request.approveError', 'Ошибка одобрения запроса');
+                setSnack({ open: true, msg: message, sev: 'error' });
                 return;
             }
             const displayOrg = orgName || org || '—';
+            const successMessage = t(
+                'org.join.request.owner.approved',
+                'Запрос подтверждён. Пользователь добавлен в организацию «{orgName}».',
+                { orgName: displayOrg }
+            );
             setActionResult({
                 type: 'approved',
-                message: t(
-                    'org.join.request.owner.approved',
-                    'Запрос подтверждён. Пользователь добавлен в организацию «{orgName}».',
-                    { orgName: displayOrg }
-                ),
+                message: successMessage,
             });
+            setSnack({ open: true, msg: successMessage, sev: 'success' });
             setTimeout(() => {
                 router.replace(`/org/${encodeURIComponent(org)}`);
             }, 1600);
@@ -133,22 +136,21 @@ export default function OrgJoinRequestPage() {
             );
             const data = (await res.json().catch(() => ({}))) as { error?: string };
             if (!res.ok) {
-                setSnack({
-                    open: true,
-                    msg: data?.error || t('org.members.request.declineError', 'Ошибка отклонения запроса'),
-                    sev: 'error',
-                });
+                const message = data?.error || t('org.members.request.declineError', 'Ошибка отклонения запроса');
+                setSnack({ open: true, msg: message, sev: 'error' });
                 return;
             }
             const displayOrg = orgName || org || '—';
+            const declineMessage = t(
+                'org.join.request.owner.declined',
+                'Запрос отклонён. Пользователь не добавлен в «{orgName}».',
+                { orgName: displayOrg }
+            );
             setActionResult({
                 type: 'declined',
-                message: t(
-                    'org.join.request.owner.declined',
-                    'Запрос отклонён. Пользователь не добавлен в «{orgName}».',
-                    { orgName: displayOrg }
-                ),
+                message: declineMessage,
             });
+            setSnack({ open: true, msg: declineMessage, sev: 'info' });
             setTimeout(() => {
                 router.replace(`/org/${encodeURIComponent(org)}`);
             }, 1600);
@@ -255,14 +257,14 @@ export default function OrgJoinRequestPage() {
                                     </Typography>
                                 </Stack>
                             ) : !isOwner ? (
-                                <Alert severity="warning" variant="outlined">
+                                <Alert severity="warning" variant="filled">
                                     {t(
                                         'org.join.request.owner.notAllowed',
                                         'Доступен только владельцу организации.'
                                     )}
                                 </Alert>
                             ) : error ? (
-                                <Alert severity="warning" variant="outlined">{error}</Alert>
+                                <Alert severity="warning" variant="filled">{error}</Alert>
                             ) : !member ? (
                                 <Typography color="text.secondary">
                                     {t(
@@ -316,15 +318,6 @@ export default function OrgJoinRequestPage() {
                                                 : t('org.join.request.owner.requestedAtUnknown', 'неизвестно')}
                                         </Typography>
                                     </Stack>
-
-                                    {actionResult && (
-                                        <Alert
-                                            variant="filled"
-                                            severity={actionResult.type === 'approved' ? 'success' : 'warning'}
-                                        >
-                                            {actionResult.message}
-                                        </Alert>
-                                    )}
 
                                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                                         <Button

@@ -223,10 +223,6 @@ export default function NewOrgPage() {
                 return;
             }
 
-            setJoinAlert({
-                type: 'success',
-                message: t('org.join.request.success', 'Запрос отправлен. Владелец организации получит уведомление.'),
-            });
             const requestedAt = new Date().toISOString();
             setSelectedOrg((prev) => (prev ? { ...prev, membershipStatus: 'requested', requestedAt } : prev));
             setOrgOptions((prev) =>
@@ -612,7 +608,7 @@ export default function NewOrgPage() {
                                     </Alert>
                                 ) : null}
 
-                                {selectedOrg?.membershipStatus === 'requested' && (
+                                {selectedOrg?.membershipStatus === 'requested' && requestedOrgs.length === 0 && (
                                     <Alert severity="info" variant="outlined">
                                         <Stack spacing={1}>
                                             <Typography variant="body2">

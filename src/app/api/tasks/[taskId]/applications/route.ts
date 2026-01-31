@@ -15,7 +15,6 @@ import { debitForBid } from '@/utils/wallet';
 import {
     notifyApplicationStatusChanged,
     notifyApplicationSubmitted,
-    notifyTaskAssignment,
     notifyTaskUnassignment,
     notifyTaskStatusChange,
 } from '@/server/tasks/notifications';
@@ -575,6 +574,8 @@ export async function PATCH(
         task;
     const storageScope = await resolveStorageScope(finalTask ?? task);
 
+    const acceptedTransition = app.status === 'accepted' && previousStatus !== 'accepted';
+
     if (contractor && previousStatus !== app.status) {
         try {
             await notifyApplicationStatusChanged({
@@ -602,26 +603,7 @@ export async function PATCH(
         }
     }
 
-    if (app.status === 'accepted' && contractor?.clerkUserId) {
-        try {
-            await notifyTaskAssignment({
-                executorClerkId: contractor.clerkUserId,
-                taskId: finalTask.taskId,
-                taskName: finalTask.taskName ?? task.taskName ?? 'Задача',
-                bsNumber: finalTask.bsNumber,
-                orgId: finalTask.orgId ?? task.orgId,
-                orgSlug: storageScope.orgSlug,
-                orgName: (finalTask as { orgName?: string })?.orgName,
-                projectRef: storageScope.projectRef,
-                projectKey: storageScope.projectKey,
-                projectName: undefined,
-                triggeredByName: actorName,
-                triggeredByEmail: actorEmail,
-            });
-        } catch (notifyErr) {
-            console.error('Failed to notify executor assignment from application', notifyErr);
-        }
-    }
+    // Consolidated acceptance flow: application status notification already mentions assignment.
 
     if (previousStatus === 'accepted' && app.status !== 'accepted' && previousExecutorId) {
         try {
@@ -653,7 +635,12 @@ export async function PATCH(
                 previousStatus: previousTaskStatus,
                 newStatus: finalTask.status,
                 authorClerkId: typeof finalTask.authorId === 'string' ? finalTask.authorId : undefined,
-                executorClerkId: typeof finalTask.executorId === 'string' ? finalTask.executorId : undefined,
+                executorClerkId:
+                    acceptedTransition
+                        ? undefined
+                        : typeof finalTask.executorId === 'string'
+                          ? finalTask.executorId
+                          : undefined,
                 triggeredByClerkId: actorClerkId,
                 triggeredByName: actorName,
                 triggeredByEmail: actorEmail,

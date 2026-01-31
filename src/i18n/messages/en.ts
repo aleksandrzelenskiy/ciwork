@@ -65,6 +65,7 @@ const enMessages: Record<string, string> = {
     'task.document.inputs.photos': 'Photos / archives / server links',
     'task.document.inputs.photosHelper': 'One link per line',
     'task.document.outputs.title': 'Documentation deliverables',
+    'task.document.review.title': 'Documentation review',
     'task.document.outputs.review': 'Review PDFs',
     'task.document.outputs.reviewHelper': 'PDF links, one per line',
     'task.document.outputs.final': 'Final files',

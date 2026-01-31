@@ -65,6 +65,7 @@ const ruMessages: Record<string, string> = {
     'task.document.inputs.photos': 'Фото / архивы / ссылки на сервер',
     'task.document.inputs.photosHelper': 'По одной ссылке в строке',
     'task.document.outputs.title': 'Результаты документации',
+    'task.document.review.title': 'Согласование документации',
     'task.document.outputs.review': 'PDF на согласование',
     'task.document.outputs.reviewHelper': 'Ссылки на PDF, по одной в строке',
     'task.document.outputs.final': 'Финальные файлы',
