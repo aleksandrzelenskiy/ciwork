@@ -65,7 +65,7 @@ const resolveNamesForReview = async (review?: InstanceType<typeof DocumentReview
     if (!review) return;
     const clerkIds = new Set<string>();
 
-    review.issues?.forEach((issue) => {
+    review.issues?.forEach((issue: DocumentIssue) => {
         if (issue?.createdById) clerkIds.add(issue.createdById);
         issue?.comments?.forEach((comment) => {
             if (comment?.authorId) clerkIds.add(comment.authorId);
