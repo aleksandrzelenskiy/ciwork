@@ -188,7 +188,7 @@ export const appendDocumentVersion = async (params: {
     review: InstanceType<typeof DocumentReviewModel>;
     version: number;
     actor: Actor;
-    changeLog: string;
+    changeLog?: string;
     filesMeta: VersionFileMeta[];
     issuesSnapshot: IssueSnapshot[];
 }) => {

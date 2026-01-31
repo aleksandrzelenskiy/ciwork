@@ -40,7 +40,7 @@ export type DocumentReviewVersion = {
     createdAt: string | Date;
     createdById: string;
     createdByName: string;
-    changeLog: string;
+    changeLog?: string;
     filesMeta: VersionFileMeta[];
     issuesSnapshot: IssueSnapshot[];
 };

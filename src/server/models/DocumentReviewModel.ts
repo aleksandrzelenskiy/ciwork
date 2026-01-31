@@ -48,7 +48,7 @@ type DocumentReviewVersion = {
     createdAt: Date;
     createdById: string;
     createdByName: string;
-    changeLog: string;
+    changeLog?: string;
     filesMeta: VersionFileMeta[];
     issuesSnapshot: IssueSnapshot[];
 };
@@ -144,7 +144,7 @@ const VersionSchema = new Schema<DocumentReviewVersion>(
         createdAt: { type: Date, default: Date.now },
         createdById: { type: String, required: true },
         createdByName: { type: String, required: true },
-        changeLog: { type: String, required: true },
+        changeLog: { type: String, default: '' },
         filesMeta: { type: [VersionFileMetaSchema], default: [] },
         issuesSnapshot: { type: [IssueSnapshotSchema], default: [] },
     },

@@ -7,12 +7,16 @@ import {
     Button,
     Chip,
     Divider,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     Drawer,
     IconButton,
     LinearProgress,
     Stack,
-    TextField,
     Typography,
+    Tooltip,
     useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -22,6 +26,9 @@ import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import AnnouncementIcon from '@mui/icons-material/Announcement';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import type { DocumentIssue, DocumentReviewClient } from '@/app/types/documentReviewTypes';
@@ -51,10 +58,11 @@ export default function DocumentReviewPage() {
     const [submitError, setSubmitError] = React.useState<string | null>(null);
     const [issueError, setIssueError] = React.useState<string | null>(null);
     const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
-    const [changeLog, setChangeLog] = React.useState('');
     const [newIssueText, setNewIssueText] = React.useState('');
     const [issueComments, setIssueComments] = React.useState<Record<string, string>>({});
     const [approving, setApproving] = React.useState(false);
+    const [pdfFullScreenOpen, setPdfFullScreenOpen] = React.useState(false);
+    const [issueDialogOpen, setIssueDialogOpen] = React.useState(false);
 
     const loadReview = React.useCallback(async () => {
         setLoading(true);
@@ -123,24 +131,19 @@ export default function DocumentReviewPage() {
     };
 
     const handleSubmit = async () => {
-        if (!changeLog.trim()) {
-            setSubmitError('Заполните список исправлений');
-            return;
-        }
         setSubmitting(true);
         setSubmitError(null);
         try {
             const res = await fetch(`/api/document-reviews/${encodeURIComponent(taskId)}/submit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ changeLog }),
+                body: JSON.stringify({}),
             });
             const payload = (await res.json().catch(() => ({}))) as { error?: string };
             if (!res.ok) {
                 setSubmitError(payload.error || 'Не удалось отправить документацию');
                 return;
             }
-            setChangeLog('');
             await loadReview();
         } catch (err) {
             setSubmitError(err instanceof Error ? err.message : 'Не удалось отправить документацию');
@@ -149,10 +152,10 @@ export default function DocumentReviewPage() {
         }
     };
 
-    const handleIssueCreate = async () => {
+    const handleIssueCreate = async (): Promise<boolean> => {
         if (!newIssueText.trim()) {
             setIssueError('Введите текст замечания');
-            return;
+            return false;
         }
         setIssueError(null);
         try {
@@ -164,12 +167,14 @@ export default function DocumentReviewPage() {
             const payload = (await res.json().catch(() => ({}))) as { error?: string };
             if (!res.ok) {
                 setIssueError(payload.error || 'Не удалось добавить замечание');
-                return;
+                return false;
             }
             setNewIssueText('');
             await loadReview();
+            return true;
         } catch (err) {
             setIssueError(err instanceof Error ? err.message : 'Не удалось добавить замечание');
+            return false;
         }
     };
 
@@ -235,6 +240,19 @@ export default function DocumentReviewPage() {
         } finally {
             setApproving(false);
         }
+    };
+
+    const openIssueDialog = () => {
+        if (!canManage) return;
+        const filename = selectedFile ? extractFileNameFromUrl(selectedFile, 'Файл') : '';
+        if (filename) {
+            setNewIssueText((prev) => (prev ? prev : `Файл: ${filename}\n`));
+        }
+        setIssueDialogOpen(true);
+    };
+
+    const closeIssueDialog = () => {
+        setIssueDialogOpen(false);
     };
 
     const renderFileList = (label: string, files: string[]) => (
@@ -440,16 +458,6 @@ export default function DocumentReviewPage() {
                             Отправить на согласование
                         </Button>
                     )}
-                    {canSubmit && (
-                        <TextField
-                            label="Список исправлений"
-                            value={changeLog}
-                            onChange={(event) => setChangeLog(event.target.value)}
-                            size="small"
-                            sx={{ minWidth: { xs: '100%', md: 320 } }}
-                            helperText="Обязательное поле для истории версий"
-                        />
-                    )}
                     <Button
                         variant="text"
                         startIcon={<FolderOpenIcon />}
@@ -517,8 +525,35 @@ export default function DocumentReviewPage() {
                             border: '1px solid',
                             borderColor: 'divider',
                             overflow: 'hidden',
+                            position: 'relative',
                         }}
                     >
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                                zIndex: 2,
+                                display: 'flex',
+                                gap: 1,
+                            }}
+                        >
+                            {selectedFile && pdfSelected && (
+                                <Tooltip title="Открыть на весь экран">
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setPdfFullScreenOpen(true)}
+                                        sx={{
+                                            backgroundColor: 'rgba(15,23,42,0.8)',
+                                            color: '#fff',
+                                            '&:hover': { backgroundColor: 'rgba(15,23,42,0.9)' },
+                                        }}
+                                    >
+                                        <OpenInFullIcon fontSize="small" />
+                                    </IconButton>
+                                </Tooltip>
+                            )}
+                        </Box>
                         {selectedFile && pdfSelected ? (
                             <iframe
                                 title="document-pdf"
@@ -596,13 +631,21 @@ export default function DocumentReviewPage() {
                                             <Stack direction="row" spacing={1} alignItems="center">
                                                 <Chip size="small" label={`v${version.version}`} />
                                                 <Typography variant="subtitle2">
-                                                    {version.createdByName}
+                                                    {/^user_[a-zA-Z0-9]+$/.test(version.createdByName)
+                                                        ? review.executorName || review.initiatorName || '—'
+                                                        : version.createdByName}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
                                                     {new Date(version.createdAt).toLocaleString()}
                                                 </Typography>
                                             </Stack>
-                                            <Typography variant="body2">{version.changeLog}</Typography>
+                                            {version.changeLog ? (
+                                                <Typography variant="body2">{version.changeLog}</Typography>
+                                            ) : (
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Без описания изменений
+                                                </Typography>
+                                            )}
                                             <Typography variant="caption" color="text.secondary">
                                                 Замечаний на входе: {version.issuesSnapshot?.length ?? 0}
                                             </Typography>
@@ -644,6 +687,89 @@ export default function DocumentReviewPage() {
                     {renderIssues(review.issues ?? [])}
                 </Box>
             </Drawer>
+
+            <Dialog fullScreen open={pdfFullScreenOpen} onClose={() => setPdfFullScreenOpen(false)}>
+                <Box
+                    sx={{
+                        position: 'relative',
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: '#0f172a',
+                    }}
+                >
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            top: 12,
+                            right: 12,
+                            zIndex: 3,
+                            display: 'flex',
+                            gap: 1,
+                        }}
+                    >
+                        {canManage && (
+                            <Tooltip title="Добавить замечание">
+                                <IconButton
+                                    onClick={openIssueDialog}
+                                    sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.15)',
+                                        color: '#fff',
+                                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.25)' },
+                                    }}
+                                >
+                                    <AnnouncementIcon />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                        <Tooltip title="Закрыть просмотр">
+                            <IconButton
+                                onClick={() => setPdfFullScreenOpen(false)}
+                                sx={{
+                                    backgroundColor: 'rgba(255,255,255,0.15)',
+                                    color: '#fff',
+                                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.25)' },
+                                }}
+                            >
+                                <CloseFullscreenIcon />
+                            </IconButton>
+                        </Tooltip>
+                    </Box>
+                    {selectedFile ? (
+                        <iframe
+                            title="document-pdf-fullscreen"
+                            src={selectedFile}
+                            style={{ width: '100%', height: '100%', border: 'none' }}
+                        />
+                    ) : null}
+                </Box>
+            </Dialog>
+
+            <Dialog open={issueDialogOpen} onClose={closeIssueDialog} fullWidth maxWidth="sm">
+                <DialogTitle>Добавить замечание</DialogTitle>
+                <DialogContent dividers>
+                    {issueError && <Alert severity="error" sx={{ mb: 2 }}>{issueError}</Alert>}
+                    <TextField
+                        label="Новое замечание"
+                        value={newIssueText}
+                        onChange={(event) => setNewIssueText(event.target.value)}
+                        multiline
+                        minRows={3}
+                        fullWidth
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeIssueDialog}>Отмена</Button>
+                    <Button
+                        variant="contained"
+                        onClick={async () => {
+                            const ok = await handleIssueCreate();
+                            if (ok) closeIssueDialog();
+                        }}
+                    >
+                        Добавить
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }

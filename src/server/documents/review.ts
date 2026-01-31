@@ -15,6 +15,7 @@ import { getServerEnv } from '@/config/env';
 import { assertWritableStorage, adjustStorageBytes, recordStorageBytes } from '@/utils/storageUsage';
 import { uploadTaskFile, deleteTaskFile } from '@/utils/s3';
 import { resolveStorageScope } from '@/app/api/reports/_shared';
+import { getStatusLabel } from '@/utils/statusLabels';
 import {
     addDocumentIssue,
     addDocumentIssueComment,
@@ -43,6 +44,14 @@ const buildActorName = (user: Awaited<ReturnType<typeof currentUser>>) => {
     if (!user) return 'Исполнитель';
     const name = [user.firstName, user.lastName].filter(Boolean).join(' ').trim();
     return name || user.username || user.id;
+};
+
+const resolveActorNameFromDb = async (clerkUserId?: string | null, fallback?: string) => {
+    const resolvedFallback = fallback?.trim() || 'Исполнитель';
+    if (!clerkUserId) return resolvedFallback;
+    const dbUser = await UserModel.findOne({ clerkUserId }).select('name').lean();
+    const dbName = typeof dbUser?.name === 'string' ? dbUser.name.trim() : '';
+    return dbName || resolvedFallback;
 };
 
 const resolveProjectEmailContext = async (projectId?: unknown) => {
@@ -286,7 +295,7 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
         uploadedMeta.push(buildStoredFileMeta(url, buffer.length));
     }
 
-    const actorName = buildActorName(user);
+    const actorName = await resolveActorNameFromDb(user.id, buildActorName(user));
     const actor = { id: user.id, name: actorName };
 
     const review = await upsertDocumentReview({
@@ -366,7 +375,7 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
 
 export const submitDocumentReview = async (params: {
     taskId: string;
-    changeLog: string;
+    changeLog?: string;
 }) => {
     const user = await currentUser();
     if (!user) {
@@ -377,10 +386,7 @@ export const submitDocumentReview = async (params: {
     if (!taskIdDecoded) {
         return { ok: false, error: 'Task ID is required', status: 400 } as const;
     }
-    const changeLog = params.changeLog?.trim();
-    if (!changeLog) {
-        return { ok: false, error: 'Необходимо заполнить список исправлений', status: 400 } as const;
-    }
+    const changeLog = params.changeLog?.trim() || '';
 
     const task = await TaskModel.findOne({ taskId: taskIdDecoded });
     if (!task) {
@@ -473,7 +479,7 @@ export const submitDocumentReview = async (params: {
     const title = task.taskName
         ? `Документация по задаче "${task.taskName}"`
         : 'Документация по задаче';
-    const message = `${actorName} отправил документацию на согласование. Статус: ${nextStatus}.`;
+    const message = `${actorName} отправил документацию на согласование. Статус: ${getStatusLabel(nextStatus)}.`;
 
     await Promise.all(
         recipientsByClerkId.map((recipient) =>
