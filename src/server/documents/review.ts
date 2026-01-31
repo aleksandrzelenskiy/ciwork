@@ -723,7 +723,9 @@ export const resolveDocumentIssueAction = async (params: {
 
     await resolveDocumentIssue({ review, issueId: params.issueId, actor });
 
-    const hasOpenIssues = (review.issues ?? []).some((issue) => issue.status !== 'resolved');
+    const hasOpenIssues = (review.issues ?? []).some(
+        (issue: DocumentIssue) => issue.status !== 'resolved'
+    );
     if (!hasOpenIssues && review.status !== 'Agreed') {
         await updateDocumentStatus({ review, status: 'Agreed', actor });
         await syncTaskStatusFromDocument({
@@ -802,7 +804,9 @@ export const approveDocumentReview = async (params: { taskId: string }) => {
         actor,
     });
 
-    const hasOpenIssues = (review.issues ?? []).some((issue) => issue.status !== 'resolved');
+    const hasOpenIssues = (review.issues ?? []).some(
+        (issue: DocumentIssue) => issue.status !== 'resolved'
+    );
     if (hasOpenIssues) {
         return { ok: false, error: 'Есть незакрытые замечания', status: 400 } as const;
     }
