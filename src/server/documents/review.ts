@@ -54,6 +54,56 @@ const resolveActorNameFromDb = async (clerkUserId?: string | null, fallback?: st
     return dbName || resolvedFallback;
 };
 
+const normalizeUserName = (value?: string | null) => (value || '').trim();
+
+const looksLikeUserId = (value?: string | null) => {
+    const raw = normalizeUserName(value);
+    return raw.startsWith('user_');
+};
+
+const resolveNamesForReview = async (review?: InstanceType<typeof DocumentReviewModel> | null) => {
+    if (!review) return;
+    const clerkIds = new Set<string>();
+
+    review.issues?.forEach((issue) => {
+        if (issue?.createdById) clerkIds.add(issue.createdById);
+        issue?.comments?.forEach((comment) => {
+            if (comment?.authorId) clerkIds.add(comment.authorId);
+        });
+    });
+
+    review.versions?.forEach((version) => {
+        if (version?.createdById) clerkIds.add(version.createdById);
+    });
+
+    if (!clerkIds.size) return;
+
+    const users = await UserModel.find({ clerkUserId: { $in: Array.from(clerkIds) } })
+        .select('clerkUserId name')
+        .lean();
+    const nameMap = new Map(users.map((user) => [user.clerkUserId, user.name?.trim() || '']));
+
+    review.issues?.forEach((issue) => {
+        const createdName = nameMap.get(issue.createdById) || '';
+        if (!normalizeUserName(issue.createdByName) || looksLikeUserId(issue.createdByName)) {
+            if (createdName) issue.createdByName = createdName;
+        }
+        issue.comments?.forEach((comment) => {
+            const commentName = nameMap.get(comment.authorId) || '';
+            if (!normalizeUserName(comment.authorName) || looksLikeUserId(comment.authorName)) {
+                if (commentName) comment.authorName = commentName;
+            }
+        });
+    });
+
+    review.versions?.forEach((version) => {
+        const authorName = nameMap.get(version.createdById) || '';
+        if (!normalizeUserName(version.createdByName) || looksLikeUserId(version.createdByName)) {
+            if (authorName) version.createdByName = authorName;
+        }
+    });
+};
+
 const resolveProjectEmailContext = async (projectId?: unknown) => {
     if (!projectId) {
         return {
@@ -178,7 +228,7 @@ export const getDocumentReviewDetails = async ({
     let review = await DocumentReviewModel.findOne({ taskId: taskIdDecoded });
     if (!review && !guestAccess) {
         const user = await currentUser();
-        const actorName = buildActorName(user);
+        const actorName = await resolveActorNameFromDb(user?.id ?? null, buildActorName(user));
         const actor = { id: user?.id ?? 'system', name: actorName };
         review = await upsertDocumentReview({
             taskId: taskIdDecoded,
@@ -189,6 +239,8 @@ export const getDocumentReviewDetails = async ({
             actor,
         });
     }
+
+    await resolveNamesForReview(review);
 
     const currentReview = review ?? {
         taskId: taskIdDecoded,
@@ -410,7 +462,7 @@ export const submitDocumentReview = async (params: {
         return { ok: false, error: 'Недостаточно прав для отправки', status: 403 } as const;
     }
 
-    const actorName = buildActorName(user);
+    const actorName = await resolveActorNameFromDb(user.id, buildActorName(user));
     const actor = { id: user.id, name: actorName };
 
     const review = await upsertDocumentReview({
@@ -555,7 +607,7 @@ export const addIssueToDocumentReview = async (params: {
         return { ok: false, error: 'Недостаточно прав для замечаний', status: 403 } as const;
     }
 
-    const actorName = buildActorName(user);
+    const actorName = await resolveActorNameFromDb(user.id, buildActorName(user));
     const actor = { id: user.id, name: actorName };
 
     const review = await upsertDocumentReview({
@@ -655,7 +707,7 @@ export const commentDocumentIssue = async (params: {
         return { ok: false, error: 'Недостаточно прав для комментариев', status: 403 } as const;
     }
 
-    const actorName = buildActorName(user);
+    const actorName = await resolveActorNameFromDb(user.id, buildActorName(user));
     const actor = { id: user.id, name: actorName };
 
     const review = await upsertDocumentReview({
@@ -715,7 +767,7 @@ export const resolveDocumentIssueAction = async (params: {
         return { ok: false, error: 'Недостаточно прав для подтверждения', status: 403 } as const;
     }
 
-    const actorName = buildActorName(user);
+    const actorName = await resolveActorNameFromDb(user.id, buildActorName(user));
     const actor = { id: user.id, name: actorName };
 
     const review = await upsertDocumentReview({
@@ -798,7 +850,7 @@ export const approveDocumentReview = async (params: { taskId: string }) => {
         return { ok: false, error: 'Недостаточно прав для согласования', status: 403 } as const;
     }
 
-    const actorName = buildActorName(user);
+    const actorName = await resolveActorNameFromDb(user.id, buildActorName(user));
     const actor = { id: user.id, name: actorName };
 
     const review = await upsertDocumentReview({

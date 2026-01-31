@@ -508,6 +508,39 @@ const readStreamToString = async (body: Readable): Promise<string> => {
   return data;
 };
 
+const readStreamToBuffer = async (body: Readable): Promise<Buffer> => {
+  const chunks: Buffer[] = [];
+  for await (const chunk of body) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+};
+
+export async function fetchFileByPublicUrl(publicUrl: string): Promise<{
+  buffer: Buffer;
+  contentType?: string;
+  contentLength?: number;
+} | null> {
+  const key = storageKeyFromPublicUrl(publicUrl);
+  if (!key) return null;
+
+  if (s3 && BUCKET) {
+    const response = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+    if (!response.Body) return null;
+    const buffer = await readStreamToBuffer(response.Body as Readable);
+    return {
+      buffer,
+      contentType: response.ContentType,
+      contentLength: response.ContentLength,
+    };
+  }
+
+  const localPath = path.join(process.cwd(), 'public', key);
+  if (!fs.existsSync(localPath)) return null;
+  const buffer = await fs.promises.readFile(localPath);
+  return { buffer };
+}
+
 const findLatestInventoryManifestKey = async (config: InventoryConfig): Promise<string | null> => {
   if (!s3) return null;
   let continuationToken: string | undefined = undefined;

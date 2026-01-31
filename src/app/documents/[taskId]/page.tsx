@@ -25,6 +25,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
@@ -256,6 +257,12 @@ export default function DocumentReviewPage() {
         setIssueDialogOpen(false);
     };
 
+    const buildProxyUrl = (fileUrl: string, download = false) => {
+        const downloadParam = download ? '&download=1' : '';
+        const base = `/api/document-reviews/${encodeURIComponent(taskId)}/file?url=${encodeURIComponent(fileUrl)}${downloadParam}`;
+        return token ? `${base}&token=${encodeURIComponent(token)}` : base;
+    };
+
     const renderFileList = (label: string, files: string[]) => (
         <Stack spacing={1}>
             <Typography variant="subtitle2" color="text.secondary">
@@ -275,9 +282,11 @@ export default function DocumentReviewPage() {
                         >
                             {extractFileNameFromUrl(file, 'Файл')}
                         </Button>
-                        <Button component="a" href={file} target="_blank" rel="noreferrer">
-                            Скачать
-                        </Button>
+                        <Tooltip title="Скачать">
+                            <IconButton component="a" href={buildProxyUrl(file, true)} target="_blank" rel="noreferrer">
+                                <CloudDownloadIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
                     </Stack>
                 ))
             )}
@@ -555,10 +564,10 @@ export default function DocumentReviewPage() {
                                 </Tooltip>
                             )}
                         </Box>
-                        {selectedFile && pdfSelected ? (
+                    {selectedFile && pdfSelected ? (
                             <iframe
                                 title="document-pdf"
-                                src={selectedFile}
+                                src={buildProxyUrl(selectedFile)}
                                 style={{ width: '100%', height: '100%', border: 'none' }}
                             />
                         ) : (
@@ -569,7 +578,7 @@ export default function DocumentReviewPage() {
                                 {selectedFile && (
                                     <Button
                                         component="a"
-                                        href={selectedFile}
+                                        href={buildProxyUrl(selectedFile, true)}
                                         target="_blank"
                                         rel="noreferrer"
                                         sx={{ mt: 2 }}
@@ -738,7 +747,7 @@ export default function DocumentReviewPage() {
                     {selectedFile ? (
                         <iframe
                             title="document-pdf-fullscreen"
-                            src={selectedFile}
+                            src={buildProxyUrl(selectedFile)}
                             style={{ width: '100%', height: '100%', border: 'none' }}
                         />
                     ) : null}
