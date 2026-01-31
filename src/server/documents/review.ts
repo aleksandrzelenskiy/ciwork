@@ -91,6 +91,11 @@ const resolveRole = (params: {
     return 'viewer' as const;
 };
 
+const getUserContextError = (userContext: Awaited<ReturnType<typeof GetUserContext>>) => {
+    if (userContext.success) return 'Нет активной сессии пользователя';
+    return userContext.message || 'Нет активной сессии пользователя';
+};
+
 const parseUploadPayload = async (request: Request) => {
     const formData = await request.formData();
     const files = Array.from(formData.values()).filter(
@@ -152,10 +157,7 @@ export const getDocumentReviewDetails = async ({
     } else {
         const userContext = await GetUserContext();
         if (!userContext.success || !userContext.data) {
-            const errorMessage = userContext.success
-                ? 'Нет активной сессии пользователя'
-                : userContext.message || 'Нет активной сессии пользователя';
-            return { ok: false, error: errorMessage, status: 401 } as const;
+            return { ok: false, error: getUserContextError(userContext), status: 401 } as const;
         }
         role = resolveRole({
             userId: userContext.data.user.clerkUserId,
@@ -236,7 +238,7 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
 
     const userContext = await GetUserContext();
     if (!userContext.success || !userContext.data) {
-        return { ok: false, error: userContext.message || 'Нет активной сессии пользователя', status: 401 } as const;
+        return { ok: false, error: getUserContextError(userContext), status: 401 } as const;
     }
 
     const role = resolveRole({
@@ -390,7 +392,7 @@ export const submitDocumentReview = async (params: {
 
     const userContext = await GetUserContext();
     if (!userContext.success || !userContext.data) {
-        return { ok: false, error: userContext.message || 'Нет активной сессии пользователя', status: 401 } as const;
+        return { ok: false, error: getUserContextError(userContext), status: 401 } as const;
     }
 
     const role = resolveRole({
@@ -535,7 +537,7 @@ export const addIssueToDocumentReview = async (params: {
 
     const userContext = await GetUserContext();
     if (!userContext.success || !userContext.data) {
-        return { ok: false, error: userContext.message || 'Нет активной сессии пользователя', status: 401 } as const;
+        return { ok: false, error: getUserContextError(userContext), status: 401 } as const;
     }
 
     const role = resolveRole({
@@ -634,7 +636,7 @@ export const commentDocumentIssue = async (params: {
 
     const userContext = await GetUserContext();
     if (!userContext.success || !userContext.data) {
-        return { ok: false, error: userContext.message || 'Нет активной сессии пользователя', status: 401 } as const;
+        return { ok: false, error: getUserContextError(userContext), status: 401 } as const;
     }
 
     const role = resolveRole({
@@ -694,7 +696,7 @@ export const resolveDocumentIssueAction = async (params: {
 
     const userContext = await GetUserContext();
     if (!userContext.success || !userContext.data) {
-        return { ok: false, error: userContext.message || 'Нет активной сессии пользователя', status: 401 } as const;
+        return { ok: false, error: getUserContextError(userContext), status: 401 } as const;
     }
 
     const role = resolveRole({
@@ -776,7 +778,7 @@ export const approveDocumentReview = async (params: { taskId: string }) => {
 
     const userContext = await GetUserContext();
     if (!userContext.success || !userContext.data) {
-        return { ok: false, error: userContext.message || 'Нет активной сессии пользователя', status: 401 } as const;
+        return { ok: false, error: getUserContextError(userContext), status: 401 } as const;
     }
 
     const role = resolveRole({
