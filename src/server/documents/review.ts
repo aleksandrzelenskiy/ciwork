@@ -83,7 +83,7 @@ const resolveNamesForReview = async (review?: InstanceType<typeof DocumentReview
         .lean();
     const nameMap = new Map(users.map((user) => [user.clerkUserId, user.name?.trim() || '']));
 
-    review.issues?.forEach((issue) => {
+    review.issues?.forEach((issue: DocumentIssue) => {
         const createdName = nameMap.get(issue.createdById) || '';
         if (!normalizeUserName(issue.createdByName) || looksLikeUserId(issue.createdByName)) {
             if (createdName) issue.createdByName = createdName;
