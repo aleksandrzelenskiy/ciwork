@@ -11,7 +11,7 @@ export async function POST(
         const { taskId } = await params;
         const result = await uploadDocumentReviewFiles(request, taskId);
         if (!result.ok) {
-            return jsonError(result.error, result.status);
+            return jsonError(result.error || 'Не удалось загрузить документацию', result.status);
         }
         return jsonData(result.data);
     } catch (error) {
