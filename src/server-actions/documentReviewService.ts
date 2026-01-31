@@ -144,8 +144,8 @@ export const resolveDocumentIssue = async (params: {
     actor: Actor;
 }) => {
     const { review, issueId, actor } = params;
-    const issues = Array.isArray(review.issues) ? review.issues : [];
-    const target = issues.find((item) => item.id === issueId);
+    const issues = Array.isArray(review.issues) ? (review.issues as DocumentIssue[]) : [];
+    const target = issues.find((item: DocumentIssue) => item.id === issueId);
     if (!target) return review;
     target.status = 'resolved';
     review.events = ensureEventArray(review.events);
