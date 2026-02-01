@@ -80,6 +80,7 @@ type MapPoint = {
     operator: OperatorSlug;
     operatorLabel?: string | null;
     orgName?: string | null;
+    orgLabel?: string | null;
     orgSlug?: string | null;
     regionCode?: string | null;
     managerName?: string | null;
