@@ -8,6 +8,7 @@ import {
     Collapse,
     CircularProgress,
     List,
+    ListItem,
     ListItemButton,
     ListItemIcon,
     ListItemText,
@@ -706,7 +707,16 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                         });
                     };
                     return (
-                        <React.Fragment key={item.label}>
+                        <ListItem
+                            key={item.label}
+                            disablePadding
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'stretch',
+                                gap: 0.5,
+                            }}
+                        >
                             <ListItemButton
                                 disableRipple
                                 disabled={isDisabled}
@@ -785,7 +795,12 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                                 )}
                             </ListItemButton>
                             {hasChildren && (
-                                <Collapse in={Boolean(isExpanded)} timeout='auto' unmountOnExit>
+                                <Collapse
+                                    in={Boolean(isExpanded)}
+                                    timeout='auto'
+                                    unmountOnExit
+                                    sx={{ width: '100%' }}
+                                >
                                     <List
                                         disablePadding
                                         sx={{
@@ -863,7 +878,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
                                     </List>
                                 </Collapse>
                             )}
-                        </React.Fragment>
+                        </ListItem>
                         );
                     })
                 )}
