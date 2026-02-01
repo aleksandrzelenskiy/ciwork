@@ -50,7 +50,8 @@ export default function MiniMap({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [orgSlugById, setOrgSlugById] = useState<Record<string, string>>({});
-  const shouldUseOrgRoutes = role !== null && role !== 'executor';
+  const isPlatformAdmin = role === 'super_admin';
+  const shouldUseOrgRoutes = role !== null && role !== 'executor' && !isPlatformAdmin;
 
   // 1. Загружаем все задачи с /api/tasks
   useEffect(() => {
@@ -112,6 +113,7 @@ export default function MiniMap({
   }, [role, clerkUserId, tasks]);
 
   const resolvedCtaHref = useMemo(() => {
+    if (isPlatformAdmin) return ctaHref ?? '/admin/tasks/locations';
     if (!shouldUseOrgRoutes) return ctaHref;
     const taskWithProject = filteredTasks.find(
       (task) => task.orgId && (task.projectKey || task.projectId)
@@ -124,7 +126,7 @@ export default function MiniMap({
     return `/org/${encodeURIComponent(orgRef)}/projects/${encodeURIComponent(
       projectRef
     )}/tasks/locations`;
-  }, [ctaHref, filteredTasks, orgSlugById, shouldUseOrgRoutes]);
+  }, [ctaHref, filteredTasks, isPlatformAdmin, orgSlugById, shouldUseOrgRoutes]);
   const resolvedCtaLabel = ctaLabel ?? t('dashboard.map.cta', 'На карте');
 
   // 3. Собираем координаты всех базовых станций (уже отфильтрованных задач)

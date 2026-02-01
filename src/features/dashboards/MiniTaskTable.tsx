@@ -79,7 +79,7 @@ export default function MiniTaskTable({
   const [error, setError] = useState<string | null>(null);
   const [orgSlugById, setOrgSlugById] = useState<Record<string, string>>({});
   const shouldUseOrgRoutes = role !== null && role !== 'executor';
-  const isAdmin = isAdminRole(role);
+  const isPlatformAdmin = role === 'super_admin';
 
   // 1. Загружаем все задачи
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function MiniTaskTable({
 
     const fetchOrgs = async () => {
       try {
-        const endpoint = isAdmin ? '/api/admin/organizations' : '/api/org';
+        const endpoint = isPlatformAdmin ? '/api/admin/organizations' : '/api/org';
         const res = await fetch(endpoint, { signal: controller.signal });
         if (!res.ok) return;
         const data = (await res.json()) as
@@ -138,7 +138,7 @@ export default function MiniTaskTable({
 
     void fetchOrgs();
     return () => controller.abort();
-  }, [isAdmin, shouldUseOrgRoutes]);
+  }, [isPlatformAdmin, shouldUseOrgRoutes]);
 
   // 2. Фильтруем задачи
   const filteredTasks = useMemo(() => {
@@ -166,7 +166,7 @@ export default function MiniTaskTable({
   const tableMaxHeight =
     rowLimit >= 5 ? 310 : Math.max(210, 70 + rowLimit * 48);
   const resolvedCtaHref = useMemo(() => {
-    if (isAdmin) return ctaHref ?? '/admin/tasks';
+    if (isPlatformAdmin) return ctaHref ?? '/admin/tasks';
     if (!shouldUseOrgRoutes) return ctaHref ?? '/tasks';
     const taskWithProject = sortedTasks.find(
       (task) => task.orgId && (task.projectKey || task.projectId)
@@ -179,7 +179,7 @@ export default function MiniTaskTable({
     return `/org/${encodeURIComponent(orgRef)}/projects/${encodeURIComponent(
       projectRef
     )}/tasks`;
-  }, [ctaHref, isAdmin, orgSlugById, shouldUseOrgRoutes, sortedTasks]);
+  }, [ctaHref, isPlatformAdmin, orgSlugById, shouldUseOrgRoutes, sortedTasks]);
 
   const resolveTaskHref = (task: Task) => {
     if (shouldUseOrgRoutes && task.orgId) {
