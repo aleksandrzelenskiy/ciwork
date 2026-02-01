@@ -364,7 +364,7 @@ export default function AdminTasksMap(): React.ReactElement {
     }, [placemarks]);
 
     const regionCounts = React.useMemo(() => {
-        const counts = new Map<string, number>();
+        const counts = new globalThis.Map<string, number>();
         placemarks.forEach((point) => {
             const key = point.regionCode || UNASSIGNED_REGION;
             counts.set(key, (counts.get(key) ?? 0) + 1);
@@ -377,7 +377,7 @@ export default function AdminTasksMap(): React.ReactElement {
     }, [regionCounts]);
 
     const executorCounts = React.useMemo(() => {
-        const counts = new Map<string, number>();
+        const counts = new globalThis.Map<string, number>();
         placemarks.forEach((point) => {
             const key = point.executorLabel || UNASSIGNED_LABEL;
             counts.set(key, (counts.get(key) ?? 0) + 1);
@@ -390,7 +390,7 @@ export default function AdminTasksMap(): React.ReactElement {
     }, [executorCounts]);
 
     const orgCounts = React.useMemo(() => {
-        const counts = new Map<string, number>();
+        const counts = new globalThis.Map<string, number>();
         placemarks.forEach((point) => {
             const key = point.orgLabel || UNASSIGNED_ORG;
             counts.set(key, (counts.get(key) ?? 0) + 1);
