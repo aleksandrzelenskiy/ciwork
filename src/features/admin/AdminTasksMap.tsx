@@ -227,7 +227,6 @@ export default function AdminTasksMap(): React.ReactElement {
         mts: true,
     }));
     const [regionFilter, setRegionFilter] = React.useState<Record<string, boolean>>({});
-    const [executorFilter, setExecutorFilter] = React.useState<Record<string, boolean>>({});
     const [orgFilter, setOrgFilter] = React.useState<Record<string, boolean>>({});
     const [filtersOpen, setFiltersOpen] = React.useState(false);
     const theme = useTheme();
@@ -376,19 +375,6 @@ export default function AdminTasksMap(): React.ReactElement {
         return Array.from(regionCounts.keys()).sort((a, b) => a.localeCompare(b, 'ru'));
     }, [regionCounts]);
 
-    const executorCounts = React.useMemo(() => {
-        const counts = new globalThis.Map<string, number>();
-        placemarks.forEach((point) => {
-            const key = point.executorLabel || UNASSIGNED_LABEL;
-            counts.set(key, (counts.get(key) ?? 0) + 1);
-        });
-        return counts;
-    }, [placemarks]);
-
-    const availableExecutors = React.useMemo(() => {
-        return Array.from(executorCounts.keys()).sort((a, b) => a.localeCompare(b, 'ru'));
-    }, [executorCounts]);
-
     const orgCounts = React.useMemo(() => {
         const counts = new globalThis.Map<string, number>();
         placemarks.forEach((point) => {
@@ -416,16 +402,6 @@ export default function AdminTasksMap(): React.ReactElement {
             return next;
         });
     }, [availableRegions]);
-
-    React.useEffect(() => {
-        setExecutorFilter((prev) => {
-            const next = { ...prev };
-            availableExecutors.forEach((executor) => {
-                if (next[executor] === undefined) next[executor] = true;
-            });
-            return next;
-        });
-    }, [availableExecutors]);
 
     React.useEffect(() => {
         setOrgFilter((prev) => {
@@ -458,15 +434,12 @@ export default function AdminTasksMap(): React.ReactElement {
             const priorityOk = point.priority ? Boolean(priorityFilter[point.priority]) : true;
             const operatorOk = Boolean(operatorFilter[point.operator]);
             const regionKey = point.regionCode || UNASSIGNED_REGION;
-            const executorKey = point.executorLabel || UNASSIGNED_LABEL;
             const orgKey = point.orgLabel || UNASSIGNED_ORG;
             const regionOk = regionFilter[regionKey] ?? true;
-            const executorOk = executorFilter[executorKey] ?? true;
             const orgOk = orgFilter[orgKey] ?? true;
-            return matchesSearch && statusOk && priorityOk && operatorOk && regionOk && executorOk && orgOk;
+            return matchesSearch && statusOk && priorityOk && operatorOk && regionOk && orgOk;
         });
     }, [
-        executorFilter,
         operatorFilter,
         placemarks,
         priorityFilter,
@@ -526,21 +499,16 @@ export default function AdminTasksMap(): React.ReactElement {
         for (const region of availableRegions) {
             if (!regionFilter[region]) return false;
         }
-        for (const executor of availableExecutors) {
-            if (!executorFilter[executor]) return false;
-        }
         for (const org of availableOrgs) {
             if (!orgFilter[org]) return false;
         }
         return true;
     }, [
-        availableExecutors,
         availableOperators,
         availablePriorities,
         availableRegions,
         availableStatuses,
         availableOrgs,
-        executorFilter,
         operatorFilter,
         priorityFilter,
         regionFilter,
@@ -656,13 +624,6 @@ export default function AdminTasksMap(): React.ReactElement {
             });
             return next;
         });
-        setExecutorFilter((prev) => {
-            const next: Record<string, boolean> = {};
-            Object.keys(prev).forEach((executor) => {
-                next[executor] = true;
-            });
-            return next;
-        });
         setOrgFilter((prev) => {
             const next: Record<string, boolean> = {};
             Object.keys(prev).forEach((org) => {
@@ -688,10 +649,6 @@ export default function AdminTasksMap(): React.ReactElement {
         () => availableRegions.filter((region) => regionFilter[region]).length,
         [availableRegions, regionFilter]
     );
-    const activeExecutorCount = React.useMemo(
-        () => availableExecutors.filter((executor) => executorFilter[executor]).length,
-        [availableExecutors, executorFilter]
-    );
     const activeOrgCount = React.useMemo(
         () => availableOrgs.filter((org) => orgFilter[org]).length,
         [availableOrgs, orgFilter]
@@ -708,9 +665,6 @@ export default function AdminTasksMap(): React.ReactElement {
     const regionLabel = availableRegions.length
         ? `Регионы · ${activeRegionCount}/${availableRegions.length}`
         : 'Регионы';
-    const executorLabel = availableExecutors.length
-        ? `Подрядчики · ${activeExecutorCount}/${availableExecutors.length}`
-        : 'Подрядчики';
     const orgLabel = availableOrgs.length
         ? `Организации · ${activeOrgCount}/${availableOrgs.length}`
         : 'Организации';
@@ -1002,56 +956,6 @@ export default function AdminTasksMap(): React.ReactElement {
                                                               setRegionFilter((prev) => ({
                                                                   ...prev,
                                                                   [region]: false,
-                                                              }))
-                                                        : undefined
-                                                }
-                                                deleteIcon={active ? <CloseRoundedIcon fontSize="small" /> : undefined}
-                                                variant={active ? 'filled' : 'outlined'}
-                                                sx={{
-                                                    backgroundColor: active
-                                                        ? alpha(accentBase, isDark ? 0.25 : 0.12)
-                                                        : 'transparent',
-                                                    color: active ? theme.palette.text.primary : theme.palette.text.secondary,
-                                                    borderColor: alpha(accentBase, isDark ? 0.3 : 0.2),
-                                                    fontWeight: active ? 700 : 500,
-                                                    boxShadow: active
-                                                        ? `0 10px 20px ${alpha(accentBase, isDark ? 0.35 : 0.18)}`
-                                                        : 'none',
-                                                    '&:hover': {
-                                                        backgroundColor: alpha(accentBase, isDark ? 0.32 : 0.2),
-                                                    },
-                                                }}
-                                            />
-                                        );
-                                    })}
-                                </Box>
-
-                                <Divider flexItem sx={{ my: 0.5, opacity: 0.35 }} />
-
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                    {executorLabel}
-                                </Typography>
-                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                                    {availableExecutors.map((executor) => {
-                                        const active = executorFilter[executor] ?? true;
-                                        const count = executorCounts.get(executor) ?? 0;
-                                        return (
-                                            <Chip
-                                                key={executor}
-                                                label={`${executor} · ${count}`}
-                                                onClick={() =>
-                                                    setExecutorFilter((prev) => ({
-                                                        ...prev,
-                                                        [executor]: !active,
-                                                    }))
-                                                }
-                                                size="small"
-                                                onDelete={
-                                                    active
-                                                        ? () =>
-                                                              setExecutorFilter((prev) => ({
-                                                                  ...prev,
-                                                                  [executor]: false,
                                                               }))
                                                         : undefined
                                                 }

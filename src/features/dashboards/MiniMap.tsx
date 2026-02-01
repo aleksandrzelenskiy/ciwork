@@ -42,7 +42,7 @@ export default function MiniMap({
   showOverlay = true,
   showCta = true,
   ctaLabel,
-  ctaHref = '/tasks/locations',
+  ctaHref,
   mapHeight = 400,
 }: MiniMapProps) {
   const { t } = useI18n();
@@ -114,15 +114,15 @@ export default function MiniMap({
 
   const resolvedCtaHref = useMemo(() => {
     if (isPlatformAdmin) return ctaHref ?? '/admin/tasks/locations';
-    if (!shouldUseOrgRoutes) return ctaHref;
+    if (!shouldUseOrgRoutes) return ctaHref ?? '/tasks/locations';
     const taskWithProject = filteredTasks.find(
       (task) => task.orgId && (task.projectKey || task.projectId)
     );
-    if (!taskWithProject) return null;
+    if (!taskWithProject) return ctaHref ?? null;
     const orgId = taskWithProject.orgId as string;
     const orgRef = orgSlugById[orgId] ?? orgId;
     const projectRef = taskWithProject.projectKey || taskWithProject.projectId;
-    if (!orgRef || !projectRef) return null;
+    if (!orgRef || !projectRef) return ctaHref ?? null;
     return `/org/${encodeURIComponent(orgRef)}/projects/${encodeURIComponent(
       projectRef
     )}/tasks/locations`;
