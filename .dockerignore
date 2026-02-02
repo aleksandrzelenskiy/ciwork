@@ -8,3 +8,4 @@ mongodb_data
 .gitignore
 Dockerfile
 docker-compose.yml
+icia-site
