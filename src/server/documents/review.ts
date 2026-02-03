@@ -569,6 +569,87 @@ export const submitDocumentReview = async (params: {
     } as const;
 };
 
+export const deleteDocumentReviewFile = async (params: { taskId: string; url: string }) => {
+    const user = await currentUser();
+    if (!user) {
+        return { ok: false, error: 'User is not authenticated', status: 401 } as const;
+    }
+
+    const taskIdDecoded = normalizeTaskId(decodeURIComponent(params.taskId));
+    if (!taskIdDecoded) {
+        return { ok: false, error: 'Task ID is required', status: 400 } as const;
+    }
+    const targetUrl = params.url.trim();
+    if (!targetUrl) {
+        return { ok: false, error: 'File url is required', status: 400 } as const;
+    }
+
+    const task = await TaskModel.findOne({ taskId: taskIdDecoded });
+    if (!task) {
+        return { ok: false, error: 'Task not found', status: 404 } as const;
+    }
+    if (task.taskType !== 'document') {
+        return { ok: false, error: 'Task is not a document task', status: 400 } as const;
+    }
+
+    const userContext = await GetUserContext();
+    if (!userContext.success || !userContext.data) {
+        return { ok: false, error: getUserContextError(userContext), status: 401 } as const;
+    }
+
+    const role = resolveRole({
+        userId: userContext.data.user.clerkUserId,
+        effectiveRole: userContext.data.effectiveOrgRole,
+        executorId: task.executorId ?? null,
+    });
+    if (role !== 'executor' && role !== 'manager') {
+        return { ok: false, error: 'Недостаточно прав для удаления', status: 403 } as const;
+    }
+
+    const review = await DocumentReviewModel.findOne({ taskId: taskIdDecoded });
+    if (!review) {
+        return { ok: false, error: 'Документация не найдена', status: 404 } as const;
+    }
+
+    if (!ALLOWED_UPLOAD_STATUSES.has(review.status as DocumentReviewStatus)) {
+        return { ok: false, error: 'Нельзя удалить файл в текущем статусе', status: 400 } as const;
+    }
+
+    const currentFiles = Array.isArray(review.currentFiles) ? review.currentFiles : [];
+    if (!currentFiles.includes(targetUrl)) {
+        return { ok: false, error: 'Файл не найден в текущем пакете', status: 404 } as const;
+    }
+
+    const nextCurrentFiles = currentFiles.filter((file) => file !== targetUrl);
+    const currentMeta = Array.isArray(review.currentFilesMeta) ? review.currentFilesMeta : [];
+    const removedMeta = currentMeta.find((meta) => meta.url === targetUrl);
+    const nextCurrentMeta = currentMeta.filter((meta) => meta.url !== targetUrl);
+    const removedBytes = removedMeta?.size ?? 0;
+
+    const actorName = await resolveActorNameFromDb(user.id, buildActorName(user));
+
+    review.currentFiles = nextCurrentFiles;
+    review.currentFilesMeta = nextCurrentMeta;
+    review.currentBytes = Math.max(0, (review.currentBytes ?? 0) - removedBytes);
+    review.events = Array.isArray(review.events) ? review.events : [];
+    review.events.push({
+        action: 'FILE_DELETED',
+        author: actorName,
+        authorId: user.id,
+        date: new Date(),
+        details: { file: targetUrl },
+    });
+    await review.save();
+
+    if (task.orgId && removedBytes > 0) {
+        await adjustStorageBytes(task.orgId, -removedBytes);
+    }
+
+    await deleteTaskFile(targetUrl);
+
+    return { ok: true, data: { files: nextCurrentFiles } } as const;
+};
+
 export const addIssueToDocumentReview = async (params: {
     taskId: string;
     text: string;

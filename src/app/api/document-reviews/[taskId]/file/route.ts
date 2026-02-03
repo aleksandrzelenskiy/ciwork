@@ -1,6 +1,6 @@
 import { jsonError } from '@/server/http/response';
 import dbConnect from '@/server/db/mongoose';
-import { getDocumentReviewDetails } from '@/server/documents/review';
+import { deleteDocumentReviewFile, getDocumentReviewDetails } from '@/server/documents/review';
 import { fetchFileByPublicUrl } from '@/utils/s3';
 import { extractFileNameFromUrl } from '@/utils/taskFiles';
 
@@ -54,5 +54,31 @@ export async function GET(
     } catch (error) {
         console.error('Ошибка при получении файла документации:', error);
         return jsonError('Не удалось получить файл', 500);
+    }
+}
+
+export async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ taskId: string }> }
+) {
+    try {
+        await dbConnect();
+        const { taskId } = await params;
+        const url = new URL(request.url);
+        const fileUrl = url.searchParams.get('url')?.trim() || '';
+        if (!fileUrl) {
+            return jsonError('File url is required', 400);
+        }
+        const result = await deleteDocumentReviewFile({ taskId, url: fileUrl });
+        if (!result.ok) {
+            return jsonError(result.error || 'Не удалось удалить файл', result.status);
+        }
+        return new Response(JSON.stringify(result.data), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    } catch (error) {
+        console.error('Ошибка при удалении файла документации:', error);
+        return jsonError('Не удалось удалить файл', 500);
     }
 }

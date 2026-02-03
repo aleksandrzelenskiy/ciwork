@@ -12,8 +12,10 @@ import {
     DialogContent,
     DialogTitle,
     Drawer,
+    CircularProgress,
     IconButton,
     LinearProgress,
+    Paper,
     Stack,
     TextField,
     Typography,
@@ -31,14 +33,30 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import AnnouncementIcon from '@mui/icons-material/Announcement';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
+import { useDropzone } from 'react-dropzone';
 import type { DocumentIssue, DocumentReviewClient } from '@/app/types/documentReviewTypes';
 import { extractFileNameFromUrl } from '@/utils/taskFiles';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { getStatusLabel } from '@/utils/statusLabels';
 
 const isPdf = (url: string) => url.toLowerCase().endsWith('.pdf');
+const isPdfFile = (file: File) =>
+    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+const createLocalId = () =>
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+type SelectedFileItem = {
+    id: string;
+    file: File;
+    previewUrl: string;
+    pdf: boolean;
+};
 
 export default function DocumentReviewPage() {
     const { taskId } = useParams() as { taskId: string };
@@ -55,16 +73,27 @@ export default function DocumentReviewPage() {
     const [filesDrawerOpen, setFilesDrawerOpen] = React.useState(false);
     const [issuesDrawerOpen, setIssuesDrawerOpen] = React.useState(false);
     const [uploading, setUploading] = React.useState(false);
+    const [uploadProgress, setUploadProgress] = React.useState(0);
     const [submitting, setSubmitting] = React.useState(false);
     const [uploadError, setUploadError] = React.useState<string | null>(null);
     const [submitError, setSubmitError] = React.useState<string | null>(null);
     const [issueError, setIssueError] = React.useState<string | null>(null);
-    const [selectedFiles, setSelectedFiles] = React.useState<File[]>([]);
+    const [selectedItems, setSelectedItems] = React.useState<SelectedFileItem[]>([]);
     const [newIssueText, setNewIssueText] = React.useState('');
     const [issueComments, setIssueComments] = React.useState<Record<string, string>>({});
     const [approving, setApproving] = React.useState(false);
     const [pdfFullScreenOpen, setPdfFullScreenOpen] = React.useState(false);
     const [issueDialogOpen, setIssueDialogOpen] = React.useState(false);
+    const [deleteTarget, setDeleteTarget] = React.useState<{
+        type: 'selected' | 'uploaded';
+        id?: string;
+        url?: string;
+        name: string;
+    } | null>(null);
+    const [deleteLoading, setDeleteLoading] = React.useState(false);
+    const [deleteError, setDeleteError] = React.useState<string | null>(null);
+
+    const selectedItemsRef = React.useRef<SelectedFileItem[]>([]);
 
     const loadReview = React.useCallback(async () => {
         setLoading(true);
@@ -96,6 +125,16 @@ export default function DocumentReviewPage() {
         void loadReview();
     }, [loadReview]);
 
+    React.useEffect(() => {
+        selectedItemsRef.current = selectedItems;
+    }, [selectedItems]);
+
+    React.useEffect(() => {
+        return () => {
+            selectedItemsRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+        };
+    }, []);
+
     const canManage = review?.role === 'manager';
     const canComment = review?.role === 'executor' || review?.role === 'manager';
     const canUpload = review?.role === 'executor' || review?.role === 'manager';
@@ -104,32 +143,86 @@ export default function DocumentReviewPage() {
     const currentFiles = review?.currentFiles ?? [];
     const previousFiles = review?.previousFiles ?? [];
 
+    const addSelectedFiles = React.useCallback((files: File[]) => {
+        if (!files.length) return;
+        setSelectedItems((prev) => [
+            ...prev,
+            ...files.map((file) => ({
+                id: createLocalId(),
+                file,
+                previewUrl: URL.createObjectURL(file),
+                pdf: isPdfFile(file),
+            })),
+        ]);
+        setUploadError(null);
+    }, []);
+
+    const removeSelectedItem = React.useCallback((id: string) => {
+        setSelectedItems((prev) => {
+            const target = prev.find((item) => item.id === id);
+            if (target) {
+                URL.revokeObjectURL(target.previewUrl);
+            }
+            return prev.filter((item) => item.id !== id);
+        });
+    }, []);
+
+    const clearSelectedItems = React.useCallback(() => {
+        setSelectedItems((prev) => {
+            prev.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+            return [];
+        });
+    }, []);
+
+    const onDrop = React.useCallback((acceptedFiles: File[]) => {
+        addSelectedFiles(acceptedFiles);
+    }, [addSelectedFiles]);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        disabled: !canUpload || uploading,
+        multiple: true,
+    });
+
     const handleUpload = async () => {
-        if (!selectedFiles.length) {
+        if (!selectedItems.length) {
             setUploadError('Выберите файлы для загрузки');
             return;
         }
         setUploading(true);
+        setUploadProgress(0);
         setUploadError(null);
         const form = new FormData();
-        selectedFiles.forEach((file) => form.append('file', file));
-        try {
-            const res = await fetch(`/api/document-reviews/${encodeURIComponent(taskId)}/upload`, {
-                method: 'POST',
-                body: form,
-            });
-            const payload = (await res.json().catch(() => ({}))) as { error?: string };
-            if (!res.ok) {
-                setUploadError(payload.error || 'Не удалось загрузить файлы');
-                return;
+        selectedItems.forEach((item) => form.append('file', item.file));
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `/api/document-reviews/${encodeURIComponent(taskId)}/upload`);
+        xhr.upload.onprogress = (event) => {
+            if (!event.lengthComputable) return;
+            const progress = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(progress);
+        };
+        xhr.onload = async () => {
+            try {
+                const payload = (JSON.parse(xhr.responseText || '{}') ?? {}) as { error?: string };
+                if (xhr.status < 200 || xhr.status >= 300) {
+                    setUploadError(payload.error || 'Не удалось загрузить файлы');
+                    return;
+                }
+                clearSelectedItems();
+                await loadReview();
+            } catch (err) {
+                setUploadError(err instanceof Error ? err.message : 'Не удалось загрузить файлы');
+            } finally {
+                setUploading(false);
+                setUploadProgress(0);
             }
-            setSelectedFiles([]);
-            await loadReview();
-        } catch (err) {
-            setUploadError(err instanceof Error ? err.message : 'Не удалось загрузить файлы');
-        } finally {
+        };
+        xhr.onerror = () => {
+            setUploadError('Не удалось загрузить файлы');
             setUploading(false);
-        }
+            setUploadProgress(0);
+        };
+        xhr.send(form);
     };
 
     const handleSubmit = async () => {
@@ -151,6 +244,53 @@ export default function DocumentReviewPage() {
             setSubmitError(err instanceof Error ? err.message : 'Не удалось отправить документацию');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const openDeleteDialog = (payload: {
+        type: 'selected' | 'uploaded';
+        id?: string;
+        url?: string;
+        name: string;
+    }) => {
+        setDeleteError(null);
+        setDeleteTarget(payload);
+    };
+
+    const closeDeleteDialog = () => {
+        if (deleteLoading) return;
+        setDeleteTarget(null);
+        setDeleteError(null);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+        if (deleteTarget.type === 'selected' && deleteTarget.id) {
+            removeSelectedItem(deleteTarget.id);
+            setDeleteTarget(null);
+            return;
+        }
+        if (!deleteTarget.url) return;
+        setDeleteLoading(true);
+        setDeleteError(null);
+        try {
+            const res = await fetch(
+                `/api/document-reviews/${encodeURIComponent(taskId)}/file?url=${encodeURIComponent(
+                    deleteTarget.url
+                )}`,
+                { method: 'DELETE' }
+            );
+            const payload = (await res.json().catch(() => ({}))) as { error?: string };
+            if (!res.ok) {
+                setDeleteError(payload.error || 'Не удалось удалить файл');
+                return;
+            }
+            await loadReview();
+            setDeleteTarget(null);
+        } catch (err) {
+            setDeleteError(err instanceof Error ? err.message : 'Не удалось удалить файл');
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -411,6 +551,8 @@ export default function DocumentReviewPage() {
     }
 
     const pdfSelected = selectedFile && isPdf(selectedFile);
+    const showUploadButton = canUpload && (selectedItems.length > 0 || currentFiles.length === 0);
+    const showSubmitButton = canSubmit && currentFiles.length > 0 && selectedItems.length === 0;
 
     return (
         <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -435,39 +577,6 @@ export default function DocumentReviewPage() {
                 </Stack>
 
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'center' }}>
-                    {canUpload && (
-                        <Button variant="outlined" component="label">
-                            Выбрать файлы
-                            <input
-                                type="file"
-                                hidden
-                                multiple
-                                onChange={(event) => {
-                                    const files = Array.from(event.target.files ?? []);
-                                    setSelectedFiles(files);
-                                }}
-                            />
-                        </Button>
-                    )}
-                    {canUpload && (
-                        <Button
-                            variant="contained"
-                            startIcon={<CloudUploadIcon />}
-                            onClick={handleUpload}
-                            disabled={uploading}
-                        >
-                            Загрузить пакет
-                        </Button>
-                    )}
-                    {canSubmit && (
-                        <Button
-                            variant="outlined"
-                            onClick={handleSubmit}
-                            disabled={submitting || currentFiles.length === 0}
-                        >
-                            Отправить на согласование
-                        </Button>
-                    )}
                     <Button
                         variant="text"
                         startIcon={<FolderOpenIcon />}
@@ -486,27 +595,282 @@ export default function DocumentReviewPage() {
                     </Button>
                 </Stack>
 
-                {uploadError && <Alert severity="error">{uploadError}</Alert>}
-                {submitError && <Alert severity="error">{submitError}</Alert>}
-                {uploading && <LinearProgress />}
-                {submitting && <LinearProgress />}
-                {selectedFiles.length > 0 && (
-                    <Stack spacing={0.5}>
-                        <Typography variant="caption" color="text.secondary">
-                            Выбрано файлов: {selectedFiles.length}
-                        </Typography>
-                        {selectedFiles.slice(0, 3).map((file) => (
-                            <Typography key={file.name} variant="body2">
-                                {file.name}
-                            </Typography>
-                        ))}
-                        {selectedFiles.length > 3 && (
-                            <Typography variant="caption" color="text.secondary">
-                                и ещё {selectedFiles.length - 3}
-                            </Typography>
+                {canUpload && (
+                    <Stack spacing={2}>
+                        <Box
+                            {...getRootProps()}
+                            sx={{
+                                border: '1px dashed',
+                                borderColor: isDragActive ? 'primary.main' : 'divider',
+                                borderRadius: UI_RADIUS.surface,
+                                p: 2,
+                                textAlign: 'center',
+                                cursor: uploading ? 'not-allowed' : 'pointer',
+                                bgcolor: isDragActive ? 'rgba(59,130,246,0.08)' : 'transparent',
+                                transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                            }}
+                        >
+                            <input {...getInputProps()} />
+                            <Stack spacing={0.5} alignItems="center">
+                                <CloudUploadIcon color={isDragActive ? 'primary' : 'action'} />
+                                <Typography variant="body2" fontWeight={600}>
+                                    Перетащите файлы сюда или нажмите, чтобы выбрать
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    PDF и другие форматы · Можно выбрать несколько файлов
+                                </Typography>
+                            </Stack>
+                        </Box>
+
+                        {selectedItems.length > 0 && (
+                            <Stack spacing={1}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    Выбранные файлы
+                                </Typography>
+                                <Box
+                                    sx={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                                        gap: 1.5,
+                                    }}
+                                >
+                                    {selectedItems.map((item) => (
+                                        <Paper
+                                            key={item.id}
+                                            variant="outlined"
+                                            sx={{
+                                                p: 1,
+                                                borderRadius: 2,
+                                                position: 'relative',
+                                                overflow: 'hidden',
+                                            }}
+                                        >
+                                            <Box
+                                                sx={{
+                                                    height: 140,
+                                                    borderRadius: 2,
+                                                    overflow: 'hidden',
+                                                    bgcolor: 'rgba(15,23,42,0.04)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                }}
+                                            >
+                                                {item.pdf ? (
+                                                    <object
+                                                        data={item.previewUrl}
+                                                        type="application/pdf"
+                                                        style={{ width: '100%', height: '100%' }}
+                                                    />
+                                                ) : (
+                                                    <Stack spacing={0.5} alignItems="center">
+                                                        <InsertDriveFileOutlinedIcon color="action" />
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Файл
+                                                        </Typography>
+                                                    </Stack>
+                                                )}
+                                            </Box>
+                                            <Tooltip title="Удалить файл">
+                                                <span>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() =>
+                                                            openDeleteDialog({
+                                                                type: 'selected',
+                                                                id: item.id,
+                                                                name: item.file.name,
+                                                            })
+                                                        }
+                                                        disabled={uploading}
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: 8,
+                                                            right: 8,
+                                                            bgcolor: 'rgba(15,23,42,0.65)',
+                                                            color: '#fff',
+                                                            '&:hover': {
+                                                                bgcolor: 'rgba(15,23,42,0.8)',
+                                                            },
+                                                        }}
+                                                    >
+                                                        <DeleteOutlineIcon fontSize="small" />
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{ mt: 0.5, display: 'block', wordBreak: 'break-word' }}
+                                            >
+                                                {item.file.name}
+                                            </Typography>
+                                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
+                                                <Chip
+                                                    size="small"
+                                                    label={uploading ? 'Загрузка' : 'Готово'}
+                                                    sx={{
+                                                        borderRadius: 999,
+                                                        fontWeight: 600,
+                                                        bgcolor: uploading
+                                                            ? 'rgba(59,130,246,0.12)'
+                                                            : 'rgba(34,197,94,0.16)',
+                                                    }}
+                                                />
+                                                {uploading && (
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {uploadProgress}%
+                                                    </Typography>
+                                                )}
+                                            </Stack>
+                                            {uploading && (
+                                                <LinearProgress
+                                                    variant="determinate"
+                                                    value={uploadProgress}
+                                                    sx={{
+                                                        mt: 1,
+                                                        height: 6,
+                                                        borderRadius: 999,
+                                                        backgroundColor: 'rgba(15,23,42,0.08)',
+                                                        '& .MuiLinearProgress-bar': {
+                                                            borderRadius: 999,
+                                                            background:
+                                                                'linear-gradient(90deg, rgba(0,122,255,0.9), rgba(88,86,214,0.9))',
+                                                        },
+                                                    }}
+                                                />
+                                            )}
+                                        </Paper>
+                                    ))}
+                                </Box>
+                            </Stack>
+                        )}
+
+                        {showUploadButton && (
+                            <Button
+                                variant="contained"
+                                startIcon={
+                                    uploading ? <CircularProgress size={18} color="inherit" /> : <CloudUploadIcon />
+                                }
+                                onClick={handleUpload}
+                                disabled={uploading || selectedItems.length === 0}
+                                sx={{ alignSelf: 'flex-start' }}
+                            >
+                                {uploading ? 'Загрузка пакета' : 'Загрузить пакет'}
+                            </Button>
                         )}
                     </Stack>
                 )}
+
+                {currentFiles.length > 0 && (
+                    <Stack spacing={1}>
+                        <Typography variant="subtitle2" color="text.secondary">
+                            Загруженные файлы
+                        </Typography>
+                        <Box
+                            sx={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                                gap: 1.5,
+                            }}
+                        >
+                            {currentFiles.map((file) => {
+                                const filename = extractFileNameFromUrl(file, 'Файл');
+                                return (
+                                    <Paper
+                                        key={file}
+                                        variant="outlined"
+                                        sx={{
+                                            p: 1,
+                                            borderRadius: 2,
+                                            position: 'relative',
+                                            overflow: 'hidden',
+                                            cursor: 'pointer',
+                                        }}
+                                        onClick={() => setSelectedFile(file)}
+                                    >
+                                        <Box
+                                            sx={{
+                                                height: 140,
+                                                borderRadius: 2,
+                                                overflow: 'hidden',
+                                                bgcolor: 'rgba(15,23,42,0.04)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                            }}
+                                        >
+                                            {isPdf(file) ? (
+                                                <object
+                                                    data={buildProxyUrl(file)}
+                                                    type="application/pdf"
+                                                    style={{ width: '100%', height: '100%' }}
+                                                />
+                                            ) : (
+                                                <Stack spacing={0.5} alignItems="center">
+                                                    <InsertDriveFileOutlinedIcon color="action" />
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Файл
+                                                    </Typography>
+                                                </Stack>
+                                            )}
+                                        </Box>
+                                        {canUpload && (
+                                            <Tooltip title="Удалить файл">
+                                                <span>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            openDeleteDialog({
+                                                                type: 'uploaded',
+                                                                url: file,
+                                                                name: filename,
+                                                            });
+                                                        }}
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: 8,
+                                                            right: 8,
+                                                            bgcolor: 'rgba(15,23,42,0.65)',
+                                                            color: '#fff',
+                                                            '&:hover': {
+                                                                bgcolor: 'rgba(15,23,42,0.8)',
+                                                            },
+                                                        }}
+                                                    >
+                                                        <DeleteOutlineIcon fontSize="small" />
+                                                    </IconButton>
+                                                </span>
+                                            </Tooltip>
+                                        )}
+                                        <Typography
+                                            variant="caption"
+                                            sx={{ mt: 0.5, display: 'block', wordBreak: 'break-word' }}
+                                        >
+                                            {filename}
+                                        </Typography>
+                                    </Paper>
+                                );
+                            })}
+                        </Box>
+                    </Stack>
+                )}
+
+                {showSubmitButton && (
+                    <Button
+                        variant="outlined"
+                        onClick={handleSubmit}
+                        disabled={submitting}
+                        startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : null}
+                        sx={{ alignSelf: 'flex-start' }}
+                    >
+                        Отправить на согласование
+                    </Button>
+                )}
+
+                {uploadError && <Alert severity="error">{uploadError}</Alert>}
+                {submitError && <Alert severity="error">{submitError}</Alert>}
+                {submitting && <LinearProgress />}
 
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
                     {!isMobile && (
@@ -752,6 +1116,34 @@ export default function DocumentReviewPage() {
                         />
                     ) : null}
                 </Box>
+            </Dialog>
+
+            <Dialog open={Boolean(deleteTarget)} onClose={closeDeleteDialog}>
+                <DialogTitle>Удалить файл?</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={1}>
+                        {deleteError && <Alert severity="error">{deleteError}</Alert>}
+                        <Typography>
+                            {deleteTarget?.type === 'selected'
+                                ? `Файл "${deleteTarget?.name}" будет удалён из списка перед загрузкой.`
+                                : `Файл "${deleteTarget?.name}" будет удалён из текущего пакета.`}
+                        </Typography>
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeDeleteDialog} disabled={deleteLoading}>
+                        Отмена
+                    </Button>
+                    <Button
+                        onClick={confirmDelete}
+                        color="error"
+                        variant="contained"
+                        disabled={deleteLoading}
+                        startIcon={deleteLoading ? <CircularProgress size={18} color="inherit" /> : null}
+                    >
+                        Удалить
+                    </Button>
+                </DialogActions>
             </Dialog>
 
             <Dialog open={issueDialogOpen} onClose={closeIssueDialog} fullWidth maxWidth="sm">
