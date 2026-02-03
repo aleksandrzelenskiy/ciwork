@@ -73,6 +73,7 @@ import { usePhotoReports } from '@/hooks/usePhotoReports';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { formatNameFromEmail } from '@/utils/email';
 import { useI18n } from '@/i18n/I18nProvider';
 
 type TaskEventDetailsValue = string | number | boolean | null | undefined;
@@ -251,6 +252,18 @@ export default function TaskDetailPage() {
         if (names.length > 2) return names.join(', ');
         return task?.bsNumber || t('common.empty', '—');
     }, [task?.bsLocation, task?.bsNumber, t]);
+
+    const authorDisplayName = React.useMemo(() => {
+        const rawName = task?.authorName?.trim() ?? '';
+        const rawEmail = task?.authorEmail?.trim() ?? '';
+        if (rawName) {
+            return rawName.includes('@') ? formatNameFromEmail(rawName) : rawName;
+        }
+        if (rawEmail) {
+            return formatNameFromEmail(rawEmail);
+        }
+        return '';
+    }, [task?.authorName, task?.authorEmail]);
 
     const asText = (x: unknown): string => {
         if (x === null || typeof x === 'undefined') return t('common.empty', '—');
@@ -562,9 +575,11 @@ export default function TaskDetailPage() {
             ev.details && typeof (ev.details as TaskEventDetails).authorName === 'string'
                 ? String((ev.details as TaskEventDetails).authorName)
                 : undefined;
+        const rawName = (ev.author || detailAuthorName || '').trim();
+        const normalizedName = rawName.includes('@') ? formatNameFromEmail(rawName) : rawName;
         return {
             id: ev.authorId || detailAuthorId,
-            name: ev.author || detailAuthorName || t('common.empty', '—'),
+            name: normalizedName || t('common.empty', '—'),
         };
     };
 
@@ -1344,7 +1359,7 @@ export default function TaskDetailPage() {
                                     {task.taskType || t('common.empty', '—')}
                                 </Typography>
 
-                                {task.authorName && (
+                                {authorDisplayName && (
                                     <Typography variant="body1">
                                         <strong>{t('tasks.author', 'Автор:')}</strong>{' '}
                                         {task.authorId ? (
@@ -1358,14 +1373,14 @@ export default function TaskDetailPage() {
                                                     minWidth: 0,
                                                     fontSize: 'inherit',
                                                     fontWeight: 'inherit',
-                                                    lineHeight: 'inherit',
-                                                    color: 'primary.main',
-                                                }}
-                                            >
-                                                {task.authorName}
+                                                lineHeight: 'inherit',
+                                                color: 'primary.main',
+                                            }}
+                                        >
+                                                {authorDisplayName}
                                             </Button>
                                         ) : (
-                                            task.authorName
+                                            authorDisplayName
                                         )}
                                     </Typography>
                                 )}
