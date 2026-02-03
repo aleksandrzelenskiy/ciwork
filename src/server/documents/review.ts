@@ -615,7 +615,9 @@ export const deleteDocumentReviewFile = async (params: { taskId: string; url: st
         return { ok: false, error: 'Нельзя удалить файл в текущем статусе', status: 400 } as const;
     }
 
-    const currentFiles = Array.isArray(review.currentFiles) ? review.currentFiles : [];
+    const currentFiles: string[] = Array.isArray(review.currentFiles)
+        ? (review.currentFiles as string[])
+        : [];
     if (!currentFiles.includes(targetUrl)) {
         return { ok: false, error: 'Файл не найден в текущем пакете', status: 404 } as const;
     }
