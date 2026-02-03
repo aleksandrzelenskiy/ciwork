@@ -38,6 +38,13 @@ import crypto from 'crypto';
 
 const ALLOWED_UPLOAD_STATUSES = new Set<DocumentReviewStatus>(['Draft', 'Issues', 'Fixed']);
 
+type StoredFileMeta = {
+    url: string;
+    name: string;
+    ext: string;
+    size: number;
+};
+
 const normalizeTaskId = (value: string) => value.trim().toUpperCase();
 
 const buildActorName = (user: Awaited<ReturnType<typeof currentUser>>) => {
@@ -623,7 +630,9 @@ export const deleteDocumentReviewFile = async (params: { taskId: string; url: st
     }
 
     const nextCurrentFiles = currentFiles.filter((file) => file !== targetUrl);
-    const currentMeta = Array.isArray(review.currentFilesMeta) ? review.currentFilesMeta : [];
+    const currentMeta: StoredFileMeta[] = Array.isArray(review.currentFilesMeta)
+        ? (review.currentFilesMeta as StoredFileMeta[])
+        : [];
     const removedMeta = currentMeta.find((meta) => meta.url === targetUrl);
     const nextCurrentMeta = currentMeta.filter((meta) => meta.url !== targetUrl);
     const removedBytes = removedMeta?.size ?? 0;
