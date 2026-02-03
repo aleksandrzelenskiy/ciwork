@@ -66,6 +66,7 @@ import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
 import WorkspaceTaskDialog from '@/app/workspace/components/WorkspaceTaskDialog';
 import type { TaskForEdit } from '@/app/workspace/components/WorkspaceTaskDialog';
 import TaskComments from '@/features/tasks/TaskComments';
+import DocumentReviewTaskPanel from '@/features/documents/DocumentReviewTaskPanel';
 import type { TaskComment } from '@/features/tasks/TaskComments';
 import type { ParsedWorkItem } from '@/app/workspace/components/T2/T2EstimateParser';
 import { T2NcwGenerator } from '@/app/workspace/components/T2/T2NcwGenerator';
@@ -2638,6 +2639,22 @@ export default function TaskDetailsPage() {
                                         </Box>
                                     )}
                                 </Stack>
+                            </CardItem>
+                        )}
+
+                        {task?.taskType === 'document' && (
+                            <CardItem sx={{ minWidth: 0 }}>
+                                <Typography
+                                    variant="body1"
+                                    fontWeight={600}
+                                    gutterBottom
+                                    sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                                >
+                                    <DescriptionOutlinedIcon fontSize="small" />
+                                    {t('task.document.review.title', 'Согласование документации')}
+                                </Typography>
+                                <Divider sx={{ mb: 1.5 }} />
+                                <DocumentReviewTaskPanel taskId={task.taskId} />
                             </CardItem>
                         )}
 
