@@ -372,20 +372,6 @@ export default function DocumentReviewViewer({
                             </Typography>
                             <Chip label={`Статус: ${getStatusLabel(review.status)}`} />
                             <Chip label={`Версия ${review.currentVersion || 0}`} />
-                            {canManage && (
-                                <Tooltip title="Добавить замечание">
-                                    <IconButton
-                                        onClick={() => {
-                                            setIssuesDrawerOpen(true);
-                                            openIssueDialog();
-                                        }}
-                                    >
-                                        <Badge color="error" badgeContent={issues.length || 0} max={99}>
-                                            <AnnouncementIcon />
-                                        </Badge>
-                                    </IconButton>
-                                </Tooltip>
-                            )}
                             <Tooltip title="Замечания">
                                 <IconButton onClick={() => setIssuesDrawerOpen(true)}>
                                     <Badge color="error" badgeContent={issues.length || 0} max={99}>
@@ -523,8 +509,7 @@ export default function DocumentReviewViewer({
                 anchor="right"
                 open={issuesDrawerOpen}
                 onClose={() => setIssuesDrawerOpen(false)}
-                sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
-                BackdropProps={{ sx: { zIndex: (theme) => theme.zIndex.modal } }}
+                ModalProps={{ hideBackdrop: true }}
             >
                 <Box sx={{ width: 320, p: 2 }}>
                     <Typography variant="subtitle1" fontWeight={600} gutterBottom>
@@ -557,10 +542,7 @@ export default function DocumentReviewViewer({
                         {canManage && (
                             <Tooltip title="Добавить замечание">
                                 <IconButton
-                                    onClick={() => {
-                                        setIssuesDrawerOpen(true);
-                                        openIssueDialog();
-                                    }}
+                                    onClick={openIssueDialog}
                                     sx={{
                                         backgroundColor: 'rgba(255,255,255,0.15)',
                                         color: '#fff',
