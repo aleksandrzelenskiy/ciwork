@@ -283,6 +283,14 @@ export default function DocumentReviewPage() {
     };
 
 
+    const headerTitle = React.useMemo(() => {
+        if (!review) return 'Документация';
+        const parts = [review.taskId, review.taskName, review.bsNumber]
+            .map((value) => (value || '').trim())
+            .filter(Boolean);
+        return `${parts.join(' ')} — документация`.trim();
+    }, [review]);
+
     if (loading) {
         return (
             <Box sx={{ p: 3 }}>
@@ -315,7 +323,7 @@ export default function DocumentReviewPage() {
                         К задаче
                     </Button>
                     <Typography variant="h5" fontWeight={700} sx={{ flexGrow: 1 }}>
-                        {`${review.taskName || 'Задача'} — документация`}
+                        {headerTitle}
                     </Typography>
                     <Chip label={`Статус: ${getStatusLabel(review.status)}`} />
                     <Chip label={`Версия ${review.currentVersion || 0}`} />

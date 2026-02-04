@@ -28,6 +28,7 @@ import AnnouncementIcon from '@mui/icons-material/Announcement';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import CommentOutlinedIcon from '@mui/icons-material/CommentOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import Badge from '@mui/material/Badge';
 import type { DocumentIssue, DocumentReviewClient } from '@/app/types/documentReviewTypes';
 import { extractFileNameFromUrl } from '@/utils/taskFiles';
 import { UI_RADIUS } from '@/config/uiTokens';
@@ -83,6 +84,7 @@ export default function DocumentReviewViewer({
 
     const currentFiles = review.currentFiles ?? [];
     const previousFiles = review.previousFiles ?? [];
+    const issues = review.issues ?? [];
 
     const buildProxyUrl = (fileUrl: string, download = false) => {
         const downloadParam = download ? '&download=1' : '';
@@ -344,6 +346,13 @@ export default function DocumentReviewViewer({
 
     const pdfSelected = selectedFile && isPdf(selectedFile);
 
+    const headerTitle = React.useMemo(() => {
+        const parts = [review.taskId, review.taskName, review.bsNumber]
+            .map((value) => (value || '').trim())
+            .filter(Boolean);
+        return `${parts.join(' ')} — документация`.trim();
+    }, [review.taskId, review.taskName, review.bsNumber]);
+
     return (
         <>
             <Dialog fullScreen open={open} onClose={onClose}>
@@ -351,10 +360,31 @@ export default function DocumentReviewViewer({
                     <Stack spacing={2}>
                         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ md: 'center' }}>
                             <Typography variant="h5" fontWeight={700} sx={{ flexGrow: 1 }}>
-                                {`${review.taskName || 'Задача'} — документация`}
+                                {headerTitle}
                             </Typography>
                             <Chip label={`Статус: ${getStatusLabel(review.status)}`} />
                             <Chip label={`Версия ${review.currentVersion || 0}`} />
+                            {canManage && (
+                                <Tooltip title="Добавить замечание">
+                                    <IconButton
+                                        onClick={() => {
+                                            setIssuesDrawerOpen(true);
+                                            openIssueDialog();
+                                        }}
+                                    >
+                                        <Badge color="error" badgeContent={issues.length || 0} max={99}>
+                                            <AnnouncementIcon />
+                                        </Badge>
+                                    </IconButton>
+                                </Tooltip>
+                            )}
+                            <Tooltip title="Замечания">
+                                <IconButton onClick={() => setIssuesDrawerOpen(true)}>
+                                    <Badge color="error" badgeContent={issues.length || 0} max={99}>
+                                        <CommentOutlinedIcon />
+                                    </Badge>
+                                </IconButton>
+                            </Tooltip>
                             <Tooltip title="Закрыть">
                                 <IconButton onClick={onClose}>
                                     <CloseIcon />
@@ -370,14 +400,6 @@ export default function DocumentReviewViewer({
                                 sx={{ display: { md: 'none' } }}
                             >
                                 Файлы
-                            </Button>
-                            <Button
-                                variant="text"
-                                startIcon={<CommentOutlinedIcon />}
-                                onClick={() => setIssuesDrawerOpen(true)}
-                                sx={{ display: { md: 'none' } }}
-                            >
-                                Замечания
                             </Button>
                             {canSubmit && currentFiles.length === 0 && (
                                 <Typography variant="body2" color="text.secondary">
@@ -468,20 +490,6 @@ export default function DocumentReviewViewer({
                                 )}
                             </Box>
 
-                            {!isMobile && (
-                                <Box
-                                    sx={{
-                                        width: 360,
-                                        borderRadius: UI_RADIUS.surface,
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        p: 2,
-                                        height: 'fit-content',
-                                    }}
-                                >
-                                    {renderIssues(review.issues ?? [])}
-                                </Box>
-                            )}
                         </Stack>
                     </Stack>
                 </Box>
@@ -506,7 +514,7 @@ export default function DocumentReviewViewer({
                         Замечания
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
-                    {renderIssues(review.issues ?? [])}
+                    {renderIssues(issues)}
                 </Box>
             </Drawer>
 
@@ -532,7 +540,10 @@ export default function DocumentReviewViewer({
                         {canManage && (
                             <Tooltip title="Добавить замечание">
                                 <IconButton
-                                    onClick={openIssueDialog}
+                                    onClick={() => {
+                                        setIssuesDrawerOpen(true);
+                                        openIssueDialog();
+                                    }}
                                     sx={{
                                         backgroundColor: 'rgba(255,255,255,0.15)',
                                         color: '#fff',
