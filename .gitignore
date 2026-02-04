@@ -1,8 +1,10 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-/public/uploads/
+# uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
+
 # dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -11,40 +13,50 @@
 !.yarn/versions
 
 # testing
-/coverage
+coverage/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
+dist/
 
-# misc
-.DS_Store
-*.pem
-
-# debug
+# logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env.production
-.env.app
-.env.mongo
-.env*
+# env (secrets)
+.env
+.env.*
+!.env.example
 
 # vercel
-.vercel
+.vercel/
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
-# IDE
+# IDE / OS
+.idea/
+.vscode/
 workspace.xml
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
 
-AGENTS.mdCaddyfile
-Caddyfile
+# temp
+tmp/
+temp/
+*.tmp
+
+# optional local caddy variants
+Caddyfile.local
+Caddyfile.prod
