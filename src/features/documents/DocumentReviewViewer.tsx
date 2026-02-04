@@ -510,11 +510,19 @@ export default function DocumentReviewViewer({
                 open={issuesDrawerOpen}
                 onClose={() => setIssuesDrawerOpen(false)}
                 ModalProps={{ hideBackdrop: true }}
+                sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
             >
                 <Box sx={{ width: 320, p: 2 }}>
-                    <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                        Замечания
-                    </Typography>
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                        <Typography variant="subtitle1" fontWeight={600} sx={{ flexGrow: 1 }}>
+                            Замечания
+                        </Typography>
+                        <Tooltip title="Закрыть">
+                            <IconButton size="small" onClick={() => setIssuesDrawerOpen(false)}>
+                                <CloseIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    </Stack>
                     <Divider sx={{ mb: 2 }} />
                     {renderIssues(issues)}
                 </Box>
