@@ -508,7 +508,13 @@ export default function DocumentReviewViewer({
                 </Box>
             </Drawer>
 
-            <Drawer anchor="right" open={issuesDrawerOpen} onClose={() => setIssuesDrawerOpen(false)}>
+            <Drawer
+                anchor="right"
+                open={issuesDrawerOpen}
+                onClose={() => setIssuesDrawerOpen(false)}
+                sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
+                BackdropProps={{ sx: { zIndex: (theme) => theme.zIndex.modal } }}
+            >
                 <Box sx={{ width: 320, p: 2 }}>
                     <Typography variant="subtitle1" fontWeight={600} gutterBottom>
                         Замечания
