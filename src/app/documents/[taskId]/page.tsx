@@ -33,7 +33,7 @@ import { UI_RADIUS } from '@/config/uiTokens';
 import { getStatusLabel } from '@/utils/statusLabels';
 import DocumentReviewViewer from '@/features/documents/DocumentReviewViewer';
 
-const isPdf = (url: string) => url.toLowerCase().endsWith('.pdf');
+const isPdf = (url: string) => extractFileNameFromUrl(url, '').toLowerCase().endsWith('.pdf');
 const isPdfFile = (file: File) =>
     file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 const createLocalId = () =>
@@ -47,6 +47,70 @@ type SelectedFileItem = {
     previewUrl: string;
     pdf: boolean;
 };
+
+type PdfThumbnailProps = {
+    fileUrl: string;
+    buildProxyUrl: (fileUrl: string) => string;
+};
+
+function PdfThumbnail({ fileUrl, buildProxyUrl }: PdfThumbnailProps) {
+    const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+    const [error, setError] = React.useState(false);
+
+    React.useEffect(() => {
+        const controller = new AbortController();
+        let objectUrl: string | null = null;
+        setPreviewUrl(null);
+        setError(false);
+
+        fetch(buildProxyUrl(fileUrl), { signal: controller.signal })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error('Failed to load PDF');
+                }
+                return res.blob();
+            })
+            .then((blob) => {
+                objectUrl = URL.createObjectURL(blob);
+                setPreviewUrl(objectUrl);
+            })
+            .catch((err) => {
+                if (err instanceof DOMException && err.name === 'AbortError') return;
+                setError(true);
+            });
+
+        return () => {
+            controller.abort();
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+    }, [buildProxyUrl, fileUrl]);
+
+    if (error) {
+        return (
+            <Stack spacing={0.5} alignItems="center">
+                <InsertDriveFileOutlinedIcon color="action" />
+                <Typography variant="caption" color="text.secondary">
+                    PDF
+                </Typography>
+            </Stack>
+        );
+    }
+
+    if (!previewUrl) {
+        return (
+            <Stack spacing={0.5} alignItems="center">
+                <InsertDriveFileOutlinedIcon color="action" />
+                <Typography variant="caption" color="text.secondary">
+                    Загрузка
+                </Typography>
+            </Stack>
+        );
+    }
+
+    return <object data={previewUrl} type="application/pdf" style={{ width: '100%', height: '100%' }} />;
+}
 
 export default function DocumentReviewPage() {
     const { taskId } = useParams() as { taskId: string };
@@ -563,11 +627,7 @@ export default function DocumentReviewPage() {
                                             }}
                                         >
                                             {isPdf(file) ? (
-                                                <object
-                                                    data={buildProxyUrl(file)}
-                                                    type="application/pdf"
-                                                    style={{ width: '100%', height: '100%' }}
-                                                />
+                                                <PdfThumbnail fileUrl={file} buildProxyUrl={buildProxyUrl} />
                                             ) : (
                                                 <Stack spacing={0.5} alignItems="center">
                                                     <InsertDriveFileOutlinedIcon color="action" />

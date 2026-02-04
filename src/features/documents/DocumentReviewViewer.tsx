@@ -35,7 +35,7 @@ import { UI_RADIUS } from '@/config/uiTokens';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { getStatusColor } from '@/utils/statusColors';
 
-const isPdf = (url: string) => url.toLowerCase().endsWith('.pdf');
+const isPdf = (url: string) => extractFileNameFromUrl(url, '').toLowerCase().endsWith('.pdf');
 
 type DocumentReviewViewerProps = {
     open: boolean;
@@ -94,13 +94,16 @@ export default function DocumentReviewViewer({
         ? `Версия v${latestVersion.version} · ${new Date(latestVersion.createdAt).toLocaleString()} · ${latestVersion.createdByName}`
         : 'Текущий пакет без версии';
 
-    const buildProxyUrl = (fileUrl: string, download = false) => {
-        const downloadParam = download ? '&download=1' : '';
-        const base = `/api/document-reviews/${encodeURIComponent(taskId)}/file?url=${encodeURIComponent(
-            fileUrl
-        )}${downloadParam}`;
-        return token ? `${base}&token=${encodeURIComponent(token)}` : base;
-    };
+    const buildProxyUrl = React.useCallback(
+        (fileUrl: string, download = false) => {
+            const downloadParam = download ? '&download=1' : '';
+            const base = `/api/document-reviews/${encodeURIComponent(taskId)}/file?url=${encodeURIComponent(
+                fileUrl
+            )}${downloadParam}`;
+            return token ? `${base}&token=${encodeURIComponent(token)}` : base;
+        },
+        [taskId, token]
+    );
 
     const handleIssueCreate = async (): Promise<boolean> => {
         if (!newIssueText.trim()) {
@@ -353,6 +356,50 @@ export default function DocumentReviewViewer({
     );
 
     const pdfSelected = selectedFile && isPdf(selectedFile);
+    const [pdfBlobUrl, setPdfBlobUrl] = React.useState<string | null>(null);
+    const [pdfBlobLoading, setPdfBlobLoading] = React.useState(false);
+    const [pdfBlobError, setPdfBlobError] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (!selectedFile || !pdfSelected) {
+            setPdfBlobUrl(null);
+            setPdfBlobLoading(false);
+            setPdfBlobError(null);
+            return;
+        }
+
+        const controller = new AbortController();
+        let objectUrl: string | null = null;
+        setPdfBlobLoading(true);
+        setPdfBlobError(null);
+        setPdfBlobUrl(null);
+
+        fetch(buildProxyUrl(selectedFile), { signal: controller.signal })
+            .then((res) => {
+                if (!res.ok) {
+                    throw new Error('Не удалось загрузить PDF');
+                }
+                return res.blob();
+            })
+            .then((blob) => {
+                objectUrl = URL.createObjectURL(blob);
+                setPdfBlobUrl(objectUrl);
+            })
+            .catch((err) => {
+                if (err instanceof DOMException && err.name === 'AbortError') return;
+                setPdfBlobError(err instanceof Error ? err.message : 'Не удалось загрузить PDF');
+            })
+            .finally(() => {
+                setPdfBlobLoading(false);
+            });
+
+        return () => {
+            controller.abort();
+            if (objectUrl) {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+    }, [buildProxyUrl, pdfSelected, selectedFile]);
 
     const headerTitle = React.useMemo(() => {
         const parts = [review.taskId, review.taskName, review.bsNumber]
@@ -462,11 +509,29 @@ export default function DocumentReviewViewer({
                                     )}
                                 </Box>
                                 {selectedFile && pdfSelected ? (
-                                    <iframe
-                                        title="document-pdf"
-                                        src={buildProxyUrl(selectedFile)}
-                                        style={{ width: '100%', height: '100%', border: 'none' }}
-                                    />
+                                    pdfBlobLoading ? (
+                                        <Box sx={{ p: 3 }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Загружаем PDF...
+                                            </Typography>
+                                        </Box>
+                                    ) : pdfBlobError ? (
+                                        <Box sx={{ p: 3 }}>
+                                            <Alert severity="error">{pdfBlobError}</Alert>
+                                        </Box>
+                                    ) : pdfBlobUrl ? (
+                                        <iframe
+                                            title="document-pdf"
+                                            src={pdfBlobUrl}
+                                            style={{ width: '100%', height: '100%', border: 'none' }}
+                                        />
+                                    ) : (
+                                        <Box sx={{ p: 3 }}>
+                                            <Typography variant="body2" color="text.secondary">
+                                                Не удалось загрузить PDF.
+                                            </Typography>
+                                        </Box>
+                                    )
                                 ) : (
                                     <Box sx={{ p: 3 }}>
                                         <Typography variant="body2" color="text.secondary">
@@ -574,10 +639,10 @@ export default function DocumentReviewViewer({
                             </IconButton>
                         </Tooltip>
                     </Box>
-                    {selectedFile ? (
+                    {selectedFile && pdfSelected && pdfBlobUrl ? (
                         <iframe
                             title="document-pdf-fullscreen"
-                            src={buildProxyUrl(selectedFile)}
+                            src={pdfBlobUrl}
                             style={{ width: '100%', height: '100%', border: 'none' }}
                         />
                     ) : null}
