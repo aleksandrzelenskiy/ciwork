@@ -36,6 +36,10 @@ services:
   mongo:
     image: mongo:6.0
     container_name: ciwork_mongo
+    ulimits:
+      nofile:
+        soft: 64000
+        hard: 64000
     env_file:
       - .env.mongo
     command:
