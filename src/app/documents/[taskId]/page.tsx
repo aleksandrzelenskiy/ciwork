@@ -291,6 +291,15 @@ export default function DocumentReviewPage() {
         return `${parts.join(' ')} — документация`.trim();
     }, [review]);
 
+    const latestVersion = React.useMemo(() => {
+        const versions = Array.isArray(review?.versions) ? review?.versions : [];
+        if (!versions.length) return null;
+        return [...versions].sort((a, b) => b.version - a.version)[0];
+    }, [review]);
+    const latestVersionMeta = latestVersion
+        ? `Версия v${latestVersion.version} · ${new Date(latestVersion.createdAt).toLocaleString()} · ${latestVersion.createdByName}`
+        : 'Текущий пакет без версии';
+
     if (loading) {
         return (
             <Box sx={{ p: 3 }}>
@@ -308,7 +317,12 @@ export default function DocumentReviewPage() {
     }
 
     const showUploadButton = canUpload && (selectedItems.length > 0 || currentFiles.length === 0);
-    const showSubmitButton = canUpload && currentFiles.length > 0 && selectedItems.length === 0;
+    const showSubmitButton =
+        review.role === 'executor' &&
+        currentFiles.length > 0 &&
+        selectedItems.length === 0 &&
+        review.status !== 'Pending' &&
+        review.status !== 'Agreed';
 
     return (
         <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -316,7 +330,13 @@ export default function DocumentReviewPage() {
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ md: 'center' }}>
                     <Button
                         component={Link}
-                        href={`/tasks/${encodeURIComponent(taskId)}`}
+                        href={
+                            review.orgSlug && review.projectKey
+                                ? `/org/${encodeURIComponent(review.orgSlug)}/projects/${encodeURIComponent(
+                                      review.projectKey
+                                  )}/tasks/${encodeURIComponent(taskId)}`
+                                : `/tasks/${encodeURIComponent(taskId)}`
+                        }
                         startIcon={<ArrowBackIcon />}
                         sx={{ alignSelf: 'flex-start' }}
                     >
@@ -502,6 +522,9 @@ export default function DocumentReviewPage() {
                     <Stack spacing={1}>
                         <Typography variant="subtitle2" color="text.secondary">
                             Загруженные файлы
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                            {latestVersionMeta}
                         </Typography>
                         <Box
                             sx={{

@@ -85,6 +85,14 @@ export default function DocumentReviewViewer({
     const currentFiles = review.currentFiles ?? [];
     const previousFiles = review.previousFiles ?? [];
     const issues = review.issues ?? [];
+    const latestVersion = React.useMemo(() => {
+        const versions = Array.isArray(review.versions) ? review.versions : [];
+        if (!versions.length) return null;
+        return [...versions].sort((a, b) => b.version - a.version)[0];
+    }, [review.versions]);
+    const latestVersionMeta = latestVersion
+        ? `Версия v${latestVersion.version} · ${new Date(latestVersion.createdAt).toLocaleString()} · ${latestVersion.createdByName}`
+        : 'Текущий пакет без версии';
 
     const buildProxyUrl = (fileUrl: string, download = false) => {
         const downloadParam = download ? '&download=1' : '';
@@ -401,6 +409,9 @@ export default function DocumentReviewViewer({
                             >
                                 Файлы
                             </Button>
+                            <Typography variant="caption" color="text.secondary">
+                                {latestVersionMeta}
+                            </Typography>
                             {canSubmit && currentFiles.length === 0 && (
                                 <Typography variant="body2" color="text.secondary">
                                     Файлы для согласования пока не загружены.
