@@ -60,3 +60,12 @@ export const fetchPdfBlobUrl = async (
     cache.set(key, entry);
     return promise;
 };
+
+export const clearPdfBlobCache = () => {
+    for (const entry of cache.values()) {
+        if (entry.blobUrl) {
+            URL.revokeObjectURL(entry.blobUrl);
+        }
+    }
+    cache.clear();
+};
