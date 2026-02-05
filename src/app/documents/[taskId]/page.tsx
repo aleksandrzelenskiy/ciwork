@@ -32,6 +32,7 @@ import { extractFileNameFromUrl } from '@/utils/taskFiles';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { getStatusLabel } from '@/utils/statusLabels';
 import DocumentReviewViewer from '@/features/documents/DocumentReviewViewer';
+import { fetchPdfBlobUrl } from '@/utils/pdfBlobCache';
 
 const isPdf = (url: string) => extractFileNameFromUrl(url, '').toLowerCase().endsWith('.pdf');
 const isPdfFile = (file: File) =>
@@ -58,21 +59,21 @@ function PdfThumbnail({ fileUrl, buildProxyUrl }: PdfThumbnailProps) {
     const [error, setError] = React.useState(false);
 
     React.useEffect(() => {
-        const controller = new AbortController();
-        let objectUrl: string | null = null;
         setPreviewUrl(null);
         setError(false);
 
-        fetch(buildProxyUrl(fileUrl), { signal: controller.signal })
-            .then((res) => {
-                if (!res.ok) {
-                    throw new Error('Failed to load PDF');
-                }
-                return res.blob();
-            })
-            .then((blob) => {
-                objectUrl = URL.createObjectURL(blob);
-                setPreviewUrl(objectUrl);
+        const controller = new AbortController();
+        const proxyUrl = buildProxyUrl(fileUrl);
+
+        fetchPdfBlobUrl(proxyUrl, async () => {
+            const res = await fetch(proxyUrl, { signal: controller.signal });
+            if (!res.ok) {
+                throw new Error('Failed to load PDF');
+            }
+            return res.blob();
+        })
+            .then((blobUrl) => {
+                setPreviewUrl(blobUrl);
             })
             .catch((err) => {
                 if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -81,9 +82,6 @@ function PdfThumbnail({ fileUrl, buildProxyUrl }: PdfThumbnailProps) {
 
         return () => {
             controller.abort();
-            if (objectUrl) {
-                URL.revokeObjectURL(objectUrl);
-            }
         };
     }, [buildProxyUrl, fileUrl]);
 

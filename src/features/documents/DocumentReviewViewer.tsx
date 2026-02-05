@@ -34,6 +34,7 @@ import { extractFileNameFromUrl } from '@/utils/taskFiles';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { getStatusColor } from '@/utils/statusColors';
+import { fetchPdfBlobUrl } from '@/utils/pdfBlobCache';
 
 const isPdf = (url: string) => extractFileNameFromUrl(url, '').toLowerCase().endsWith('.pdf');
 
@@ -368,22 +369,22 @@ export default function DocumentReviewViewer({
             return;
         }
 
-        const controller = new AbortController();
-        let objectUrl: string | null = null;
         setPdfBlobLoading(true);
         setPdfBlobError(null);
         setPdfBlobUrl(null);
 
-        fetch(buildProxyUrl(selectedFile), { signal: controller.signal })
-            .then((res) => {
-                if (!res.ok) {
-                    throw new Error('Не удалось загрузить PDF');
-                }
-                return res.blob();
-            })
-            .then((blob) => {
-                objectUrl = URL.createObjectURL(blob);
-                setPdfBlobUrl(objectUrl);
+        const controller = new AbortController();
+        const proxyUrl = buildProxyUrl(selectedFile);
+
+        fetchPdfBlobUrl(proxyUrl, async () => {
+            const res = await fetch(proxyUrl, { signal: controller.signal });
+            if (!res.ok) {
+                throw new Error('Не удалось загрузить PDF');
+            }
+            return res.blob();
+        })
+            .then((blobUrl) => {
+                setPdfBlobUrl(blobUrl);
             })
             .catch((err) => {
                 if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -395,9 +396,6 @@ export default function DocumentReviewViewer({
 
         return () => {
             controller.abort();
-            if (objectUrl) {
-                URL.revokeObjectURL(objectUrl);
-            }
         };
     }, [buildProxyUrl, pdfSelected, selectedFile]);
 
