@@ -17,6 +17,7 @@ import ManageAccountsSharpIcon from '@mui/icons-material/ManageAccountsSharp';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { withBasePath } from '@/utils/basePath';
 import { useI18n } from '@/i18n/I18nProvider';
+import { clearPdfBlobCache } from '@/utils/pdfBlobCache';
 
 const menu = [
   { name: 'common.settings', fallback: 'Settings', path: '/settings', icon: <ManageAccountsSharpIcon /> },
@@ -49,6 +50,7 @@ export default function UserMenu() {
   const handleMenuClick = async (setting: (typeof menu)[0]) => {
     handleCloseUserMenu();
     if (setting.action === 'logout') {
+      clearPdfBlobCache();
       await signOut({ redirectUrl: withBasePath('/sign-in') });
     } else if (setting.path) {
       router.push(setting.path);

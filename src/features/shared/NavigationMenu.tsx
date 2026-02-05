@@ -37,6 +37,7 @@ import {
 import { MANAGER_ROLES } from '@/app/types/roles';
 import { withBasePath } from '@/utils/basePath';
 import { useI18n } from '@/i18n/I18nProvider';
+import { clearPdfBlobCache } from '@/utils/pdfBlobCache';
 
 type NavigationMenuProps = {
     onNavigateAction: (path: string) => void;
@@ -506,6 +507,7 @@ export default function NavigationMenu({ onNavigateAction }: NavigationMenuProps
     const avatarSrc = contextUser?.profilePic || user?.imageUrl || '';
 
     const handleLogout = async () => {
+        clearPdfBlobCache();
         await signOut({ redirectUrl: withBasePath('/sign-in') });
     };
 
