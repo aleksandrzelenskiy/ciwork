@@ -617,7 +617,7 @@ export default function DocumentReviewPage() {
                 {currentFiles.length > 0 && (
                     <Stack spacing={1}>
                         <Typography variant="subtitle1" fontWeight={600}>
-                            Загруженные файлы
+                            {isSubmittedForReview ? 'Отправленные файлы' : 'Загруженные файлы'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                             {latestVersionMeta}
