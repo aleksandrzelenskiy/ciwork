@@ -70,6 +70,7 @@ export default function DocumentReviewViewer({
     const [approving, setApproving] = React.useState(false);
     const [pdfFullScreenOpen, setPdfFullScreenOpen] = React.useState(false);
     const [issueDialogOpen, setIssueDialogOpen] = React.useState(false);
+    const [issuesState, setIssuesState] = React.useState<DocumentIssue[]>(review.issues ?? []);
 
     React.useEffect(() => {
         if (open) {
@@ -79,13 +80,18 @@ export default function DocumentReviewViewer({
         }
     }, [open]);
 
+    React.useEffect(() => {
+        setIssuesState(review.issues ?? []);
+    }, [review.issues]);
+
     const canManage = review.role === 'manager';
     const canComment = review.role === 'executor' || review.role === 'manager';
     const canSubmit = review.role === 'executor' || review.role === 'manager';
 
     const currentFiles = review.currentFiles ?? [];
     const previousFiles = review.previousFiles ?? [];
-    const issues = review.issues ?? [];
+    const issues = issuesState;
+    const openIssuesCount = issues.filter((issue) => issue.status !== 'resolved').length;
     const latestVersion = React.useMemo(() => {
         const versions = Array.isArray(review.versions) ? review.versions : [];
         if (!versions.length) return null;
@@ -118,13 +124,15 @@ export default function DocumentReviewViewer({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: newIssueText }),
             });
-            const payload = (await res.json().catch(() => ({}))) as { error?: string };
+            const payload = (await res.json().catch(() => ({}))) as { error?: string; issues?: DocumentIssue[] };
             if (!res.ok) {
                 setIssueError(payload.error || 'Не удалось добавить замечание');
                 return false;
             }
             setNewIssueText('');
-            await onRefresh();
+            if (Array.isArray(payload.issues)) {
+                setIssuesState(payload.issues);
+            }
             return true;
         } catch (err) {
             setIssueError(err instanceof Error ? err.message : 'Не удалось добавить замечание');
@@ -140,12 +148,18 @@ export default function DocumentReviewViewer({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'resolve', issueId }),
             });
-            const payload = (await res.json().catch(() => ({}))) as { error?: string };
+            const payload = (await res.json().catch(() => ({}))) as { error?: string; issues?: DocumentIssue[] };
             if (!res.ok) {
                 setIssueError(payload.error || 'Не удалось подтвердить замечание');
                 return;
             }
-            await onRefresh();
+            if (Array.isArray(payload.issues)) {
+                setIssuesState(payload.issues);
+            } else {
+                setIssuesState((prev) =>
+                    prev.map((issue) => (issue.id === issueId ? { ...issue, status: 'resolved' } : issue))
+                );
+            }
         } catch (err) {
             setIssueError(err instanceof Error ? err.message : 'Не удалось подтвердить замечание');
         }
@@ -164,13 +178,15 @@ export default function DocumentReviewViewer({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'comment', issueId, text, type }),
             });
-            const payload = (await res.json().catch(() => ({}))) as { error?: string };
+            const payload = (await res.json().catch(() => ({}))) as { error?: string; issues?: DocumentIssue[] };
             if (!res.ok) {
                 setIssueError(payload.error || 'Не удалось добавить комментарий');
                 return;
             }
             setIssueComments((prev) => ({ ...prev, [issueId]: '' }));
-            await onRefresh();
+            if (Array.isArray(payload.issues)) {
+                setIssuesState(payload.issues);
+            }
         } catch (err) {
             setIssueError(err instanceof Error ? err.message : 'Не удалось добавить комментарий');
         }
@@ -199,14 +215,13 @@ export default function DocumentReviewViewer({
     const openIssueDialog = () => {
         if (!canManage) return;
         const filename = selectedFile ? extractFileNameFromUrl(selectedFile, 'Файл') : '';
-        if (filename) {
-            setNewIssueText((prev) => (prev ? prev : `Файл: ${filename}\n`));
-        }
+        setNewIssueText(filename ? `Файл: ${filename}\n` : '');
         setIssueDialogOpen(true);
     };
 
     const closeIssueDialog = () => {
         setIssueDialogOpen(false);
+        setNewIssueText('');
     };
 
     const renderFileList = (label: string, files: string[]) => (
@@ -419,7 +434,7 @@ export default function DocumentReviewViewer({
                             <Chip label={`Версия ${review.currentVersion || 0}`} />
                             <Tooltip title="Замечания">
                                 <IconButton onClick={() => setIssuesDrawerOpen(true)}>
-                                    <Badge color="error" badgeContent={issues.length || 0} max={99}>
+                                    <Badge color="error" badgeContent={openIssuesCount} max={99}>
                                         <CommentOutlinedIcon />
                                     </Badge>
                                 </IconButton>
@@ -483,11 +498,17 @@ export default function DocumentReviewViewer({
                                 <Box
                                     sx={{
                                         position: 'absolute',
-                                        top: 8,
-                                        right: 8,
+                                        bottom: 12,
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
                                         zIndex: 2,
                                         display: 'flex',
                                         gap: 1,
+                                        px: 1,
+                                        py: 0.5,
+                                        borderRadius: 999,
+                                        backgroundColor: 'rgba(31,41,55,0.6)',
+                                        backdropFilter: 'blur(6px)',
                                     }}
                                 >
                                     {selectedFile && pdfSelected && (
@@ -496,9 +517,9 @@ export default function DocumentReviewViewer({
                                                 size="small"
                                                 onClick={() => setPdfFullScreenOpen(true)}
                                                 sx={{
-                                                    backgroundColor: 'rgba(15,23,42,0.8)',
+                                                    backgroundColor: 'rgba(55,65,81,0.9)',
                                                     color: '#fff',
-                                                    '&:hover': { backgroundColor: 'rgba(15,23,42,0.9)' },
+                                                    '&:hover': { backgroundColor: 'rgba(55,65,81,1)' },
                                                 }}
                                             >
                                                 <OpenInFullIcon fontSize="small" />
@@ -603,11 +624,17 @@ export default function DocumentReviewViewer({
                     <Box
                         sx={{
                             position: 'absolute',
-                            top: 12,
-                            right: 12,
+                            bottom: 16,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
                             zIndex: 3,
                             display: 'flex',
                             gap: 1,
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 999,
+                            backgroundColor: 'rgba(31,41,55,0.6)',
+                            backdropFilter: 'blur(6px)',
                         }}
                     >
                         {canManage && (
@@ -615,9 +642,9 @@ export default function DocumentReviewViewer({
                                 <IconButton
                                     onClick={openIssueDialog}
                                     sx={{
-                                        backgroundColor: 'rgba(255,255,255,0.15)',
+                                        backgroundColor: 'rgba(55,65,81,0.9)',
                                         color: '#fff',
-                                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.25)' },
+                                        '&:hover': { backgroundColor: 'rgba(55,65,81,1)' },
                                     }}
                                 >
                                     <AnnouncementIcon />
@@ -628,9 +655,9 @@ export default function DocumentReviewViewer({
                             <IconButton
                                 onClick={() => setPdfFullScreenOpen(false)}
                                 sx={{
-                                    backgroundColor: 'rgba(255,255,255,0.15)',
+                                    backgroundColor: 'rgba(55,65,81,0.9)',
                                     color: '#fff',
-                                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.25)' },
+                                    '&:hover': { backgroundColor: 'rgba(55,65,81,1)' },
                                 }}
                             >
                                 <CloseFullscreenIcon />

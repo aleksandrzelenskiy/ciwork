@@ -18,6 +18,7 @@ import {
     Stack,
     Typography,
     Tooltip,
+    TextField,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -136,6 +137,8 @@ export default function DocumentReviewPage() {
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [viewerOpen, setViewerOpen] = React.useState(false);
     const [showUploadZone, setShowUploadZone] = React.useState(true);
+    const [submitDialogOpen, setSubmitDialogOpen] = React.useState(false);
+    const [changeLog, setChangeLog] = React.useState('');
 
     const selectedItemsRef = React.useRef<SelectedFileItem[]>([]);
 
@@ -295,7 +298,7 @@ export default function DocumentReviewPage() {
             const res = await fetch(`/api/document-reviews/${encodeURIComponent(taskId)}/submit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({}),
+                body: JSON.stringify({ changeLog: changeLog.trim() }),
             });
             const payload = (await res.json().catch(() => ({}))) as { error?: string };
             if (!res.ok) {
@@ -303,6 +306,8 @@ export default function DocumentReviewPage() {
                 return;
             }
             void loadReview();
+            setSubmitDialogOpen(false);
+            setChangeLog('');
         } catch (err) {
             setSubmitError(err instanceof Error ? err.message : 'Не удалось отправить документацию');
         } finally {
@@ -712,7 +717,7 @@ export default function DocumentReviewPage() {
                 {showSubmitButton && (
                     <Button
                         variant="outlined"
-                        onClick={handleSubmit}
+                        onClick={() => setSubmitDialogOpen(true)}
                         disabled={submitting}
                         startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : null}
                         sx={{ alignSelf: 'flex-start' }}
@@ -821,6 +826,49 @@ export default function DocumentReviewPage() {
                         startIcon={deleteLoading ? <CircularProgress size={18} color="inherit" /> : null}
                     >
                         Удалить
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={submitDialogOpen}
+                onClose={() => {
+                    if (submitting) return;
+                    setSubmitDialogOpen(false);
+                }}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle>Отправить на согласование</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ mt: 1 }}>
+                        {submitError && <Alert severity="error">{submitError}</Alert>}
+                        <TextField
+                            label="Описание изменений"
+                            placeholder="Кратко опишите, что изменилось в пакете"
+                            value={changeLog}
+                            onChange={(event) => setChangeLog(event.target.value)}
+                            multiline
+                            minRows={4}
+                            fullWidth
+                            disabled={submitting}
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={() => setSubmitDialogOpen(false)}
+                        disabled={submitting}
+                    >
+                        Отмена
+                    </Button>
+                    <Button
+                        onClick={handleSubmit}
+                        variant="contained"
+                        disabled={submitting}
+                        startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : null}
+                    >
+                        Отправить
                     </Button>
                 </DialogActions>
             </Dialog>
