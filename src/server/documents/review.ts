@@ -348,7 +348,7 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
         return { ok: false, error: 'Task organization is missing', status: 400 } as const;
     }
 
-    const storageCheck = await assertWritableStorage(task.orgId);
+    const storageCheck = await assertWritableStorage(orgId);
     if (!storageCheck.ok) {
         return { ok: false, error: storageCheck.error, status: 402 } as const;
     }
