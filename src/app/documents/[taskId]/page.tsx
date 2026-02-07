@@ -33,6 +33,7 @@ import { extractFileNameFromUrl } from '@/utils/taskFiles';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { getStatusLabel } from '@/utils/statusLabels';
 import DocumentReviewViewer from '@/features/documents/DocumentReviewViewer';
+import DocumentDiffViewer from '@/features/documents/DocumentDiffViewer';
 import { fetchPdfBlobUrl } from '@/utils/pdfBlobCache';
 
 const isPdf = (url: string) => extractFileNameFromUrl(url, '').toLowerCase().endsWith('.pdf');
@@ -136,6 +137,7 @@ export default function DocumentReviewPage() {
     const [deleteLoading, setDeleteLoading] = React.useState(false);
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [viewerOpen, setViewerOpen] = React.useState(false);
+    const [diffOpen, setDiffOpen] = React.useState(false);
     const [showUploadZone, setShowUploadZone] = React.useState(true);
     const [submitDialogOpen, setSubmitDialogOpen] = React.useState(false);
     const [changeLog, setChangeLog] = React.useState('');
@@ -196,8 +198,10 @@ export default function DocumentReviewPage() {
     const isExecutor = review?.role === 'executor';
     const canUpload = isExecutor;
 
-    const currentFiles = review?.currentFiles ?? [];
-    const previousFiles = review?.previousFiles ?? [];
+    const currentFiles = React.useMemo(() => review?.currentFiles ?? [], [review?.currentFiles]);
+    const previousFiles = React.useMemo(() => review?.previousFiles ?? [], [review?.previousFiles]);
+    const currentPdfFiles = React.useMemo(() => currentFiles.filter(isPdf), [currentFiles]);
+    const previousPdfFiles = React.useMemo(() => previousFiles.filter(isPdf), [previousFiles]);
 
     const isSubmittedForReview = review?.status === 'Pending';
     const shouldGateUpload = isExecutor && isSubmittedForReview && currentFiles.length > 0;
@@ -747,6 +751,19 @@ export default function DocumentReviewPage() {
                                                 Замечаний на входе: {version.issuesSnapshot?.length ?? 0}
                                             </Typography>
 
+                                            {version.version === latestVersionNumber &&
+                                                previousPdfFiles.length > 0 &&
+                                                currentPdfFiles.length > 0 && (
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => setDiffOpen(true)}
+                                                    sx={{ alignSelf: 'flex-start' }}
+                                                >
+                                                    Сравнить с предыдущей
+                                                </Button>
+                                            )}
+
                                             {version.version === latestVersionNumber && currentFiles.length > 0 && (
                                                 <Box>
                                                     <Typography variant="caption" color="text.secondary">
@@ -885,6 +902,14 @@ export default function DocumentReviewPage() {
                 selectedFile={selectedFile}
                 onSelectFile={setSelectedFile}
                 onRefresh={loadReview}
+            />
+
+            <DocumentDiffViewer
+                open={diffOpen}
+                onClose={() => setDiffOpen(false)}
+                currentFiles={currentPdfFiles}
+                previousFiles={previousPdfFiles}
+                buildProxyUrl={buildProxyUrl}
             />
 
             <Dialog open={Boolean(deleteTarget)} onClose={closeDeleteDialog}>
