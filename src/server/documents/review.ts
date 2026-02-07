@@ -343,7 +343,8 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
         return { ok: false, error: 'No files uploaded', status: 400 } as const;
     }
 
-    if (!task.orgId) {
+    const orgId = task.orgId;
+    if (!orgId) {
         return { ok: false, error: 'Task organization is missing', status: 400 } as const;
     }
 
@@ -406,12 +407,10 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
         (review.previousBytes ?? 0);
     const delta = newStorageBytes - oldStorageBytes;
 
-    if (task.orgId) {
-        if (delta > 0) {
-            await recordStorageBytes(task.orgId, delta);
-        } else if (delta < 0) {
-            await adjustStorageBytes(task.orgId, delta);
-        }
+    if (delta > 0) {
+        await recordStorageBytes(orgId, delta);
+    } else if (delta < 0) {
+        await adjustStorageBytes(orgId, delta);
     }
 
     review.currentFiles = nextCurrentFiles;
@@ -542,10 +541,13 @@ export const submitDocumentReview = async (params: {
 
     const newStorageBytes = nextPublishedBytes + nextPreviousBytes;
     const delta = newStorageBytes - oldStorageBytes;
-    if (delta > 0) {
-        await recordStorageBytes(task.orgId, delta);
-    } else if (delta < 0) {
-        await adjustStorageBytes(task.orgId, delta);
+    const submitOrgId = task.orgId;
+    if (submitOrgId) {
+        if (delta > 0) {
+            await recordStorageBytes(submitOrgId, delta);
+        } else if (delta < 0) {
+            await adjustStorageBytes(submitOrgId, delta);
+        }
     }
 
     await review.save();
