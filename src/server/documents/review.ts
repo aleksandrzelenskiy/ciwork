@@ -250,6 +250,22 @@ export const getDocumentReviewDetails = async ({
 
     await resolveNamesForReview(review);
 
+    if (
+        review &&
+        (!Array.isArray(review.publishedFiles) || review.publishedFiles.length === 0) &&
+        Array.isArray(review.currentFiles) &&
+        review.currentFiles.length > 0 &&
+        ((review.currentVersion ?? 0) > 0 || review.status !== 'Draft')
+    ) {
+        review.publishedFiles = review.currentFiles;
+        review.publishedFilesMeta = review.currentFilesMeta ?? [];
+        review.publishedBytes = review.currentBytes ?? 0;
+        review.currentFiles = [];
+        review.currentFilesMeta = [];
+        review.currentBytes = 0;
+        await review.save();
+    }
+
     const currentReview = review ?? {
         taskId: taskIdDecoded,
         taskName: task.taskName ?? '',
@@ -258,6 +274,7 @@ export const getDocumentReviewDetails = async ({
         status: 'Draft',
         currentVersion: 0,
         currentFiles: [],
+        publishedFiles: [],
         previousFiles: [],
         issues: [],
         versions: [],
@@ -274,6 +291,7 @@ export const getDocumentReviewDetails = async ({
             status: currentReview.status as DocumentReviewStatus,
             currentVersion: currentReview.currentVersion ?? 0,
             currentFiles: currentReview.currentFiles ?? [],
+            publishedFiles: currentReview.publishedFiles ?? [],
             previousFiles: currentReview.previousFiles ?? [],
             issues: currentReview.issues ?? [],
             versions: currentReview.versions ?? [],
@@ -371,36 +389,21 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
         return { ok: false, error: 'Нельзя загрузить файлы в текущем статусе', status: 400 } as const;
     }
 
-    const oldStorageBytes = (review.currentBytes ?? 0) + (review.previousBytes ?? 0);
-    const filesToDelete: string[] = [];
-    let nextPreviousFiles = review.previousFiles ?? [];
-    let nextPreviousMeta = review.previousFilesMeta ?? [];
-    let nextPreviousBytes = review.previousBytes ?? 0;
-
-    const hasPublishedVersion = (review.currentVersion ?? 0) > 0 || review.status !== 'Draft';
-
-    if (!hasPublishedVersion && review.currentFiles?.length) {
-        // Draft replacement before the first submission: keep no history.
-        filesToDelete.push(...review.currentFiles);
-        nextPreviousFiles = review.previousFiles ?? [];
-        nextPreviousMeta = review.previousFilesMeta ?? [];
-        nextPreviousBytes = review.previousBytes ?? 0;
-    } else if (hasPublishedVersion) {
-        // Keep only the two latest versions on storage: drop the old previous, shift current -> previous.
-        if (review.previousFiles?.length) {
-            filesToDelete.push(...review.previousFiles);
-        }
-        nextPreviousFiles = review.currentFiles ?? [];
-        nextPreviousMeta = review.currentFilesMeta ?? [];
-        nextPreviousBytes = review.currentBytes ?? 0;
-    }
+    const oldStorageBytes =
+        (review.currentBytes ?? 0) +
+        (review.publishedBytes ?? 0) +
+        (review.previousBytes ?? 0);
+    const filesToDelete: string[] = Array.isArray(review.currentFiles) ? review.currentFiles : [];
 
     await Promise.all(filesToDelete.map((url) => deleteTaskFile(url)));
 
     const nextCurrentFiles = uploadedUrls;
     const nextCurrentMeta = uploadedMeta;
     const nextCurrentBytes = totalBytes;
-    const newStorageBytes = nextCurrentBytes + nextPreviousBytes;
+    const newStorageBytes =
+        nextCurrentBytes +
+        (review.publishedBytes ?? 0) +
+        (review.previousBytes ?? 0);
     const delta = newStorageBytes - oldStorageBytes;
 
     if (delta > 0) {
@@ -410,11 +413,8 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
     }
 
     review.currentFiles = nextCurrentFiles;
-    review.previousFiles = nextPreviousFiles;
     review.currentFilesMeta = nextCurrentMeta;
-    review.previousFilesMeta = nextPreviousMeta;
     review.currentBytes = nextCurrentBytes;
-    review.previousBytes = nextPreviousBytes;
     // Do not change status on upload; status becomes Fixed only after submit.
     review.events = Array.isArray(review.events) ? review.events : [];
     review.events.push({
@@ -496,6 +496,23 @@ export const submitDocumentReview = async (params: {
     const filesMeta = toVersionFilesMeta(review.currentFilesMeta ?? []);
     const issuesSnapshot = toIssueSnapshots(review.issues ?? []);
 
+    const oldStorageBytes =
+        (review.currentBytes ?? 0) +
+        (review.publishedBytes ?? 0) +
+        (review.previousBytes ?? 0);
+
+    const filesToDelete: string[] = Array.isArray(review.previousFiles)
+        ? review.previousFiles
+        : [];
+
+    const nextPublishedFiles = review.currentFiles ?? [];
+    const nextPublishedMeta = review.currentFilesMeta ?? [];
+    const nextPublishedBytes = review.currentBytes ?? 0;
+
+    const nextPreviousFiles = review.publishedFiles ?? [];
+    const nextPreviousMeta = review.publishedFilesMeta ?? [];
+    const nextPreviousBytes = review.publishedBytes ?? 0;
+
     review.currentVersion = nextVersion;
 
     const nextStatus: DocumentReviewStatus = review.status === 'Draft' ? 'Pending' : 'Fixed';
@@ -508,6 +525,28 @@ export const submitDocumentReview = async (params: {
         filesMeta,
         issuesSnapshot,
     });
+
+    await Promise.all(filesToDelete.map((url) => deleteTaskFile(url)));
+
+    review.publishedFiles = nextPublishedFiles;
+    review.publishedFilesMeta = nextPublishedMeta;
+    review.publishedBytes = nextPublishedBytes;
+    review.previousFiles = nextPreviousFiles;
+    review.previousFilesMeta = nextPreviousMeta;
+    review.previousBytes = nextPreviousBytes;
+    review.currentFiles = [];
+    review.currentFilesMeta = [];
+    review.currentBytes = 0;
+
+    const newStorageBytes = nextPublishedBytes + nextPreviousBytes;
+    const delta = newStorageBytes - oldStorageBytes;
+    if (delta > 0) {
+        await recordStorageBytes(task.orgId, delta);
+    } else if (delta < 0) {
+        await adjustStorageBytes(task.orgId, delta);
+    }
+
+    await review.save();
 
     await syncTaskStatusFromDocument({
         taskId: taskIdDecoded,

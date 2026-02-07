@@ -64,7 +64,7 @@ export default function DocumentReviewTaskPanel({ taskId }: DocumentReviewTaskPa
         return <Alert severity="error">{error || 'Не удалось загрузить документацию'}</Alert>;
     }
 
-    const currentFiles = review.currentFiles ?? [];
+    const currentFiles = review.publishedFiles ?? [];
     const currentPdf = currentFiles.find(isPdf) ?? currentFiles[0] ?? '';
 
     return (

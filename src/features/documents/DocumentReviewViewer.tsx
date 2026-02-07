@@ -47,6 +47,8 @@ type DocumentReviewViewerProps = {
     selectedFile: string | null;
     onSelectFile: (file: string) => void;
     onRefresh: () => Promise<void>;
+    currentFilesOverride?: string[];
+    previousFilesOverride?: string[];
 };
 
 export default function DocumentReviewViewer({
@@ -58,6 +60,8 @@ export default function DocumentReviewViewer({
     selectedFile,
     onSelectFile,
     onRefresh,
+    currentFilesOverride,
+    previousFilesOverride,
 }: DocumentReviewViewerProps) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -88,8 +92,10 @@ export default function DocumentReviewViewer({
     const canComment = review.role === 'executor' || review.role === 'manager';
     const canSubmit = review.role === 'executor' || review.role === 'manager';
 
-    const currentFiles = review.currentFiles ?? [];
-    const previousFiles = review.previousFiles ?? [];
+    const currentFiles =
+        currentFilesOverride ?? review.publishedFiles ?? [];
+    const previousFiles =
+        previousFilesOverride ?? review.previousFiles ?? [];
     const issues = issuesState;
     const openIssuesCount = issues.filter((issue) => issue.status !== 'resolved').length;
     const latestVersion = React.useMemo(() => {

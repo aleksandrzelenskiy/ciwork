@@ -139,6 +139,10 @@ export default function DocumentReviewPage() {
     const [deleteLoading, setDeleteLoading] = React.useState(false);
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [viewerOpen, setViewerOpen] = React.useState(false);
+    const [viewerFilesOverride, setViewerFilesOverride] = React.useState<{
+        current: string[];
+        previous: string[];
+    } | null>(null);
     const [diffOpen, setDiffOpen] = React.useState(false);
     const [showUploadZone, setShowUploadZone] = React.useState(true);
     const [submitDialogOpen, setSubmitDialogOpen] = React.useState(false);
@@ -156,12 +160,16 @@ export default function DocumentReviewPage() {
                 return;
             }
             setReview(data);
-            const allFiles = [...data.currentFiles, ...data.previousFiles];
+            const draftFiles = data.currentFiles ?? [];
+            const publishedFiles = data.publishedFiles ?? [];
+            const allFiles = [...publishedFiles, ...data.previousFiles, ...draftFiles];
             const initialPdf =
-                data.currentFiles.find(isPdf) ??
+                publishedFiles.find(isPdf) ??
                 data.previousFiles.find(isPdf) ??
-                data.currentFiles[0] ??
+                draftFiles.find(isPdf) ??
+                publishedFiles[0] ??
                 data.previousFiles[0] ??
+                draftFiles[0] ??
                 null;
             setSelectedFile((prev) => (prev && allFiles.includes(prev) ? prev : initialPdf));
             setError(null);
@@ -198,16 +206,20 @@ export default function DocumentReviewPage() {
     }, []);
 
     const isExecutor = review?.role === 'executor';
-    const canUpload = isExecutor;
+    const canUpload = isExecutor && (review?.status === 'Draft' || review?.status === 'Issues');
 
-    const currentFiles = React.useMemo(() => review?.currentFiles ?? [], [review?.currentFiles]);
+    const draftFiles = React.useMemo(() => review?.currentFiles ?? [], [review?.currentFiles]);
+    const publishedFiles = React.useMemo(
+        () => review?.publishedFiles ?? [],
+        [review?.publishedFiles]
+    );
     const previousFiles = React.useMemo(() => review?.previousFiles ?? [], [review?.previousFiles]);
-    const currentPdfFiles = React.useMemo(() => currentFiles.filter(isPdf), [currentFiles]);
+    const currentPdfFiles = React.useMemo(() => publishedFiles.filter(isPdf), [publishedFiles]);
     const previousPdfFiles = React.useMemo(() => previousFiles.filter(isPdf), [previousFiles]);
 
     const isSubmittedForReview =
         review?.status === 'Pending' || review?.status === 'Fixed' || review?.status === 'Agreed';
-    const shouldGateUpload = isExecutor && isSubmittedForReview && currentFiles.length > 0;
+    const shouldGateUpload = canUpload && isSubmittedForReview && draftFiles.length > 0;
 
     React.useEffect(() => {
         if (shouldGateUpload && selectedItems.length === 0) {
@@ -360,7 +372,7 @@ export default function DocumentReviewPage() {
             setDeleteLoading(true);
             setDeleteError(null);
             try {
-                const tasks = currentFiles.map((file) =>
+                const tasks = draftFiles.map((file) =>
                     fetch(
                         `/api/document-reviews/${encodeURIComponent(taskId)}/file?url=${encodeURIComponent(file)}`,
                         { method: 'DELETE' }
@@ -441,10 +453,10 @@ export default function DocumentReviewPage() {
         );
     }
 
-    const showUploadButton = canUpload && (selectedItems.length > 0 || currentFiles.length === 0);
+    const showUploadButton = canUpload && (selectedItems.length > 0 || draftFiles.length === 0);
     const showSubmitButton =
         review.role === 'executor' &&
-        currentFiles.length > 0 &&
+        draftFiles.length > 0 &&
         selectedItems.length === 0 &&
         review.status !== 'Pending' &&
         review.status !== 'Agreed';
@@ -673,7 +685,7 @@ export default function DocumentReviewPage() {
                     </Stack>
                 )}
 
-                {isExecutor && currentFiles.length > 0 && !isSubmittedForReview && (
+                {isExecutor && draftFiles.length > 0 && !isSubmittedForReview && (
                     <Stack spacing={1}>
                         <Typography variant="subtitle1" fontWeight={600}>
                             Черновик пакета
@@ -700,7 +712,7 @@ export default function DocumentReviewPage() {
                             </Button>
                         </Stack>
                         <Stack spacing={1}>
-                            {currentFiles.map((file) => {
+                            {draftFiles.map((file) => {
                                 const filename = extractFileNameFromUrl(file, 'Файл');
                                 return (
                                     <Paper
@@ -724,6 +736,10 @@ export default function DocumentReviewPage() {
                                                 size="small"
                                                 onClick={() => {
                                                     setSelectedFile(file);
+                                                    setViewerFilesOverride({
+                                                        current: draftFiles,
+                                                        previous: [],
+                                                    });
                                                     setViewerOpen(true);
                                                 }}
                                             >
@@ -832,7 +848,7 @@ export default function DocumentReviewPage() {
                                                 </Button>
                                             )}
 
-                                            {version.version === latestVersionNumber && currentFiles.length > 0 && (
+                                            {version.version === latestVersionNumber && publishedFiles.length > 0 && (
                                                 <Box>
                                                     <Typography variant="caption" color="text.secondary">
                                                         Файлы текущей версии
@@ -845,7 +861,7 @@ export default function DocumentReviewPage() {
                                                             gap: 1.5,
                                                         }}
                                                     >
-                                                        {currentFiles.map((file) => {
+                                                        {publishedFiles.map((file) => {
                                                             const filename = extractFileNameFromUrl(file, 'Файл');
                                                             return (
                                                                 <Paper
@@ -860,6 +876,7 @@ export default function DocumentReviewPage() {
                                                                     }}
                                                                     onClick={() => {
                                                                         setSelectedFile(file);
+                                                                        setViewerFilesOverride(null);
                                                                         setViewerOpen(true);
                                                                     }}
                                                                 >
@@ -935,6 +952,7 @@ export default function DocumentReviewPage() {
                                                                             size="small"
                                                                             onClick={() => {
                                                                                 setSelectedFile(file);
+                                                                                setViewerFilesOverride(null);
                                                                                 setViewerOpen(true);
                                                                             }}
                                                                         >
@@ -963,13 +981,18 @@ export default function DocumentReviewPage() {
 
             <DocumentReviewViewer
                 open={viewerOpen}
-                onClose={() => setViewerOpen(false)}
+                onClose={() => {
+                    setViewerOpen(false);
+                    setViewerFilesOverride(null);
+                }}
                 review={review}
                 taskId={taskId}
                 token={token}
                 selectedFile={selectedFile}
                 onSelectFile={setSelectedFile}
                 onRefresh={loadReview}
+                currentFilesOverride={viewerFilesOverride?.current}
+                previousFilesOverride={viewerFilesOverride?.previous}
             />
 
             <DocumentDiffViewer

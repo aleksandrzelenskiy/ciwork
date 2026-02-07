@@ -61,10 +61,13 @@ type DocumentReview = {
     status: DocumentReviewStatus;
     currentVersion: number;
     currentFiles: string[];
+    publishedFiles: string[];
     previousFiles: string[];
     currentFilesMeta: StoredFileMeta[];
+    publishedFilesMeta: StoredFileMeta[];
     previousFilesMeta: StoredFileMeta[];
     currentBytes: number;
+    publishedBytes: number;
     previousBytes: number;
     issues: Issue[];
     versions: DocumentReviewVersion[];
@@ -160,10 +163,13 @@ const DocumentReviewSchema = new Schema<DocumentReview>(
         status: { type: String, default: 'Draft' },
         currentVersion: { type: Number, default: 0 },
         currentFiles: { type: [String], default: [] },
+        publishedFiles: { type: [String], default: [] },
         previousFiles: { type: [String], default: [] },
         currentFilesMeta: { type: [StoredFileMetaSchema], default: [] },
+        publishedFilesMeta: { type: [StoredFileMetaSchema], default: [] },
         previousFilesMeta: { type: [StoredFileMetaSchema], default: [] },
         currentBytes: { type: Number, default: 0 },
+        publishedBytes: { type: Number, default: 0 },
         previousBytes: { type: Number, default: 0 },
         issues: { type: [IssueSchema], default: [] },
         versions: { type: [VersionSchema], default: [] },

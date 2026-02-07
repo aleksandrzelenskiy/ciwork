@@ -54,6 +54,7 @@ export type DocumentReviewClient = {
     status: DocumentReviewStatus;
     currentVersion: number;
     currentFiles: string[];
+    publishedFiles: string[];
     previousFiles: string[];
     issues: DocumentIssue[];
     versions: DocumentReviewVersion[];

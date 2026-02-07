@@ -26,9 +26,12 @@ export async function GET(
         }
 
         const allowedFiles = new Set([
-            ...(details.data.currentFiles ?? []),
+            ...(details.data.publishedFiles ?? []),
             ...(details.data.previousFiles ?? []),
         ]);
+        if (details.data.role === 'executor' || details.data.role === 'manager') {
+            (details.data.currentFiles ?? []).forEach((file) => allowedFiles.add(file));
+        }
         if (!allowedFiles.has(fileUrl)) {
             return jsonError('Недостаточно прав для файла', 403);
         }

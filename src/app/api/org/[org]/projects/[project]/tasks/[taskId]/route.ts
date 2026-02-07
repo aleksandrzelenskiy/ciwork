@@ -426,6 +426,11 @@ export async function DELETE(
                         if (url.trim()) taskFiles.add(url);
                     }
                 }
+                if (Array.isArray(reviewForCleanup?.publishedFiles)) {
+                    for (const url of reviewForCleanup.publishedFiles) {
+                        if (url.trim()) taskFiles.add(url);
+                    }
+                }
                 if (Array.isArray(reviewForCleanup?.previousFiles)) {
                     for (const url of reviewForCleanup.previousFiles) {
                         if (url.trim()) taskFiles.add(url);
@@ -441,6 +446,7 @@ export async function DELETE(
         if (shouldDeleteDocuments && reviewForCleanup) {
             const bytesToAdjust =
                 Math.max(0, reviewForCleanup.currentBytes ?? 0) +
+                Math.max(0, reviewForCleanup.publishedBytes ?? 0) +
                 Math.max(0, reviewForCleanup.previousBytes ?? 0);
             const orgIdForBytes = reviewForCleanup.orgId || deletedTask.orgId;
             if (bytesToAdjust > 0 && orgIdForBytes) {
