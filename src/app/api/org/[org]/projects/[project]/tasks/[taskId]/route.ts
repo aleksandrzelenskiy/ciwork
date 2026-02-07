@@ -373,9 +373,19 @@ export async function DELETE(
         const isDocumentTask = deletedTask.taskType === 'document';
         const shouldDeleteDocuments = isDocumentTask && deleteDocuments;
 
-        const reviewForCleanup = await DocumentReviewModel.findOneAndDelete({
+        const reviewForCleanup = (await DocumentReviewModel.findOneAndDelete({
             taskId: taskIdForCleanup,
-        }).lean();
+        }).lean()) as
+            | {
+                  currentFiles?: string[];
+                  publishedFiles?: string[];
+                  previousFiles?: string[];
+                  currentBytes?: number;
+                  publishedBytes?: number;
+                  previousBytes?: number;
+                  orgId?: unknown;
+              }
+            | null;
 
         if (deleteReports) {
             const reportEntries = await ReportModel.find({ taskId: taskIdForCleanup })
