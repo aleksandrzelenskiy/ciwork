@@ -2644,7 +2644,7 @@ export default function TaskDetailsPage() {
                             </CardItem>
                         )}
 
-                        {task?.taskType === 'document' && (
+                        {task?.taskType === 'document' && normalizedStatus === 'Pending' && (
                             <CardItem sx={{ minWidth: 0 }}>
                                 <Typography
                                     variant="body1"

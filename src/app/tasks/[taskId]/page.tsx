@@ -1729,7 +1729,7 @@ export default function TaskDetailPage() {
                         </CardItem>
                     )}
 
-                    {task?.taskType === 'document' && (
+                    {task?.taskType === 'document' && normalizedStatus === 'Done' && (
                         <CardItem sx={{ minWidth: 0 }}>
                             <Typography
                                 variant="body1"
