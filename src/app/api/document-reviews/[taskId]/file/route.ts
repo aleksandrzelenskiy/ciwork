@@ -30,7 +30,9 @@ export async function GET(
             ...(details.data.previousFiles ?? []),
         ]);
         if (details.data.role === 'executor' || details.data.role === 'manager') {
-            (details.data.currentFiles ?? []).forEach((file) => allowedFiles.add(file));
+            (details.data.currentFiles ?? []).forEach((file: string) =>
+                allowedFiles.add(file)
+            );
         }
         if (!allowedFiles.has(fileUrl)) {
             return jsonError('Недостаточно прав для файла', 403);
