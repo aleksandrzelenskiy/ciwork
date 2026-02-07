@@ -976,13 +976,13 @@ export default function DocumentReviewPage() {
                 buildProxyUrl={buildProxyUrl}
             />
 
-            <Snackbar
-                open={Boolean(submitNotice)}
-                autoHideDuration={3000}
-                onClose={() => setSubmitNotice(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                {submitNotice ? (
+            {submitNotice && (
+                <Snackbar
+                    open
+                    autoHideDuration={3000}
+                    onClose={() => setSubmitNotice(null)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
                     <Alert
                         onClose={() => setSubmitNotice(null)}
                         severity={submitNotice.type}
@@ -990,8 +990,8 @@ export default function DocumentReviewPage() {
                     >
                         {submitNotice.text}
                     </Alert>
-                ) : null}
-            </Snackbar>
+                </Snackbar>
+            )}
 
             <Dialog open={Boolean(deleteTarget)} onClose={closeDeleteDialog}>
                 <DialogTitle>Удалить файл?</DialogTitle>
