@@ -197,6 +197,7 @@ export default function DocumentReviewPage() {
     const canUpload = isExecutor;
 
     const currentFiles = review?.currentFiles ?? [];
+    const previousFiles = review?.previousFiles ?? [];
 
     const isSubmittedForReview = review?.status === 'Pending';
     const shouldGateUpload = isExecutor && isSubmittedForReview && currentFiles.length > 0;
@@ -414,6 +415,9 @@ export default function DocumentReviewPage() {
         review.status !== 'Pending' &&
         review.status !== 'Agreed';
 
+    const latestVersionNumber = review.currentVersion || 0;
+    const previousVersionNumber = Math.max(0, latestVersionNumber - 1);
+
     return (
         <Box sx={{ p: { xs: 2, md: 3 } }}>
             <Stack spacing={2}>
@@ -598,6 +602,19 @@ export default function DocumentReviewPage() {
                             </Stack>
                         )}
 
+                        {selectedItems.length > 0 && (
+                            <TextField
+                                label="Описание изменений"
+                                placeholder="Кратко опишите, что изменилось в этом пакете"
+                                value={changeLog}
+                                onChange={(event) => setChangeLog(event.target.value)}
+                                multiline
+                                minRows={3}
+                                fullWidth
+                                disabled={uploading}
+                            />
+                        )}
+
                         {showUploadButton && (
                             <Button
                                 variant="contained"
@@ -614,21 +631,17 @@ export default function DocumentReviewPage() {
                     </Stack>
                 )}
 
-                {currentFiles.length > 0 && (
+                {isExecutor && currentFiles.length > 0 && (
                     <Stack spacing={1}>
                         <Typography variant="subtitle1" fontWeight={600}>
-                            {isSubmittedForReview ? 'Отправленные файлы' : 'Загруженные файлы'}
+                            {isSubmittedForReview ? 'Отправленный пакет' : 'Черновик пакета'}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                            {latestVersionMeta}
+                            {isSubmittedForReview
+                                ? latestVersionMeta
+                                : 'До отправки пакет виден только вам и не отправляет уведомления.'}
                         </Typography>
-                        <Box
-                            sx={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                                gap: 1.5,
-                            }}
-                        >
+                        <Stack spacing={1}>
                             {currentFiles.map((file) => {
                                 const filename = extractFileNameFromUrl(file, 'Файл');
                                 return (
@@ -636,81 +649,31 @@ export default function DocumentReviewPage() {
                                         key={file}
                                         variant="outlined"
                                         sx={{
-                                            p: 1,
+                                            p: 1.5,
                                             borderRadius: 2,
-                                            position: 'relative',
-                                            overflow: 'hidden',
-                                            cursor: 'pointer',
-                                        }}
-                                        onClick={() => {
-                                            setSelectedFile(file);
-                                            setViewerOpen(true);
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: 1,
                                         }}
                                     >
-                                        <Box
-                                            sx={{
-                                                height: 140,
-                                                borderRadius: 2,
-                                                overflow: 'hidden',
-                                                bgcolor: 'rgba(15,23,42,0.04)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                pointerEvents: 'none',
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <InsertDriveFileOutlinedIcon color="action" />
+                                            <Typography variant="body2">{filename}</Typography>
+                                        </Stack>
+                                        <Button
+                                            size="small"
+                                            onClick={() => {
+                                                setSelectedFile(file);
+                                                setViewerOpen(true);
                                             }}
                                         >
-                                            {isPdf(file) ? (
-                                                <Box sx={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
-                                                    <PdfThumbnail fileUrl={file} buildProxyUrl={buildProxyUrl} />
-                                                </Box>
-                                            ) : (
-                                                <Stack spacing={0.5} alignItems="center">
-                                                    <InsertDriveFileOutlinedIcon color="action" />
-                                                    <Typography variant="caption" color="text.secondary">
-                                                        Файл
-                                                    </Typography>
-                                                </Stack>
-                                            )}
-                                        </Box>
-                                        {canUpload && (
-                                            <Tooltip title="Удалить файл">
-                                                <span>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            openDeleteDialog({
-                                                                type: 'uploaded',
-                                                                url: file,
-                                                                name: filename,
-                                                            });
-                                                        }}
-                                                        sx={{
-                                                            position: 'absolute',
-                                                            top: 8,
-                                                            right: 8,
-                                                            bgcolor: 'rgba(15,23,42,0.65)',
-                                                            color: '#fff',
-                                                            '&:hover': {
-                                                                bgcolor: 'rgba(15,23,42,0.8)',
-                                                            },
-                                                        }}
-                                                    >
-                                                        <DeleteOutlineIcon fontSize="small" />
-                                                    </IconButton>
-                                                </span>
-                                            </Tooltip>
-                                        )}
-                                        <Typography
-                                            variant="caption"
-                                            sx={{ mt: 0.5, display: 'block', wordBreak: 'break-word' }}
-                                        >
-                                            {filename}
-                                        </Typography>
+                                            Открыть
+                                        </Button>
                                     </Paper>
                                 );
                             })}
-                        </Box>
+                        </Stack>
                     </Stack>
                 )}
 
@@ -783,6 +746,128 @@ export default function DocumentReviewPage() {
                                             <Typography variant="caption" color="text.secondary">
                                                 Замечаний на входе: {version.issuesSnapshot?.length ?? 0}
                                             </Typography>
+
+                                            {version.version === latestVersionNumber && currentFiles.length > 0 && (
+                                                <Box>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        Файлы текущей версии
+                                                    </Typography>
+                                                    <Box
+                                                        sx={{
+                                                            mt: 1,
+                                                            display: 'grid',
+                                                            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                                                            gap: 1.5,
+                                                        }}
+                                                    >
+                                                        {currentFiles.map((file) => {
+                                                            const filename = extractFileNameFromUrl(file, 'Файл');
+                                                            return (
+                                                                <Paper
+                                                                    key={file}
+                                                                    variant="outlined"
+                                                                    sx={{
+                                                                        p: 1,
+                                                                        borderRadius: 2,
+                                                                        position: 'relative',
+                                                                        overflow: 'hidden',
+                                                                        cursor: 'pointer',
+                                                                    }}
+                                                                    onClick={() => {
+                                                                        setSelectedFile(file);
+                                                                        setViewerOpen(true);
+                                                                    }}
+                                                                >
+                                                                    <Box
+                                                                        sx={{
+                                                                            height: 140,
+                                                                            borderRadius: 2,
+                                                                            overflow: 'hidden',
+                                                                            bgcolor: 'rgba(15,23,42,0.04)',
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            pointerEvents: 'none',
+                                                                        }}
+                                                                    >
+                                                                        {isPdf(file) ? (
+                                                                            <Box sx={{ width: '100%', height: '100%' }}>
+                                                                                <PdfThumbnail
+                                                                                    fileUrl={file}
+                                                                                    buildProxyUrl={buildProxyUrl}
+                                                                                />
+                                                                            </Box>
+                                                                        ) : (
+                                                                            <Stack spacing={0.5} alignItems="center">
+                                                                                <InsertDriveFileOutlinedIcon color="action" />
+                                                                                <Typography variant="caption" color="text.secondary">
+                                                                                    Файл
+                                                                                </Typography>
+                                                                            </Stack>
+                                                                        )}
+                                                                    </Box>
+                                                                    <Typography
+                                                                        variant="caption"
+                                                                        sx={{ mt: 0.5, display: 'block', wordBreak: 'break-word' }}
+                                                                    >
+                                                                        {filename}
+                                                                    </Typography>
+                                                                </Paper>
+                                                            );
+                                                        })}
+                                                    </Box>
+                                                </Box>
+                                            )}
+
+                                            {version.version === previousVersionNumber &&
+                                                previousFiles.length > 0 &&
+                                                version.version !== latestVersionNumber && (
+                                                    <Box>
+                                                        <Typography variant="caption" color="text.secondary">
+                                                            Файлы предыдущей версии
+                                                        </Typography>
+                                                        <Stack spacing={0.75} sx={{ mt: 1 }}>
+                                                            {previousFiles.map((file) => {
+                                                                const filename = extractFileNameFromUrl(file, 'Файл');
+                                                                return (
+                                                                    <Paper
+                                                                        key={file}
+                                                                        variant="outlined"
+                                                                        sx={{
+                                                                            p: 1,
+                                                                            borderRadius: 2,
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'space-between',
+                                                                            gap: 1,
+                                                                        }}
+                                                                    >
+                                                                        <Stack direction="row" spacing={1} alignItems="center">
+                                                                            <InsertDriveFileOutlinedIcon color="action" />
+                                                                            <Typography variant="body2">{filename}</Typography>
+                                                                        </Stack>
+                                                                        <Button
+                                                                            size="small"
+                                                                            onClick={() => {
+                                                                                setSelectedFile(file);
+                                                                                setViewerOpen(true);
+                                                                            }}
+                                                                        >
+                                                                            Открыть
+                                                                        </Button>
+                                                                    </Paper>
+                                                                );
+                                                            })}
+                                                        </Stack>
+                                                    </Box>
+                                                )}
+
+                                            {version.version < previousVersionNumber && (
+                                                <Alert severity="info">
+                                                    Файлы этой версии удалены из хранилища по политике хранения. Метаданные,
+                                                    замечания и diff сохранены.
+                                                </Alert>
+                                            )}
                                         </Stack>
                                     </Box>
                                 ))
