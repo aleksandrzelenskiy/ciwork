@@ -310,6 +310,7 @@ export default function DocumentReviewPage() {
                 setSubmitError(payload.error || 'Не удалось отправить документацию');
                 return;
             }
+            clearSelectedItems();
             void loadReview();
             setSubmitDialogOpen(false);
             setChangeLog('');
@@ -376,12 +377,6 @@ export default function DocumentReviewPage() {
         return `${parts.join(' ')} — документация`.trim();
     }, [review]);
 
-    const latestVersion = React.useMemo(() => {
-        const versions = Array.isArray(review?.versions) ? review?.versions : [];
-        if (!versions.length) return null;
-        return [...versions].sort((a, b) => b.version - a.version)[0];
-    }, [review]);
-
     const formatDateTime = React.useCallback((value: string | number | Date) => {
         const date = new Date(value);
         const datePart = date.toLocaleDateString('ru-RU');
@@ -391,9 +386,6 @@ export default function DocumentReviewPage() {
         return `${datePart} ${timePart}`;
     }, []);
 
-    const latestVersionMeta = latestVersion
-        ? `Версия v${latestVersion.version} · ${formatDateTime(latestVersion.createdAt)} · ${latestVersion.createdByName}`
-        : 'Текущий пакет без версии';
 
     if (loading) {
         return (
@@ -445,6 +437,14 @@ export default function DocumentReviewPage() {
                     </Typography>
                     <Chip label={`Статус: ${getStatusLabel(review.status)}`} />
                     <Chip label={`Версия ${review.currentVersion || 0}`} />
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => setDiffOpen(true)}
+                        disabled={currentPdfFiles.length === 0 || previousPdfFiles.length === 0}
+                    >
+                        Изменения
+                    </Button>
                     <IconButton onClick={loadReview} aria-label="refresh">
                         <RefreshIcon />
                     </IconButton>
@@ -635,15 +635,13 @@ export default function DocumentReviewPage() {
                     </Stack>
                 )}
 
-                {isExecutor && currentFiles.length > 0 && (
+                {isExecutor && currentFiles.length > 0 && !isSubmittedForReview && (
                     <Stack spacing={1}>
                         <Typography variant="subtitle1" fontWeight={600}>
-                            {isSubmittedForReview ? 'Отправленный пакет' : 'Черновик пакета'}
+                            Черновик пакета
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                            {isSubmittedForReview
-                                ? latestVersionMeta
-                                : 'До отправки пакет виден только вам и не отправляет уведомления.'}
+                            До отправки пакет виден только вам и не отправляет уведомления.
                         </Typography>
                         <Stack spacing={1}>
                             {currentFiles.map((file) => {
