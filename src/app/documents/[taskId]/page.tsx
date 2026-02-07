@@ -135,6 +135,7 @@ export default function DocumentReviewPage() {
     const [deleteLoading, setDeleteLoading] = React.useState(false);
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [viewerOpen, setViewerOpen] = React.useState(false);
+    const [showUploadZone, setShowUploadZone] = React.useState(true);
 
     const selectedItemsRef = React.useRef<SelectedFileItem[]>([]);
 
@@ -189,9 +190,21 @@ export default function DocumentReviewPage() {
         };
     }, []);
 
-    const canUpload = review?.role === 'executor' || review?.role === 'manager';
+    const isExecutor = review?.role === 'executor';
+    const canUpload = isExecutor;
 
     const currentFiles = review?.currentFiles ?? [];
+
+    const isSubmittedForReview = review?.status === 'Pending';
+    const shouldGateUpload = isExecutor && isSubmittedForReview && currentFiles.length > 0;
+
+    React.useEffect(() => {
+        if (shouldGateUpload && selectedItems.length === 0) {
+            setShowUploadZone(false);
+            return;
+        }
+        setShowUploadZone(true);
+    }, [selectedItems.length, shouldGateUpload]);
 
     const addSelectedFiles = React.useCallback((files: File[]) => {
         if (!files.length) return;
@@ -358,8 +371,18 @@ export default function DocumentReviewPage() {
         if (!versions.length) return null;
         return [...versions].sort((a, b) => b.version - a.version)[0];
     }, [review]);
+
+    const formatDateTime = React.useCallback((value: string | number | Date) => {
+        const date = new Date(value);
+        const datePart = date.toLocaleDateString('ru-RU');
+        const timePart = date
+            .toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+            .replace(':', '.');
+        return `${datePart} ${timePart}`;
+    }, []);
+
     const latestVersionMeta = latestVersion
-        ? `Версия v${latestVersion.version} · ${new Date(latestVersion.createdAt).toLocaleString()} · ${latestVersion.createdByName}`
+        ? `Версия v${latestVersion.version} · ${formatDateTime(latestVersion.createdAt)} · ${latestVersion.createdByName}`
         : 'Текущий пакет без версии';
 
     if (loading) {
@@ -416,30 +439,36 @@ export default function DocumentReviewPage() {
 
                 {canUpload && (
                     <Stack spacing={2}>
-                        <Box
-                            {...getRootProps()}
-                            sx={{
-                                border: '1px dashed',
-                                borderColor: isDragActive ? 'primary.main' : 'divider',
-                                borderRadius: UI_RADIUS.surface,
-                                p: 2,
-                                textAlign: 'center',
-                                cursor: uploading ? 'not-allowed' : 'pointer',
-                                bgcolor: isDragActive ? 'rgba(59,130,246,0.08)' : 'transparent',
-                                transition: 'border-color 0.2s ease, background-color 0.2s ease',
-                            }}
-                        >
-                            <input {...getInputProps()} />
-                            <Stack spacing={0.5} alignItems="center">
-                                <CloudUploadIcon color={isDragActive ? 'primary' : 'action'} />
-                                <Typography variant="body2" fontWeight={600}>
-                                    Перетащите файлы сюда или нажмите, чтобы выбрать
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    PDF и другие форматы · Можно выбрать несколько файлов
-                                </Typography>
-                            </Stack>
-                        </Box>
+                        {showUploadZone ? (
+                            <Box
+                                {...getRootProps()}
+                                sx={{
+                                    border: '1px dashed',
+                                    borderColor: isDragActive ? 'primary.main' : 'divider',
+                                    borderRadius: UI_RADIUS.surface,
+                                    p: 2,
+                                    textAlign: 'center',
+                                    cursor: uploading ? 'not-allowed' : 'pointer',
+                                    bgcolor: isDragActive ? 'rgba(59,130,246,0.08)' : 'transparent',
+                                    transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                                }}
+                            >
+                                <input {...getInputProps()} />
+                                <Stack spacing={0.5} alignItems="center">
+                                    <CloudUploadIcon color={isDragActive ? 'primary' : 'action'} />
+                                    <Typography variant="body2" fontWeight={600}>
+                                        Перетащите файлы сюда или нажмите, чтобы выбрать
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        PDF и другие форматы · Можно выбрать несколько файлов
+                                    </Typography>
+                                </Stack>
+                            </Box>
+                        ) : (
+                            <Button variant="text" onClick={() => setShowUploadZone(true)} sx={{ alignSelf: 'flex-start' }}>
+                                Загрузить новый пакет
+                            </Button>
+                        )}
 
                         {selectedItems.length > 0 && (
                             <Stack spacing={1}>
@@ -582,7 +611,7 @@ export default function DocumentReviewPage() {
 
                 {currentFiles.length > 0 && (
                     <Stack spacing={1}>
-                        <Typography variant="subtitle2" color="text.secondary">
+                        <Typography variant="subtitle1" fontWeight={600}>
                             Загруженные файлы
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
@@ -622,10 +651,13 @@ export default function DocumentReviewPage() {
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
+                                                pointerEvents: 'none',
                                             }}
                                         >
                                             {isPdf(file) ? (
-                                                <PdfThumbnail fileUrl={file} buildProxyUrl={buildProxyUrl} />
+                                                <Box sx={{ width: '100%', height: '100%', pointerEvents: 'none' }}>
+                                                    <PdfThumbnail fileUrl={file} buildProxyUrl={buildProxyUrl} />
+                                                </Box>
                                             ) : (
                                                 <Stack spacing={0.5} alignItems="center">
                                                     <InsertDriveFileOutlinedIcon color="action" />
@@ -733,7 +765,7 @@ export default function DocumentReviewPage() {
                                                         : version.createdByName}
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
-                                                    {new Date(version.createdAt).toLocaleString()}
+                                                    {formatDateTime(version.createdAt)}
                                                 </Typography>
                                             </Stack>
                                             {version.changeLog ? (
