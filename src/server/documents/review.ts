@@ -36,7 +36,8 @@ import type {
 import { extractFileNameFromUrl } from '@/utils/taskFiles';
 import crypto from 'crypto';
 
-const ALLOWED_UPLOAD_STATUSES = new Set<DocumentReviewStatus>(['Draft', 'Issues', 'Fixed']);
+const ALLOWED_UPLOAD_STATUSES = new Set<DocumentReviewStatus>(['Draft', 'Issues']);
+const ALLOWED_SUBMIT_STATUSES = new Set<DocumentReviewStatus>(['Draft', 'Issues', 'Fixed']);
 
 type StoredFileMeta = {
     url: string;
@@ -414,9 +415,7 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
     review.previousFilesMeta = nextPreviousMeta;
     review.currentBytes = nextCurrentBytes;
     review.previousBytes = nextPreviousBytes;
-    if (review.status === 'Issues') {
-        review.status = 'Fixed';
-    }
+    // Do not change status on upload; status becomes Fixed only after submit.
     review.events = Array.isArray(review.events) ? review.events : [];
     review.events.push({
         action: 'FILES_UPLOADED',
@@ -485,7 +484,7 @@ export const submitDocumentReview = async (params: {
         actor,
     });
 
-    if (!ALLOWED_UPLOAD_STATUSES.has(review.status as DocumentReviewStatus)) {
+    if (!ALLOWED_SUBMIT_STATUSES.has(review.status as DocumentReviewStatus)) {
         return { ok: false, error: 'Нельзя отправить на согласование в текущем статусе', status: 400 } as const;
     }
 

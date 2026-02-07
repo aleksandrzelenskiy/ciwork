@@ -205,7 +205,8 @@ export default function DocumentReviewPage() {
     const currentPdfFiles = React.useMemo(() => currentFiles.filter(isPdf), [currentFiles]);
     const previousPdfFiles = React.useMemo(() => previousFiles.filter(isPdf), [previousFiles]);
 
-    const isSubmittedForReview = review?.status === 'Pending';
+    const isSubmittedForReview =
+        review?.status === 'Pending' || review?.status === 'Fixed' || review?.status === 'Agreed';
     const shouldGateUpload = isExecutor && isSubmittedForReview && currentFiles.length > 0;
 
     React.useEffect(() => {
@@ -678,13 +679,16 @@ export default function DocumentReviewPage() {
                             Черновик пакета
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                            До отправки пакет виден только вам и не отправляет уведомления.
+                            {review.status === 'Issues'
+                                ? 'Есть замечания. Черновик ещё не отправлен — после правок нажмите «Отправить на согласование».'
+                                : 'До отправки пакет виден только вам и не отправляет уведомления.'}
                         </Typography>
                         <Stack direction="row" spacing={1} alignItems="center">
                             <Button
                                 size="small"
                                 variant="outlined"
                                 color="error"
+                                disabled={isSubmittedForReview}
                                 onClick={() =>
                                     openDeleteDialog({
                                         type: 'uploaded-all',
