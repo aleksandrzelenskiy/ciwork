@@ -353,27 +353,6 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
         return { ok: false, error: storageCheck.error, status: 402 } as const;
     }
 
-    const scope = await resolveStorageScope(task);
-    const uploadedUrls: string[] = [];
-    const uploadedMeta: Array<{ url: string; name: string; ext: string; size: number }> = [];
-    let totalBytes = 0;
-
-    for (const file of files) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const filename = file.name || 'file';
-        const url = await uploadTaskFile(
-            buffer,
-            taskIdDecoded,
-            'document-review',
-            filename,
-            file.type || 'application/octet-stream',
-            { orgSlug: scope.orgSlug, projectKey: scope.projectKey }
-        );
-        uploadedUrls.push(url);
-        totalBytes += buffer.length;
-        uploadedMeta.push(buildStoredFileMeta(url, buffer.length));
-    }
-
     const actorName = await resolveActorNameFromDb(user.id, buildActorName(user));
     const actor = { id: user.id, name: actorName };
 
@@ -388,6 +367,29 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
 
     if (!ALLOWED_UPLOAD_STATUSES.has(review.status as DocumentReviewStatus)) {
         return { ok: false, error: 'Нельзя загрузить файлы в текущем статусе', status: 400 } as const;
+    }
+
+    const nextVersion = (review.currentVersion ?? 0) + 1;
+    const versionFolder = `v${nextVersion}`;
+    const scope = await resolveStorageScope(task);
+    const uploadedUrls: string[] = [];
+    const uploadedMeta: Array<{ url: string; name: string; ext: string; size: number }> = [];
+    let totalBytes = 0;
+
+    for (const file of files) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const filename = file.name || 'file';
+        const url = await uploadTaskFile(
+            buffer,
+            taskIdDecoded,
+            'document-review',
+            filename,
+            file.type || 'application/octet-stream',
+            { orgSlug: scope.orgSlug, projectKey: scope.projectKey, subpath: versionFolder }
+        );
+        uploadedUrls.push(url);
+        totalBytes += buffer.length;
+        uploadedMeta.push(buildStoredFileMeta(url, buffer.length));
     }
 
     const oldStorageBytes =

@@ -165,7 +165,7 @@ export function buildTaskFileKey(
     taskId: string,
     subfolder: TaskFileSubfolder,
     filename: string,
-    opts?: { orgSlug?: string; projectKey?: string }
+    opts?: { orgSlug?: string; projectKey?: string; subpath?: string }
 ): string {
   const safeTaskId = sanitizeTaskId(taskId);
   const safeName = normalizeFilename(filename);
@@ -177,7 +177,19 @@ export function buildTaskFileKey(
   if (safeOrg) parts.push(safeOrg);
   if (safeProject) parts.push(safeProject);
 
-  parts.push(`${safeTaskId}`, `${safeTaskId}-${subfolder}`, safeName);
+  parts.push(`${safeTaskId}`, `${safeTaskId}-${subfolder}`);
+
+  const extraPath = opts?.subpath
+    ? opts.subpath
+        .split('/')
+        .map((segment) => sanitizePathSegment(segment))
+        .filter(Boolean)
+    : [];
+  if (extraPath.length > 0) {
+    parts.push(...extraPath);
+  }
+
+  parts.push(safeName);
 
   return path.posix.join(...parts);
 }
@@ -218,7 +230,7 @@ export async function uploadTaskFile(
     subfolder: TaskFileSubfolder,
     filename: string,
     contentType: string,
-    opts?: { orgSlug?: string; projectKey?: string }
+    opts?: { orgSlug?: string; projectKey?: string; subpath?: string }
 ): Promise<string> {
   const key = buildTaskFileKey(taskId, subfolder, filename, opts);
 
@@ -525,14 +537,27 @@ export async function fetchFileByPublicUrl(publicUrl: string): Promise<{
   if (!key) return null;
 
   if (s3 && BUCKET) {
-    const response = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
-    if (!response.Body) return null;
-    const buffer = await readStreamToBuffer(response.Body as Readable);
-    return {
-      buffer,
-      contentType: response.ContentType,
-      contentLength: response.ContentLength,
-    };
+    try {
+      const response = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+      if (!response.Body) return null;
+      const buffer = await readStreamToBuffer(response.Body as Readable);
+      return {
+        buffer,
+        contentType: response.ContentType,
+        contentLength: response.ContentLength,
+      };
+    } catch (err) {
+      const code =
+        (err as { name?: string; Code?: string; code?: string } | null)?.name ||
+        (err as { Code?: string } | null)?.Code ||
+        (err as { code?: string } | null)?.code;
+      const status = (err as { $metadata?: { httpStatusCode?: number } } | null)?.$metadata
+        ?.httpStatusCode;
+      if (code === 'NoSuchKey' || code === 'NotFound' || status === 404) {
+        return null;
+      }
+      throw err;
+    }
   }
 
   const localPath = path.join(process.cwd(), 'public', key);

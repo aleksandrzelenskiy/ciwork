@@ -11,12 +11,15 @@ import {
     DialogTitle,
     FormControl,
     InputLabel,
+    IconButton,
     MenuItem,
     Select,
     Slider,
     Stack,
     Typography,
 } from '@mui/material';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -72,7 +75,8 @@ export default function DocumentDiffViewer({
     const [error, setError] = React.useState<string | null>(null);
     const [diffEnabled, setDiffEnabled] = React.useState(true);
     const [sensitivity, setSensitivity] = React.useState(55);
-    const [singleColumn, setSingleColumn] = React.useState(false);
+    const [viewMode, setViewMode] = React.useState<'split' | 'diff-only'>('split');
+    const [fullScreen, setFullScreen] = React.useState(false);
 
     const currentCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
     const previousCanvasRef = React.useRef<HTMLCanvasElement | null>(null);
@@ -94,6 +98,12 @@ export default function DocumentDiffViewer({
     }, [open, currentFiles, previousFiles]);
 
     React.useEffect(() => {
+        if (!open) {
+            setFullScreen(false);
+        }
+    }, [open]);
+
+    React.useEffect(() => {
         if (!open) return;
         if (!currentFile || !previousFile) return;
         let cancelled = false;
@@ -103,7 +113,10 @@ export default function DocumentDiffViewer({
         const loadDoc = async (fileUrl: string) => {
             const proxyUrl = buildProxyUrl(fileUrl);
             const response = await fetch(proxyUrl);
-            if (!response.ok) throw new Error('Не удалось загрузить PDF');
+            if (!response.ok) {
+                const message = response.status === 404 ? 'Файл не найден' : 'Не удалось загрузить PDF';
+                throw new Error(message);
+            }
             const buffer = await response.arrayBuffer();
             return pdfjsLib.getDocument({ data: buffer }).promise;
         };
@@ -281,8 +294,15 @@ export default function DocumentDiffViewer({
     }, []);
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="xl">
-            <DialogTitle>Сравнение PDF</DialogTitle>
+        <Dialog open={open} onClose={onClose} fullScreen={fullScreen} fullWidth maxWidth="xl">
+            <DialogTitle>
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                    <Typography variant="h6">Сравнение PDF</Typography>
+                    <IconButton onClick={() => setFullScreen((prev) => !prev)}>
+                        {fullScreen ? <CloseFullscreenIcon /> : <OpenInFullIcon />}
+                    </IconButton>
+                </Stack>
+            </DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
@@ -361,10 +381,12 @@ export default function DocumentDiffViewer({
                             </Button>
                             <Button
                                 size="small"
-                                variant={singleColumn ? 'contained' : 'outlined'}
-                                onClick={() => setSingleColumn((prev) => !prev)}
+                                variant={viewMode === 'diff-only' ? 'contained' : 'outlined'}
+                                onClick={() =>
+                                    setViewMode((prev) => (prev === 'diff-only' ? 'split' : 'diff-only'))
+                                }
                             >
-                                {singleColumn ? 'Три колонки' : 'Одна колонка'}
+                                {viewMode === 'diff-only' ? 'Текущая + различия' : 'Только различия'}
                             </Button>
                             <Box sx={{ width: 220 }}>
                                 <Typography variant="caption" color="text.secondary">
@@ -389,73 +411,77 @@ export default function DocumentDiffViewer({
                             Нет PDF-файлов для сравнения. Загрузите PDF в текущей и предыдущей версии.
                         </Typography>
                     ) : (
-                        <Box ref={containerRef}>
-                        <Box
-                            sx={{
-                                display: 'grid',
-                                gridTemplateColumns: {
-                                    xs: '1fr',
-                                    md: singleColumn ? '1fr' : '1fr 1fr 1fr',
-                                },
-                                gap: 2,
-                            }}
-                        >
-                            <Stack spacing={1}>
-                                <Typography variant="subtitle2">Предыдущая версия</Typography>
-                                <Box
-                                    ref={previousScrollRef}
-                                    onScroll={() => syncScroll(previousScrollRef.current)}
-                                    sx={{
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 2,
-                                        p: 1,
-                                        maxHeight: 520,
-                                        overflow: 'auto',
-                                        bgcolor: 'background.paper',
-                                    }}
-                                >
-                                    <canvas ref={previousCanvasRef} style={{ width: '100%', height: 'auto' }} />
-                                </Box>
-                            </Stack>
-                            <Stack spacing={1}>
-                                <Typography variant="subtitle2">Текущая версия</Typography>
-                                <Box
-                                    ref={currentScrollRef}
-                                    onScroll={() => syncScroll(currentScrollRef.current)}
-                                    sx={{
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 2,
-                                        p: 1,
-                                        maxHeight: 520,
-                                        overflow: 'auto',
-                                        bgcolor: 'background.paper',
-                                    }}
-                                >
-                                    <canvas ref={currentCanvasRef} style={{ width: '100%', height: 'auto' }} />
-                                </Box>
-                            </Stack>
-                            <Stack spacing={1}>
-                                <Typography variant="subtitle2">Различия</Typography>
-                                <Box
-                                    ref={diffScrollRef}
-                                    onScroll={() => syncScroll(diffScrollRef.current)}
-                                    sx={{
-                                        border: '1px solid',
-                                        borderColor: 'divider',
-                                        borderRadius: 2,
-                                        p: 1,
-                                        maxHeight: 520,
-                                        overflow: 'auto',
-                                        bgcolor: 'background.paper',
-                                    }}
-                                >
-                                    <canvas ref={diffCanvasRef} style={{ width: '100%', height: 'auto' }} />
-                                </Box>
-                            </Stack>
+                        <Box ref={containerRef} sx={{ position: 'relative' }}>
+                            <Box
+                                sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: {
+                                        xs: '1fr',
+                                        md: viewMode === 'diff-only' ? '1fr' : '1fr 1fr 1fr',
+                                    },
+                                    gap: 2,
+                                }}
+                            >
+                                {viewMode !== 'diff-only' && (
+                                    <Stack spacing={1}>
+                                        <Typography variant="subtitle2">Предыдущая версия</Typography>
+                                        <Box
+                                            ref={previousScrollRef}
+                                            onScroll={() => syncScroll(previousScrollRef.current)}
+                                            sx={{
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: 2,
+                                                p: 1,
+                                                maxHeight: fullScreen ? 'calc(100vh - 320px)' : 520,
+                                                overflow: 'auto',
+                                                bgcolor: 'background.paper',
+                                            }}
+                                        >
+                                            <canvas ref={previousCanvasRef} style={{ width: '100%', height: 'auto' }} />
+                                        </Box>
+                                    </Stack>
+                                )}
+                                {viewMode !== 'diff-only' && (
+                                    <Stack spacing={1}>
+                                        <Typography variant="subtitle2">Текущая версия</Typography>
+                                        <Box
+                                            ref={currentScrollRef}
+                                            onScroll={() => syncScroll(currentScrollRef.current)}
+                                            sx={{
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                borderRadius: 2,
+                                                p: 1,
+                                                maxHeight: fullScreen ? 'calc(100vh - 320px)' : 520,
+                                                overflow: 'auto',
+                                                bgcolor: 'background.paper',
+                                            }}
+                                        >
+                                            <canvas ref={currentCanvasRef} style={{ width: '100%', height: 'auto' }} />
+                                        </Box>
+                                    </Stack>
+                                )}
+                                <Stack spacing={1}>
+                                    <Typography variant="subtitle2">Различия</Typography>
+                                    <Box
+                                        ref={diffScrollRef}
+                                        onScroll={() => syncScroll(diffScrollRef.current)}
+                                        sx={{
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            borderRadius: 2,
+                                            p: 1,
+                                            maxHeight: fullScreen ? 'calc(100vh - 320px)' : 520,
+                                            overflow: 'auto',
+                                            bgcolor: 'background.paper',
+                                        }}
+                                    >
+                                        <canvas ref={diffCanvasRef} style={{ width: '100%', height: 'auto' }} />
+                                    </Box>
+                                </Stack>
+                            </Box>
                         </Box>
-                    </Box>
                     )}
                 </Stack>
             </DialogContent>

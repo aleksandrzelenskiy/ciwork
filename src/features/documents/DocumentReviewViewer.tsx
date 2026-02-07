@@ -400,7 +400,8 @@ export default function DocumentReviewViewer({
         fetchPdfBlobUrl(proxyUrl, async () => {
             const res = await fetch(proxyUrl, { signal: controller.signal });
             if (!res.ok) {
-                throw new Error('Не удалось загрузить PDF');
+                const message = res.status === 404 ? 'Файл не найден' : 'Не удалось загрузить PDF';
+                throw new Error(message);
             }
             return res.blob();
         })
