@@ -406,10 +406,12 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
         (review.previousBytes ?? 0);
     const delta = newStorageBytes - oldStorageBytes;
 
-    if (delta > 0) {
-        await recordStorageBytes(task.orgId, delta);
-    } else if (delta < 0) {
-        await adjustStorageBytes(task.orgId, delta);
+    if (task.orgId) {
+        if (delta > 0) {
+            await recordStorageBytes(task.orgId, delta);
+        } else if (delta < 0) {
+            await adjustStorageBytes(task.orgId, delta);
+        }
     }
 
     review.currentFiles = nextCurrentFiles;
