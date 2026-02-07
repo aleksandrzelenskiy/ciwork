@@ -92,6 +92,7 @@ const enMessages: Record<string, string> = {
     'task.document.require.review': 'Please upload PDF files for review',
     'task.document.require.final': 'Final PDF and DWG are required for approval',
     'task.workItems.disabledForDocument': 'Not available for document tasks',
+    'task.delete.documents': 'Delete all documentation and approvals',
     'wallet.balance': 'Balance',
     'wallet.mainBalance': 'Main balance',
     'wallet.transactions.title': 'Balance transactions',

@@ -293,6 +293,7 @@ const ruMessages: Record<string, string> = {
     'reports.list.deleteConfirm': 'Удалить',
     'reports.list.error.load': 'Не удалось загрузить фотоотчеты',
     'reports.list.error.delete': 'Не удалось удалить отчёт',
+    'task.delete.documents': 'Удалить всю документацию и согласования',
     'common.accessDenied': 'Доступ запрещен',
     'common.refresh': 'Обновить',
     'common.all': 'Все',

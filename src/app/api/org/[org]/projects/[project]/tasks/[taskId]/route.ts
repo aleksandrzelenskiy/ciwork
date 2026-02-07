@@ -32,6 +32,8 @@ import { addReverseRelations, removeReverseRelations } from '@/app/utils/related
 import ReportModel from '@/server/models/ReportModel';
 import { deleteReport } from '@/server/reports/base';
 import UserModel from '@/server/models/UserModel';
+import DocumentReviewModel from '@/server/models/DocumentReviewModel';
+import { adjustStorageBytes } from '@/utils/storageUsage';
 
 
 export const runtime = 'nodejs';
@@ -327,6 +329,10 @@ export async function DELETE(
         const deleteReports =
             deleteReportsParam === null ||
             !['false', '0', 'no'].includes(deleteReportsParam.toLowerCase());
+        const deleteDocumentsParam = url.searchParams.get('deleteDocuments');
+        const deleteDocuments =
+            deleteDocumentsParam === null ||
+            !['false', '0', 'no'].includes(deleteDocumentsParam.toLowerCase());
 
         const ensured = await requireOrgProject(orgSlug, projectRef);
         if (!ensured.ok) {
@@ -340,6 +346,7 @@ export async function DELETE(
             .select(
                 [
                     'taskId',
+                    'taskType',
                     'orgId',
                     'projectId',
                     'taskName',
@@ -349,6 +356,8 @@ export async function DELETE(
                     'orderUrl',
                     'ncwUrl',
                     'closingDocumentsUrl',
+                    'documentReviewFiles',
+                    'documentFinalFiles',
                 ].join(' ')
             )
             .lean();
@@ -361,6 +370,13 @@ export async function DELETE(
             typeof deletedTask.taskId === 'string' && deletedTask.taskId.trim()
                 ? deletedTask.taskId
                 : taskId;
+        const isDocumentTask = deletedTask.taskType === 'document';
+        const shouldDeleteDocuments = isDocumentTask && deleteDocuments;
+
+        const reviewForCleanup = await DocumentReviewModel.findOneAndDelete({
+            taskId: taskIdForCleanup,
+        }).lean();
+
         if (deleteReports) {
             const reportEntries = await ReportModel.find({ taskId: taskIdForCleanup })
                 .select('baseId')
@@ -375,7 +391,9 @@ export async function DELETE(
                     console.warn('Failed to delete report on task removal:', result.error);
                 }
             }
+        }
 
+        if (deleteReports && !isDocumentTask) {
             await deleteTaskFolder(taskIdForCleanup, orgSlug, projectRef);
         } else {
             const taskFiles = new Set<string>();
@@ -392,10 +410,42 @@ export async function DELETE(
             if (deletedTask.orderUrl) taskFiles.add(deletedTask.orderUrl);
             if (deletedTask.ncwUrl) taskFiles.add(deletedTask.ncwUrl);
             if (deletedTask.closingDocumentsUrl) taskFiles.add(deletedTask.closingDocumentsUrl);
+            if (shouldDeleteDocuments) {
+                if (Array.isArray(deletedTask.documentReviewFiles)) {
+                    for (const url of deletedTask.documentReviewFiles) {
+                        if (url.trim()) taskFiles.add(url);
+                    }
+                }
+                if (Array.isArray(deletedTask.documentFinalFiles)) {
+                    for (const url of deletedTask.documentFinalFiles) {
+                        if (url.trim()) taskFiles.add(url);
+                    }
+                }
+                if (Array.isArray(reviewForCleanup?.currentFiles)) {
+                    for (const url of reviewForCleanup.currentFiles) {
+                        if (url.trim()) taskFiles.add(url);
+                    }
+                }
+                if (Array.isArray(reviewForCleanup?.previousFiles)) {
+                    for (const url of reviewForCleanup.previousFiles) {
+                        if (url.trim()) taskFiles.add(url);
+                    }
+                }
+            }
 
             await Promise.all(
                 Array.from(taskFiles).map((fileUrl) => deleteTaskFile(fileUrl))
             );
+        }
+
+        if (shouldDeleteDocuments && reviewForCleanup) {
+            const bytesToAdjust =
+                Math.max(0, reviewForCleanup.currentBytes ?? 0) +
+                Math.max(0, reviewForCleanup.previousBytes ?? 0);
+            const orgIdForBytes = reviewForCleanup.orgId || deletedTask.orgId;
+            if (bytesToAdjust > 0 && orgIdForBytes) {
+                await adjustStorageBytes(String(orgIdForBytes), -Math.abs(bytesToAdjust));
+            }
         }
 
         await TaskDeletionLog.create({

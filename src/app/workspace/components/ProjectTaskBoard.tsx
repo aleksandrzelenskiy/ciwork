@@ -291,6 +291,7 @@ export default function ProjectTaskBoard({
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deleteReports, setDeleteReports] = useState(true);
+    const [deleteDocuments, setDeleteDocuments] = useState(true);
 
     // ЛКМ - переход на страницу задачи
     const openTaskPage = (task: Task) => {
@@ -332,6 +333,7 @@ export default function ProjectTaskBoard({
         if (!menuTask) return;
         setDeleteError(null);
         setDeleteReports(true);
+        setDeleteDocuments(true);
         setDeleteOpen(true);
     };
 
@@ -344,6 +346,7 @@ export default function ProjectTaskBoard({
             const projectRef = menuTask.projectKey || project;
             const params = new URLSearchParams({
                 deleteReports: deleteReports ? 'true' : 'false',
+                deleteDocuments: deleteDocuments ? 'true' : 'false',
             });
             const url = `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
                 projectRef
@@ -445,6 +448,24 @@ export default function ProjectTaskBoard({
                         }
                         label={t('task.delete.reports', 'Удалить связанные с задачей фотоотчеты')}
                     />
+                    {menuTask?.taskType === 'document' && (
+                        <FormControlLabel
+                            sx={{ mt: 1 }}
+                            control={
+                                <Checkbox
+                                    checked={deleteDocuments}
+                                    onChange={(event) =>
+                                        setDeleteDocuments(event.target.checked)
+                                    }
+                                    disabled={deleteLoading}
+                                />
+                            }
+                            label={t(
+                                'task.delete.documents',
+                                'Удалить всю документацию и согласования'
+                            )}
+                        />
+                    )}
                     {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
                 </DialogContent>
                 <DialogActions>

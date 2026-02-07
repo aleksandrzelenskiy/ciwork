@@ -368,10 +368,12 @@ const ProjectTaskListInner = (
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [deleteReports, setDeleteReports] = useState(true);
+    const [deleteDocuments, setDeleteDocuments] = useState(true);
 
     const askDelete = () => {
         setDeleteError(null);
         setDeleteReports(true);
+        setDeleteDocuments(true);
         setDeleteOpen(true);
     };
     const handleCancelDelete = () => setDeleteOpen(false);
@@ -383,6 +385,7 @@ const ProjectTaskListInner = (
             const projectRef = selectedTask.projectKey || project;
             const params = new URLSearchParams({
                 deleteReports: deleteReports ? 'true' : 'false',
+                deleteDocuments: deleteDocuments ? 'true' : 'false',
             });
             const url = `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
                 projectRef
@@ -894,10 +897,28 @@ const ProjectTaskListInner = (
                                     checked={deleteReports}
                                     onChange={(event) => setDeleteReports(event.target.checked)}
                                     disabled={deleteLoading}
-                            />
-                        }
+                                />
+                            }
                             label={t('task.delete.reports', 'Удалить связанные с задачей фотоотчеты')}
                         />
+                        {selectedTask?.taskType === 'document' && (
+                            <FormControlLabel
+                                sx={{ mt: 1 }}
+                                control={
+                                    <Checkbox
+                                        checked={deleteDocuments}
+                                        onChange={(event) =>
+                                            setDeleteDocuments(event.target.checked)
+                                        }
+                                        disabled={deleteLoading}
+                                    />
+                                }
+                                label={t(
+                                    'task.delete.documents',
+                                    'Удалить всю документацию и согласования'
+                                )}
+                            />
+                        )}
                         {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
                     </DialogContent>
                     <DialogActions>

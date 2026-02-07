@@ -327,6 +327,7 @@ export default function TaskDetailsPage() {
     const [deleteOpen, setDeleteOpen] = React.useState(false);
     const [deleting, setDeleting] = React.useState(false);
     const [deleteReports, setDeleteReports] = React.useState(true);
+    const [deleteDocuments, setDeleteDocuments] = React.useState(true);
     const [deleteDocumentOpen, setDeleteDocumentOpen] = React.useState(false);
     const [documentToDelete, setDocumentToDelete] = React.useState<string | null>(null);
     const [documentToDeleteType, setDocumentToDeleteType] = React.useState<
@@ -924,6 +925,7 @@ export default function TaskDetailsPage() {
         try {
             const query = new URLSearchParams({
                 deleteReports: deleteReports ? 'true' : 'false',
+                deleteDocuments: deleteDocuments ? 'true' : 'false',
             });
             const res = await fetch(
                 `/api/org/${encodeURIComponent(org)}/projects/${encodeURIComponent(
@@ -3613,6 +3615,22 @@ export default function TaskDetailsPage() {
                         }
                         label={t('task.delete.reports', 'Удалить связанные с задачей фотоотчеты')}
                     />
+                    {task?.taskType === 'document' && (
+                        <FormControlLabel
+                            sx={{ mt: 1 }}
+                            control={
+                                <Checkbox
+                                    checked={deleteDocuments}
+                                    onChange={(event) => setDeleteDocuments(event.target.checked)}
+                                    disabled={deleting}
+                                />
+                            }
+                            label={t(
+                                'task.delete.documents',
+                                'Удалить всю документацию и согласования'
+                            )}
+                        />
+                    )}
                 </DialogContent>
                 <DialogActions>
                     <Button
