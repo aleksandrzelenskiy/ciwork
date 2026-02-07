@@ -376,12 +376,16 @@ export const uploadDocumentReviewFiles = async (request: Request, taskId: string
     let nextPreviousMeta = review.previousFilesMeta ?? [];
     let nextPreviousBytes = review.previousBytes ?? 0;
 
-    if (review.status === 'Draft' && review.currentFiles?.length) {
+    const hasPublishedVersion = (review.currentVersion ?? 0) > 0 || review.status !== 'Draft';
+
+    if (!hasPublishedVersion && review.currentFiles?.length) {
+        // Draft replacement before the first submission: keep no history.
         filesToDelete.push(...review.currentFiles);
         nextPreviousFiles = review.previousFiles ?? [];
         nextPreviousMeta = review.previousFilesMeta ?? [];
         nextPreviousBytes = review.previousBytes ?? 0;
-    } else if (review.status !== 'Draft') {
+    } else if (hasPublishedVersion) {
+        // Keep only the two latest versions on storage: drop the old previous, shift current -> previous.
         if (review.previousFiles?.length) {
             filesToDelete.push(...review.previousFiles);
         }

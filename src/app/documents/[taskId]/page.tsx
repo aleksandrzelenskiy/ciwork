@@ -16,6 +16,7 @@ import {
     LinearProgress,
     Paper,
     Stack,
+    Snackbar,
     Typography,
     Tooltip,
     TextField,
@@ -128,8 +129,9 @@ export default function DocumentReviewPage() {
     const [uploadError, setUploadError] = React.useState<string | null>(null);
     const [submitError, setSubmitError] = React.useState<string | null>(null);
     const [selectedItems, setSelectedItems] = React.useState<SelectedFileItem[]>([]);
+    const [submitNotice, setSubmitNotice] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [deleteTarget, setDeleteTarget] = React.useState<{
-        type: 'selected' | 'uploaded';
+        type: 'selected' | 'uploaded' | 'uploaded-all';
         id?: string;
         url?: string;
         name: string;
@@ -308,21 +310,30 @@ export default function DocumentReviewPage() {
             const payload = (await res.json().catch(() => ({}))) as { error?: string };
             if (!res.ok) {
                 setSubmitError(payload.error || 'Не удалось отправить документацию');
+                setSubmitNotice({
+                    type: 'error',
+                    text: payload.error || 'Не удалось отправить документацию',
+                });
                 return;
             }
             clearSelectedItems();
+            setShowUploadZone(false);
+            setUploadError(null);
             void loadReview();
             setSubmitDialogOpen(false);
             setChangeLog('');
+            setSubmitNotice({ type: 'success', text: 'Пакет отправлен на согласование' });
         } catch (err) {
-            setSubmitError(err instanceof Error ? err.message : 'Не удалось отправить документацию');
+            const message = err instanceof Error ? err.message : 'Не удалось отправить документацию';
+            setSubmitError(message);
+            setSubmitNotice({ type: 'error', text: message });
         } finally {
             setSubmitting(false);
         }
     };
 
     const openDeleteDialog = (payload: {
-        type: 'selected' | 'uploaded';
+        type: 'selected' | 'uploaded' | 'uploaded-all';
         id?: string;
         url?: string;
         name: string;
@@ -342,6 +353,32 @@ export default function DocumentReviewPage() {
         if (deleteTarget.type === 'selected' && deleteTarget.id) {
             removeSelectedItem(deleteTarget.id);
             setDeleteTarget(null);
+            return;
+        }
+        if (deleteTarget.type === 'uploaded-all') {
+            setDeleteLoading(true);
+            setDeleteError(null);
+            try {
+                const tasks = currentFiles.map((file) =>
+                    fetch(
+                        `/api/document-reviews/${encodeURIComponent(taskId)}/file?url=${encodeURIComponent(file)}`,
+                        { method: 'DELETE' }
+                    )
+                );
+                const results = await Promise.all(tasks);
+                const failed = results.find((res) => !res.ok);
+                if (failed) {
+                    const payload = (await failed.json().catch(() => ({}))) as { error?: string };
+                    setDeleteError(payload.error || 'Не удалось удалить файлы');
+                    return;
+                }
+                await loadReview();
+                setDeleteTarget(null);
+            } catch (err) {
+                setDeleteError(err instanceof Error ? err.message : 'Не удалось удалить файлы');
+            } finally {
+                setDeleteLoading(false);
+            }
             return;
         }
         if (!deleteTarget.url) return;
@@ -643,6 +680,21 @@ export default function DocumentReviewPage() {
                         <Typography variant="caption" color="text.secondary">
                             До отправки пакет виден только вам и не отправляет уведомления.
                         </Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={() =>
+                                    openDeleteDialog({
+                                        type: 'uploaded-all',
+                                        name: 'Все файлы черновика',
+                                    })
+                                }
+                            >
+                                Удалить все
+                            </Button>
+                        </Stack>
                         <Stack spacing={1}>
                             {currentFiles.map((file) => {
                                 const filename = extractFileNameFromUrl(file, 'Файл');
@@ -663,15 +715,29 @@ export default function DocumentReviewPage() {
                                             <InsertDriveFileOutlinedIcon color="action" />
                                             <Typography variant="body2">{filename}</Typography>
                                         </Stack>
-                                        <Button
-                                            size="small"
-                                            onClick={() => {
-                                                setSelectedFile(file);
-                                                setViewerOpen(true);
-                                            }}
-                                        >
-                                            Открыть
-                                        </Button>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <Button
+                                                size="small"
+                                                onClick={() => {
+                                                    setSelectedFile(file);
+                                                    setViewerOpen(true);
+                                                }}
+                                            >
+                                                Открыть
+                                            </Button>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() =>
+                                                    openDeleteDialog({
+                                                        type: 'uploaded',
+                                                        url: file,
+                                                        name: filename,
+                                                    })
+                                                }
+                                            >
+                                                <DeleteOutlineIcon fontSize="small" />
+                                            </IconButton>
+                                        </Stack>
                                     </Paper>
                                 );
                             })}
@@ -910,6 +976,23 @@ export default function DocumentReviewPage() {
                 buildProxyUrl={buildProxyUrl}
             />
 
+            <Snackbar
+                open={Boolean(submitNotice)}
+                autoHideDuration={3000}
+                onClose={() => setSubmitNotice(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                {submitNotice ? (
+                    <Alert
+                        onClose={() => setSubmitNotice(null)}
+                        severity={submitNotice.type}
+                        variant="filled"
+                    >
+                        {submitNotice.text}
+                    </Alert>
+                ) : null}
+            </Snackbar>
+
             <Dialog open={Boolean(deleteTarget)} onClose={closeDeleteDialog}>
                 <DialogTitle>Удалить файл?</DialogTitle>
                 <DialogContent>
@@ -918,7 +1001,9 @@ export default function DocumentReviewPage() {
                         <Typography>
                             {deleteTarget?.type === 'selected'
                                 ? `Файл "${deleteTarget?.name}" будет удалён из списка перед загрузкой.`
-                                : `Файл "${deleteTarget?.name}" будет удалён из текущего пакета.`}
+                                : deleteTarget?.type === 'uploaded-all'
+                                  ? 'Все файлы черновика будут удалены.'
+                                  : `Файл "${deleteTarget?.name}" будет удалён из текущего пакета.`}
                         </Typography>
                     </Stack>
                 </DialogContent>
