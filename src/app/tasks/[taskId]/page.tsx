@@ -84,6 +84,11 @@ type Change = {
 };
 
 type TaskEventDetails = Record<string, TaskEventDetailsValue | Change>;
+type AgreedDocumentPackage = {
+    currentVersion?: number;
+    publishedFiles?: string[];
+    error?: string;
+};
 
 export default function TaskDetailPage() {
     const { t, locale } = useI18n();
@@ -91,6 +96,7 @@ export default function TaskDetailPage() {
     const taskId = params?.taskId?.trim() || '';
     const router = useRouter();
     const searchParams = useSearchParams();
+    const token = searchParams?.get('token')?.trim() || '';
     const theme = useTheme();
     const {
         masonryCardSx,
@@ -183,6 +189,11 @@ export default function TaskDetailPage() {
     const [pendingDecision, setPendingDecision] = React.useState<'accept' | 'reject' | null>(null);
     const [decisionLoading, setDecisionLoading] = React.useState(false);
     const [decisionError, setDecisionError] = React.useState<string | null>(null);
+    const [agreedDocsLoading, setAgreedDocsLoading] = React.useState(false);
+    const [agreedDocsError, setAgreedDocsError] = React.useState<string | null>(null);
+    const [agreedDocsVersion, setAgreedDocsVersion] = React.useState<number>(0);
+    const [agreedDocsFiles, setAgreedDocsFiles] = React.useState<string[]>([]);
+    const [agreedDocsArchiveLoading, setAgreedDocsArchiveLoading] = React.useState(false);
 
     const openProfileDialog = (clerkUserId?: string | null) => {
         if (!clerkUserId) return;
@@ -470,6 +481,134 @@ export default function TaskDetailPage() {
 
     const isManager = Boolean(userRole && MANAGER_ROLES.includes(userRole));
     const normalizedStatus = normalizeStatusTitle(task?.status);
+    const shouldShowAgreedDocsBlock = task?.taskType === 'document' && normalizedStatus === 'Agreed';
+    const buildDocumentReviewFileUrl = React.useCallback(
+        (fileUrl: string, download = false) => {
+            const downloadParam = download ? '&download=1' : '';
+            const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+            return `/api/document-reviews/${encodeURIComponent(
+                task?.taskId ?? taskId
+            )}/file?url=${encodeURIComponent(fileUrl)}${downloadParam}${tokenParam}`;
+        },
+        [task?.taskId, taskId, token]
+    );
+
+    React.useEffect(() => {
+        if (!shouldShowAgreedDocsBlock || !task?.taskId) {
+            setAgreedDocsFiles([]);
+            setAgreedDocsVersion(0);
+            setAgreedDocsError(null);
+            setAgreedDocsLoading(false);
+            return;
+        }
+
+        const loadAgreedDocs = async () => {
+            try {
+                setAgreedDocsLoading(true);
+                setAgreedDocsError(null);
+                const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+                const res = await fetch(
+                    `/api/document-reviews/${encodeURIComponent(task.taskId)}${tokenParam}`,
+                    { cache: 'no-store' }
+                );
+                const data = (await res.json().catch(() => null)) as AgreedDocumentPackage | null;
+                if (!res.ok || !data) {
+                    setAgreedDocsFiles([]);
+                    setAgreedDocsVersion(0);
+                    setAgreedDocsError(
+                        data?.error ||
+                            t(
+                                'task.document.agreed.error',
+                                'Не удалось загрузить согласованную документацию'
+                            )
+                    );
+                    return;
+                }
+                const files = Array.isArray(data.publishedFiles)
+                    ? data.publishedFiles.filter(
+                          (file): file is string =>
+                              typeof file === 'string' && file.trim().length > 0
+                      )
+                    : [];
+                setAgreedDocsFiles(files);
+                setAgreedDocsVersion(
+                    typeof data.currentVersion === 'number' ? data.currentVersion : 0
+                );
+            } catch (loadError) {
+                setAgreedDocsFiles([]);
+                setAgreedDocsVersion(0);
+                setAgreedDocsError(
+                    loadError instanceof Error
+                        ? loadError.message
+                        : t(
+                              'task.document.agreed.error',
+                              'Не удалось загрузить согласованную документацию'
+                          )
+                );
+            } finally {
+                setAgreedDocsLoading(false);
+            }
+        };
+
+        void loadAgreedDocs();
+    }, [shouldShowAgreedDocsBlock, task?.taskId, t, token]);
+
+    const handleDownloadAgreedDocsArchive = React.useCallback(async () => {
+        if (!task?.taskId) return;
+        try {
+            setAgreedDocsArchiveLoading(true);
+            setAgreedDocsError(null);
+            const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+            const res = await fetch(
+                `/api/document-reviews/${encodeURIComponent(task.taskId)}/download${tokenParam}`,
+                { cache: 'no-store' }
+            );
+            const errorData = (await res
+                .clone()
+                .json()
+                .catch(() => null)) as { error?: string } | null;
+            if (!res.ok) {
+                setAgreedDocsError(
+                    errorData?.error ||
+                        t(
+                            'task.document.agreed.archiveError',
+                            'Не удалось скачать архив согласованной документации'
+                        )
+                );
+                return;
+            }
+
+            const blob = await res.blob();
+            const downloadUrl = URL.createObjectURL(blob);
+            const contentDisposition = res.headers.get('Content-Disposition') || '';
+            const encodedNameMatch = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+            const plainNameMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
+            const resolvedName = encodedNameMatch?.[1] || plainNameMatch?.[1];
+            const filename = resolvedName
+                ? decodeURIComponent(resolvedName)
+                : `agreed-documents-${task.taskId}.zip`;
+
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+        } catch (downloadError) {
+            setAgreedDocsError(
+                downloadError instanceof Error
+                    ? downloadError.message
+                    : t(
+                          'task.document.agreed.archiveError',
+                          'Не удалось скачать архив согласованной документации'
+                      )
+            );
+        } finally {
+            setAgreedDocsArchiveLoading(false);
+        }
+    }, [task?.taskId, t, token]);
+
     const documentStatusHint = React.useMemo(() => {
         if (task?.taskType !== 'document') return null;
         switch (normalizedStatus) {
@@ -1742,6 +1881,100 @@ export default function TaskDetailPage() {
                             </Typography>
                             <Divider sx={{ mb: 1.5 }} />
                             <DocumentReviewTaskPanel taskId={task.taskId} />
+                        </CardItem>
+                    )}
+                    {shouldShowAgreedDocsBlock && (
+                        <CardItem sx={{ minWidth: 0 }}>
+                            <Typography
+                                variant="body1"
+                                fontWeight={600}
+                                gutterBottom
+                                sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                            >
+                                <DescriptionOutlinedIcon fontSize="small" />
+                                {t('task.document.agreed.title', 'Согласованная документация')}
+                            </Typography>
+                            <Divider sx={{ mb: 1.5 }} />
+                            {agreedDocsLoading ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                                    <CircularProgress size={24} />
+                                </Box>
+                            ) : agreedDocsError ? (
+                                <Typography color="error.main">{agreedDocsError}</Typography>
+                            ) : agreedDocsFiles.length === 0 ? (
+                                <Typography color="text.secondary">
+                                    {t('task.document.agreed.empty', 'В согласованном пакете пока нет файлов')}
+                                </Typography>
+                            ) : (
+                                <Stack spacing={1.25}>
+                                    <Stack
+                                        direction={{ xs: 'column', sm: 'row' }}
+                                        alignItems={{ xs: 'stretch', sm: 'center' }}
+                                        justifyContent="space-between"
+                                        gap={1}
+                                    >
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('task.document.agreed.version', 'Пакет версии v{version}', {
+                                                version: agreedDocsVersion || 1,
+                                            })}
+                                        </Typography>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={handleDownloadAgreedDocsArchive}
+                                            disabled={agreedDocsArchiveLoading}
+                                        >
+                                            {agreedDocsArchiveLoading
+                                                ? t('task.document.agreed.archiveLoading', 'Скачиваем...')
+                                                : t('task.document.agreed.archiveDownload', 'Скачать архивом')}
+                                        </Button>
+                                    </Stack>
+                                    <Stack spacing={1}>
+                                        {agreedDocsFiles.map((fileUrl, index) => (
+                                            <Stack
+                                                key={`${fileUrl}-${index}`}
+                                                direction={{ xs: 'column', sm: 'row' }}
+                                                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                                                justifyContent="space-between"
+                                                gap={1}
+                                                sx={{
+                                                    p: 1.25,
+                                                    borderRadius: 1,
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                }}
+                                            >
+                                                <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                                                    {extractFileNameFromUrl(
+                                                        fileUrl,
+                                                        t('task.documents.documentNumber', 'Документ {index}', {
+                                                            index: index + 1,
+                                                        })
+                                                    )}
+                                                </Typography>
+                                                <Stack direction="row" spacing={1}>
+                                                    <Button
+                                                        component="a"
+                                                        href={buildDocumentReviewFileUrl(fileUrl)}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        size="small"
+                                                    >
+                                                        {t('common.open', 'Открыть')}
+                                                    </Button>
+                                                    <Button
+                                                        component="a"
+                                                        href={buildDocumentReviewFileUrl(fileUrl, true)}
+                                                        size="small"
+                                                    >
+                                                        {t('common.download', 'Скачать')}
+                                                    </Button>
+                                                </Stack>
+                                            </Stack>
+                                        ))}
+                                    </Stack>
+                                </Stack>
+                            )}
                         </CardItem>
                     )}
 
