@@ -54,6 +54,8 @@ import {
 import Masonry from '@mui/lab/Masonry';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
 import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import { getPriorityIcon, normalizePriority } from '@/utils/priorityIcons';
 import TaskGeoLocation from '@/app/workspace/components/TaskGeoLocation';
@@ -526,8 +528,7 @@ export default function TaskDetailPage() {
                 }
                 const files = Array.isArray(data.publishedFiles)
                     ? data.publishedFiles.filter(
-                          (file): file is string =>
-                              typeof file === 'string' && file.trim().length > 0
+                          (file): file is string => file.trim().length > 0
                       )
                     : [];
                 setAgreedDocsFiles(files);
@@ -1952,23 +1953,27 @@ export default function TaskDetailPage() {
                                                         })
                                                     )}
                                                 </Typography>
-                                                <Stack direction="row" spacing={1}>
-                                                    <Button
-                                                        component="a"
-                                                        href={buildDocumentReviewFileUrl(fileUrl)}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        size="small"
-                                                    >
-                                                        {t('common.open', 'Открыть')}
-                                                    </Button>
-                                                    <Button
-                                                        component="a"
-                                                        href={buildDocumentReviewFileUrl(fileUrl, true)}
-                                                        size="small"
-                                                    >
-                                                        {t('common.download', 'Скачать')}
-                                                    </Button>
+                                                <Stack direction="row" spacing={0.5}>
+                                                    <Tooltip title={t('common.open', 'Открыть')}>
+                                                        <IconButton
+                                                            component="a"
+                                                            href={buildDocumentReviewFileUrl(fileUrl)}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            size="small"
+                                                        >
+                                                            <OpenInNewIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                    <Tooltip title={t('common.download', 'Скачать')}>
+                                                        <IconButton
+                                                            component="a"
+                                                            href={buildDocumentReviewFileUrl(fileUrl, true)}
+                                                            size="small"
+                                                        >
+                                                            <CloudDownloadOutlinedIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
                                                 </Stack>
                                             </Stack>
                                         ))}

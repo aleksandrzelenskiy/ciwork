@@ -53,6 +53,8 @@ import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
 import CasesOutlinedIcon from '@mui/icons-material/CasesOutlined';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
@@ -916,8 +918,7 @@ export default function TaskDetailsPage() {
                 }
                 const files = Array.isArray(data.publishedFiles)
                     ? data.publishedFiles.filter(
-                          (file): file is string =>
-                              typeof file === 'string' && file.trim().length > 0
+                          (file): file is string => file.trim().length > 0
                       )
                     : [];
                 setAgreedDocsFiles(files);
@@ -2870,23 +2871,27 @@ export default function TaskDetailsPage() {
                                                             )
                                                         )}
                                                     </Typography>
-                                                    <Stack direction="row" spacing={1}>
-                                                        <Button
-                                                            component="a"
-                                                            href={buildDocumentReviewFileUrl(fileUrl)}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            size="small"
-                                                        >
-                                                            {t('common.open', 'Открыть')}
-                                                        </Button>
-                                                        <Button
-                                                            component="a"
-                                                            href={buildDocumentReviewFileUrl(fileUrl, true)}
-                                                            size="small"
-                                                        >
-                                                            {t('common.download', 'Скачать')}
-                                                        </Button>
+                                                    <Stack direction="row" spacing={0.5}>
+                                                        <Tooltip title={t('common.open', 'Открыть')}>
+                                                            <IconButton
+                                                                component="a"
+                                                                href={buildDocumentReviewFileUrl(fileUrl)}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                size="small"
+                                                            >
+                                                                <OpenInNewIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                        <Tooltip title={t('common.download', 'Скачать')}>
+                                                            <IconButton
+                                                                component="a"
+                                                                href={buildDocumentReviewFileUrl(fileUrl, true)}
+                                                                size="small"
+                                                            >
+                                                                <CloudDownloadOutlinedIcon fontSize="small" />
+                                                            </IconButton>
+                                                        </Tooltip>
                                                     </Stack>
                                                 </Stack>
                                             ))}
