@@ -520,21 +520,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             return;
         }
         if (hasCustomStructure && !activeFolderId) {
-            setUploadError(
-                t(
-                    'reports.upload.folders.error.rootDisabled',
-                    'Для кастомной структуры загрузка в корень БС недоступна. Выберите конечную папку.'
-                )
-            );
             return;
         }
         if (hasCustomStructure && activeFolderHasChildren) {
-            setUploadError(
-                t(
-                    'reports.upload.folders.error.selectLeaf',
-                    'Загрузка доступна только в конечные папки без подпапок.'
-                )
-            );
             return;
         }
         if (items.length === 0) {
@@ -896,19 +884,41 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         }
         return url.replace(/^\/+/, '');
     };
+    const normalizePathForStorage = (path: string) =>
+        path
+            .split('/')
+            .map((segment) =>
+                segment
+                    .trim()
+                    .replace(/[\\/]/g, '_')
+                    .replace(/\s+/g, '_')
+            )
+            .filter(Boolean)
+            .join('/');
+    const decodeUrlSegment = (segment: string) => {
+        try {
+            return decodeURIComponent(segment);
+        } catch {
+            return segment;
+        }
+    };
+    const activeFolderStoragePath = normalizePathForStorage(activeFolderPath || '');
     const getFolderPathFromFileUrl = (url: string) => {
         const key = extractStorageKey(url);
         if (!key || !activeBase) return '';
-        const segments = key.split('/').filter(Boolean);
+        const segments = key
+            .split('/')
+            .filter(Boolean)
+            .map((segment) => decodeUrlSegment(segment));
         const baseIndex = segments.findIndex((segment) => segment === activeBase);
         if (baseIndex < 0) return '';
         const tail = segments.slice(baseIndex + 1);
         if (tail.length <= 1) return '';
-        return tail.slice(0, -1).join('/');
+        return normalizePathForStorage(tail.slice(0, -1).join('/'));
     };
     const visibleExistingFiles = existingFiles.filter((url) => {
         const folderPath = getFolderPathFromFileUrl(url);
-        return folderPath === (activeFolderPath || '');
+        return folderPath === activeFolderStoragePath;
     });
     const filesCountByFolderPath = (() => {
         const map = new Map<string, number>();
@@ -1193,19 +1203,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                         path: `${activeBase}${activeFolderPath ? ` / ${activeFolderPath}` : ''}`,
                                     })}
                                 </Typography>
-                                {hasCustomStructure && !canUploadToSelectedFolder && (
-                                    <Typography variant="caption" color="warning.main">
-                                        {!activeFolderId
-                                            ? t(
-                                                  'reports.upload.folders.error.rootDisabled',
-                                                  'Для кастомной структуры загрузка в корень БС недоступна. Выберите конечную папку.'
-                                              )
-                                            : t(
-                                                  'reports.upload.folders.error.selectLeaf',
-                                                  'Загрузка доступна только в конечные папки без подпапок.'
-                                              )}
-                                    </Typography>
-                                )}
                             </Stack>
                         )}
                         {existingLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
@@ -1265,7 +1262,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                 </Box>
                             </Stack>
                         )}
-                        {!readOnly && (
+                        {!readOnly && canUploadToSelectedFolder && (
                             <Box
                                 {...getRootProps()}
                                 sx={{
