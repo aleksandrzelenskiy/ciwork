@@ -951,6 +951,13 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const rootFolderCount = existingFiles.length;
     const rootHasFiles = rootFolderCount > 0;
     const totalSelectedBytes = items.reduce((sum, item) => sum + (item.file.size || 0), 0);
+    const activeChildFolderNames = React.useMemo(() => {
+        if (!hasCustomStructure) return [];
+        const children = activeFolderId
+            ? folderTreeChildren.get(activeFolderId) ?? []
+            : folderTreeChildren.get('__root__') ?? [];
+        return children.map((child) => child.name).filter(Boolean);
+    }, [hasCustomStructure, activeFolderId, folderTreeChildren]);
 
     return (
         <Dialog
@@ -1096,6 +1103,15 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                         {uploadError && <Alert severity="error">{uploadError}</Alert>}
                         {folderConfigError && <Alert severity="warning">{folderConfigError}</Alert>}
                         {existingError && <Alert severity="error">{existingError}</Alert>}
+                        {hasCustomStructure && activeChildFolderNames.length > 0 && (
+                            <Alert severity="info">
+                                {t(
+                                    'reports.upload.folders.nestedUploadInfo',
+                                    'Загрузка доступна только во вложенные подпапки по структуре. Выберите одну из подпапок: {folders}.',
+                                    { folders: activeChildFolderNames.join(', ') }
+                                )}
+                            </Alert>
+                        )}
                         {folderConfigLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
                         {folderPaths.length > 0 && (
                             <Stack spacing={0.5}>
