@@ -344,6 +344,13 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         });
         return map;
     }, [folderTreeNodes]);
+    const folderTreeChildCountById = React.useMemo(() => {
+        const map = new Map<string, number>();
+        folderTreeNodes.forEach((node) => {
+            map.set(node.id, (folderTreeChildren.get(node.id) ?? []).length);
+        });
+        return map;
+    }, [folderTreeNodes, folderTreeChildren]);
 
     const folderPathById = React.useMemo(() => {
         const map = new Map<string, string>();
@@ -510,6 +517,24 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         if (readOnly) return;
         if (!activeBase) {
             setUploadError('Выберите папку БС для загрузки фотоотчета');
+            return;
+        }
+        if (hasCustomStructure && !activeFolderId) {
+            setUploadError(
+                t(
+                    'reports.upload.folders.error.rootDisabled',
+                    'Для кастомной структуры загрузка в корень БС недоступна. Выберите конечную папку.'
+                )
+            );
+            return;
+        }
+        if (hasCustomStructure && activeFolderHasChildren) {
+            setUploadError(
+                t(
+                    'reports.upload.folders.error.selectLeaf',
+                    'Загрузка доступна только в конечные папки без подпапок.'
+                )
+            );
             return;
         }
         if (items.length === 0) {
@@ -834,6 +859,13 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const activeFolderId = activeBase ? selectedFolderByBase[activeBase] ?? '' : '';
     const activeFolderPath = activeFolderId ? folderPathById.get(activeFolderId) ?? '' : '';
     const activeTreeNodeId = activeFolderId || 'root';
+    const hasCustomStructure = folderPaths.length > 0;
+    const activeFolderHasChildren = activeFolderId
+        ? (folderTreeChildCountById.get(activeFolderId) ?? 0) > 0
+        : false;
+    const canUploadToSelectedFolder = !hasCustomStructure
+        ? true
+        : Boolean(activeFolderId) && !activeFolderHasChildren;
     const expandedNodeIds = activeBase ? expandedFolderNodesByBase[activeBase] ?? [] : [];
     const effectiveExpandedNodeIds =
         expandedNodeIds.length > 0
@@ -878,6 +910,17 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         const folderPath = getFolderPathFromFileUrl(url);
         return folderPath === (activeFolderPath || '');
     });
+    const filesCountByFolderPath = (() => {
+        const map = new Map<string, number>();
+        existingFiles.forEach((url) => {
+            const folderPath = getFolderPathFromFileUrl(url);
+            map.set(folderPath, (map.get(folderPath) ?? 0) + 1);
+        });
+        return map;
+    })();
+    const getFolderCount = (folderId: string) =>
+        filesCountByFolderPath.get(folderPathById.get(folderId) ?? '') ?? 0;
+    const rootFolderCount = filesCountByFolderPath.get('') ?? 0;
     const totalSelectedBytes = items.reduce((sum, item) => sum + (item.file.size || 0), 0);
 
     return (
@@ -1016,6 +1059,11 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                 ? `Просмотр фото для БС ${activeBase}.`
                                 : `Загружайте фото для БС ${activeBase}.`}
                         </Typography>
+                        {taskName && (
+                            <Typography variant="caption" color="text.secondary">
+                                Задача: {taskName}
+                            </Typography>
+                        )}
                         {uploadError && <Alert severity="error">{uploadError}</Alert>}
                         {folderConfigError && <Alert severity="warning">{folderConfigError}</Alert>}
                         {existingError && <Alert severity="error">{existingError}</Alert>}
@@ -1045,11 +1093,24 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                             }
                                             sx={{ borderRadius: 1.5, mx: 0.5 }}
                                         >
-                                            <ListItemIcon sx={{ minWidth: 28 }}>
-                                                <FolderOutlinedIcon fontSize="small" />
-                                            </ListItemIcon>
                                             <ListItemText
-                                                primary={t('reports.upload.folders.root', 'Корень БС')}
+                                                primary={
+                                                    <Stack direction="row" spacing={0.75} alignItems="center">
+                                                        <FolderOutlinedIcon fontSize="small" />
+                                                        <Typography variant="body2">
+                                                            {activeBase ||
+                                                                t('reports.upload.folders.root', 'Корень БС')}
+                                                        </Typography>
+                                                        {rootFolderCount > 0 && (
+                                                            <Typography
+                                                                variant="body2"
+                                                                sx={{ color: 'primary.main', fontWeight: 600 }}
+                                                            >
+                                                                ({rootFolderCount})
+                                                            </Typography>
+                                                        )}
+                                                    </Stack>
+                                                }
                                             />
                                         </ListItemButton>
                                         {(folderTreeChildren.get('__root__') ?? []).map((rootNode) => {
@@ -1076,25 +1137,40 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                             }}
                                                         >
                                                             <ListItemIcon sx={{ minWidth: 28 }}>
-                                                                {children.length > 0 ? (
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        onClick={(event) => {
-                                                                            event.stopPropagation();
-                                                                            toggleNodeExpanded(node.id);
-                                                                        }}
-                                                                    >
-                                                                        {expanded ? (
-                                                                            <ExpandMoreIcon fontSize="small" />
-                                                                        ) : (
-                                                                            <ChevronRightIcon fontSize="small" />
-                                                                        )}
-                                                                    </IconButton>
-                                                                ) : (
+                                                                <Stack direction="row" alignItems="center" spacing={0.25}>
                                                                     <FolderOutlinedIcon fontSize="small" />
-                                                                )}
+                                                                    {children.length > 0 && (
+                                                                        <IconButton
+                                                                            size="small"
+                                                                            onClick={(event) => {
+                                                                                event.stopPropagation();
+                                                                                toggleNodeExpanded(node.id);
+                                                                            }}
+                                                                        >
+                                                                            {expanded ? (
+                                                                                <ExpandMoreIcon fontSize="small" />
+                                                                            ) : (
+                                                                                <ChevronRightIcon fontSize="small" />
+                                                                            )}
+                                                                        </IconButton>
+                                                                    )}
+                                                                </Stack>
                                                             </ListItemIcon>
-                                                            <ListItemText primary={node.name} />
+                                                            <ListItemText
+                                                                primary={
+                                                                    <Stack direction="row" spacing={0.75} alignItems="center">
+                                                                        <Typography variant="body2">{node.name}</Typography>
+                                                                        {getFolderCount(node.id) > 0 && (
+                                                                            <Typography
+                                                                                variant="body2"
+                                                                                sx={{ color: 'primary.main', fontWeight: 600 }}
+                                                                            >
+                                                                                ({getFolderCount(node.id)})
+                                                                            </Typography>
+                                                                        )}
+                                                                    </Stack>
+                                                                }
+                                                            />
                                                         </ListItemButton>
                                                         {children.length > 0 && (
                                                             <Collapse in={expanded} timeout="auto" unmountOnExit>
@@ -1117,36 +1193,21 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                         path: `${activeBase}${activeFolderPath ? ` / ${activeFolderPath}` : ''}`,
                                     })}
                                 </Typography>
+                                {hasCustomStructure && !canUploadToSelectedFolder && (
+                                    <Typography variant="caption" color="warning.main">
+                                        {!activeFolderId
+                                            ? t(
+                                                  'reports.upload.folders.error.rootDisabled',
+                                                  'Для кастомной структуры загрузка в корень БС недоступна. Выберите конечную папку.'
+                                              )
+                                            : t(
+                                                  'reports.upload.folders.error.selectLeaf',
+                                                  'Загрузка доступна только в конечные папки без подпапок.'
+                                              )}
+                                    </Typography>
+                                )}
                             </Stack>
                         )}
-                        {!readOnly && (
-                            <Box
-                                {...getRootProps()}
-                                sx={{
-                                    border: '1.5px dashed',
-                                    borderColor: isDragActive ? 'primary.main' : 'rgba(15, 23, 42, 0.2)',
-                                    borderRadius: 4,
-                                    p: 3,
-                                    textAlign: 'center',
-                                    background:
-                                        'linear-gradient(140deg, rgba(255,255,255,0.8), rgba(236,242,249,0.92))',
-                                    transition: 'all 0.2s ease',
-                                    cursor: uploading ? 'not-allowed' : 'pointer',
-                                    opacity: uploading ? 0.6 : 1,
-                                }}
-                            >
-                                <input {...getInputProps()} disabled={uploading} />
-                                <CloudUploadIcon fontSize="large" color="action" />
-                                <Typography variant="h6" sx={{ mt: 1, mb: 0.5, fontWeight: 600 }}>
-                                    Перетащите фото или нажмите, чтобы выбрать
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    До {MAX_FILE_SIZE_MB} МБ каждое. Партия до {MAX_BATCH_FILES} файлов или{' '}
-                                    {MAX_BATCH_MB} МБ.
-                                </Typography>
-                            </Box>
-                        )}
-
                         {existingLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
                         {visibleExistingFiles.length > 0 && (
                             <Stack spacing={1}>
@@ -1204,6 +1265,34 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                 </Box>
                             </Stack>
                         )}
+                        {!readOnly && (
+                            <Box
+                                {...getRootProps()}
+                                sx={{
+                                    border: '1.5px dashed',
+                                    borderColor: isDragActive ? 'primary.main' : 'rgba(15, 23, 42, 0.2)',
+                                    borderRadius: 4,
+                                    p: 3,
+                                    textAlign: 'center',
+                                    background:
+                                        'linear-gradient(140deg, rgba(255,255,255,0.8), rgba(236,242,249,0.92))',
+                                    transition: 'all 0.2s ease',
+                                    cursor: uploading ? 'not-allowed' : 'pointer',
+                                    opacity: uploading ? 0.6 : 1,
+                                }}
+                            >
+                                <input {...getInputProps()} disabled={uploading} />
+                                <CloudUploadIcon fontSize="large" color="action" />
+                                <Typography variant="h6" sx={{ mt: 1, mb: 0.5, fontWeight: 600 }}>
+                                    Перетащите фото или нажмите, чтобы выбрать
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    До {MAX_FILE_SIZE_MB} МБ каждое. Партия до {MAX_BATCH_FILES} файлов или{' '}
+                                    {MAX_BATCH_MB} МБ.
+                                </Typography>
+                            </Box>
+                        )}
+
 
                         {!readOnly && items.length > 0 && (
                             <Box
@@ -1325,11 +1414,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                             </Typography>
                         )}
 
-                        {taskName && (
-                            <Typography variant="caption" color="text.secondary">
-                                Задача: {taskName}
-                            </Typography>
-                        )}
                     </>
                 )}
             </DialogContent>
@@ -1377,7 +1461,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                             <Button
                                 variant="contained"
                                 onClick={() => void handleUpload()}
-                                disabled={uploading || items.length === 0}
+                                disabled={uploading || items.length === 0 || !canUploadToSelectedFolder}
                                 startIcon={<CloudUploadIcon />}
                                 sx={{
                                     textTransform: 'none',
