@@ -20,7 +20,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import Link from 'next/link';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ReportHeader from '@/features/reports/ReportHeader';
 import ReportGallery from '@/features/reports/ReportGallery';
 import ReportIssuesPanel from '@/features/reports/ReportIssuesPanel';
@@ -54,6 +54,7 @@ type ReportPayload = {
 
 export default function PhotoReportPage() {
     const { t } = useI18n();
+    const router = useRouter();
     const { taskId, baseId } = useParams() as { taskId: string; baseId: string };
     const searchParams = useSearchParams();
     const token = searchParams?.get('token')?.trim() || '';
@@ -73,6 +74,8 @@ export default function PhotoReportPage() {
     const [approving, setApproving] = React.useState(false);
     const [downloading, setDownloading] = React.useState(false);
     const [submitting, setSubmitting] = React.useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+    const [deleting, setDeleting] = React.useState(false);
     const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
     const [profileOpen, setProfileOpen] = React.useState(false);
 
@@ -287,6 +290,28 @@ export default function PhotoReportPage() {
         }
     };
 
+    const handleDeleteReport = async () => {
+        if (deleting) return;
+        setDeleting(true);
+        try {
+            const response = await fetch(`/api/reports/${taskId}/${baseId}${tokenParam}`, {
+                method: 'DELETE',
+            });
+            const payload = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+            if (!response.ok) {
+                showAlert(payload.error || t('reports.error.delete', 'Не удалось удалить фотоотчет'), 'error');
+                return;
+            }
+            setDeleteDialogOpen(false);
+            showAlert(payload.message || t('reports.delete.success', 'Фотоотчет удален'), 'success');
+            router.push(token ? `/reports?token=${encodeURIComponent(token)}` : '/reports');
+        } catch {
+            showAlert(t('reports.error.delete', 'Не удалось удалить фотоотчет'), 'error');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" mt={6}>
@@ -371,10 +396,13 @@ export default function PhotoReportPage() {
                             canEdit={canEditReport}
                             canSubmit={canEditReport}
                             submitLoading={submitting}
+                            canDelete={canEditReport}
+                            deleteLoading={deleting}
                             onApprove={handleApproveRequest}
                             onUploadFix={() => setFixDialogOpen(true)}
                             onEdit={() => setEditDialogOpen(true)}
                             onSubmit={() => void handleSubmitReport()}
+                            onDelete={() => setDeleteDialogOpen(true)}
                         />
                         <Box
                             sx={(theme) => ({
@@ -453,6 +481,46 @@ export default function PhotoReportPage() {
                 readOnly={!canEditReport}
                 initialBaseId={baseId}
             />
+            <Dialog
+                open={deleteDialogOpen}
+                onClose={() => {
+                    if (!deleting) setDeleteDialogOpen(false);
+                }}
+                aria-labelledby="report-delete-title"
+                aria-describedby="report-delete-description"
+            >
+                <DialogTitle id="report-delete-title">
+                    {t('reports.delete.title', 'Удалить фотоотчет')}
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="report-delete-description">
+                        {t(
+                            'reports.delete.description',
+                            'Фотоотчет будет удален без возможности восстановления. Продолжить?'
+                        )}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={() => setDeleteDialogOpen(false)}
+                        disabled={deleting}
+                        sx={{ textTransform: 'none' }}
+                    >
+                        {t('common.cancel', 'Отмена')}
+                    </Button>
+                    <Button
+                        onClick={() => void handleDeleteReport()}
+                        variant="contained"
+                        color="error"
+                        disabled={deleting}
+                        sx={{ textTransform: 'none' }}
+                    >
+                        {deleting
+                            ? t('reports.actions.deleteLoading', 'Удаление…')
+                            : t('reports.actions.delete', 'Удалить')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
             <Dialog
                 open={approveDialogOpen}
                 onClose={() => setApproveDialogOpen(false)}

@@ -11,8 +11,13 @@ import UserModel from '@/server/models/UserModel';
 import { createNotification } from '@/server/notifications/service';
 import { GetUserContext } from '@/server-actions/user-context';
 import { getAggregatedReportStatus } from '@/server-actions/reportService';
+import { sendEmail } from '@/server/email/mailer';
+import { getServerEnv } from '@/config/env';
 import { mapRoleToLegacy } from '@/utils/roleMapping';
-import { verifyInitiatorAccessToken } from '@/utils/initiatorAccessToken';
+import {
+    signInitiatorAccessToken,
+    verifyInitiatorAccessToken,
+} from '@/utils/initiatorAccessToken';
 import {
     deleteStoragePrefix,
     deleteTaskFile,
@@ -388,7 +393,9 @@ export const deleteReport = async ({ taskId, baseId }: ReportParams) => {
     }
 
     const taskRecord = await TaskModel.findOne({ taskId: taskIdDecoded })
-        .select('orgId projectId taskName bsNumber')
+        .select(
+            'taskId orgId projectId taskName bsNumber authorId executorId authorEmail executorEmail initiatorEmail'
+        )
         .lean();
     const projectId =
         report.projectId?.toString?.() ?? taskRecord?.projectId?.toString?.() ?? null;
@@ -396,7 +403,7 @@ export const deleteReport = async ({ taskId, baseId }: ReportParams) => {
         return { ok: false, error: 'Проект для отчёта не найден', status: 404 } as const;
     }
 
-    const project = await ProjectModel.findById(projectId).select('managers').lean();
+    const project = await ProjectModel.findById(projectId).select('managers name key').lean();
     const managers = Array.isArray(project?.managers) ? project?.managers : [];
     const managesProject = managers.some(
         (manager) =>
@@ -492,6 +499,135 @@ export const deleteReport = async ({ taskId, baseId }: ReportParams) => {
     });
 
     await ReportModel.deleteOne({ _id: report._id });
+
+    const actorName =
+        userContext.data.user.name?.trim() ||
+        userContext.data.user.email?.trim() ||
+        'Менеджер проекта';
+    const actorClerkId = userContext.data.user.clerkUserId?.trim() || '';
+    const actorEmail = userContext.data.user.email?.trim().toLowerCase() || '';
+
+    try {
+        const recipientClerkIds = new Set<string>();
+        if (typeof taskRecord?.authorId === 'string' && taskRecord.authorId.trim()) {
+            recipientClerkIds.add(taskRecord.authorId.trim());
+        }
+        if (typeof taskRecord?.executorId === 'string' && taskRecord.executorId.trim()) {
+            recipientClerkIds.add(taskRecord.executorId.trim());
+        }
+        if (actorClerkId) {
+            recipientClerkIds.delete(actorClerkId);
+        }
+
+        const recipientsByClerkId = await UserModel.find({
+            clerkUserId: { $in: Array.from(recipientClerkIds) },
+        })
+            .select('_id email')
+            .lean()
+            .exec();
+
+        const notificationTitle = `Фотоотчет удален (БС ${baseIdDecoded})`;
+        const taskTitle = taskRecord?.taskName || taskIdDecoded;
+        const notificationMessage = `${actorName} удалил фотоотчет по задаче «${taskTitle}».`;
+        const notificationLink = `/tasks/${encodeURIComponent(taskIdDecoded.toLowerCase())}`;
+
+        await Promise.all(
+            recipientsByClerkId.map((recipient) =>
+                createNotification({
+                    recipientUserId: recipient._id,
+                    type: 'task_status_change',
+                    title: notificationTitle,
+                    message: notificationMessage,
+                    link: notificationLink,
+                    orgId: report.orgId ?? taskRecord?.orgId ?? undefined,
+                    senderName: actorName,
+                    senderEmail: userContext.data.user.email ?? undefined,
+                    metadata: {
+                        taskId: taskIdDecoded,
+                        baseId: baseIdDecoded,
+                        action: 'report_deleted',
+                    },
+                })
+            )
+        );
+
+        const recipientEmails = new Set<string>();
+        recipientsByClerkId.forEach((recipient) => {
+            if (typeof recipient.email === 'string' && recipient.email.trim()) {
+                recipientEmails.add(recipient.email.trim().toLowerCase());
+            }
+        });
+
+        const directEmails = new Set<string>();
+        if (typeof taskRecord?.authorEmail === 'string' && taskRecord.authorEmail.trim()) {
+            directEmails.add(taskRecord.authorEmail.trim().toLowerCase());
+        }
+        if (typeof taskRecord?.executorEmail === 'string' && taskRecord.executorEmail.trim()) {
+            directEmails.add(taskRecord.executorEmail.trim().toLowerCase());
+        }
+        if (typeof taskRecord?.initiatorEmail === 'string' && taskRecord.initiatorEmail.trim()) {
+            directEmails.add(taskRecord.initiatorEmail.trim().toLowerCase());
+        }
+        managers.forEach((managerEmail) => {
+            if (typeof managerEmail === 'string' && managerEmail.trim()) {
+                directEmails.add(managerEmail.trim().toLowerCase());
+            }
+        });
+        if (actorEmail) {
+            directEmails.delete(actorEmail);
+        }
+
+        const { FRONTEND_URL } = getServerEnv();
+        const frontendUrl = FRONTEND_URL || 'https://ciwork.ru';
+        const projectName = typeof project?.name === 'string' ? project.name.trim() : '';
+        const projectKey = typeof project?.key === 'string' ? project.key.trim() : '';
+        const projectLabel =
+            projectName && projectKey
+                ? `${projectKey} - ${projectName}`
+                : projectName || projectKey || '—';
+        const reportLink = `${frontendUrl}/reports?highlightTaskId=${encodeURIComponent(
+            taskIdDecoded.toLowerCase()
+        )}`;
+
+        const initiatorEmailNormalized =
+            typeof taskRecord?.initiatorEmail === 'string'
+                ? taskRecord.initiatorEmail.trim().toLowerCase()
+                : '';
+        const initiatorAccessLink =
+            initiatorEmailNormalized && taskRecord?.taskId
+                ? `${frontendUrl}/reports?token=${encodeURIComponent(
+                      signInitiatorAccessToken({
+                          taskId: taskRecord.taskId,
+                          email: initiatorEmailNormalized,
+                      })
+                  )}&highlightTaskId=${encodeURIComponent(taskRecord.taskId.toLowerCase())}`
+                : '';
+
+        for (const email of directEmails) {
+            if (recipientEmails.has(email)) continue;
+            const link =
+                email === initiatorEmailNormalized && initiatorAccessLink
+                    ? initiatorAccessLink
+                    : reportLink;
+            await sendEmail({
+                to: email,
+                subject: notificationTitle,
+                text: [
+                    notificationMessage,
+                    `Проект: ${projectLabel}`,
+                    `БС: ${baseIdDecoded}`,
+                    `Ссылка: ${link}`,
+                ].join('\n\n'),
+                html: `
+<p>${notificationMessage}</p>
+<p>Проект: ${projectLabel}</p>
+<p>БС: ${baseIdDecoded}</p>
+<p><a href="${link}">Перейти к задаче</a></p>`,
+            });
+        }
+    } catch (notificationError) {
+        console.error('Failed to notify report deletion', notificationError);
+    }
 
     return { ok: true, data: { message: 'Отчёт успешно удалён' } } as const;
 };
