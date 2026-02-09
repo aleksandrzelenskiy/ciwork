@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+import SendIcon from '@mui/icons-material/Send';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import ReportHeader from '@/features/reports/ReportHeader';
@@ -72,6 +73,7 @@ export default function PhotoReportPage() {
     const [nextBasesDialogOpen, setNextBasesDialogOpen] = React.useState(false);
     const [approving, setApproving] = React.useState(false);
     const [downloading, setDownloading] = React.useState(false);
+    const [submitting, setSubmitting] = React.useState(false);
     const [profileUserId, setProfileUserId] = React.useState<string | null>(null);
     const [profileOpen, setProfileOpen] = React.useState(false);
 
@@ -254,6 +256,37 @@ export default function PhotoReportPage() {
         }
     };
 
+    const handleSubmitReport = async () => {
+        if (!canEditReport) return;
+        if (submitting) return;
+        setSubmitting(true);
+        try {
+            const response = await fetch('/api/reports/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    taskId: report.taskId,
+                    baseIds: baseOptions,
+                }),
+            });
+            const payload = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+            if (!response.ok) {
+                showAlert(payload.error || t('reports.error.submit', 'Не удалось отправить фотоотчет'), 'error');
+                return;
+            }
+            showAlert(
+                payload.message || t('reports.upload.submit.success', 'Фотоотчет отправлен менеджеру'),
+                'success',
+            );
+            await fetchReport();
+            await refreshReportSummaries();
+        } catch {
+            showAlert(t('reports.error.submit', 'Не удалось отправить фотоотчет'), 'error');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" mt={6}>
@@ -340,6 +373,22 @@ export default function PhotoReportPage() {
                             onUploadFix={() => setFixDialogOpen(true)}
                             onEdit={() => setEditDialogOpen(true)}
                         />
+                        {canEditReport && (
+                            <Box sx={{ mt: { xs: 2.5, md: 1.5 }, pt: { xs: 1.5, md: 1 } }}>
+                                <Button
+                                    fullWidth
+                                    variant="contained"
+                                    onClick={() => void handleSubmitReport()}
+                                    disabled={submitting}
+                                    startIcon={<SendIcon />}
+                                    sx={{ borderRadius: UI_RADIUS.pill, textTransform: 'none' }}
+                                >
+                                    {submitting
+                                        ? t('reports.submit.loading', 'Отправка…')
+                                        : t('reports.submit.action', 'Отправить')}
+                                </Button>
+                            </Box>
+                        )}
                         <Box
                             sx={(theme) => ({
                                 borderRadius: UI_RADIUS.tooltip,

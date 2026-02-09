@@ -26,6 +26,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CloseIcon from '@mui/icons-material/Close';
+import FolderIcon from '@mui/icons-material/Folder';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -928,11 +929,27 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         });
         return map;
     })();
-    const getFolderCount = (folderId: string) =>
-        filesCountByFolderPath.get(
-            normalizePathForStorage(folderPathById.get(folderId) ?? '')
-        ) ?? 0;
+    const folderSubtreeCountById = React.useMemo(() => {
+        const memo = new Map<string, number>();
+        const countNode = (folderId: string): number => {
+            if (memo.has(folderId)) return memo.get(folderId) ?? 0;
+            const ownPath = normalizePathForStorage(folderPathById.get(folderId) ?? '');
+            let total = filesCountByFolderPath.get(ownPath) ?? 0;
+            const children = folderTreeChildren.get(folderId) ?? [];
+            children.forEach((child) => {
+                total += countNode(child.id);
+            });
+            memo.set(folderId, total);
+            return total;
+        };
+        folderTreeNodes.forEach((node) => {
+            countNode(node.id);
+        });
+        return memo;
+    }, [filesCountByFolderPath, folderPathById, folderTreeChildren, folderTreeNodes]);
+    const getFolderCount = (folderId: string) => folderSubtreeCountById.get(folderId) ?? 0;
     const rootFolderCount = existingFiles.length;
+    const rootHasFiles = rootFolderCount > 0;
     const totalSelectedBytes = items.reduce((sum, item) => sum + (item.file.size || 0), 0);
 
     return (
@@ -1103,13 +1120,29 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                     [activeBase]: '',
                                                 }))
                                             }
-                                            sx={{ borderRadius: 1.5, mx: 0.5 }}
+                                            sx={{
+                                                borderRadius: 1.5,
+                                                mx: 0.5,
+                                                border: '1px solid',
+                                                borderColor: rootHasFiles ? 'primary.main' : 'transparent',
+                                                bgcolor: rootHasFiles ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                                            }}
                                         >
                                             <ListItemText
                                                 primary={
                                                     <Stack direction="row" spacing={0.75} alignItems="center">
-                                                        <FolderOutlinedIcon fontSize="small" />
-                                                        <Typography variant="body2">
+                                                        {rootHasFiles ? (
+                                                            <FolderIcon fontSize="small" color="primary" />
+                                                        ) : (
+                                                            <FolderOutlinedIcon fontSize="small" color="action" />
+                                                        )}
+                                                        <Typography
+                                                            variant="body2"
+                                                            sx={{
+                                                                color: rootHasFiles ? 'primary.main' : 'text.primary',
+                                                                fontWeight: rootHasFiles ? 600 : 500,
+                                                            }}
+                                                        >
                                                             {activeBase ||
                                                                 t('reports.upload.folders.root', 'Корень БС')}
                                                         </Typography>
@@ -1131,6 +1164,8 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                 depth: number
                                             ): React.ReactNode => {
                                                 const children = folderTreeChildren.get(node.id) ?? [];
+                                                const nodeCount = getFolderCount(node.id);
+                                                const nodeHasFiles = nodeCount > 0;
                                                 const expanded = isNodeExpanded(node.id);
                                                 return (
                                                     <React.Fragment key={node.id}>
@@ -1146,11 +1181,25 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                                 borderRadius: 1.5,
                                                                 mx: 0.5,
                                                                 pl: 1 + depth * 2,
+                                                                border: '1px solid',
+                                                                borderColor: nodeHasFiles
+                                                                    ? 'primary.main'
+                                                                    : 'transparent',
+                                                                bgcolor: nodeHasFiles
+                                                                    ? 'rgba(25, 118, 210, 0.08)'
+                                                                    : 'transparent',
                                                             }}
                                                         >
                                                             <ListItemIcon sx={{ minWidth: 28 }}>
                                                                 <Stack direction="row" alignItems="center" spacing={0.25}>
-                                                                    <FolderOutlinedIcon fontSize="small" />
+                                                                    {nodeHasFiles ? (
+                                                                        <FolderIcon fontSize="small" color="primary" />
+                                                                    ) : (
+                                                                        <FolderOutlinedIcon
+                                                                            fontSize="small"
+                                                                            color="action"
+                                                                        />
+                                                                    )}
                                                                     {children.length > 0 && (
                                                                         <IconButton
                                                                             size="small"
@@ -1171,13 +1220,23 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                             <ListItemText
                                                                 primary={
                                                                     <Stack direction="row" spacing={0.75} alignItems="center">
-                                                                        <Typography variant="body2">{node.name}</Typography>
-                                                                        {getFolderCount(node.id) > 0 && (
+                                                                        <Typography
+                                                                            variant="body2"
+                                                                            sx={{
+                                                                                color: nodeHasFiles
+                                                                                    ? 'primary.main'
+                                                                                    : 'text.primary',
+                                                                                fontWeight: nodeHasFiles ? 600 : 500,
+                                                                            }}
+                                                                        >
+                                                                            {node.name}
+                                                                        </Typography>
+                                                                        {nodeCount > 0 && (
                                                                             <Typography
                                                                                 variant="body2"
                                                                                 sx={{ color: 'primary.main', fontWeight: 600 }}
                                                                             >
-                                                                                ({getFolderCount(node.id)})
+                                                                                ({nodeCount})
                                                                             </Typography>
                                                                         )}
                                                                     </Stack>
