@@ -62,7 +62,9 @@ export async function GET(request: NextRequest) {
         (await findProjectByRef(taskProjectKey));
 
     if (!project) {
-        const report = await ReportModel.findOne({ taskId }).select('projectId').lean();
+        const report = await ReportModel.findOne({ taskId })
+            .select('projectId')
+            .lean<{ projectId?: unknown } | null>();
         const reportProjectRef = normalizeProjectRef(report?.projectId);
         project = await findProjectByRef(reportProjectRef);
     }
