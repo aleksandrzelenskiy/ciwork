@@ -259,13 +259,14 @@ export default function PhotoReportPage() {
     const handleSubmitReport = async () => {
         if (!canEditReport) return;
         if (submitting) return;
+        const reportTaskId = report?.taskId ?? taskId;
         setSubmitting(true);
         try {
             const response = await fetch('/api/reports/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    taskId: report.taskId,
+                    taskId: reportTaskId,
                     baseIds: baseOptions,
                 }),
             });
