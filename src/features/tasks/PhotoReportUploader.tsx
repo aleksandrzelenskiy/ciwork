@@ -971,13 +971,19 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                     defaultExpandIcon={<ChevronRightIcon fontSize="small" />}
                                     selected={activeTreeNodeId}
                                     expanded={expandedNodeIds}
-                                    onNodeToggle={(_event, nodeIds) => {
+                                    onNodeToggle={(
+                                        _event: React.SyntheticEvent<Element, Event>,
+                                        nodeIds: string[]
+                                    ) => {
                                         setExpandedFolderNodesByBase((prev) => ({
                                             ...prev,
                                             [activeBase]: nodeIds,
                                         }));
                                     }}
-                                    onNodeSelect={(_event, nodeId) => {
+                                    onNodeSelect={(
+                                        _event: React.SyntheticEvent<Element, Event>,
+                                        nodeId: string
+                                    ) => {
                                         setSelectedFolderByBase((prev) => ({
                                             ...prev,
                                             [activeBase]: nodeId === 'root' ? '' : nodeId,
