@@ -66,6 +66,12 @@ type TreeNode = {
     parentId: string | null;
 };
 
+type FolderNodeOption = {
+    id: string;
+    name: string;
+    parentId?: string | null;
+};
+
 type PhotoReportUploaderProps = {
     open: boolean;
     onClose: () => void;
@@ -209,6 +215,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             );
             const data = (await res.json().catch(() => ({}))) as {
                 folderPaths?: FolderPathOption[];
+                folders?: FolderNodeOption[];
                 error?: string;
             };
             if (!res.ok) {
@@ -222,7 +229,39 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 setFolderPaths([]);
                 return;
             }
-            setFolderPaths(Array.isArray(data.folderPaths) ? data.folderPaths : []);
+            const directPaths = Array.isArray(data.folderPaths) ? data.folderPaths : [];
+            if (directPaths.length > 0) {
+                setFolderPaths(directPaths);
+                return;
+            }
+            const folders = Array.isArray(data.folders) ? data.folders : [];
+            if (folders.length === 0) {
+                setFolderPaths([]);
+                return;
+            }
+            const byId = new Map(folders.map((item) => [item.id, item]));
+            const resolvePath = (id: string) => {
+                const parts: string[] = [];
+                const visited = new Set<string>();
+                let current = byId.get(id);
+                while (current) {
+                    if (visited.has(current.id)) break;
+                    visited.add(current.id);
+                    parts.unshift((current.name || '').trim());
+                    const parentId =
+                        typeof current.parentId === 'string' && current.parentId.trim()
+                            ? current.parentId.trim()
+                            : '';
+                    if (!parentId) break;
+                    current = byId.get(parentId);
+                }
+                return parts.filter(Boolean).join('/');
+            };
+            setFolderPaths(
+                folders
+                    .map((item) => ({ id: item.id, path: resolvePath(item.id) }))
+                    .filter((item) => item.id && item.path)
+            );
         } catch (error) {
             setFolderConfigError(
                 error instanceof Error
@@ -793,6 +832,10 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const activeFolderPath = activeFolderId ? folderPathById.get(activeFolderId) ?? '' : '';
     const activeTreeNodeId = activeFolderId || 'root';
     const expandedNodeIds = activeBase ? expandedFolderNodesByBase[activeBase] ?? [] : [];
+    const effectiveExpandedNodeIds =
+        expandedNodeIds.length > 0
+            ? expandedNodeIds
+            : ['root', ...folderTreeNodes.map((node) => node.id)];
     const extractStorageKey = (url: string) => {
         if (!url) return '';
         if (/^https?:\/\//i.test(url)) {
@@ -970,7 +1013,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                     defaultCollapseIcon={<ExpandMoreIcon fontSize="small" />}
                                     defaultExpandIcon={<ChevronRightIcon fontSize="small" />}
                                     selected={activeTreeNodeId}
-                                    expanded={expandedNodeIds}
+                                    expanded={effectiveExpandedNodeIds}
                                     onNodeToggle={(
                                         _event: React.SyntheticEvent<Element, Event>,
                                         nodeIds: string[]
