@@ -16,8 +16,6 @@ import {
     Paper,
     Stack,
     Typography,
-    TextField,
-    MenuItem,
     useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -28,7 +26,11 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useDropzone } from 'react-dropzone';
+import TreeView from '@mui/lab/TreeView';
+import TreeItem from '@mui/lab/TreeItem';
 import type { PhotoReport } from '@/app/types/taskTypes';
 import { withBasePath } from '@/utils/basePath';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -56,6 +58,12 @@ type FolderState = {
 type FolderPathOption = {
     id: string;
     path: string;
+};
+
+type TreeNode = {
+    id: string;
+    name: string;
+    parentId: string | null;
 };
 
 type PhotoReportUploaderProps = {
@@ -121,6 +129,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const [folderConfigLoading, setFolderConfigLoading] = React.useState(false);
     const [folderPaths, setFolderPaths] = React.useState<FolderPathOption[]>([]);
     const [selectedFolderByBase, setSelectedFolderByBase] = React.useState<Record<string, string>>({});
+    const [expandedFolderNodesByBase, setExpandedFolderNodesByBase] = React.useState<Record<string, string[]>>({});
 
     const theme = useTheme();
     const { t } = useI18n();
@@ -183,6 +192,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setExistingFilesByBase(initialExistingFilesByBase);
         setFolderPaths([]);
         setSelectedFolderByBase({});
+        setExpandedFolderNodesByBase({});
     }, [initialExistingFilesByBase, initialFolderState]);
 
     const loadFolderConfig = React.useCallback(async () => {
@@ -265,6 +275,40 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         [taskId]
     );
 
+    const folderTreeNodes = React.useMemo<TreeNode[]>(() => {
+        if (folderPaths.length === 0) return [];
+        const byPath = new Map(folderPaths.map((item) => [item.path, item.id]));
+        return folderPaths.map((item) => {
+            const segments = item.path.split('/').map((s) => s.trim()).filter(Boolean);
+            const parentPath = segments.length > 1 ? segments.slice(0, -1).join('/') : '';
+            return {
+                id: item.id,
+                name: segments[segments.length - 1] ?? item.path,
+                parentId: parentPath ? byPath.get(parentPath) ?? null : null,
+            };
+        });
+    }, [folderPaths]);
+
+    const folderTreeChildren = React.useMemo(() => {
+        const map = new Map<string, TreeNode[]>();
+        folderTreeNodes.forEach((node) => {
+            const key = node.parentId ?? '__root__';
+            const bucket = map.get(key) ?? [];
+            bucket.push(node);
+            map.set(key, bucket);
+        });
+        map.forEach((nodes) => {
+            nodes.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+        });
+        return map;
+    }, [folderTreeNodes]);
+
+    const folderPathById = React.useMemo(() => {
+        const map = new Map<string, string>();
+        folderPaths.forEach((item) => map.set(item.id, item.path));
+        return map;
+    }, [folderPaths]);
+
     React.useEffect(() => {
         if (open) {
             setAutoClosed(false);
@@ -278,6 +322,19 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             }
         }
     }, [open, resetState, initialBaseId, loadExistingFiles, loadFolderConfig]);
+
+    React.useEffect(() => {
+        if (!activeBase || view !== 'upload') return;
+        setExpandedFolderNodesByBase((prev) => {
+            if (prev[activeBase] && prev[activeBase].length > 0) {
+                return prev;
+            }
+            return {
+                ...prev,
+                [activeBase]: ['root', ...folderTreeNodes.map((node) => node.id)],
+            };
+        });
+    }, [activeBase, view, folderTreeNodes]);
 
     React.useEffect(() => {
         if (!open && !uploading && !submitLoading) {
@@ -634,11 +691,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setExistingError(null);
         setFolderAlert(null);
         setView('upload');
-        setSelectedFolderByBase((prev) =>
-            Object.prototype.hasOwnProperty.call(prev, baseId)
-                ? prev
-                : { ...prev, [baseId]: '' }
-        );
+        setSelectedFolderByBase((prev) => ({ ...prev, [baseId]: prev[baseId] ?? '' }));
+        const defaultExpanded = ['root', ...folderTreeNodes.map((node) => node.id)];
+        setExpandedFolderNodesByBase((prev) => ({ ...prev, [baseId]: defaultExpanded }));
         void loadExistingFiles(baseId);
     };
 
@@ -735,10 +790,35 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
 
     const existingFiles = activeBase ? existingFilesByBase[activeBase] ?? [] : [];
     const activeFolderId = activeBase ? selectedFolderByBase[activeBase] ?? '' : '';
-    const activeFolderPath =
-        activeFolderId && folderPaths.length > 0
-            ? folderPaths.find((item) => item.id === activeFolderId)?.path ?? ''
-            : '';
+    const activeFolderPath = activeFolderId ? folderPathById.get(activeFolderId) ?? '' : '';
+    const activeTreeNodeId = activeFolderId || 'root';
+    const expandedNodeIds = activeBase ? expandedFolderNodesByBase[activeBase] ?? [] : [];
+    const extractStorageKey = (url: string) => {
+        if (!url) return '';
+        if (/^https?:\/\//i.test(url)) {
+            try {
+                const parsed = new URL(url);
+                return parsed.pathname.replace(/^\/+/, '');
+            } catch {
+                return '';
+            }
+        }
+        return url.replace(/^\/+/, '');
+    };
+    const getFolderPathFromFileUrl = (url: string) => {
+        const key = extractStorageKey(url);
+        if (!key || !activeBase) return '';
+        const segments = key.split('/').filter(Boolean);
+        const baseIndex = segments.findIndex((segment) => segment === activeBase);
+        if (baseIndex < 0) return '';
+        const tail = segments.slice(baseIndex + 1);
+        if (tail.length <= 1) return '';
+        return tail.slice(0, -1).join('/');
+    };
+    const visibleExistingFiles = existingFiles.filter((url) => {
+        const folderPath = getFolderPathFromFileUrl(url);
+        return folderPath === (activeFolderPath || '');
+    });
     const totalSelectedBytes = items.reduce((sum, item) => sum + (item.file.size || 0), 0);
 
     return (
@@ -883,27 +963,49 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                         {folderConfigLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
                         {folderPaths.length > 0 && (
                             <Stack spacing={0.5}>
-                                <TextField
-                                    select
-                                    label={t('reports.upload.folders.field.label', 'Папка внутри БС')}
-                                    value={activeFolderId}
-                                    onChange={(event) =>
+                                <Typography variant="caption" color="text.secondary">
+                                    {t('reports.upload.folders.treeTitle', 'Структура папок')}
+                                </Typography>
+                                <TreeView
+                                    defaultCollapseIcon={<ExpandMoreIcon fontSize="small" />}
+                                    defaultExpandIcon={<ChevronRightIcon fontSize="small" />}
+                                    selected={activeTreeNodeId}
+                                    expanded={expandedNodeIds}
+                                    onNodeToggle={(_event, nodeIds) => {
+                                        setExpandedFolderNodesByBase((prev) => ({
+                                            ...prev,
+                                            [activeBase]: nodeIds,
+                                        }));
+                                    }}
+                                    onNodeSelect={(_event, nodeId) => {
                                         setSelectedFolderByBase((prev) => ({
                                             ...prev,
-                                            [activeBase]: event.target.value,
-                                        }))
-                                    }
-                                    size="small"
+                                            [activeBase]: nodeId === 'root' ? '' : nodeId,
+                                        }));
+                                    }}
+                                    sx={{
+                                        border: '1px solid rgba(15,23,42,0.1)',
+                                        borderRadius: 2,
+                                        p: 1,
+                                        background: 'rgba(255,255,255,0.55)',
+                                    }}
                                 >
-                                    <MenuItem value="">
-                                        {t('reports.upload.folders.root', 'Корень БС')}
-                                    </MenuItem>
-                                    {folderPaths.map((item) => (
-                                        <MenuItem key={item.id} value={item.id}>
-                                            {item.path}
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
+                                    <TreeItem
+                                        nodeId="root"
+                                        label={t('reports.upload.folders.root', 'Корень БС')}
+                                    >
+                                        {(folderTreeChildren.get('__root__') ?? []).map((node) => {
+                                            const renderNode = (current: TreeNode): React.ReactNode => (
+                                                <TreeItem key={current.id} nodeId={current.id} label={current.name}>
+                                                    {(folderTreeChildren.get(current.id) ?? []).map((child) =>
+                                                        renderNode(child)
+                                                    )}
+                                                </TreeItem>
+                                            );
+                                            return renderNode(node);
+                                        })}
+                                    </TreeItem>
+                                </TreeView>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('reports.upload.folders.path', 'Путь загрузки: {path}', {
                                         path: `${activeBase}${activeFolderPath ? ` / ${activeFolderPath}` : ''}`,
@@ -940,7 +1042,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                         )}
 
                         {existingLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
-                        {existingFiles.length > 0 && (
+                        {visibleExistingFiles.length > 0 && (
                             <Stack spacing={1}>
                                 <Typography variant="subtitle2" fontWeight={600}>
                                     Уже загружено
@@ -952,7 +1054,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                         gap: 1.5,
                                     }}
                                 >
-                                    {existingFiles.map((url) => (
+                                    {visibleExistingFiles.map((url) => (
                                         <Box
                                             key={url}
                                             sx={{

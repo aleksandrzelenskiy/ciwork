@@ -289,6 +289,7 @@ const enMessages: Record<string, string> = {
     'reports.upload.dialog.titleWithBase': 'Photo report — {baseId}',
     'reports.upload.folders.error.load': 'Failed to load folder structure',
     'reports.upload.folders.field.label': 'Folder inside BS',
+    'reports.upload.folders.treeTitle': 'Folder structure',
     'reports.upload.folders.root': 'BS root',
     'reports.upload.folders.path': 'Upload path: {path}',
     'reports.upload.submit.success': 'Photo report sent to manager',

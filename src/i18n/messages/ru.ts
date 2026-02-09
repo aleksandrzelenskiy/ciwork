@@ -288,6 +288,7 @@ const ruMessages: Record<string, string> = {
     'reports.upload.dialog.titleWithBase': 'Фотоотчет — {baseId}',
     'reports.upload.folders.error.load': 'Не удалось загрузить структуру папок',
     'reports.upload.folders.field.label': 'Папка внутри БС',
+    'reports.upload.folders.treeTitle': 'Структура папок',
     'reports.upload.folders.root': 'Корень БС',
     'reports.upload.folders.path': 'Путь загрузки: {path}',
     'reports.upload.submit.success': 'Фотоотчет отправлен менеджеру',
