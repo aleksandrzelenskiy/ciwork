@@ -1103,15 +1103,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                         {uploadError && <Alert severity="error">{uploadError}</Alert>}
                         {folderConfigError && <Alert severity="warning">{folderConfigError}</Alert>}
                         {existingError && <Alert severity="error">{existingError}</Alert>}
-                        {hasCustomStructure && activeChildFolderNames.length > 0 && (
-                            <Alert severity="info">
-                                {t(
-                                    'reports.upload.folders.nestedUploadInfo',
-                                    'Загрузка доступна только во вложенные подпапки по структуре. Выберите одну из подпапок: {folders}.',
-                                    { folders: activeChildFolderNames.join(', ') }
-                                )}
-                            </Alert>
-                        )}
                         {folderConfigLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
                         {folderPaths.length > 0 && (
                             <Stack spacing={0.5}>
@@ -1136,13 +1127,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                     [activeBase]: '',
                                                 }))
                                             }
-                                            sx={{
-                                                borderRadius: 1.5,
-                                                mx: 0.5,
-                                                border: '1px solid',
-                                                borderColor: rootHasFiles ? 'primary.main' : 'transparent',
-                                                bgcolor: rootHasFiles ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
-                                            }}
+                                            sx={{ borderRadius: 1.5, mx: 0.5 }}
                                         >
                                             <ListItemText
                                                 primary={
@@ -1154,10 +1139,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                         )}
                                                         <Typography
                                                             variant="body2"
-                                                            sx={{
-                                                                color: rootHasFiles ? 'primary.main' : 'text.primary',
-                                                                fontWeight: rootHasFiles ? 600 : 500,
-                                                            }}
+                                                            sx={{ color: 'text.primary', fontWeight: 400 }}
                                                         >
                                                             {activeBase ||
                                                                 t('reports.upload.folders.root', 'Корень БС')}
@@ -1197,13 +1179,6 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                                 borderRadius: 1.5,
                                                                 mx: 0.5,
                                                                 pl: 1 + depth * 2,
-                                                                border: '1px solid',
-                                                                borderColor: nodeHasFiles
-                                                                    ? 'primary.main'
-                                                                    : 'transparent',
-                                                                bgcolor: nodeHasFiles
-                                                                    ? 'rgba(25, 118, 210, 0.08)'
-                                                                    : 'transparent',
                                                             }}
                                                         >
                                                             <ListItemIcon sx={{ minWidth: 28 }}>
@@ -1238,12 +1213,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                                     <Stack direction="row" spacing={0.75} alignItems="center">
                                                                         <Typography
                                                                             variant="body2"
-                                                                            sx={{
-                                                                                color: nodeHasFiles
-                                                                                    ? 'primary.main'
-                                                                                    : 'text.primary',
-                                                                                fontWeight: nodeHasFiles ? 600 : 500,
-                                                                            }}
+                                                                            sx={{ color: 'text.primary', fontWeight: 400 }}
                                                                         >
                                                                             {node.name}
                                                                         </Typography>
@@ -1280,6 +1250,15 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                         path: `${activeBase}${activeFolderPath ? ` / ${activeFolderPath}` : ''}`,
                                     })}
                                 </Typography>
+                                {hasCustomStructure && activeChildFolderNames.length > 0 && (
+                                    <Alert severity="info">
+                                        {t(
+                                            'reports.upload.folders.nestedUploadInfo',
+                                            'Загрузка доступна только во вложенные подпапки по структуре. Выберите одну из подпапок: {folders}.',
+                                            { folders: activeChildFolderNames.join(', ') }
+                                        )}
+                                    </Alert>
+                                )}
                             </Stack>
                         )}
                         {existingLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
