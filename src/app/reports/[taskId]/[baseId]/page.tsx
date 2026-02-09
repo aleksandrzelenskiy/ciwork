@@ -19,7 +19,6 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
-import SendIcon from '@mui/icons-material/Send';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import ReportHeader from '@/features/reports/ReportHeader';
@@ -370,26 +369,13 @@ export default function PhotoReportPage() {
                             canApprove={canApprove}
                             canUploadFix={canUploadFix}
                             canEdit={canEditReport}
+                            canSubmit={canEditReport}
+                            submitLoading={submitting}
                             onApprove={handleApproveRequest}
                             onUploadFix={() => setFixDialogOpen(true)}
                             onEdit={() => setEditDialogOpen(true)}
+                            onSubmit={() => void handleSubmitReport()}
                         />
-                        {canEditReport && (
-                            <Box sx={{ mt: { xs: 2.5, md: 1.5 }, pt: { xs: 1.5, md: 1 } }}>
-                                <Button
-                                    fullWidth
-                                    variant="contained"
-                                    onClick={() => void handleSubmitReport()}
-                                    disabled={submitting}
-                                    startIcon={<SendIcon />}
-                                    sx={{ borderRadius: UI_RADIUS.pill, textTransform: 'none' }}
-                                >
-                                    {submitting
-                                        ? t('reports.submit.loading', 'Отправка…')
-                                        : t('reports.submit.action', 'Отправить')}
-                                </Button>
-                            </Box>
-                        )}
                         <Box
                             sx={(theme) => ({
                                 borderRadius: UI_RADIUS.tooltip,

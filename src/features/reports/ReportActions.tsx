@@ -2,6 +2,7 @@ import { Box, Button, Stack } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import SendIcon from '@mui/icons-material/Send';
 import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportActionsProps = {
@@ -9,9 +10,12 @@ type ReportActionsProps = {
     canApprove: boolean;
     canUploadFix: boolean;
     canEdit: boolean;
+    canSubmit?: boolean;
+    submitLoading?: boolean;
     onApprove: () => void;
     onUploadFix: () => void;
     onEdit: () => void;
+    onSubmit?: () => void;
 };
 
 export default function ReportActions({
@@ -19,14 +23,18 @@ export default function ReportActions({
     canApprove,
     canUploadFix,
     canEdit,
+    canSubmit = false,
+    submitLoading = false,
     onApprove,
     onUploadFix,
     onEdit,
+    onSubmit,
 }: ReportActionsProps) {
     const { t } = useI18n();
     const showApprove = canApprove && status !== 'Agreed';
     const showFixUpload = canUploadFix && (status === 'Issues' || status === 'Fixed');
     const showEdit = canEdit && status !== 'Agreed';
+    const showSubmit = canSubmit && showEdit && typeof onSubmit === 'function';
 
     return (
         <Box
@@ -46,12 +54,25 @@ export default function ReportActions({
             <Stack spacing={1.5}>
                 {showEdit && (
                     <Button
-                        variant="contained"
+                        variant="outlined"
                         startIcon={<EditOutlinedIcon />}
                         onClick={onEdit}
                         sx={{ textTransform: 'none', borderRadius: 999 }}
                     >
                         {t('reports.actions.edit', 'Редактировать')}
+                    </Button>
+                )}
+                {showSubmit && (
+                    <Button
+                        variant="contained"
+                        startIcon={<SendIcon />}
+                        onClick={onSubmit}
+                        disabled={submitLoading}
+                        sx={{ textTransform: 'none', borderRadius: 999 }}
+                    >
+                        {submitLoading
+                            ? t('reports.submit.loading', 'Отправка…')
+                            : t('reports.submit.action', 'Отправить')}
                     </Button>
                 )}
                 {showApprove && (
