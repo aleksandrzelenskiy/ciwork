@@ -16,13 +16,13 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import TopicIcon from '@mui/icons-material/Topic';
-import AddIcon from '@mui/icons-material/Add';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import { RUSSIAN_REGIONS, REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { useI18n } from '@/i18n/I18nProvider';
-import { buildFolderPathMap } from '@/utils/photoReportFolders';
 
 type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
 
@@ -123,8 +123,6 @@ export default function ProjectDialog({
     const [photoReportFolders, setPhotoReportFolders] = React.useState<
         Array<{ id: string; name: string; parentId?: string | null; order?: number }>
     >([]);
-    const [newFolderName, setNewFolderName] = React.useState('');
-    const [newFolderParentId, setNewFolderParentId] = React.useState('');
     const [folderError, setFolderError] = React.useState<string | null>(null);
     const hasInitializedRef = React.useRef(false);
 
@@ -174,8 +172,6 @@ export default function ProjectDialog({
         setPhotoReportFolders(
             Array.isArray(initialData?.photoReportFolders) ? initialData.photoReportFolders : []
         );
-        setNewFolderName('');
-        setNewFolderParentId('');
         setFolderError(null);
     }, [open, initialData, members, resolveRegionCode]);
 
@@ -220,15 +216,6 @@ export default function ProjectDialog({
         },
     };
 
-    const folderPathOptions = React.useMemo(
-        () =>
-            buildFolderPathMap(photoReportFolders).map((item) => ({
-                id: item.id,
-                path: item.path,
-            })),
-        [photoReportFolders]
-    );
-
     const createFolderId = React.useCallback(() => {
         if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
             return crypto.randomUUID();
@@ -236,8 +223,12 @@ export default function ProjectDialog({
         return `folder-${Math.random().toString(36).slice(2)}-${Date.now()}`;
     }, []);
 
-    const addPhotoFolder = React.useCallback(() => {
-        const trimmed = newFolderName.trim();
+    const addPhotoFolder = React.useCallback(
+        (parentId?: string | null) => {
+        const promptValue = window.prompt(
+            t('project.photoFolders.promptName', 'Введите название папки')
+        );
+        const trimmed = (promptValue ?? '').trim();
         if (!trimmed) {
             setFolderError(t('project.photoFolders.error.emptyName', 'Укажите название папки'));
             return;
@@ -254,12 +245,22 @@ export default function ProjectDialog({
             {
                 id: createFolderId(),
                 name: trimmed,
-                parentId: newFolderParentId || null,
+                parentId: parentId || null,
                 order: prev.length,
             },
         ]);
-        setNewFolderName('');
-    }, [createFolderId, newFolderName, newFolderParentId, t]);
+    }, [createFolderId, t]);
+    const childrenByParent = React.useMemo(() => {
+        const map = new Map<string, Array<{ id: string; name: string; parentId?: string | null; order?: number }>>();
+        const ordered = [...photoReportFolders].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        ordered.forEach((folder) => {
+            const key = folder.parentId || '__root__';
+            const arr = map.get(key) ?? [];
+            arr.push(folder);
+            map.set(key, arr);
+        });
+        return map;
+    }, [photoReportFolders]);
 
     const removePhotoFolder = React.useCallback((folderId: string) => {
         setPhotoReportFolders((prev) => {
@@ -290,19 +291,6 @@ export default function ProjectDialog({
         });
     }, []);
 
-    const updatePhotoFolderName = React.useCallback((folderId: string, nextName: string) => {
-        setPhotoReportFolders((prev) =>
-            prev.map((folder) =>
-                folder.id === folderId
-                    ? {
-                          ...folder,
-                          name: nextName,
-                      }
-                    : folder
-            )
-        );
-    }, []);
-
     const handleSubmit = async () => {
         if (isSubmitDisabled) return;
         setSubmitting(true);
@@ -322,14 +310,18 @@ export default function ProjectDialog({
                             .filter((email): email is string => Boolean(email))
                     )
                 ),
-                photoReportFolders: photoReportFolders
-                    .map((folder, index) => ({
-                        id: folder.id,
-                        name: folder.name.trim(),
-                        parentId: folder.parentId ?? null,
-                        order: typeof folder.order === 'number' ? folder.order : index,
-                    }))
-                    .filter((folder) => folder.name.length > 0),
+                ...(projectType === 'installation'
+                    ? {
+                          photoReportFolders: photoReportFolders
+                              .map((folder, index) => ({
+                                  id: folder.id,
+                                  name: folder.name.trim(),
+                                  parentId: folder.parentId ?? null,
+                                  order: typeof folder.order === 'number' ? folder.order : index,
+                              }))
+                              .filter((folder) => folder.name.length > 0),
+                      }
+                    : {}),
             };
             await onSubmit(payload);
         } finally {
@@ -481,6 +473,8 @@ export default function ProjectDialog({
                         )}
                     />
                 </Box>
+                {projectType === 'installation' && (
+                <>
                 <Divider sx={{ my: 2.5 }} />
                 <Stack spacing={1.25}>
                     <Typography variant="subtitle1" fontWeight={600}>
@@ -497,38 +491,16 @@ export default function ProjectDialog({
                             {folderError}
                         </Typography>
                     )}
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                        <TextField
-                            label={t('project.photoFolders.field.name', 'Название папки')}
-                            value={newFolderName}
-                            onChange={(event) => setNewFolderName(event.target.value)}
-                            disabled={busy}
-                            fullWidth
-                            sx={glassInputSx}
-                        />
-                        <TextField
-                            select
-                            label={t('project.photoFolders.field.parent', 'Родитель')}
-                            value={newFolderParentId}
-                            onChange={(event) => setNewFolderParentId(event.target.value)}
-                            disabled={busy}
-                            sx={{ minWidth: 220, ...glassInputSx }}
-                        >
-                            <MenuItem value="">
-                                {t('project.photoFolders.parent.root', 'Корень БС')}
-                            </MenuItem>
-                            {folderPathOptions.map((item) => (
-                                <MenuItem key={item.id} value={item.id}>
-                                    {item.path}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography variant="caption" color="text.secondary">
+                            {t('project.photoFolders.parent.root', 'Корень БС')}
+                        </Typography>
                         <Button
                             variant="outlined"
-                            onClick={addPhotoFolder}
-                            startIcon={<AddIcon />}
+                            onClick={() => addPhotoFolder(null)}
+                            startIcon={<AddCircleOutlineIcon />}
                             disabled={busy}
-                            sx={{ minWidth: 140 }}
+                            sx={{ minWidth: 140, alignSelf: 'flex-start' }}
                         >
                             {t('project.photoFolders.action.add', 'Добавить')}
                         </Button>
@@ -542,25 +514,7 @@ export default function ProjectDialog({
                                 p: 1.25,
                             }}
                         >
-                            <Typography
-                                variant="caption"
-                                color="text.secondary"
-                                sx={{ display: 'block', mb: 1 }}
-                            >
-                                {t('project.photoFolders.parent.root', 'Корень БС')}
-                            </Typography>
                             {(() => {
-                                const ordered = [...photoReportFolders].sort(
-                                    (a, b) => (a.order ?? 0) - (b.order ?? 0)
-                                );
-                                const childrenByParent = new Map<string, typeof ordered>();
-                                ordered.forEach((folder) => {
-                                    const parentKey = folder.parentId || '__root__';
-                                    const arr = childrenByParent.get(parentKey) ?? [];
-                                    arr.push(folder);
-                                    childrenByParent.set(parentKey, arr);
-                                });
-
                                 const renderBranch = (
                                     parentId: string | null,
                                     depth: number
@@ -570,16 +524,21 @@ export default function ProjectDialog({
                                     return nodes.map((folder) => (
                                         <Box key={folder.id} sx={{ ml: depth === 0 ? 0 : 2, mb: 1 }}>
                                             <Stack direction="row" spacing={1} alignItems="center">
-                                                <TextField
-                                                    value={folder.name}
-                                                    onChange={(event) =>
-                                                        updatePhotoFolderName(folder.id, event.target.value)
-                                                    }
-                                                    size="small"
-                                                    fullWidth
+                                                <FolderOutlinedIcon fontSize="small" color="action" />
+                                                <Typography variant="body2" sx={{ flex: 1 }}>
+                                                    {folder.name}
+                                                </Typography>
+                                                <IconButton
+                                                    edge="end"
+                                                    onClick={() => addPhotoFolder(folder.id)}
                                                     disabled={busy}
-                                                    sx={glassInputSx}
-                                                />
+                                                    aria-label={t(
+                                                        'project.photoFolders.action.addChild',
+                                                        'Добавить подпапку'
+                                                    )}
+                                                >
+                                                    <AddCircleOutlineIcon fontSize="small" />
+                                                </IconButton>
                                                 <IconButton
                                                     edge="end"
                                                     onClick={() => removePhotoFolder(folder.id)}
@@ -611,6 +570,8 @@ export default function ProjectDialog({
                         </Typography>
                     )}
                 </Stack>
+                </>
+                )}
             </DialogContent>
             <DialogActions
                 sx={{

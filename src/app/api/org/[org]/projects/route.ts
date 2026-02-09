@@ -248,6 +248,12 @@ export async function POST(
         if (!normalizedFolders.ok) {
             return NextResponse.json({ error: normalizedFolders.error }, { status: 400 });
         }
+        if (projectType !== 'installation' && normalizedFolders.nodes.length > 0) {
+            return NextResponse.json(
+                { error: 'Кастомная структура фотоотчетов доступна только для проектов типа installation' },
+                { status: 400 }
+            );
+        }
 
         const session = await mongoose.startSession();
         let project: ProjectDTO | null = null;

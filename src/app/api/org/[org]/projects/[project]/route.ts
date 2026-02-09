@@ -243,6 +243,15 @@ export async function PATCH(
         }
 
         if (body.photoReportFolders !== undefined) {
+            const projectType = normalizeProjectType(currentProject.projectType) ?? 'installation';
+            if (projectType !== 'installation') {
+                return NextResponse.json(
+                    {
+                        error: 'Кастомная структура фотоотчетов доступна только для проектов типа installation',
+                    },
+                    { status: 400 }
+                );
+            }
             const normalizedFolders = normalizePhotoReportFolders(body.photoReportFolders);
             if (!normalizedFolders.ok) {
                 return NextResponse.json({ error: normalizedFolders.error }, { status: 400 });
