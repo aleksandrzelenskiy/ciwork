@@ -54,6 +54,12 @@ type Project = {
     projectType?: 'installation' | 'document';
     managers?: string[];
     managerEmail?: string;
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
     regionCode: string;
     operator: string;
 };
@@ -464,6 +470,7 @@ export default function OrgProjectsPage() {
                 regionCode: values.regionCode,
                 operator: values.operator,
                 managers: values.managers,
+                photoReportFolders: values.photoReportFolders ?? [],
             };
 
             const projectRef = projectToEdit?.key || projectToEdit?._id;
@@ -932,6 +939,7 @@ export default function OrgProjectsPage() {
                             regionCode: normalizeRegionCode(projectToEdit.regionCode),
                             operator: projectToEdit.operator,
                             managers: projectToEdit.managers ?? [],
+                            photoReportFolders: projectToEdit.photoReportFolders ?? [],
                         }
                         : undefined
                 }
