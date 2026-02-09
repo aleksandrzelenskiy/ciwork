@@ -347,6 +347,7 @@ const ruMessages: Record<string, string> = {
     'market.filters.title': 'Фильтры',
     'market.loading': 'Загружаем задачи…',
     'market.empty': 'Подходящих задач не найдено',
+    'market.specialization.required': 'Чтобы видеть задачи на бирже, выберите специализацию в настройках профиля.',
     'market.card.organization': 'Организация: {value}',
     'market.card.region': 'Регион: {value}',
     'market.card.publicTask': 'Публичная задача',

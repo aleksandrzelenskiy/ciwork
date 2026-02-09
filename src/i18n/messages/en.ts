@@ -347,6 +347,7 @@ const enMessages: Record<string, string> = {
     'market.filters.title': 'Filters',
     'market.loading': 'Loading tasks…',
     'market.empty': 'No matching tasks found',
+    'market.specialization.required': 'To view marketplace tasks, choose a specialization in your profile settings.',
     'market.card.organization': 'Organization: {value}',
     'market.card.region': 'Region: {value}',
     'market.card.publicTask': 'Public task',

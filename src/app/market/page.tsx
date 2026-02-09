@@ -604,6 +604,10 @@ export default function MarketplacePage() {
         Boolean(filters.project) ||
         Boolean(filters.status) ||
         Boolean(filters.taskType);
+    const hasContractorSpecialization = Array.isArray(userContext?.specializations)
+        && userContext.specializations.some((spec) => spec === 'installation' || spec === 'document' || spec === 'construction');
+    const showSpecializationWarning =
+        userContext?.profileType === 'contractor' && !hasContractorSpecialization;
 
     const filteredTasks = tasks.filter((task) => {
         const matchesOrganization = filters.organization
@@ -747,6 +751,14 @@ export default function MarketplacePage() {
         >
             <Stack spacing={2} sx={{ position: 'relative' }}>
                 {contextError && <Alert severity="warning">{contextError}</Alert>}
+                {showSpecializationWarning && (
+                    <Alert severity="info">
+                        {t(
+                            'market.specialization.required',
+                            'Чтобы видеть задачи на бирже, выберите специализацию в настройках профиля.'
+                        )}
+                    </Alert>
+                )}
                 <Stack
                     direction="row"
                     spacing={1.5}

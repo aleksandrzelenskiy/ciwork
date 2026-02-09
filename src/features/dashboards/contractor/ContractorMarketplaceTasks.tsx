@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import {
+    Alert,
     Box,
     Button,
     CircularProgress,
@@ -29,6 +30,11 @@ interface MarketplaceTask {
     createdAt?: string;
 }
 
+interface UserContextPayload {
+    profileType?: 'employer' | 'contractor';
+    specializations?: string[];
+}
+
 const formatBudget = (budget: number | null | undefined, currency: string | undefined, locale: string) => {
     if (!budget) return '—';
     const resolvedCurrency = currency || 'RUB';
@@ -48,8 +54,26 @@ export default function ContractorMarketplaceTasks() {
     const [tasks, setTasks] = useState<MarketplaceTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [needsSpecialization, setNeedsSpecialization] = useState(false);
 
     useEffect(() => {
+        async function fetchUserContext() {
+            try {
+                const res = await fetch(withBasePath('/api/current-user'), { cache: 'no-store' });
+                if (!res.ok) return;
+                const data = (await res.json()) as UserContextPayload;
+                const specs = Array.isArray(data.specializations) ? data.specializations : [];
+                const hasAllowedSpec = specs.some(
+                    (spec) => spec === 'installation' || spec === 'document' || spec === 'construction'
+                );
+                if (data.profileType === 'contractor' && !hasAllowedSpec) {
+                    setNeedsSpecialization(true);
+                }
+            } catch {
+                // Ignore profile read errors here and keep default empty-state behavior.
+            }
+        }
+
         async function fetchTasks() {
             try {
                 const res = await fetch(withBasePath('/api/tasks/public?limit=5'));
@@ -65,7 +89,8 @@ export default function ContractorMarketplaceTasks() {
                 setLoading(false);
             }
         }
-        fetchTasks();
+        void fetchUserContext();
+        void fetchTasks();
     }, [t]);
 
     if (loading) {
@@ -85,6 +110,16 @@ export default function ContractorMarketplaceTasks() {
     }
 
     if (tasks.length === 0) {
+        if (needsSpecialization) {
+            return (
+                <Alert severity='info'>
+                    {t(
+                        'market.specialization.required',
+                        'Чтобы видеть задачи на бирже, выберите специализацию в настройках профиля.'
+                    )}
+                </Alert>
+            );
+        }
         return (
             <Typography textAlign='center' color='text.secondary'>
                 {t('market.empty.newTasks', 'Сейчас нет новых задач на маркетплейсе')}

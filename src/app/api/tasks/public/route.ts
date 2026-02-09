@@ -31,6 +31,11 @@ export async function GET(request: NextRequest) {
     const context = await GetUserContext();
     const currentUserId =
         context.success && context.data?.user?._id ? context.data.user._id.toString() : null;
+    const isContractor = context.success && context.data?.user?.profileType === 'contractor';
+
+    if (!isContractor) {
+        return NextResponse.json({ tasks: [] });
+    }
 
     try {
         await dbConnect();
@@ -74,32 +79,29 @@ export async function GET(request: NextRequest) {
         ];
     }
 
-    if (context.success && context.data?.user?.profileType === 'contractor') {
-        const specs = Array.isArray(context.data.user.specializations)
-            ? (context.data.user.specializations as unknown[])
-            : [];
-        if (specs.length > 0) {
-            const normalizedSpecs = specs
-                .filter((spec): spec is string => typeof spec === 'string')
-                .map((spec) => (spec === 'construction' ? 'installation' : spec));
-            const allowedTypes = new Set<string>(
-                normalizedSpecs.filter((spec) => spec === 'installation' || spec === 'document')
-            );
-            if (allowedTypes.has('installation')) {
-                allowedTypes.add('construction');
-            }
-            const allowUntyped = allowedTypes.has('installation');
-            matchStage.$and = [
-                ...(Array.isArray(matchStage.$and) ? matchStage.$and : []),
-                {
-                    $or: [
-                        { taskType: { $in: Array.from(allowedTypes) } },
-                        ...(allowUntyped ? [{ taskType: { $exists: false } }, { taskType: null }] : []),
-                    ],
-                },
-            ];
-        }
+    const specs = Array.isArray(context.data.user.specializations)
+        ? (context.data.user.specializations as unknown[])
+        : [];
+    const normalizedSpecs = specs
+        .filter((spec): spec is string => typeof spec === 'string')
+        .map((spec) => (spec === 'construction' ? 'installation' : spec));
+    const allowedTypes = new Set<string>(
+        normalizedSpecs.filter((spec) => spec === 'installation' || spec === 'document')
+    );
+    if (allowedTypes.has('installation')) {
+        allowedTypes.add('construction');
     }
+
+    if (allowedTypes.size === 0) {
+        return NextResponse.json({ tasks: [] });
+    }
+
+    matchStage.$and = [
+        ...(Array.isArray(matchStage.$and) ? matchStage.$and : []),
+        {
+            taskType: { $in: Array.from(allowedTypes) },
+        },
+    ];
 
     const pipeline: mongoose.PipelineStage[] = [
         { $match: matchStage },
