@@ -11,6 +11,7 @@ import { requireOrgRole } from '@/server/org/permissions';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
 import { ensureSubscriptionWriteAccess } from '@/utils/subscriptionBilling';
+import { normalizePhotoReportFolders } from '@/utils/photoReportFolders';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,12 @@ type ProjectDTO = {
     projectType: 'installation' | 'document';
     managers?: string[];
     managerEmail?: string | null;
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
     regionCode: string;
     operator: string;
 };
@@ -53,6 +60,12 @@ type CreateProjectBody = {
     regionCode: string;
     operator: string;
     managers?: string[];
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
 };
 type CreateProjectResponse = { ok: true; project: ProjectDTO } | { error: string };
 
@@ -64,6 +77,12 @@ interface ProjectLean {
     description?: string;
     projectType?: 'installation' | 'document';
     managers?: string[];
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
     regionCode: string;
     operator: string;
 }
@@ -144,7 +163,16 @@ export async function GET(
 
         const rows = await Project.find(
             projectFilter,
-            { name: 1, key: 1, description: 1, projectType: 1, managers: 1, regionCode: 1, operator: 1 }
+            {
+                name: 1,
+                key: 1,
+                description: 1,
+                projectType: 1,
+                managers: 1,
+                photoReportFolders: 1,
+                regionCode: 1,
+                operator: 1,
+            }
         ).lean<ProjectLean[]>();
 
         const projects: ProjectDTO[] = rows.map((p: ProjectLean) => {
@@ -157,6 +185,9 @@ export async function GET(
                 projectType: normalizeProjectType(p.projectType) ?? 'installation',
                 managers,
                 managerEmail: managers[0] ?? null,
+                photoReportFolders: Array.isArray(p.photoReportFolders)
+                    ? p.photoReportFolders
+                    : [],
                 regionCode: p.regionCode,
                 operator: p.operator,
             };
@@ -213,6 +244,10 @@ export async function POST(
 
         const normalizedManagers = normalizeEmailsArray(body.managers);
         const managerEmails = await resolveManagerEmails(orgDoc._id, normalizedManagers, email);
+        const normalizedFolders = normalizePhotoReportFolders(body.photoReportFolders);
+        if (!normalizedFolders.ok) {
+            return NextResponse.json({ error: normalizedFolders.error }, { status: 400 });
+        }
 
         const session = await mongoose.startSession();
         let project: ProjectDTO | null = null;
@@ -243,6 +278,7 @@ export async function POST(
                             description: body?.description,
                             projectType,
                             managers: managerEmails,
+                            photoReportFolders: normalizedFolders.nodes,
                             createdByEmail: email,
                             regionCode: body.regionCode,
                             operator: body.operator,
@@ -266,6 +302,16 @@ export async function POST(
                     projectType: normalizeProjectType(created.projectType) ?? projectType,
                     managers: createdManagers,
                     managerEmail: createdManagers[0] ?? email,
+                    photoReportFolders: Array.isArray(
+                        (created as { photoReportFolders?: unknown }).photoReportFolders
+                    )
+                        ? ((created as { photoReportFolders?: unknown }).photoReportFolders as Array<{
+                              id: string;
+                              name: string;
+                              parentId?: string | null;
+                              order?: number;
+                          }>)
+                        : [],
                     regionCode: created.regionCode,
                     operator: created.operator,
                 };

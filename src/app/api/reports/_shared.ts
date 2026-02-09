@@ -10,6 +10,7 @@ import ProjectModel from '@/server/models/ProjectModel';
 export type UploadPayload = {
     taskId: string;
     baseId: string;
+    folderId?: string;
     files: File[];
 };
 
@@ -72,12 +73,14 @@ export const extractUploadPayload = async (request: Request): Promise<UploadPayl
     const formData = await request.formData();
     const taskIdRaw = String(formData.get('taskId') ?? '').trim();
     const baseIdRaw = String(formData.get('baseId') ?? '').trim();
+    const folderIdRaw = String(formData.get('folderId') ?? '').trim();
     const files = Array.from(formData.values()).filter(
         (value): value is File => value instanceof File
     );
     return {
         taskId: normalizeTaskId(taskIdRaw),
         baseId: baseIdRaw,
+        folderId: folderIdRaw || undefined,
         files,
     };
 };
@@ -135,6 +138,7 @@ export const buildReportKey = (params: {
     taskId: string;
     baseId: string;
     filename: string;
+    subpath?: string | null;
     isFix?: boolean;
 }) => {
     const safe = (value?: string) =>
@@ -149,6 +153,16 @@ export const buildReportKey = (params: {
     const reportFolder = `${taskId}-reports`;
     const filename = safe(params.filename);
     parts.push(taskId, reportFolder, baseId);
+    const subpathParts =
+        typeof params.subpath === 'string'
+            ? params.subpath
+                  .split('/')
+                  .map((segment) => safe(segment))
+                  .filter(Boolean)
+            : [];
+    if (subpathParts.length > 0) {
+        parts.push(...subpathParts);
+    }
     if (params.isFix) {
         parts.push('Fix');
     }

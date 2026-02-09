@@ -80,6 +80,7 @@ export default function useProjectDialog({
                 regionCode: values.regionCode,
                 operator: values.operator,
                 managers: values.managers,
+                photoReportFolders: values.photoReportFolders ?? [],
             };
             const projectRef = projectToEdit?.key || projectToEdit?._id;
             const url =

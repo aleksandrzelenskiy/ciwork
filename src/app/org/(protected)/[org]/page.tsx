@@ -814,6 +814,7 @@ export default function OrgSettingsPage() {
                               regionCode: resolveRegionCode(projectToEdit.regionCode),
                               operator: projectToEdit.operator,
                               managers: projectToEdit.managers ?? [],
+                              photoReportFolders: projectToEdit.photoReportFolders ?? [],
                           }
                         : undefined
                 }

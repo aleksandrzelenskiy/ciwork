@@ -13,6 +13,12 @@ export interface Project extends Document {
     description?: string;
     projectType: 'installation' | 'document';
     managers: string[];
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
     createdByEmail: string;
     regionCode: typeof RUSSIAN_REGIONS[number]['code'];
     operator: typeof OPERATORS[number]['value'];
@@ -33,6 +39,17 @@ const ProjectSchema = new Schema<Project>(
             required: true,
         },
         managers: { type: [String], default: [] },
+        photoReportFolders: {
+            type: [
+                {
+                    id: { type: String, required: true },
+                    name: { type: String, required: true },
+                    parentId: { type: String, default: null },
+                    order: { type: Number, default: 0 },
+                },
+            ],
+            default: [],
+        },
         regionCode: {
             type: String,
             enum: RUSSIAN_REGIONS.map((region) => region.code),

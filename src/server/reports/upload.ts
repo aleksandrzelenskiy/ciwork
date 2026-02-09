@@ -2,6 +2,7 @@ import 'server-only';
 
 import { currentUser } from '@clerk/nextjs/server';
 import TaskModel from '@/server/models/TaskModel';
+import ProjectModel from '@/server/models/ProjectModel';
 import { deleteTaskFile, uploadBuffer } from '@/utils/s3';
 import { adjustStorageBytes, assertWritableStorage, recordStorageBytes } from '@/utils/storageUsage';
 import { appendReportFiles, upsertReport } from '@/server-actions/reportService';
@@ -15,6 +16,7 @@ import {
     prepareImageBuffer,
     resolveStorageScope,
 } from '@/app/api/reports/_shared';
+import { resolvePhotoReportFolderPath } from '@/utils/photoReportFolders';
 
 const buildActorName = (user: Awaited<ReturnType<typeof currentUser>>) => {
     if (!user) return 'Исполнитель';
@@ -73,6 +75,17 @@ export const handleReportUpload = async (
         }
 
         const scope = await resolveStorageScope(task);
+        const projectDoc = task.projectId
+            ? await ProjectModel.findById(task.projectId)
+                  .select('photoReportFolders')
+                  .lean()
+            : null;
+        const subpath = resolvePhotoReportFolderPath(
+            Array.isArray(projectDoc?.photoReportFolders)
+                ? projectDoc.photoReportFolders
+                : [],
+            payload.folderId
+        );
         const baseIdNormalized = payload.baseId.trim().toLowerCase();
         const bsLocationList = Array.isArray(task.bsLocation) ? task.bsLocation : [];
         const matchedLocation =
@@ -104,6 +117,7 @@ export const handleReportUpload = async (
                 taskId: payload.taskId,
                 baseId: payload.baseId,
                 filename: prepared.filename,
+                subpath,
             });
             const url = await uploadBuffer(
                 prepared.buffer,

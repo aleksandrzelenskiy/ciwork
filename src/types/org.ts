@@ -25,6 +25,12 @@ export type ProjectDTO = {
     projectType?: 'installation' | 'document';
     managers?: string[];
     managerEmail?: string;
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
     regionCode: string;
     operator: string;
 };

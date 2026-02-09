@@ -16,6 +16,8 @@ import {
     Paper,
     Stack,
     Typography,
+    TextField,
+    MenuItem,
     useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -29,6 +31,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useDropzone } from 'react-dropzone';
 import type { PhotoReport } from '@/app/types/taskTypes';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type BaseLocation = {
     name?: string | null;
@@ -48,6 +51,11 @@ type UploadItem = {
 type FolderState = {
     uploaded: boolean;
     fileCount: number;
+};
+
+type FolderPathOption = {
+    id: string;
+    path: string;
 };
 
 type PhotoReportUploaderProps = {
@@ -98,6 +106,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const [folderState, setFolderState] = React.useState<Record<string, FolderState>>({});
     const [existingFilesByBase, setExistingFilesByBase] = React.useState<Record<string, string[]>>({});
     const [uploadError, setUploadError] = React.useState<string | null>(null);
+    const [folderConfigError, setFolderConfigError] = React.useState<string | null>(null);
     const [existingError, setExistingError] = React.useState<string | null>(null);
     const [uploading, setUploading] = React.useState(false);
     const [existingLoading, setExistingLoading] = React.useState(false);
@@ -109,8 +118,12 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     const [deleteLoading, setDeleteLoading] = React.useState(false);
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [autoClosed, setAutoClosed] = React.useState(false);
+    const [folderConfigLoading, setFolderConfigLoading] = React.useState(false);
+    const [folderPaths, setFolderPaths] = React.useState<FolderPathOption[]>([]);
+    const [selectedFolderByBase, setSelectedFolderByBase] = React.useState<Record<string, string>>({});
 
     const theme = useTheme();
+    const { t } = useI18n();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
     const cancelRef = React.useRef(false);
@@ -160,13 +173,57 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setDeleteTarget(null);
         setDeleteError(null);
         setDeleteLoading(false);
+        setFolderConfigError(null);
+        setFolderConfigLoading(false);
         setItems((prev) => {
             prev.forEach((item) => URL.revokeObjectURL(item.preview));
             return [];
         });
         setFolderState(initialFolderState);
         setExistingFilesByBase(initialExistingFilesByBase);
+        setFolderPaths([]);
+        setSelectedFolderByBase({});
     }, [initialExistingFilesByBase, initialFolderState]);
+
+    const loadFolderConfig = React.useCallback(async () => {
+        if (!taskId) {
+            setFolderPaths([]);
+            return;
+        }
+        setFolderConfigLoading(true);
+        setFolderConfigError(null);
+        try {
+            const res = await fetch(
+                withBasePath(`/api/reports/config?taskId=${encodeURIComponent(taskId)}`),
+                { cache: 'no-store' }
+            );
+            const data = (await res.json().catch(() => ({}))) as {
+                folderPaths?: FolderPathOption[];
+                error?: string;
+            };
+            if (!res.ok) {
+                setFolderConfigError(
+                    data.error ||
+                        t(
+                            'reports.upload.folders.error.load',
+                            'Не удалось загрузить структуру папок'
+                        )
+                );
+                setFolderPaths([]);
+                return;
+            }
+            setFolderPaths(Array.isArray(data.folderPaths) ? data.folderPaths : []);
+        } catch (error) {
+            setFolderConfigError(
+                error instanceof Error
+                    ? error.message
+                    : t('reports.upload.folders.error.load', 'Не удалось загрузить структуру папок')
+            );
+            setFolderPaths([]);
+        } finally {
+            setFolderConfigLoading(false);
+        }
+    }, [taskId, t]);
 
     const loadExistingFiles = React.useCallback(
         async (baseId: string) => {
@@ -212,6 +269,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         if (open) {
             setAutoClosed(false);
             resetState();
+            void loadFolderConfig();
             const normalizedBaseId = initialBaseId?.trim();
             if (normalizedBaseId) {
                 setActiveBase(normalizedBaseId);
@@ -219,7 +277,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 void loadExistingFiles(normalizedBaseId);
             }
         }
-    }, [open, resetState, initialBaseId, loadExistingFiles]);
+    }, [open, resetState, initialBaseId, loadExistingFiles, loadFolderConfig]);
 
     React.useEffect(() => {
         if (!open && !uploading && !submitLoading) {
@@ -412,6 +470,10 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
             const formData = new FormData();
             formData.append('baseId', activeBase);
             formData.append('taskId', taskId);
+            const selectedFolderId = selectedFolderByBase[activeBase]?.trim();
+            if (selectedFolderId) {
+                formData.append('folderId', selectedFolderId);
+            }
             batch.forEach((item) => {
                 formData.append('files', item.file);
             });
@@ -572,6 +634,11 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         setExistingError(null);
         setFolderAlert(null);
         setView('upload');
+        setSelectedFolderByBase((prev) =>
+            Object.prototype.hasOwnProperty.call(prev, baseId)
+                ? prev
+                : { ...prev, [baseId]: '' }
+        );
         void loadExistingFiles(baseId);
     };
 
@@ -655,7 +722,10 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                 setSubmitError(data.error || 'Не удалось отправить фотоотчет');
                 return;
             }
-            setSubmitSuccess(data.message || 'Фотоотчет отправлен менеджеру');
+            setSubmitSuccess(
+                data.message ||
+                    t('reports.upload.submit.success', 'Фотоотчет отправлен менеджеру')
+            );
         } catch (error) {
             setSubmitError(error instanceof Error ? error.message : 'Ошибка отправки');
         } finally {
@@ -664,6 +734,11 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
     };
 
     const existingFiles = activeBase ? existingFilesByBase[activeBase] ?? [] : [];
+    const activeFolderId = activeBase ? selectedFolderByBase[activeBase] ?? '' : '';
+    const activeFolderPath =
+        activeFolderId && folderPaths.length > 0
+            ? folderPaths.find((item) => item.id === activeFolderId)?.path ?? ''
+            : '';
     const totalSelectedBytes = items.reduce((sum, item) => sum + (item.file.size || 0), 0);
 
     return (
@@ -705,7 +780,11 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                         </IconButton>
                     )}
                     <Typography variant="inherit">
-                        {view === 'upload' ? `Фотоотчет — ${activeBase}` : 'Фотоотчет'}
+                        {view === 'upload'
+                            ? t('reports.upload.dialog.titleWithBase', 'Фотоотчет — {baseId}', {
+                                  baseId: activeBase,
+                              })
+                            : t('reports.header.title', 'Фотоотчет')}
                     </Typography>
                 </Stack>
                 <IconButton onClick={handleDialogClose} disabled={uploading || submitLoading}>
@@ -766,7 +845,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                 <Box>
                                                     <Typography fontWeight={600}>{baseId}</Typography>
                                                     <Typography variant="caption" color="text.secondary">
-                                                        Фотоотчет
+                                                        {t('reports.header.title', 'Фотоотчет')}
                                                     </Typography>
                                                 </Box>
                                             </Stack>
@@ -799,7 +878,39 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                 : `Загружайте фото для БС ${activeBase}.`}
                         </Typography>
                         {uploadError && <Alert severity="error">{uploadError}</Alert>}
+                        {folderConfigError && <Alert severity="warning">{folderConfigError}</Alert>}
                         {existingError && <Alert severity="error">{existingError}</Alert>}
+                        {folderConfigLoading && <LinearProgress sx={{ borderRadius: 999 }} />}
+                        {folderPaths.length > 0 && (
+                            <Stack spacing={0.5}>
+                                <TextField
+                                    select
+                                    label={t('reports.upload.folders.field.label', 'Папка внутри БС')}
+                                    value={activeFolderId}
+                                    onChange={(event) =>
+                                        setSelectedFolderByBase((prev) => ({
+                                            ...prev,
+                                            [activeBase]: event.target.value,
+                                        }))
+                                    }
+                                    size="small"
+                                >
+                                    <MenuItem value="">
+                                        {t('reports.upload.folders.root', 'Корень БС')}
+                                    </MenuItem>
+                                    {folderPaths.map((item) => (
+                                        <MenuItem key={item.id} value={item.id}>
+                                            {item.path}
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+                                <Typography variant="caption" color="text.secondary">
+                                    {t('reports.upload.folders.path', 'Путь загрузки: {path}', {
+                                        path: `${activeBase}${activeFolderPath ? ` / ${activeFolderPath}` : ''}`,
+                                    })}
+                                </Typography>
+                            </Stack>
+                        )}
                         {!readOnly && (
                             <Box
                                 {...getRootProps()}

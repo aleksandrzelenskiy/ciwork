@@ -11,13 +11,18 @@ import {
     MenuItem,
     Stack,
     Typography,
+    IconButton,
+    Divider,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import TopicIcon from '@mui/icons-material/Topic';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { RUSSIAN_REGIONS, REGION_MAP, REGION_ISO_MAP } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { useI18n } from '@/i18n/I18nProvider';
+import { buildFolderPathMap } from '@/utils/photoReportFolders';
 
 type OrgRole = 'owner' | 'org_admin' | 'manager' | 'executor' | 'viewer';
 
@@ -36,6 +41,12 @@ export type ProjectDialogValues = {
     regionCode: string;
     operator: string;
     managers: string[];
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
 };
 
 type Props = {
@@ -109,6 +120,12 @@ export default function ProjectDialog({
     const [managerOptions, setManagerOptions] = React.useState<ProjectManagerOption[]>([]);
     const [selectedManagers, setSelectedManagers] = React.useState<ProjectManagerOption[]>([]);
     const [submitting, setSubmitting] = React.useState(false);
+    const [photoReportFolders, setPhotoReportFolders] = React.useState<
+        Array<{ id: string; name: string; parentId?: string | null; order?: number }>
+    >([]);
+    const [newFolderName, setNewFolderName] = React.useState('');
+    const [newFolderParentId, setNewFolderParentId] = React.useState('');
+    const [folderError, setFolderError] = React.useState<string | null>(null);
     const hasInitializedRef = React.useRef(false);
 
     React.useEffect(() => {
@@ -154,6 +171,12 @@ export default function ProjectDialog({
             return option ?? { email };
         });
         setSelectedManagers(resolved);
+        setPhotoReportFolders(
+            Array.isArray(initialData?.photoReportFolders) ? initialData.photoReportFolders : []
+        );
+        setNewFolderName('');
+        setNewFolderParentId('');
+        setFolderError(null);
     }, [open, initialData, members, resolveRegionCode]);
 
     React.useEffect(() => {
@@ -174,7 +197,14 @@ export default function ProjectDialog({
     const normalizedKeyUpper = normalizeProjectKey(key);
     const isKeyValid = normalizedKey ? PROJECT_KEY_PATTERN.test(normalizedKeyUpper) : false;
     const isSubmitDisabled =
-        !name.trim() || !normalizedKey || !isKeyValid || !regionCode || !operator || !projectType || busy;
+        !name.trim() ||
+        !normalizedKey ||
+        !isKeyValid ||
+        !regionCode ||
+        !operator ||
+        !projectType ||
+        busy ||
+        Boolean(folderError);
     const keyHelperText = !normalizedKey
         ? 'Только латинские A-Z, цифры и дефис. Пример: ALPHA-1.'
         : isKeyValid
@@ -189,6 +219,89 @@ export default function ProjectDialog({
             '&.Mui-focused fieldset': { borderColor: inputFocusBorder },
         },
     };
+
+    const folderPathOptions = React.useMemo(
+        () =>
+            buildFolderPathMap(photoReportFolders).map((item) => ({
+                id: item.id,
+                path: item.path,
+            })),
+        [photoReportFolders]
+    );
+
+    const createFolderId = React.useCallback(() => {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+        return `folder-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+    }, []);
+
+    const addPhotoFolder = React.useCallback(() => {
+        const trimmed = newFolderName.trim();
+        if (!trimmed) {
+            setFolderError(t('project.photoFolders.error.emptyName', 'Укажите название папки'));
+            return;
+        }
+        if (trimmed === '.' || trimmed === '..') {
+            setFolderError(
+                t('project.photoFolders.error.invalidName', 'Недопустимое название папки')
+            );
+            return;
+        }
+        setFolderError(null);
+        setPhotoReportFolders((prev) => [
+            ...prev,
+            {
+                id: createFolderId(),
+                name: trimmed,
+                parentId: newFolderParentId || null,
+                order: prev.length,
+            },
+        ]);
+        setNewFolderName('');
+    }, [createFolderId, newFolderName, newFolderParentId, t]);
+
+    const removePhotoFolder = React.useCallback((folderId: string) => {
+        setPhotoReportFolders((prev) => {
+            const childMap = new Map<string, string[]>();
+            prev.forEach((folder) => {
+                const parentId = folder.parentId ?? '';
+                if (!parentId) return;
+                const arr = childMap.get(parentId) ?? [];
+                arr.push(folder.id);
+                childMap.set(parentId, arr);
+            });
+
+            const toDelete = new Set<string>([folderId]);
+            const queue = [folderId];
+            while (queue.length > 0) {
+                const current = queue.shift();
+                if (!current) continue;
+                const children = childMap.get(current) ?? [];
+                children.forEach((childId) => {
+                    if (!toDelete.has(childId)) {
+                        toDelete.add(childId);
+                        queue.push(childId);
+                    }
+                });
+            }
+
+            return prev.filter((folder) => !toDelete.has(folder.id));
+        });
+    }, []);
+
+    const updatePhotoFolderName = React.useCallback((folderId: string, nextName: string) => {
+        setPhotoReportFolders((prev) =>
+            prev.map((folder) =>
+                folder.id === folderId
+                    ? {
+                          ...folder,
+                          name: nextName,
+                      }
+                    : folder
+            )
+        );
+    }, []);
 
     const handleSubmit = async () => {
         if (isSubmitDisabled) return;
@@ -209,6 +322,14 @@ export default function ProjectDialog({
                             .filter((email): email is string => Boolean(email))
                     )
                 ),
+                photoReportFolders: photoReportFolders
+                    .map((folder, index) => ({
+                        id: folder.id,
+                        name: folder.name.trim(),
+                        parentId: folder.parentId ?? null,
+                        order: typeof folder.order === 'number' ? folder.order : index,
+                    }))
+                    .filter((folder) => folder.name.length > 0),
             };
             await onSubmit(payload);
         } finally {
@@ -360,6 +481,136 @@ export default function ProjectDialog({
                         )}
                     />
                 </Box>
+                <Divider sx={{ my: 2.5 }} />
+                <Stack spacing={1.25}>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                        {t('project.photoFolders.title', 'Структура папок фотоотчета')}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        {t(
+                            'project.photoFolders.hint',
+                            'Корень всегда папка БС. Здесь настраиваются только вложенные подпапки.'
+                        )}
+                    </Typography>
+                    {folderError && (
+                        <Typography variant="caption" color="error.main">
+                            {folderError}
+                        </Typography>
+                    )}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                        <TextField
+                            label={t('project.photoFolders.field.name', 'Название папки')}
+                            value={newFolderName}
+                            onChange={(event) => setNewFolderName(event.target.value)}
+                            disabled={busy}
+                            fullWidth
+                            sx={glassInputSx}
+                        />
+                        <TextField
+                            select
+                            label={t('project.photoFolders.field.parent', 'Родитель')}
+                            value={newFolderParentId}
+                            onChange={(event) => setNewFolderParentId(event.target.value)}
+                            disabled={busy}
+                            sx={{ minWidth: 220, ...glassInputSx }}
+                        >
+                            <MenuItem value="">
+                                {t('project.photoFolders.parent.root', 'Корень БС')}
+                            </MenuItem>
+                            {folderPathOptions.map((item) => (
+                                <MenuItem key={item.id} value={item.id}>
+                                    {item.path}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+                        <Button
+                            variant="outlined"
+                            onClick={addPhotoFolder}
+                            startIcon={<AddIcon />}
+                            disabled={busy}
+                            sx={{ minWidth: 140 }}
+                        >
+                            {t('project.photoFolders.action.add', 'Добавить')}
+                        </Button>
+                    </Stack>
+                    {photoReportFolders.length > 0 ? (
+                        <Box
+                            sx={{
+                                borderRadius: UI_RADIUS.tooltip,
+                                border: `1px solid ${inputBorder}`,
+                                backgroundColor: inputBg,
+                                p: 1.25,
+                            }}
+                        >
+                            <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ display: 'block', mb: 1 }}
+                            >
+                                {t('project.photoFolders.parent.root', 'Корень БС')}
+                            </Typography>
+                            {(() => {
+                                const ordered = [...photoReportFolders].sort(
+                                    (a, b) => (a.order ?? 0) - (b.order ?? 0)
+                                );
+                                const childrenByParent = new Map<string, typeof ordered>();
+                                ordered.forEach((folder) => {
+                                    const parentKey = folder.parentId || '__root__';
+                                    const arr = childrenByParent.get(parentKey) ?? [];
+                                    arr.push(folder);
+                                    childrenByParent.set(parentKey, arr);
+                                });
+
+                                const renderBranch = (
+                                    parentId: string | null,
+                                    depth: number
+                                ): React.ReactNode => {
+                                    const key = parentId || '__root__';
+                                    const nodes = childrenByParent.get(key) ?? [];
+                                    return nodes.map((folder) => (
+                                        <Box key={folder.id} sx={{ ml: depth === 0 ? 0 : 2, mb: 1 }}>
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                <TextField
+                                                    value={folder.name}
+                                                    onChange={(event) =>
+                                                        updatePhotoFolderName(folder.id, event.target.value)
+                                                    }
+                                                    size="small"
+                                                    fullWidth
+                                                    disabled={busy}
+                                                    sx={glassInputSx}
+                                                />
+                                                <IconButton
+                                                    edge="end"
+                                                    onClick={() => removePhotoFolder(folder.id)}
+                                                    disabled={busy}
+                                                    aria-label={t(
+                                                        'project.photoFolders.action.delete',
+                                                        'Удалить папку'
+                                                    )}
+                                                >
+                                                    <DeleteOutlineIcon fontSize="small" />
+                                                </IconButton>
+                                            </Stack>
+                                            <Box sx={{ pl: 1, borderLeft: '1px dashed rgba(148,163,184,0.45)', mt: 1 }}>
+                                                {renderBranch(folder.id, depth + 1)}
+                                            </Box>
+                                        </Box>
+                                    ));
+                                };
+
+                                return renderBranch(null, 0);
+                            })()}
+                        </Box>
+                    ) : (
+                        <Typography variant="caption" color="text.secondary">
+                            {t(
+                                'project.photoFolders.empty',
+                                'Структура не задана. Фотоотчеты будут загружаться в корень папки БС.'
+                            )}
+                        </Typography>
+                    )}
+                </Stack>
             </DialogContent>
             <DialogActions
                 sx={{
@@ -368,7 +619,7 @@ export default function ProjectDialog({
                 }}
             >
                 <Button onClick={onClose} disabled={busy} sx={{ borderRadius: UI_RADIUS.pill, px: 2 }}>
-                    Отмена
+                    {t('common.cancel', 'Отмена')}
                 </Button>
                 <Button
                     variant="contained"
@@ -381,7 +632,9 @@ export default function ProjectDialog({
                         boxShadow: '0 15px 35px rgba(59,130,246,0.45)',
                     }}
                 >
-                    {isCreate ? 'Создать' : 'Сохранить'}
+                    {isCreate
+                        ? t('org.projects.actions.create', 'Создать')
+                        : t('common.save', 'Сохранить')}
                 </Button>
             </DialogActions>
         </Dialog>

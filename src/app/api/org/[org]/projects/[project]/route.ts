@@ -11,6 +11,7 @@ import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import { OPERATORS } from '@/app/utils/operators';
 import { syncProjectsUsage } from '@/utils/billingLimits';
 import { deleteStoragePrefix } from '@/utils/s3';
+import { normalizePhotoReportFolders } from '@/utils/photoReportFolders';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -56,6 +57,12 @@ type ProjectDTO = {
     regionCode: string;
     operator: string;
     managers?: string[];
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
 };
 
 type UpdateBody = {
@@ -66,6 +73,12 @@ type UpdateBody = {
     regionCode?: string;
     operator?: string;
     managers?: string[];
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
 };
 type UpdateResponse = { ok: true; project: ProjectDTO } | { error: string };
 type GetResponse = { ok: true; project: ProjectDTO } | { error: string };
@@ -80,6 +93,12 @@ type ProjectLean = {
     regionCode: string;
     operator: string;
     managers?: string[];
+    photoReportFolders?: Array<{
+        id: string;
+        name: string;
+        parentId?: string | null;
+        order?: number;
+    }>;
 };
 
 const normalizeProjectType = (value?: string | null): 'installation' | 'document' | undefined => {
@@ -107,6 +126,9 @@ function toProjectDto(doc: ProjectLean): ProjectDTO {
         regionCode: doc.regionCode,
         operator: doc.operator,
         managers: Array.isArray(doc.managers) ? doc.managers : undefined,
+        photoReportFolders: Array.isArray(doc.photoReportFolders)
+            ? doc.photoReportFolders
+            : [],
     };
 }
 
@@ -180,10 +202,15 @@ export async function PATCH(
         if (!email) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
         // права (manager и выше)
-        const { org } = await requireOrgRole(orgSlug, email, ['owner', 'org_admin', 'manager']);
+        const { org, membership } = await requireOrgRole(orgSlug, email, ['owner', 'org_admin', 'manager']);
 
         const body = (await request.json()) as UpdateBody;
         const update: Record<string, unknown> = {};
+        const match = getProjectMatch(project, org._id);
+        const currentProject = await Project.findOne(match).lean<ProjectLean | null>();
+        if (!currentProject) {
+            return NextResponse.json({ error: 'Проект не найден' }, { status: 404 });
+        }
 
         if (typeof body.name === 'string') update.name = body.name.trim();
         if (typeof body.key === 'string') update.key = body.key.trim().toUpperCase(); // нормализуем KEY
@@ -215,13 +242,35 @@ export async function PATCH(
             update.managers = await resolveManagerEmails(org._id, normalizedManagers, email);
         }
 
+        if (body.photoReportFolders !== undefined) {
+            const normalizedFolders = normalizePhotoReportFolders(body.photoReportFolders);
+            if (!normalizedFolders.ok) {
+                return NextResponse.json({ error: normalizedFolders.error }, { status: 400 });
+            }
+            const role = membership.role;
+            const normalizedEmail = email.trim().toLowerCase();
+            const managesProject = Array.isArray(currentProject.managers)
+                ? currentProject.managers.some(
+                      (managerEmail) =>
+                          typeof managerEmail === 'string' &&
+                          managerEmail.trim().toLowerCase() === normalizedEmail
+                  )
+                : false;
+            const canEditFolders = role === 'owner' || managesProject;
+            if (!canEditFolders) {
+                return NextResponse.json(
+                    { error: 'Только owner или менеджер проекта может менять структуру папок фотоотчета' },
+                    { status: 403 }
+                );
+            }
+            update.photoReportFolders = normalizedFolders.nodes;
+        }
+
         if (Object.keys(update).length === 0) {
             return NextResponse.json({ error: 'Нет полей для обновления' }, { status: 400 });
         }
 
         // --- главная смена логики поиска проекта ---
-        const match = getProjectMatch(project, org._id);
-
         const updated = await Project.findOneAndUpdate(match, { $set: update }, { new: true }).lean<ProjectLean | null>();
 
         if (!updated) {
