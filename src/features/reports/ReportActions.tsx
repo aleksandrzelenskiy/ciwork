@@ -59,7 +59,7 @@ export default function ReportActions({
                         : 'rgba(255,255,255,0.95)',
             })}
         >
-            <Stack spacing={1.5}>
+            <Stack spacing={2}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                     {t('reports.actions.title', 'Действия')}
                 </Typography>
@@ -71,19 +71,6 @@ export default function ReportActions({
                         sx={{ textTransform: 'none', borderRadius: 999 }}
                     >
                         {t('reports.actions.edit', 'Редактировать')}
-                    </Button>
-                )}
-                {showSubmit && (
-                    <Button
-                        variant="contained"
-                        startIcon={<SendIcon />}
-                        onClick={onSubmit}
-                        disabled={submitLoading}
-                        sx={{ textTransform: 'none', borderRadius: 999 }}
-                    >
-                        {submitLoading
-                            ? t('reports.submit.loading', 'Отправка…')
-                            : t('reports.submit.action', 'Отправить')}
                     </Button>
                 )}
                 {showApprove && (
@@ -119,6 +106,19 @@ export default function ReportActions({
                         {deleteLoading
                             ? t('reports.actions.deleteLoading', 'Удаление…')
                             : t('reports.actions.delete', 'Удалить')}
+                    </Button>
+                )}
+                {showSubmit && (
+                    <Button
+                        variant="contained"
+                        startIcon={<SendIcon />}
+                        onClick={onSubmit}
+                        disabled={submitLoading}
+                        sx={{ textTransform: 'none', borderRadius: 999 }}
+                    >
+                        {submitLoading
+                            ? t('reports.submit.loading', 'Отправка…')
+                            : t('reports.submit.action', 'Отправить')}
                     </Button>
                 )}
             </Stack>
