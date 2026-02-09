@@ -929,7 +929,9 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         return map;
     })();
     const getFolderCount = (folderId: string) =>
-        filesCountByFolderPath.get(folderPathById.get(folderId) ?? '') ?? 0;
+        filesCountByFolderPath.get(
+            normalizePathForStorage(folderPathById.get(folderId) ?? '')
+        ) ?? 0;
     const rootFolderCount = filesCountByFolderPath.get('') ?? 0;
     const totalSelectedBytes = items.reduce((sum, item) => sum + (item.file.size || 0), 0);
 
