@@ -124,6 +124,10 @@ export default function ProjectDialog({
         Array<{ id: string; name: string; parentId?: string | null; order?: number }>
     >([]);
     const [folderError, setFolderError] = React.useState<string | null>(null);
+    const [addFolderDialogOpen, setAddFolderDialogOpen] = React.useState(false);
+    const [addFolderName, setAddFolderName] = React.useState('');
+    const [addFolderParentId, setAddFolderParentId] = React.useState<string | null>(null);
+    const [addFolderDialogError, setAddFolderDialogError] = React.useState<string | null>(null);
     const hasInitializedRef = React.useRef(false);
 
     React.useEffect(() => {
@@ -173,6 +177,10 @@ export default function ProjectDialog({
             Array.isArray(initialData?.photoReportFolders) ? initialData.photoReportFolders : []
         );
         setFolderError(null);
+        setAddFolderDialogOpen(false);
+        setAddFolderName('');
+        setAddFolderParentId(null);
+        setAddFolderDialogError(null);
     }, [open, initialData, members, resolveRegionCode]);
 
     React.useEffect(() => {
@@ -223,33 +231,72 @@ export default function ProjectDialog({
         return `folder-${Math.random().toString(36).slice(2)}-${Date.now()}`;
     }, []);
 
-    const addPhotoFolder = React.useCallback(
-        (parentId?: string | null) => {
-        const promptValue = window.prompt(
-            t('project.photoFolders.promptName', 'Введите название папки')
-        );
-        const trimmed = (promptValue ?? '').trim();
+    const openAddFolderDialog = React.useCallback((parentId?: string | null) => {
+        setAddFolderParentId(parentId ?? null);
+        setAddFolderName('');
+        setAddFolderDialogError(null);
+        setAddFolderDialogOpen(true);
+    }, []);
+
+    const closeAddFolderDialog = React.useCallback(() => {
+        if (busy) return;
+        setAddFolderDialogOpen(false);
+        setAddFolderName('');
+        setAddFolderDialogError(null);
+    }, [busy]);
+
+    const addPhotoFolder = React.useCallback(() => {
+        const trimmed = addFolderName.trim();
         if (!trimmed) {
-            setFolderError(t('project.photoFolders.error.emptyName', 'Укажите название папки'));
+            setAddFolderDialogError(
+                t('project.photoFolders.error.emptyName', 'Укажите название папки')
+            );
             return;
         }
         if (trimmed === '.' || trimmed === '..') {
-            setFolderError(
+            setAddFolderDialogError(
                 t('project.photoFolders.error.invalidName', 'Недопустимое название папки')
             );
             return;
         }
+        setAddFolderDialogError(null);
         setFolderError(null);
         setPhotoReportFolders((prev) => [
             ...prev,
             {
                 id: createFolderId(),
                 name: trimmed,
-                parentId: parentId || null,
+                parentId: addFolderParentId || null,
                 order: prev.length,
             },
         ]);
-    }, [createFolderId, t]);
+        setAddFolderDialogOpen(false);
+        setAddFolderName('');
+        setAddFolderParentId(null);
+    }, [addFolderName, addFolderParentId, createFolderId, t]);
+
+    const folderPathById = React.useMemo(() => {
+        const byId = new Map<string, { id: string; name: string; parentId?: string | null }>();
+        photoReportFolders.forEach((folder) => byId.set(folder.id, folder));
+        const resolvePath = (folderId: string): string => {
+            const parts: string[] = [];
+            const visited = new Set<string>();
+            let current = byId.get(folderId);
+            while (current) {
+                if (visited.has(current.id)) break;
+                visited.add(current.id);
+                parts.unshift(current.name);
+                if (!current.parentId) break;
+                current = byId.get(current.parentId);
+            }
+            return parts.join(' / ');
+        };
+        const map = new Map<string, string>();
+        photoReportFolders.forEach((folder) => {
+            map.set(folder.id, resolvePath(folder.id));
+        });
+        return map;
+    }, [photoReportFolders]);
     const childrenByParent = React.useMemo(() => {
         const map = new Map<string, Array<{ id: string; name: string; parentId?: string | null; order?: number }>>();
         const ordered = [...photoReportFolders].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -497,7 +544,7 @@ export default function ProjectDialog({
                         </Typography>
                         <Button
                             variant="outlined"
-                            onClick={() => addPhotoFolder(null)}
+                            onClick={() => openAddFolderDialog(null)}
                             startIcon={<AddCircleOutlineIcon />}
                             disabled={busy}
                             sx={{ minWidth: 140, alignSelf: 'flex-start' }}
@@ -530,7 +577,7 @@ export default function ProjectDialog({
                                                 </Typography>
                                                 <IconButton
                                                     edge="end"
-                                                    onClick={() => addPhotoFolder(folder.id)}
+                                                    onClick={() => openAddFolderDialog(folder.id)}
                                                     disabled={busy}
                                                     aria-label={t(
                                                         'project.photoFolders.action.addChild',
@@ -598,6 +645,50 @@ export default function ProjectDialog({
                         : t('common.save', 'Сохранить')}
                 </Button>
             </DialogActions>
+
+            <Dialog open={addFolderDialogOpen} onClose={closeAddFolderDialog} maxWidth="xs" fullWidth>
+                <DialogTitle>
+                    {t('project.photoFolders.modal.title', 'Новая папка')}
+                </DialogTitle>
+                <DialogContent>
+                    <Stack spacing={1.25} sx={{ pt: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary">
+                            {t('project.photoFolders.modal.parent', 'Родитель: {value}', {
+                                value: addFolderParentId
+                                    ? (folderPathById.get(addFolderParentId) ??
+                                          t('project.photoFolders.parent.root', 'Корень БС'))
+                                    : t('project.photoFolders.parent.root', 'Корень БС'),
+                            })}
+                        </Typography>
+                        <TextField
+                            autoFocus
+                            fullWidth
+                            label={t('project.photoFolders.modal.field.name', 'Название папки')}
+                            value={addFolderName}
+                            onChange={(event) => setAddFolderName(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                    event.preventDefault();
+                                    addPhotoFolder();
+                                }
+                            }}
+                        />
+                        {addFolderDialogError && (
+                            <Typography variant="caption" color="error.main">
+                                {addFolderDialogError}
+                            </Typography>
+                        )}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={closeAddFolderDialog}>
+                        {t('common.cancel', 'Отмена')}
+                    </Button>
+                    <Button variant="contained" onClick={addPhotoFolder}>
+                        {t('project.photoFolders.action.add', 'Добавить')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Dialog>
     );
 }
