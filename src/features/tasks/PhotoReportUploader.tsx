@@ -16,6 +16,11 @@ import {
     Paper,
     Stack,
     Typography,
+    Collapse,
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
     useMediaQuery,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
@@ -29,8 +34,6 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useDropzone } from 'react-dropzone';
-import TreeView from '@mui/lab/TreeView';
-import TreeItem from '@mui/lab/TreeItem';
 import type { PhotoReport } from '@/app/types/taskTypes';
 import { withBasePath } from '@/utils/basePath';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -836,6 +839,19 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
         expandedNodeIds.length > 0
             ? expandedNodeIds
             : ['root', ...folderTreeNodes.map((node) => node.id)];
+    const isNodeExpanded = (nodeId: string) => effectiveExpandedNodeIds.includes(nodeId);
+    const toggleNodeExpanded = (nodeId: string) => {
+        setExpandedFolderNodesByBase((prev) => {
+            const current = prev[activeBase] ?? ['root', ...folderTreeNodes.map((node) => node.id)];
+            const exists = current.includes(nodeId);
+            return {
+                ...prev,
+                [activeBase]: exists
+                    ? current.filter((id) => id !== nodeId)
+                    : [...current, nodeId],
+            };
+        });
+    };
     const extractStorageKey = (url: string) => {
         if (!url) return '';
         if (/^https?:\/\//i.test(url)) {
@@ -1009,52 +1025,93 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                 <Typography variant="caption" color="text.secondary">
                                     {t('reports.upload.folders.treeTitle', 'Структура папок')}
                                 </Typography>
-                                <TreeView
-                                    defaultCollapseIcon={<ExpandMoreIcon fontSize="small" />}
-                                    defaultExpandIcon={<ChevronRightIcon fontSize="small" />}
-                                    selected={activeTreeNodeId}
-                                    expanded={effectiveExpandedNodeIds}
-                                    onNodeToggle={(
-                                        _event: React.SyntheticEvent<Element, Event>,
-                                        nodeIds: string[]
-                                    ) => {
-                                        setExpandedFolderNodesByBase((prev) => ({
-                                            ...prev,
-                                            [activeBase]: nodeIds,
-                                        }));
-                                    }}
-                                    onNodeSelect={(
-                                        _event: React.SyntheticEvent<Element, Event>,
-                                        nodeId: string
-                                    ) => {
-                                        setSelectedFolderByBase((prev) => ({
-                                            ...prev,
-                                            [activeBase]: nodeId === 'root' ? '' : nodeId,
-                                        }));
-                                    }}
+                                <Box
                                     sx={{
                                         border: '1px solid rgba(15,23,42,0.1)',
                                         borderRadius: 2,
-                                        p: 1,
+                                        px: 0.5,
+                                        py: 0.75,
                                         background: 'rgba(255,255,255,0.55)',
                                     }}
                                 >
-                                    <TreeItem
-                                        nodeId="root"
-                                        label={t('reports.upload.folders.root', 'Корень БС')}
-                                    >
-                                        {(folderTreeChildren.get('__root__') ?? []).map((node) => {
-                                            const renderNode = (current: TreeNode): React.ReactNode => (
-                                                <TreeItem key={current.id} nodeId={current.id} label={current.name}>
-                                                    {(folderTreeChildren.get(current.id) ?? []).map((child) =>
-                                                        renderNode(child)
-                                                    )}
-                                                </TreeItem>
-                                            );
-                                            return renderNode(node);
+                                    <List dense disablePadding>
+                                        <ListItemButton
+                                            selected={activeTreeNodeId === 'root'}
+                                            onClick={() =>
+                                                setSelectedFolderByBase((prev) => ({
+                                                    ...prev,
+                                                    [activeBase]: '',
+                                                }))
+                                            }
+                                            sx={{ borderRadius: 1.5, mx: 0.5 }}
+                                        >
+                                            <ListItemIcon sx={{ minWidth: 28 }}>
+                                                <FolderOutlinedIcon fontSize="small" />
+                                            </ListItemIcon>
+                                            <ListItemText
+                                                primary={t('reports.upload.folders.root', 'Корень БС')}
+                                            />
+                                        </ListItemButton>
+                                        {(folderTreeChildren.get('__root__') ?? []).map((rootNode) => {
+                                            const renderNode = (
+                                                node: TreeNode,
+                                                depth: number
+                                            ): React.ReactNode => {
+                                                const children = folderTreeChildren.get(node.id) ?? [];
+                                                const expanded = isNodeExpanded(node.id);
+                                                return (
+                                                    <React.Fragment key={node.id}>
+                                                        <ListItemButton
+                                                            selected={activeTreeNodeId === node.id}
+                                                            onClick={() =>
+                                                                setSelectedFolderByBase((prev) => ({
+                                                                    ...prev,
+                                                                    [activeBase]: node.id,
+                                                                }))
+                                                            }
+                                                            sx={{
+                                                                borderRadius: 1.5,
+                                                                mx: 0.5,
+                                                                pl: 1 + depth * 2,
+                                                            }}
+                                                        >
+                                                            <ListItemIcon sx={{ minWidth: 28 }}>
+                                                                {children.length > 0 ? (
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        onClick={(event) => {
+                                                                            event.stopPropagation();
+                                                                            toggleNodeExpanded(node.id);
+                                                                        }}
+                                                                    >
+                                                                        {expanded ? (
+                                                                            <ExpandMoreIcon fontSize="small" />
+                                                                        ) : (
+                                                                            <ChevronRightIcon fontSize="small" />
+                                                                        )}
+                                                                    </IconButton>
+                                                                ) : (
+                                                                    <FolderOutlinedIcon fontSize="small" />
+                                                                )}
+                                                            </ListItemIcon>
+                                                            <ListItemText primary={node.name} />
+                                                        </ListItemButton>
+                                                        {children.length > 0 && (
+                                                            <Collapse in={expanded} timeout="auto" unmountOnExit>
+                                                                <List disablePadding dense>
+                                                                    {children.map((child) =>
+                                                                        renderNode(child, depth + 1)
+                                                                    )}
+                                                                </List>
+                                                            </Collapse>
+                                                        )}
+                                                    </React.Fragment>
+                                                );
+                                            };
+                                            return renderNode(rootNode, 1);
                                         })}
-                                    </TreeItem>
-                                </TreeView>
+                                    </List>
+                                </Box>
                                 <Typography variant="caption" color="text.secondary">
                                     {t('reports.upload.folders.path', 'Путь загрузки: {path}', {
                                         path: `${activeBase}${activeFolderPath ? ` / ${activeFolderPath}` : ''}`,
