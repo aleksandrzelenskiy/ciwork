@@ -133,6 +133,8 @@ export default function PhotoReportPage() {
     const canUploadFix = permissions.canUploadFix;
     const canDownload = permissions.canDownload;
     const canEditReport = permissions.canEdit;
+    const editBlockedStatuses = new Set(['Agreed', 'Issues', 'Fixed']);
+    const canShowEditReportAction = canEditReport && !editBlockedStatuses.has(report?.status ?? '');
     const canSubmitDraft = canEditReport && report?.status === 'Draft';
 
     const baseIdsFromTask = React.useMemo(() => {
@@ -402,7 +404,7 @@ export default function PhotoReportPage() {
                             status={report.status}
                             canApprove={canApprove}
                             canUploadFix={canUploadFix}
-                            canEdit={canEditReport}
+                            canEdit={canShowEditReportAction}
                             canSubmit={canSubmitDraft}
                             submitLoading={submitting}
                             canDelete={canEditReport}
