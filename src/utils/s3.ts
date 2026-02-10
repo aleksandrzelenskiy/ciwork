@@ -197,22 +197,17 @@ export function buildTaskFileKey(
 export type MessengerMediaKind = 'image' | 'video';
 
 export function buildMessengerMediaKey(params: {
-  orgSlug?: string;
-  orgId?: string;
+  orgSlug: string;
   conversationId: string;
   filename: string;
 }): string {
-  const safeOrg = params.orgSlug ? sanitizePathSegment(params.orgSlug) : '';
-  const safeOrgId = params.orgId ? sanitizePathSegment(params.orgId) : '';
+  const safeOrg = sanitizePathSegment(params.orgSlug);
   const safeConversationId = sanitizePathSegment(params.conversationId);
   const safeName = normalizeFilename(params.filename);
-  const parts = ['uploads'];
-
-  if (safeOrg) {
-    parts.push(safeOrg);
-  } else if (safeOrgId) {
-    parts.push(`org-${safeOrgId}`);
+  if (!safeOrg) {
+    throw new Error('INVALID_MESSENGER_ORG_SLUG');
   }
+  const parts = ['uploads', safeOrg];
 
   parts.push('messenger', safeConversationId, safeName);
 

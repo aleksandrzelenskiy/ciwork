@@ -16,8 +16,8 @@ import {
 } from '@/server/messenger/helpers';
 import { notificationSocketGateway } from '@/server/socket/notificationSocket';
 import { optimizeImageFile, optimizeVideoFile } from '@/server/messenger/media';
-import { assertWritableStorage, recordStorageBytes } from '@/utils/storageUsage';
-import { buildMessengerMediaKey, uploadBuffer } from '@/utils/s3';
+import { adjustStorageBytes, assertWritableStorage, recordStorageBytes } from '@/utils/storageUsage';
+import { buildMessengerMediaKey, deleteTaskFile, uploadBuffer } from '@/utils/s3';
 
 const MAX_MEDIA_COUNT = 6;
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -148,101 +148,133 @@ export async function POST(request: Request) {
         filename?: string;
     }> = [];
     let attachmentsBytes = 0;
+    const uploadedUrls: string[] = [];
+    let storageRecorded = false;
+    let messagePersisted = false;
 
-    if (files.length > 0) {
-        const storageCheck = await assertWritableStorage(access.orgId);
-        if (!storageCheck.ok) {
-            return NextResponse.json(
-                {
-                    error: storageCheck.error,
-                    readOnly: true,
-                    storage: storageCheck.access,
-                },
-                { status: 402 }
-            );
-        }
-        const org = await OrganizationModel.findById(access.orgId).select('orgSlug').lean().exec();
-        const orgSlug = org?.orgSlug ?? undefined;
-
-        for (const file of files) {
-            const optimized = file.type.startsWith('image/')
-                ? await optimizeImageFile(file)
-                : await optimizeVideoFile(file);
-            const key = buildMessengerMediaKey({
-                orgSlug,
-                orgId: access.orgId.toString(),
-                conversationId,
-                filename: optimized.filename,
-            });
-            const url = await uploadBuffer(optimized.buffer, key, optimized.contentType);
-            let posterUrl: string | undefined;
-            if (optimized.kind === 'video' && optimized.poster) {
-                const posterKey = buildMessengerMediaKey({
-                    orgSlug,
-                    orgId: access.orgId.toString(),
-                    conversationId,
-                    filename: optimized.poster.filename,
-                });
-                posterUrl = await uploadBuffer(
-                    optimized.poster.buffer,
-                    posterKey,
-                    optimized.poster.contentType
+    try {
+        if (files.length > 0) {
+            const storageCheck = await assertWritableStorage(access.orgId);
+            if (!storageCheck.ok) {
+                return NextResponse.json(
+                    {
+                        error: storageCheck.error,
+                        readOnly: true,
+                        storage: storageCheck.access,
+                    },
+                    { status: 402 }
                 );
-                attachmentsBytes += optimized.poster.size;
             }
-            attachments.push({
-                url,
-                kind: optimized.kind,
-                contentType: optimized.contentType,
-                size: optimized.size,
-                width: optimized.width,
-                height: optimized.height,
-                posterUrl,
-                filename: optimized.filename,
-            });
-            attachmentsBytes += optimized.size;
+            const org = await OrganizationModel.findById(access.orgId).select('orgSlug').lean().exec();
+            const orgSlug = typeof org?.orgSlug === 'string' ? org.orgSlug : '';
+            if (!orgSlug.trim()) {
+                return NextResponse.json(
+                    { error: 'Организация не настроена для хранения медиафайлов' },
+                    { status: 400 }
+                );
+            }
+
+            for (const file of files) {
+                const optimized = file.type.startsWith('image/')
+                    ? await optimizeImageFile(file)
+                    : await optimizeVideoFile(file);
+                const key = buildMessengerMediaKey({
+                    orgSlug,
+                    conversationId,
+                    filename: optimized.filename,
+                });
+                const url = await uploadBuffer(optimized.buffer, key, optimized.contentType);
+                uploadedUrls.push(url);
+                let posterUrl: string | undefined;
+                if (optimized.kind === 'video' && optimized.poster) {
+                    const posterKey = buildMessengerMediaKey({
+                        orgSlug,
+                        conversationId,
+                        filename: optimized.poster.filename,
+                    });
+                    posterUrl = await uploadBuffer(
+                        optimized.poster.buffer,
+                        posterKey,
+                        optimized.poster.contentType
+                    );
+                    uploadedUrls.push(posterUrl);
+                    attachmentsBytes += optimized.poster.size;
+                }
+                attachments.push({
+                    url,
+                    kind: optimized.kind,
+                    contentType: optimized.contentType,
+                    size: optimized.size,
+                    width: optimized.width,
+                    height: optimized.height,
+                    posterUrl,
+                    filename: optimized.filename,
+                });
+                attachmentsBytes += optimized.size;
+            }
+
+            if (attachmentsBytes > 0) {
+                await recordStorageBytes(access.orgId, attachmentsBytes);
+                storageRecorded = true;
+            }
         }
 
-        if (attachmentsBytes > 0) {
-            await recordStorageBytes(access.orgId, attachmentsBytes);
+        const message = await ChatMessageModel.create({
+            conversationId,
+            orgId: access.orgId,
+            senderEmail,
+            senderName,
+            text,
+            replyTo:
+                replyTo && replyTo.messageId
+                    ? {
+                          messageId: replyTo.messageId,
+                          text: replyTo.text ?? '',
+                          senderEmail: replyTo.senderEmail ?? '',
+                          senderName: replyTo.senderName ?? '',
+                          createdAt: replyTo.createdAt ? new Date(replyTo.createdAt) : undefined,
+                      }
+                    : undefined,
+            readBy: [senderEmail],
+            attachments,
+            attachmentsBytes,
+        });
+        messagePersisted = true;
+
+        await ChatConversationModel.findByIdAndUpdate(conversationId, {
+            $set: { updatedAt: new Date() },
+        }).exec();
+
+        const recipientEmails = await getRecipientEmailsForConversation(access);
+        const uniqueRecipientEmails = Array.from(
+            new Set(recipientEmails.map(normalizeEmail)).add(senderEmail)
+        ).filter(Boolean);
+        const recipientUserIds = await findUserIdsByEmails(uniqueRecipientEmails);
+
+        const messagePayload = chatMessageToDTO(message.toObject<ChatMessageLike>());
+        try {
+            notificationSocketGateway.emitChatMessage(conversationId, messagePayload, recipientUserIds);
+        } catch (socketError) {
+            console.warn('messenger: failed to emit chat message socket event', socketError);
         }
+
+        return NextResponse.json({ ok: true, message: messagePayload });
+    } catch (error) {
+        if (!messagePersisted) {
+            if (uploadedUrls.length > 0) {
+                await Promise.allSettled(uploadedUrls.map((url) => deleteTaskFile(url)));
+            }
+            if (storageRecorded && attachmentsBytes > 0) {
+                await adjustStorageBytes(access.orgId, -Math.abs(attachmentsBytes));
+            }
+        }
+        const message = error instanceof Error ? error.message : 'Ошибка загрузки медиафайлов';
+        const optimizationFailed =
+            message.includes('MEDIA_IMAGE_OPTIMIZATION_FAILED') ||
+            message.includes('MEDIA_VIDEO_OPTIMIZATION_FAILED');
+        return NextResponse.json(
+            { error: optimizationFailed ? 'Не удалось оптимизировать медиафайл перед загрузкой' : message },
+            { status: optimizationFailed ? 422 : 500 }
+        );
     }
-
-    const message = await ChatMessageModel.create({
-        conversationId,
-        orgId: access.orgId,
-        senderEmail,
-        senderName,
-        text,
-        replyTo:
-            replyTo && replyTo.messageId
-                ? {
-                      messageId: replyTo.messageId,
-                      text: replyTo.text ?? '',
-                      senderEmail: replyTo.senderEmail ?? '',
-                      senderName: replyTo.senderName ?? '',
-                      createdAt: replyTo.createdAt ? new Date(replyTo.createdAt) : undefined,
-                  }
-                : undefined,
-        readBy: [senderEmail],
-        attachments,
-        attachmentsBytes,
-    });
-
-    await ChatConversationModel.findByIdAndUpdate(conversationId, {
-        $set: { updatedAt: new Date() },
-    }).exec();
-
-    const recipientEmails = await getRecipientEmailsForConversation(access);
-
-    const uniqueRecipientEmails = Array.from(
-        new Set(recipientEmails.map(normalizeEmail)).add(senderEmail)
-    ).filter(Boolean);
-
-    const recipientUserIds = await findUserIdsByEmails(uniqueRecipientEmails);
-
-    const messagePayload = chatMessageToDTO(message.toObject<ChatMessageLike>());
-    notificationSocketGateway.emitChatMessage(conversationId, messagePayload, recipientUserIds);
-
-    return NextResponse.json({ ok: true, message: messagePayload });
 }

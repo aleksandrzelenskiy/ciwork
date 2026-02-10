@@ -101,27 +101,14 @@ export const optimizeImageFile = async (file: File): Promise<OptimizedMedia> => 
             kind: 'image',
         };
     } catch (error) {
-        console.warn('messenger media: image optimization failed, using original buffer.', error);
-        return {
-            buffer: sourceBuffer,
-            filename: `${uuidv4()}.${ext || 'jpg'}`,
-            contentType: mime || 'application/octet-stream',
-            size: sourceBuffer.length,
-            kind: 'image',
-        };
+        console.warn('messenger media: image optimization failed.', error);
+        throw new Error('MEDIA_IMAGE_OPTIMIZATION_FAILED');
     }
 };
 
 export const optimizeVideoFile = async (file: File): Promise<OptimizedMedia> => {
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = getFileExtension(file.name || '', 'mp4');
-    const original: OptimizedMedia = {
-        buffer,
-        filename: `${uuidv4()}.${ext}`,
-        contentType: file.type || 'application/octet-stream',
-        size: buffer.length,
-        kind: 'video',
-    };
 
     const tempDir = os.tmpdir();
     const inputPath = path.join(tempDir, `messenger-${uuidv4()}.${ext}`);
@@ -191,9 +178,11 @@ export const optimizeVideoFile = async (file: File): Promise<OptimizedMedia> => 
     } catch (error) {
         const err = error as NodeJS.ErrnoException;
         if (err?.code !== 'ENOENT') {
-            console.warn('messenger media: video optimization failed, using original buffer.', error);
+            console.warn('messenger media: video optimization failed.', error);
+        } else {
+            console.warn('messenger media: ffmpeg is unavailable for video optimization.');
         }
-        return original;
+        throw new Error('MEDIA_VIDEO_OPTIMIZATION_FAILED');
     } finally {
         await fs.rm(inputPath, { force: true });
         await fs.rm(outputPath, { force: true });

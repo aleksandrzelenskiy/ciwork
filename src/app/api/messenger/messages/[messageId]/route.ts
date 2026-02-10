@@ -13,6 +13,8 @@ import {
     type AccessContext,
 } from '@/server/messenger/helpers';
 import { notificationSocketGateway } from '@/server/socket/notificationSocket';
+import { deleteTaskFile } from '@/utils/s3';
+import { adjustStorageBytes } from '@/utils/storageUsage';
 
 const CAN_MODERATE_ROLES = new Set(['owner', 'org_admin']);
 
@@ -60,7 +62,36 @@ export async function DELETE(
         return NextResponse.json({ error: 'Недостаточно прав для удаления' }, { status: 403 });
     }
 
+    const urlsToDelete = new Set<string>();
+    if (Array.isArray(message.attachments)) {
+        for (const attachment of message.attachments) {
+            if (typeof attachment?.url === 'string' && attachment.url.trim()) {
+                urlsToDelete.add(attachment.url);
+            }
+            if (typeof attachment?.posterUrl === 'string' && attachment.posterUrl.trim()) {
+                urlsToDelete.add(attachment.posterUrl);
+            }
+        }
+    }
+
+    const fallbackBytes = Array.isArray(message.attachments)
+        ? message.attachments.reduce((sum, attachment) => {
+              const size = typeof attachment?.size === 'number' ? attachment.size : 0;
+              return sum + Math.max(0, size);
+          }, 0)
+        : 0;
+    const bytesToAdjust =
+        typeof message.attachmentsBytes === 'number' && message.attachmentsBytes > 0
+            ? message.attachmentsBytes
+            : fallbackBytes;
+
     await ChatMessageModel.deleteOne({ _id: normalizedMessageId }).exec();
+    if (urlsToDelete.size > 0) {
+        await Promise.allSettled(Array.from(urlsToDelete).map((url) => deleteTaskFile(url)));
+    }
+    if (bytesToAdjust > 0) {
+        await adjustStorageBytes(access.orgId, -Math.abs(bytesToAdjust));
+    }
 
     await ChatConversationModel.findByIdAndUpdate(access.conversationId, {
         $set: { updatedAt: new Date() },
