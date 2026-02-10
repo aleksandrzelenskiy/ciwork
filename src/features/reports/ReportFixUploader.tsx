@@ -11,12 +11,11 @@ import {
     LinearProgress,
     Stack,
     Typography,
-    TextField,
-    MenuItem,
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useDropzone } from 'react-dropzone';
 import { withBasePath } from '@/utils/basePath';
+import { FIX_REMARKS_FOLDER_NAME } from '@/utils/photoReportFolders';
 import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportFixUploaderProps = {
@@ -44,10 +43,6 @@ export default function ReportFixUploader({
     const [uploading, setUploading] = React.useState(false);
     const [uploadProgress, setUploadProgress] = React.useState<{ done: number; total: number } | null>(null);
     const [error, setError] = React.useState<string | null>(null);
-    const [folderConfigLoading, setFolderConfigLoading] = React.useState(false);
-    const [folderConfigError, setFolderConfigError] = React.useState<string | null>(null);
-    const [folderPaths, setFolderPaths] = React.useState<Array<{ id: string; path: string }>>([]);
-    const [selectedFolderId, setSelectedFolderId] = React.useState('');
 
     React.useEffect(() => {
         if (!open) {
@@ -55,63 +50,8 @@ export default function ReportFixUploader({
             setError(null);
             setUploading(false);
             setUploadProgress(null);
-            setFolderConfigLoading(false);
-            setFolderConfigError(null);
-            setFolderPaths([]);
-            setSelectedFolderId('');
         }
     }, [open]);
-
-    React.useEffect(() => {
-        if (!open || !taskId) return;
-        let cancelled = false;
-        const loadConfig = async () => {
-            setFolderConfigLoading(true);
-            setFolderConfigError(null);
-            try {
-                const res = await fetch(
-                    withBasePath(`/api/reports/config?taskId=${encodeURIComponent(taskId)}`),
-                    { cache: 'no-store' }
-                );
-                const data = (await res.json().catch(() => ({}))) as {
-                    folderPaths?: Array<{ id: string; path: string }>;
-                    error?: string;
-                };
-                if (cancelled) return;
-                if (!res.ok) {
-                    setFolderConfigError(
-                        data.error ||
-                            t(
-                                'reports.upload.folders.error.load',
-                                'Не удалось загрузить структуру папок'
-                            )
-                    );
-                    setFolderPaths([]);
-                    return;
-                }
-                setFolderPaths(Array.isArray(data.folderPaths) ? data.folderPaths : []);
-            } catch (loadError) {
-                if (cancelled) return;
-                setFolderConfigError(
-                    loadError instanceof Error
-                        ? loadError.message
-                        : t(
-                              'reports.upload.folders.error.load',
-                              'Не удалось загрузить структуру папок'
-                          )
-                );
-                setFolderPaths([]);
-            } finally {
-                if (!cancelled) {
-                    setFolderConfigLoading(false);
-                }
-            }
-        };
-        void loadConfig();
-        return () => {
-            cancelled = true;
-        };
-    }, [open, taskId, t]);
 
     React.useEffect(() => {
         if (!files.length) {
@@ -200,9 +140,6 @@ export default function ReportFixUploader({
                 const formData = new FormData();
                 formData.append('taskId', taskId);
                 formData.append('baseId', baseId);
-                if (selectedFolderId.trim()) {
-                    formData.append('folderId', selectedFolderId.trim());
-                }
                 batch.forEach((file) => formData.append('files', file));
 
                 const res = await fetch(withBasePath('/api/reports/upload-fix'), {
@@ -240,37 +177,11 @@ export default function ReportFixUploader({
                     <Typography variant="body2" color="text.secondary">
                         {t('reports.fixUploader.subtitle', 'Добавьте фото, подтверждающие устранение замечаний.')}
                     </Typography>
-                    {folderConfigError && <Alert severity="warning">{folderConfigError}</Alert>}
-                    {folderConfigLoading && <LinearProgress />}
-                    {folderPaths.length > 0 && (
-                        <Stack spacing={0.5}>
-                            <TextField
-                                select
-                                label={t('reports.upload.folders.field.label', 'Папка внутри БС')}
-                                value={selectedFolderId}
-                                onChange={(event) => setSelectedFolderId(event.target.value)}
-                                size="small"
-                            >
-                                <MenuItem value="">
-                                    {t('reports.upload.folders.root', 'Корень БС')}
-                                </MenuItem>
-                                {folderPaths.map((folder) => (
-                                    <MenuItem key={folder.id} value={folder.id}>
-                                        {folder.path}
-                                    </MenuItem>
-                                ))}
-                            </TextField>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('reports.upload.folders.path', 'Путь загрузки: {path}', {
-                                    path:
-                                        baseId +
-                                        (selectedFolderId
-                                            ? ` / ${folderPaths.find((item) => item.id === selectedFolderId)?.path ?? ''}`
-                                            : ''),
-                                })}
-                            </Typography>
-                        </Stack>
-                    )}
+                    <Typography variant="caption" color="text.secondary">
+                        {t('reports.upload.folders.path', 'Путь загрузки: {path}', {
+                            path: `${baseId} / ${FIX_REMARKS_FOLDER_NAME}`,
+                        })}
+                    </Typography>
                     <Stack
                         {...getRootProps()}
                         sx={(theme) => ({

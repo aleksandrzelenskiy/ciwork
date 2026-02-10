@@ -14,6 +14,7 @@ export type NormalizedPhotoReportFolderNode = {
 
 export const MAX_PHOTO_REPORT_FOLDERS = 200;
 export const MAX_PHOTO_REPORT_FOLDER_DEPTH = 6;
+export const FIX_REMARKS_FOLDER_NAME = 'Исправление замечаний';
 
 const normalizeFolderName = (value: string) =>
     value

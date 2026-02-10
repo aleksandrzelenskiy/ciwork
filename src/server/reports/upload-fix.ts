@@ -16,7 +16,7 @@ import {
     prepareImageBuffer,
     resolveStorageScope,
 } from '@/app/api/reports/_shared';
-import { resolvePhotoReportFolderPath } from '@/utils/photoReportFolders';
+import { FIX_REMARKS_FOLDER_NAME } from '@/utils/photoReportFolders';
 import { createNotification } from '@/server/notifications/service';
 import { sendEmail } from '@/server/email/mailer';
 import { signInitiatorAccessToken } from '@/utils/initiatorAccessToken';
@@ -34,17 +34,11 @@ const resolveProjectEmailContext = async (projectId?: unknown) => {
             projectLabel: '—',
             managerName: '—',
             managerEmail: '—',
-            photoReportFolders: [] as Array<{
-                id: string;
-                name: string;
-                parentId?: string | null;
-                order?: number;
-            }>,
         };
     }
 
     const project = await ProjectModel.findById(projectId)
-        .select('name key managers photoReportFolders')
+        .select('name key managers')
         .lean();
     const projectName = typeof project?.name === 'string' ? project.name.trim() : '';
     const projectKey = typeof project?.key === 'string' ? project.key.trim() : '';
@@ -63,13 +57,10 @@ const resolveProjectEmailContext = async (projectId?: unknown) => {
     }
 
     return {
-        projectLabel,
-        managerName: managerName || '—',
-        managerEmail: managerEmail || '—',
-        photoReportFolders: Array.isArray(project?.photoReportFolders)
-            ? project.photoReportFolders
-            : [],
-    };
+            projectLabel,
+            managerName: managerName || '—',
+            managerEmail: managerEmail || '—',
+        };
 };
 
 export const handleFixUpload = async (
@@ -124,12 +115,7 @@ export const handleFixUpload = async (
 
         const scope = await resolveStorageScope(task);
         const projectEmailContext = await resolveProjectEmailContext(task.projectId);
-        const subpath = resolvePhotoReportFolderPath(
-            Array.isArray(projectEmailContext?.photoReportFolders)
-                ? projectEmailContext.photoReportFolders
-                : [],
-            payload.folderId
-        );
+        const subpath = FIX_REMARKS_FOLDER_NAME;
         const baseIdNormalized = payload.baseId.trim().toLowerCase();
         const bsLocationList = Array.isArray(task.bsLocation) ? task.bsLocation : [];
         const matchedLocation =
