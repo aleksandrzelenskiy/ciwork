@@ -385,8 +385,6 @@ export default function PhotoReportPage() {
                             baseId={baseId}
                             mainPhotos={report.files}
                             fixedPhotos={report.fixedFiles}
-                            reportStatus={report.status}
-                            hasIssues={(report.issues || []).length > 0}
                         />
                     </Stack>
                     <Stack spacing={3} sx={{ width: { xs: '100%', lg: 360 }, flexShrink: 0 }}>
