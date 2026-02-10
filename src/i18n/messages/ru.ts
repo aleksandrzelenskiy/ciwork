@@ -239,6 +239,7 @@ const ruMessages: Record<string, string> = {
     'reports.error.notFound': 'Отчет не найден',
     'reports.all': 'Все фотоотчеты',
     'reports.gallery.main': 'Основные фото',
+    'reports.gallery.report': 'Фотографии',
     'reports.gallery.fixed': 'Исправления',
     'reports.relatedBases.title': 'Связанные БС',
     'reports.relatedBases.current': 'Сейчас открыта БС {baseId}. Согласование применяется только к этой БС.',

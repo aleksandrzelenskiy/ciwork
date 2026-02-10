@@ -240,6 +240,7 @@ const enMessages: Record<string, string> = {
     'reports.error.notFound': 'Report not found',
     'reports.all': 'All photo reports',
     'reports.gallery.main': 'Main photos',
+    'reports.gallery.report': 'Photo report',
     'reports.gallery.fixed': 'Fixes',
     'reports.relatedBases.title': 'Related sites',
     'reports.relatedBases.current': 'Currently open site {baseId}. Approval applies only to this site.',

@@ -422,17 +422,21 @@ export default function ReportFolderBrowser({
 
     if (treeNodes.length === 0) {
         return (
-            <Stack spacing={3}>
-                <ReportGallery title={t('reports.gallery.main', 'Основные фото')} photos={mainPhotos} />
+            <Stack spacing={3} sx={{ width: '100%' }}>
+                <Box sx={{ width: '100%' }}>
+                    <ReportGallery title={t('reports.gallery.report', 'Фотографии')} photos={mainPhotos} />
+                </Box>
                 {fixedPhotos.length > 0 && (
-                    <ReportGallery title={t('reports.gallery.fixed', 'Исправления')} photos={fixedPhotos} />
+                    <Box sx={{ width: '100%' }}>
+                        <ReportGallery title={t('reports.gallery.fixed', 'Исправления')} photos={fixedPhotos} />
+                    </Box>
                 )}
             </Stack>
         );
     }
 
     return (
-        <Stack spacing={2.5}>
+        <Stack spacing={2.5} sx={{ width: '100%' }}>
             {loading && <LinearProgress sx={{ borderRadius: 999 }} />}
 
             <Button
@@ -445,9 +449,10 @@ export default function ReportFolderBrowser({
                     : t('reports.folders.show', 'Показать структуру папок')}
             </Button>
 
-            <Collapse in={structureVisible} timeout="auto" unmountOnExit>
+            <Collapse in={structureVisible} timeout="auto" unmountOnExit sx={{ width: '100%' }}>
                 <Box
                     sx={{
+                        width: '100%',
                         border: '1px solid rgba(15,23,42,0.1)',
                         borderRadius: 2,
                         px: 0.5,
@@ -510,7 +515,11 @@ export default function ReportFolderBrowser({
                 </Box>
             </Collapse>
 
-            <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="folder-path">
+            <Breadcrumbs
+                separator={<NavigateNextIcon fontSize="small" />}
+                aria-label="folder-path"
+                sx={{ width: '100%' }}
+            >
                 <Button
                     onClick={() => setSelectedNodeId('root')}
                     sx={{ textTransform: 'none', minWidth: 0, px: 0.25 }}
@@ -538,16 +547,20 @@ export default function ReportFolderBrowser({
                 })}
             </Breadcrumbs>
 
-            <ReportGallery
-                title={`${t('reports.gallery.main', 'Основные фото')} (${visibleMainPhotos.length})`}
-                photos={visibleMainPhotos}
-            />
+            <Box sx={{ width: '100%' }}>
+                <ReportGallery
+                    title={`${t('reports.gallery.report', 'Фотографии')} (${visibleMainPhotos.length})`}
+                    photos={visibleMainPhotos}
+                />
+            </Box>
 
             {fixedPhotos.length > 0 && (
-                <ReportGallery
-                    title={`${t('reports.gallery.fixed', 'Исправления')} (${visibleFixedPhotos.length})`}
-                    photos={visibleFixedPhotos}
-                />
+                <Box sx={{ width: '100%' }}>
+                    <ReportGallery
+                        title={`${t('reports.gallery.fixed', 'Исправления')} (${visibleFixedPhotos.length})`}
+                        photos={visibleFixedPhotos}
+                    />
+                </Box>
             )}
         </Stack>
     );
