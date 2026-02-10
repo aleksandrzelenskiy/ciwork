@@ -291,6 +291,8 @@ const ruMessages: Record<string, string> = {
     'reports.upload.folders.treeTitle': 'Структура папок',
     'reports.upload.folders.root': 'Корень БС',
     'reports.upload.folders.path': 'Путь загрузки: {path}',
+    'reports.folders.detected': 'Показаны папки, обнаруженные по загруженным файлам.',
+    'reports.folders.current': 'Текущая папка: {path}',
     'reports.upload.folders.error.rootDisabled': 'Для кастомной структуры загрузка в корень БС недоступна. Выберите конечную папку.',
     'reports.upload.folders.error.selectLeaf': 'Загрузка доступна только в конечные папки без подпапок.',
     'reports.upload.submit.success': 'Фотоотчет отправлен менеджеру',

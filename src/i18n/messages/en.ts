@@ -292,6 +292,8 @@ const enMessages: Record<string, string> = {
     'reports.upload.folders.treeTitle': 'Folder structure',
     'reports.upload.folders.root': 'BS root',
     'reports.upload.folders.path': 'Upload path: {path}',
+    'reports.folders.detected': 'Showing folders detected from uploaded files.',
+    'reports.folders.current': 'Current folder: {path}',
     'reports.upload.folders.error.rootDisabled': 'For custom structure, upload to the BS root is disabled. Select a leaf folder.',
     'reports.upload.folders.error.selectLeaf': 'Upload is allowed only to leaf folders without subfolders.',
     'reports.upload.submit.success': 'Photo report sent to manager',

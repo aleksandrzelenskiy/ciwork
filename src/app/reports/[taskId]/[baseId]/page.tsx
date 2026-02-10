@@ -22,7 +22,7 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import ReportHeader from '@/features/reports/ReportHeader';
-import ReportGallery from '@/features/reports/ReportGallery';
+import ReportFolderBrowser from '@/features/reports/ReportFolderBrowser';
 import ReportIssuesPanel from '@/features/reports/ReportIssuesPanel';
 import ReportActions from '@/features/reports/ReportActions';
 import ReportFixUploader from '@/features/reports/ReportFixUploader';
@@ -380,8 +380,14 @@ export default function PhotoReportPage() {
 
                 <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems="flex-start">
                     <Stack spacing={3} sx={{ flex: 1 }}>
-                        <ReportGallery title={t('reports.gallery.main', 'Основные фото')} photos={report.files} />
-                        <ReportGallery title={t('reports.gallery.fixed', 'Исправления')} photos={report.fixedFiles} />
+                        <ReportFolderBrowser
+                            taskId={report.taskId}
+                            baseId={baseId}
+                            mainPhotos={report.files}
+                            fixedPhotos={report.fixedFiles}
+                            reportStatus={report.status}
+                            hasIssues={(report.issues || []).length > 0}
+                        />
                     </Stack>
                     <Stack spacing={3} sx={{ width: { xs: '100%', lg: 360 }, flexShrink: 0 }}>
                         <ReportIssuesPanel
