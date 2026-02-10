@@ -5,14 +5,23 @@ import {
     Box,
     Breadcrumbs,
     Button,
+    Collapse,
+    IconButton,
     LinearProgress,
-    Paper,
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
     Stack,
     Typography,
 } from '@mui/material';
-import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import FolderIcon from '@mui/icons-material/Folder';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ReportGallery from '@/features/reports/ReportGallery';
 import { withBasePath } from '@/utils/basePath';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -22,12 +31,11 @@ type FolderPathOption = {
     path: string;
 };
 
-type FolderNode = {
+type TreeNode = {
     id: string;
     name: string;
     parentId: string | null;
     storagePath: string;
-    displayPath: string;
 };
 
 type ReportFolderBrowserProps = {
@@ -129,7 +137,9 @@ export default function ReportFolderBrowser({
     const { t } = useI18n();
     const [folderPaths, setFolderPaths] = React.useState<FolderPathOption[]>([]);
     const [loading, setLoading] = React.useState(false);
-    const [activeFolderId, setActiveFolderId] = React.useState<string>('');
+    const [selectedNodeId, setSelectedNodeId] = React.useState('root');
+    const [expandedNodeIds, setExpandedNodeIds] = React.useState<string[]>([]);
+    const [structureVisible, setStructureVisible] = React.useState(true);
 
     React.useEffect(() => {
         const normalizedTaskId = taskId.trim();
@@ -189,7 +199,7 @@ export default function ReportFolderBrowser({
     const usingDetectedPaths = folderPaths.length === 0 && detectedFolderPaths.length > 0;
     const effectiveFolderPaths = folderPaths.length > 0 ? folderPaths : detectedFolderPaths;
 
-    const folderNodes = React.useMemo<FolderNode[]>(() => {
+    const treeNodes = React.useMemo<TreeNode[]>(() => {
         if (effectiveFolderPaths.length === 0) return [];
 
         const normalizedEntries = effectiveFolderPaths
@@ -211,45 +221,53 @@ export default function ReportFolderBrowser({
         return normalizedEntries
             .map((entry) => {
                 const segments = entry.displayPath.split('/').map((s) => s.trim()).filter(Boolean);
-                const parentStoragePath = normalizePathForStorage(segments.slice(0, -1).join('/'));
-                const name = segments[segments.length - 1] ?? entry.displayPath;
+                const parentStoragePath = normalizePathForStorage(
+                    segments.slice(0, -1).join('/')
+                );
+                const rawName = segments[segments.length - 1] ?? entry.displayPath;
                 return {
                     id: entry.id,
-                    name,
+                    name: rawName,
                     parentId: parentStoragePath ? byStoragePath.get(parentStoragePath) ?? null : null,
                     storagePath: entry.storagePath,
-                    displayPath: entry.displayPath,
                 };
             })
             .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
     }, [effectiveFolderPaths]);
 
-    const nodeById = React.useMemo(
-        () => new Map(folderNodes.map((node) => [node.id, node])),
-        [folderNodes]
-    );
-
-    const childrenByParentId = React.useMemo(() => {
-        const map = new Map<string, FolderNode[]>();
-        folderNodes.forEach((node) => {
-            const key = node.parentId ?? 'root';
+    const treeChildren = React.useMemo(() => {
+        const map = new Map<string, TreeNode[]>();
+        treeNodes.forEach((node) => {
+            const key = node.parentId ?? '__root__';
             const bucket = map.get(key) ?? [];
             bucket.push(node);
             map.set(key, bucket);
         });
-        map.forEach((nodes) => {
-            nodes.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
-        });
+
+        map.forEach((nodes) => nodes.sort((a, b) => a.name.localeCompare(b.name, 'ru')));
         return map;
-    }, [folderNodes]);
+    }, [treeNodes]);
+
+    const nodeById = React.useMemo(
+        () => new Map(treeNodes.map((node) => [node.id, node])),
+        [treeNodes]
+    );
 
     React.useEffect(() => {
-        if (activeFolderId && !nodeById.has(activeFolderId)) {
-            setActiveFolderId('');
+        if (selectedNodeId !== 'root' && !nodeById.has(selectedNodeId)) {
+            setSelectedNodeId('root');
         }
-    }, [activeFolderId, nodeById]);
+    }, [selectedNodeId, nodeById]);
 
-    const activeStoragePath = activeFolderId ? nodeById.get(activeFolderId)?.storagePath ?? '' : '';
+    React.useEffect(() => {
+        setExpandedNodeIds((prev) => {
+            if (prev.length > 0) return prev;
+            return ['root', ...treeNodes.map((node) => node.id)];
+        });
+    }, [treeNodes]);
+
+    const activeStoragePath =
+        selectedNodeId === 'root' ? '' : nodeById.get(selectedNodeId)?.storagePath ?? '';
 
     const visibleMainPhotos = React.useMemo(
         () =>
@@ -267,188 +285,270 @@ export default function ReportFolderBrowser({
         [fixedPhotos, baseId, activeStoragePath]
     );
 
-    const mainCountByPath = React.useMemo(() => {
+    const filesCountByFolderPath = React.useMemo(() => {
         const map = new Map<string, number>();
         mainPhotos.forEach((url) => {
-            const path = getFolderStoragePathFromFileUrl(url, baseId, false);
-            map.set(path, (map.get(path) ?? 0) + 1);
+            const folderPath = getFolderStoragePathFromFileUrl(url, baseId, false);
+            map.set(folderPath, (map.get(folderPath) ?? 0) + 1);
         });
-        return map;
-    }, [mainPhotos, baseId]);
-
-    const fixCountByPath = React.useMemo(() => {
-        const map = new Map<string, number>();
         fixedPhotos.forEach((url) => {
-            const path = getFolderStoragePathFromFileUrl(url, baseId, true);
-            map.set(path, (map.get(path) ?? 0) + 1);
+            const folderPath = getFolderStoragePathFromFileUrl(url, baseId, true);
+            map.set(folderPath, (map.get(folderPath) ?? 0) + 1);
         });
         return map;
-    }, [fixedPhotos, baseId]);
+    }, [mainPhotos, fixedPhotos, baseId]);
 
-    const currentChildren = childrenByParentId.get(activeFolderId || 'root') ?? [];
+    const folderSubtreeCountById = React.useMemo(() => {
+        const memo = new Map<string, number>();
+        const countNode = (folderId: string): number => {
+            if (memo.has(folderId)) return memo.get(folderId) ?? 0;
+            const node = nodeById.get(folderId);
+            if (!node) return 0;
+            let total = filesCountByFolderPath.get(node.storagePath) ?? 0;
+            const children = treeChildren.get(folderId) ?? [];
+            children.forEach((child) => {
+                total += countNode(child.id);
+            });
+            memo.set(folderId, total);
+            return total;
+        };
 
-    const breadcrumbs = React.useMemo(() => {
-        if (!activeFolderId) return [] as FolderNode[];
-        const items: FolderNode[] = [];
-        let current = nodeById.get(activeFolderId);
+        treeNodes.forEach((node) => {
+            countNode(node.id);
+        });
+        return memo;
+    }, [treeNodes, nodeById, treeChildren, filesCountByFolderPath]);
+
+    const getFolderCount = React.useCallback(
+        (folderId: string) => folderSubtreeCountById.get(folderId) ?? 0,
+        [folderSubtreeCountById]
+    );
+
+    const rootFolderCount = mainPhotos.length + fixedPhotos.length;
+    const rootHasFiles = rootFolderCount > 0;
+
+    const isNodeExpanded = React.useCallback(
+        (nodeId: string) => expandedNodeIds.includes(nodeId),
+        [expandedNodeIds]
+    );
+
+    const toggleNodeExpanded = (nodeId: string) => {
+        setExpandedNodeIds((prev) => {
+            const exists = prev.includes(nodeId);
+            return exists ? prev.filter((id) => id !== nodeId) : [...prev, nodeId];
+        });
+    };
+
+    const breadcrumbsNodes = React.useMemo(() => {
+        if (selectedNodeId === 'root') return [] as TreeNode[];
+        const nodes: TreeNode[] = [];
+        let current = nodeById.get(selectedNodeId);
         let guard = 0;
         while (current && guard < 30) {
-            items.unshift(current);
+            nodes.unshift(current);
             guard += 1;
             current = current.parentId ? nodeById.get(current.parentId) : undefined;
         }
-        return items;
-    }, [activeFolderId, nodeById]);
+        return nodes;
+    }, [selectedNodeId, nodeById]);
 
-    if (folderNodes.length === 0) {
+    const renderNode = (node: TreeNode, depth: number): React.ReactNode => {
+        const children = treeChildren.get(node.id) ?? [];
+        const nodeCount = getFolderCount(node.id);
+        const nodeHasFiles = nodeCount > 0;
+        const expanded = isNodeExpanded(node.id);
+
+        return (
+            <React.Fragment key={node.id}>
+                <ListItemButton
+                    selected={selectedNodeId === node.id}
+                    onClick={() => setSelectedNodeId(node.id)}
+                    sx={{
+                        borderRadius: 1.5,
+                        mx: 0.5,
+                        pl: 1 + depth * 2,
+                        backgroundColor: nodeHasFiles ? 'rgba(59,130,246,0.08)' : 'transparent',
+                    }}
+                >
+                    <ListItemIcon sx={{ minWidth: 28 }}>
+                        <Stack direction="row" alignItems="center" spacing={0.25}>
+                            {nodeHasFiles ? (
+                                <FolderIcon fontSize="small" color="primary" />
+                            ) : (
+                                <FolderOutlinedIcon fontSize="small" color="action" />
+                            )}
+                            {children.length > 0 && (
+                                <IconButton
+                                    size="small"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        toggleNodeExpanded(node.id);
+                                    }}
+                                >
+                                    {expanded ? (
+                                        <ExpandMoreIcon fontSize="small" />
+                                    ) : (
+                                        <ChevronRightIcon fontSize="small" />
+                                    )}
+                                </IconButton>
+                            )}
+                        </Stack>
+                    </ListItemIcon>
+                    <ListItemText
+                        primary={
+                            <Stack direction="row" spacing={0.75} alignItems="center">
+                                <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 400 }}>
+                                    {node.name}
+                                </Typography>
+                                {nodeCount > 0 && (
+                                    <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                                        ({nodeCount})
+                                    </Typography>
+                                )}
+                            </Stack>
+                        }
+                    />
+                </ListItemButton>
+                {children.length > 0 && (
+                    <Collapse in={expanded} timeout="auto" unmountOnExit>
+                        <List disablePadding dense>
+                            {children.map((child) => renderNode(child, depth + 1))}
+                        </List>
+                    </Collapse>
+                )}
+            </React.Fragment>
+        );
+    };
+
+    if (treeNodes.length === 0) {
         return (
             <Stack spacing={3}>
                 <ReportGallery title={t('reports.gallery.main', 'Основные фото')} photos={mainPhotos} />
-                <ReportGallery title={t('reports.gallery.fixed', 'Исправления')} photos={fixedPhotos} />
+                {fixedPhotos.length > 0 && (
+                    <ReportGallery title={t('reports.gallery.fixed', 'Исправления')} photos={fixedPhotos} />
+                )}
             </Stack>
         );
     }
 
     return (
         <Stack spacing={2.5}>
-            <Paper
-                sx={(theme) => ({
-                    borderRadius: 3,
-                    border:
-                        theme.palette.mode === 'dark'
-                            ? '1px solid rgba(148,163,184,0.18)'
-                            : '1px solid rgba(15,23,42,0.08)',
-                    background:
-                        theme.palette.mode === 'dark'
-                            ? 'rgba(15,18,26,0.92)'
-                            : 'rgba(255,255,255,0.9)',
-                    p: 2,
-                })}
-            >
-                <Stack spacing={1.25}>
-                    <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        alignItems={{ xs: 'flex-start', sm: 'center' }}
-                        justifyContent="space-between"
-                        spacing={1}
-                    >
-                        <Typography variant="subtitle2" fontWeight={700}>
-                            {t('reports.upload.folders.treeTitle', 'Структура папок')}
-                        </Typography>
-                        {loading && <LinearProgress sx={{ width: { xs: '100%', sm: 180 }, borderRadius: 999 }} />}
-                    </Stack>
+            {loading && <LinearProgress sx={{ borderRadius: 999 }} />}
 
+            <Button
+                onClick={() => setStructureVisible((prev) => !prev)}
+                startIcon={structureVisible ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                sx={{ alignSelf: 'flex-start', textTransform: 'none', px: 0.5 }}
+            >
+                {structureVisible
+                    ? t('reports.folders.hide', 'Скрыть структуру папок')
+                    : t('reports.folders.show', 'Показать структуру папок')}
+            </Button>
+
+            <Collapse in={structureVisible} timeout="auto" unmountOnExit>
+                <Box
+                    sx={{
+                        border: '1px solid rgba(15,23,42,0.1)',
+                        borderRadius: 2,
+                        px: 0.5,
+                        py: 0.75,
+                        background: 'rgba(255,255,255,0.55)',
+                    }}
+                >
                     {usingDetectedPaths && (
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block', px: 1, pb: 1 }}
+                        >
                             {t(
                                 'reports.folders.detected',
                                 'Показаны папки, обнаруженные по загруженным файлам.'
                             )}
                         </Typography>
                     )}
-
-                    <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="folders">
-                        <Button
-                            onClick={() => setActiveFolderId('')}
-                            sx={{ textTransform: 'none', minWidth: 0, px: 0.5 }}
+                    <List dense disablePadding>
+                        <ListItemButton
+                            selected={selectedNodeId === 'root'}
+                            onClick={() => setSelectedNodeId('root')}
+                            sx={{
+                                borderRadius: 1.5,
+                                mx: 0.5,
+                                backgroundColor: rootHasFiles ? 'rgba(59,130,246,0.08)' : 'transparent',
+                            }}
                         >
-                            {baseId}
-                        </Button>
-                        {breadcrumbs.map((item, index) => {
-                            const isLast = index === breadcrumbs.length - 1;
-                            if (isLast) {
-                                return (
-                                    <Typography key={item.id} color="text.primary" fontWeight={600}>
-                                        {item.name}
-                                    </Typography>
-                                );
-                            }
-                            return (
-                                <Button
-                                    key={item.id}
-                                    onClick={() => setActiveFolderId(item.id)}
-                                    sx={{ textTransform: 'none', minWidth: 0, px: 0.5 }}
-                                >
-                                    {item.name}
-                                </Button>
-                            );
-                        })}
-                    </Breadcrumbs>
-
-                    {currentChildren.length > 0 && (
-                        <Stack spacing={1}>
-                            <Typography variant="caption" color="text.secondary">
-                                {t('reports.folders.subfolders', 'Подпапки')}
-                            </Typography>
-                            <Box
-                                sx={{
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                                    gap: 1,
-                                }}
-                            >
-                                {currentChildren.map((node) => {
-                                    const mainCount = mainCountByPath.get(node.storagePath) ?? 0;
-                                    const fixCount = fixCountByPath.get(node.storagePath) ?? 0;
-                                    return (
-                                        <Button
-                                            key={node.id}
-                                            variant="outlined"
-                                            startIcon={<FolderOpenIcon />}
-                                            onClick={() => setActiveFolderId(node.id)}
-                                            sx={{
-                                                justifyContent: 'space-between',
-                                                textTransform: 'none',
-                                                borderRadius: 2,
-                                                px: 1.25,
-                                                py: 0.75,
-                                            }}
+                            <ListItemText
+                                primary={
+                                    <Stack direction="row" spacing={0.75} alignItems="center">
+                                        {rootHasFiles ? (
+                                            <FolderIcon fontSize="small" color="primary" />
+                                        ) : (
+                                            <FolderOutlinedIcon fontSize="small" color="action" />
+                                        )}
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ color: 'text.primary', fontWeight: 400 }}
                                         >
-                                            <Stack
-                                                direction="row"
-                                                spacing={0.75}
-                                                alignItems="center"
-                                                sx={{ width: '100%', justifyContent: 'space-between' }}
+                                            {baseId || t('reports.upload.folders.root', 'Корень БС')}
+                                        </Typography>
+                                        {rootFolderCount > 0 && (
+                                            <Typography
+                                                variant="body2"
+                                                sx={{ color: 'primary.main', fontWeight: 600 }}
                                             >
-                                                <Typography variant="body2" noWrap>
-                                                    {node.name}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
-                                                    M:{mainCount} · F:{fixCount}
-                                                </Typography>
-                                            </Stack>
-                                        </Button>
-                                    );
-                                })}
-                            </Box>
-                        </Stack>
-                    )}
+                                                ({rootFolderCount})
+                                            </Typography>
+                                        )}
+                                    </Stack>
+                                }
+                            />
+                        </ListItemButton>
+                        {(treeChildren.get('__root__') ?? []).map((rootNode) =>
+                            renderNode(rootNode, 1)
+                        )}
+                    </List>
+                </Box>
+            </Collapse>
 
-                    {currentChildren.length === 0 && (
-                        <Stack direction="row" spacing={0.75} alignItems="center">
-                            <FolderOutlinedIcon fontSize="small" color="disabled" />
-                            <Typography variant="caption" color="text.secondary">
-                                {t('reports.folders.leaf', 'Конечная папка. Подпапок нет.')}
+            <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="folder-path">
+                <Button
+                    onClick={() => setSelectedNodeId('root')}
+                    sx={{ textTransform: 'none', minWidth: 0, px: 0.25 }}
+                >
+                    {baseId || t('reports.upload.folders.root', 'Корень БС')}
+                </Button>
+                {breadcrumbsNodes.map((node, index) => {
+                    const isLast = index === breadcrumbsNodes.length - 1;
+                    if (isLast) {
+                        return (
+                            <Typography key={node.id} variant="body2" fontWeight={600}>
+                                {node.name}
                             </Typography>
-                        </Stack>
-                    )}
-                </Stack>
-            </Paper>
-
-            <Typography variant="body2" color="text.secondary">
-                {t('reports.folders.current', 'Текущая папка: {path}', {
-                    path: `${baseId}${activeStoragePath ? ` / ${activeStoragePath}` : ''}`,
+                        );
+                    }
+                    return (
+                        <Button
+                            key={node.id}
+                            onClick={() => setSelectedNodeId(node.id)}
+                            sx={{ textTransform: 'none', minWidth: 0, px: 0.25 }}
+                        >
+                            {node.name}
+                        </Button>
+                    );
                 })}
-            </Typography>
+            </Breadcrumbs>
 
             <ReportGallery
                 title={`${t('reports.gallery.main', 'Основные фото')} (${visibleMainPhotos.length})`}
                 photos={visibleMainPhotos}
             />
-            <ReportGallery
-                title={`${t('reports.gallery.fixed', 'Исправления')} (${visibleFixedPhotos.length})`}
-                photos={visibleFixedPhotos}
-            />
+
+            {fixedPhotos.length > 0 && (
+                <ReportGallery
+                    title={`${t('reports.gallery.fixed', 'Исправления')} (${visibleFixedPhotos.length})`}
+                    photos={visibleFixedPhotos}
+                />
+            )}
         </Stack>
     );
 }
