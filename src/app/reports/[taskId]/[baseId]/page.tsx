@@ -378,8 +378,12 @@ export default function PhotoReportPage() {
                 token={token}
             />
 
-                <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems="flex-start">
-                    <Stack spacing={3} sx={{ flex: 1 }}>
+                <Stack
+                    direction={{ xs: 'column', lg: 'row' }}
+                    spacing={3}
+                    alignItems={{ xs: 'stretch', lg: 'flex-start' }}
+                >
+                    <Stack spacing={3} sx={{ flex: 1, width: '100%' }}>
                         <ReportFolderBrowser
                             taskId={report.taskId}
                             baseId={baseId}
