@@ -196,8 +196,40 @@ export default function ReportFolderBrowser({
         [baseId, mainPhotos, fixedPhotos]
     );
 
-    const usingDetectedPaths = folderPaths.length === 0 && detectedFolderPaths.length > 0;
-    const effectiveFolderPaths = folderPaths.length > 0 ? folderPaths : detectedFolderPaths;
+    const effectiveFolderPaths = React.useMemo(() => {
+        if (folderPaths.length === 0) return detectedFolderPaths;
+        if (detectedFolderPaths.length === 0) return folderPaths;
+
+        const byStoragePath = new Map<string, FolderPathOption>();
+        folderPaths.forEach((item) => {
+            const normalized = normalizePathForStorage(item.path);
+            if (!normalized) return;
+            byStoragePath.set(normalized, item);
+        });
+        detectedFolderPaths.forEach((item) => {
+            const normalized = normalizePathForStorage(item.path);
+            if (!normalized || byStoragePath.has(normalized)) return;
+            byStoragePath.set(normalized, item);
+        });
+
+        return Array.from(byStoragePath.values()).sort((a, b) =>
+            a.path.localeCompare(b.path, 'ru')
+        );
+    }, [folderPaths, detectedFolderPaths]);
+
+    const usingDetectedPaths = React.useMemo(() => {
+        if (detectedFolderPaths.length === 0) return false;
+        if (folderPaths.length === 0) return true;
+
+        const configured = new Set(
+            folderPaths
+                .map((item) => normalizePathForStorage(item.path))
+                .filter(Boolean)
+        );
+        return detectedFolderPaths.some(
+            (item) => !configured.has(normalizePathForStorage(item.path))
+        );
+    }, [folderPaths, detectedFolderPaths]);
 
     const treeNodes = React.useMemo<TreeNode[]>(() => {
         if (effectiveFolderPaths.length === 0) return [];
