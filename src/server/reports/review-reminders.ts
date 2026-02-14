@@ -3,14 +3,16 @@ import 'server-only';
 import ReportModel from '@/server/models/ReportModel';
 import TaskModel from '@/server/models/TaskModel';
 import ProjectModel from '@/server/models/ProjectModel';
+import UserModel from '@/server/models/UserModel';
 import { sendEmail } from '@/server/email/mailer';
 import { signInitiatorAccessToken } from '@/utils/initiatorAccessToken';
 import { getServerEnv } from '@/config/env';
 
-const REVIEW_PENDING_STATUSES = new Set(['Pending', 'Fixed']);
+const REPORT_REMINDER_STATUSES = new Set(['Pending', 'Fixed', 'Issues']);
 const REMINDER_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000;
 const REMINDER_EVENT_ACTION = 'REMINDER_SENT';
-const REMINDER_EVENT_KIND = 'photo_report_review';
+const REVIEW_REMINDER_KIND = 'photo_report_review';
+const ISSUES_REMINDER_KIND = 'photo_report_issues';
 
 type ReportStatusEvent = {
     action?: string;
@@ -77,14 +79,15 @@ const getSubmissionContext = (
 
 const getLatestReminderDate = (
     events?: ReportStatusEvent[],
-    submittedAt?: Date
+    submittedAt?: Date,
+    kind?: string
 ): Date | null => {
     const normalizedEvents = Array.isArray(events) ? events : [];
     for (let i = normalizedEvents.length - 1; i >= 0; i -= 1) {
         const event = normalizedEvents[i];
         if (event?.action !== REMINDER_EVENT_ACTION) continue;
-        const kind = event?.details?.kind;
-        if (kind !== REMINDER_EVENT_KIND) continue;
+        const eventKind = event?.details?.kind;
+        if (kind && eventKind !== kind) continue;
         const eventDate = toDate(event.date);
         if (!eventDate) continue;
         if (submittedAt && eventDate < submittedAt) continue;
@@ -112,7 +115,7 @@ export const sendPendingReportReviewReminders = async (
     };
 
     const reports = await ReportModel.find({
-        status: { $in: Array.from(REVIEW_PENDING_STATUSES) },
+        status: { $in: Array.from(REPORT_REMINDER_STATUSES) },
     })
         .select(
             'taskId baseId status createdAt updatedAt createdByName events'
@@ -126,10 +129,38 @@ export const sendPendingReportReviewReminders = async (
 
     const taskIds = Array.from(new Set(reports.map((report) => report.taskId)));
     const tasks = await TaskModel.find({ taskId: { $in: taskIds } })
-        .select('taskId taskName initiatorEmail authorEmail projectId')
+        .select(
+            'taskId taskName initiatorEmail authorEmail projectId executorEmail executorId'
+        )
         .lean()
         .exec();
     const taskById = new Map(tasks.map((task) => [task.taskId, task]));
+    const executorClerkIds = Array.from(
+        new Set(
+            tasks
+                .map((task) =>
+                    typeof task.executorId === 'string' ? task.executorId.trim() : ''
+                )
+                .filter(Boolean)
+        )
+    );
+    const executorsByClerkId = new Map<string, string>();
+    if (executorClerkIds.length > 0) {
+        const users = await UserModel.find({
+            clerkUserId: { $in: executorClerkIds },
+        })
+            .select('clerkUserId email')
+            .lean()
+            .exec();
+        users.forEach((user) => {
+            const clerkUserId =
+                typeof user.clerkUserId === 'string' ? user.clerkUserId.trim() : '';
+            const email = normalizeEmail(user.email);
+            if (clerkUserId && email) {
+                executorsByClerkId.set(clerkUserId, email);
+            }
+        });
+    }
 
     const projectIds = Array.from(
         new Set(
@@ -163,6 +194,10 @@ export const sendPendingReportReviewReminders = async (
     const frontendUrl = FRONTEND_URL || 'https://ciwork.ru';
     const approvalText =
         'Выполните пожалуйста проверку фотоотчета и выставите замечания или согласуйте фотоотчет пользователя в случае отсутствия замечаний.';
+    const fixesApprovalText =
+        'Замечания по задаче устранены, пользователь загрузил фотографии исправлений. Выполните пожалуйста проверку фотоотчета и выставите замечания или согласуйте фотоотчет пользователя в случае отсутствия замечаний.';
+    const issuesText =
+        'По задаче есть замечания к фотоотчету. Необходимо устранить замечания и загрузить фотографии исправлений.';
 
     for (const report of reports) {
         try {
@@ -171,7 +206,13 @@ export const sendPendingReportReviewReminders = async (
                 continue;
             }
 
-            const lastReminderAt = getLatestReminderDate(report.events, submission.submittedAt);
+            const reminderKind =
+                report.status === 'Issues' ? ISSUES_REMINDER_KIND : REVIEW_REMINDER_KIND;
+            const lastReminderAt = getLatestReminderDate(
+                report.events,
+                submission.submittedAt,
+                reminderKind
+            );
             if (
                 lastReminderAt &&
                 now.getTime() - lastReminderAt.getTime() < REMINDER_INTERVAL_MS
@@ -182,28 +223,58 @@ export const sendPendingReportReviewReminders = async (
             stats.eligible += 1;
 
             const task = taskById.get(report.taskId);
-            const managerEmail =
-                normalizeEmail(
-                    task?.projectId
-                        ? managerEmailByProjectId.get(task.projectId.toString())
-                        : ''
-                ) || normalizeEmail(task?.authorEmail);
             const initiatorEmail = normalizeEmail(task?.initiatorEmail);
-
-            const recipients = Array.from(
-                new Set([managerEmail, initiatorEmail].filter(Boolean))
-            );
-            if (recipients.length === 0) {
-                stats.skippedNoRecipients += 1;
-                continue;
-            }
-
             const taskTitle =
                 (typeof task?.taskName === 'string' && task.taskName.trim()) ||
                 report.taskId;
             const reportLink = `${frontendUrl}/reports/${encodeURIComponent(
                 report.taskId
             )}/${encodeURIComponent(report.baseId)}`;
+
+            let recipients: string[] = [];
+            let subject = '';
+            let text = '';
+            let html = '';
+
+            if (report.status === 'Issues') {
+                const executorEmail =
+                    normalizeEmail(task?.executorEmail) ||
+                    normalizeEmail(
+                        task?.executorId
+                            ? executorsByClerkId.get(task.executorId.trim())
+                            : ''
+                    );
+                recipients = executorEmail ? [executorEmail] : [];
+                const issuesDateText = formatDate(submission.submittedAt);
+                const summaryLine = `${issuesDateText} по задаче «${taskTitle}» (БС ${report.baseId}) были выставлены замечания по фотоотчету.`;
+                subject = `Напоминание: устраните замечания по фотоотчету «${taskTitle}»`;
+                text = `${summaryLine}\n\n${issuesText}`;
+                html = `<p>${summaryLine}</p><p>${issuesText}</p>`;
+            } else {
+                const managerEmail =
+                    normalizeEmail(
+                        task?.projectId
+                            ? managerEmailByProjectId.get(task.projectId.toString())
+                            : ''
+                    ) || normalizeEmail(task?.authorEmail);
+                recipients = Array.from(new Set([managerEmail, initiatorEmail].filter(Boolean)));
+                const submittedDateText = formatDate(submission.submittedAt);
+                const summaryLine =
+                    report.status === 'Fixed'
+                        ? `${submittedDateText} пользователем ${submission.submittedBy} устранены замечания и загружены фотографии исправлений по задаче «${taskTitle}» (БС ${report.baseId}).`
+                        : `${submittedDateText} пользователем ${submission.submittedBy} отправлен фотоотчет по задаче «${taskTitle}» (БС ${report.baseId}).`;
+                const actionText =
+                    report.status === 'Fixed' ? fixesApprovalText : approvalText;
+                subject = `Напоминание: проверьте фотоотчет по задаче «${taskTitle}»`;
+                text = `${summaryLine}\n\n${actionText}`;
+                html = `<p>${summaryLine}</p><p>${actionText}</p>`;
+            }
+
+            if (recipients.length === 0) {
+                stats.skippedNoRecipients += 1;
+                continue;
+            }
+
             const initiatorLink = initiatorEmail
                 ? `${reportLink}?token=${encodeURIComponent(
                       signInitiatorAccessToken({
@@ -212,9 +283,6 @@ export const sendPendingReportReviewReminders = async (
                       })
                   )}`
                 : '';
-            const submittedDateText = formatDate(submission.submittedAt);
-            const summaryLine = `${submittedDateText} пользователем ${submission.submittedBy} отправлен фотоотчет по задаче «${taskTitle}» (БС ${report.baseId}).`;
-            const subject = `Напоминание: проверьте фотоотчет по задаче «${taskTitle}»`;
 
             await Promise.all(
                 recipients.map(async (recipient) => {
@@ -225,8 +293,8 @@ export const sendPendingReportReviewReminders = async (
                     await sendEmail({
                         to: recipient,
                         subject,
-                        text: `${summaryLine}\n\n${approvalText}\n\nСсылка на фотоотчет: ${link}`,
-                        html: `<p>${summaryLine}</p><p>${approvalText}</p><p><a href="${link}">Перейти к фотоотчету</a></p>`,
+                        text: `${text}\n\nСсылка на фотоотчет: ${link}`,
+                        html: `${html}<p><a href="${link}">Перейти к фотоотчету</a></p>`,
                     });
                 })
             );
@@ -238,7 +306,7 @@ export const sendPendingReportReviewReminders = async (
                 authorId: 'system:photo-report-reminder',
                 date: now,
                 details: {
-                    kind: REMINDER_EVENT_KIND,
+                    kind: reminderKind,
                     recipients,
                     status: report.status,
                 },
