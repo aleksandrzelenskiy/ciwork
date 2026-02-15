@@ -12,16 +12,26 @@ import dbConnect from '@/server/db/mongoose';
 import ReportModel from '@/server/models/ReportModel';
 import type { EffectiveOrgRole } from '@/app/types/roles';
 import { getStatusLabel } from '@/utils/statusLabels';
+import { formatMessage, resolveLocale, type Locale, type Translator } from '@/i18n';
+import ruMessages from '@/i18n/messages/ru';
+import enMessages from '@/i18n/messages/en';
 
 interface ReportsStatisticsProps {
   role: EffectiveOrgRole | null;
   clerkUserId: string;
+  locale?: Locale;
 }
 
 const ReportsStatistics = async ({
   role,
   clerkUserId,
+  locale,
 }: ReportsStatisticsProps) => {
+  const resolvedLocale = resolveLocale(locale);
+  const dictionary = resolvedLocale === 'en' ? enMessages : ruMessages;
+  const t: Translator = (key, fallback, values) =>
+    formatMessage(dictionary[key] ?? fallback ?? key, values);
+
   // 1) Подключаемся к БД перед любыми операциями с моделью
   await dbConnect();
 
@@ -166,7 +176,7 @@ const ReportsStatistics = async ({
                   const { color, Icon } = getColorAndIcon(diffPending);
                   return (
                     <>
-                      <Typography variant='h6'>{getStatusLabel('Pending')}</Typography>
+                      <Typography variant='h6'>{getStatusLabel('Pending', t)}</Typography>
                       <Typography variant='h3'>
                         {reportCounts.Pending}
                       </Typography>
@@ -190,7 +200,7 @@ const ReportsStatistics = async ({
                   const { color, Icon } = getColorAndIcon(diffIssues);
                   return (
                     <>
-                      <Typography variant='h6'>{getStatusLabel('Issues')}</Typography>
+                      <Typography variant='h6'>{getStatusLabel('Issues', t)}</Typography>
                       <Typography variant='h3'>
                         {reportCounts.Issues}
                       </Typography>
@@ -214,7 +224,7 @@ const ReportsStatistics = async ({
                   const { color, Icon } = getColorAndIcon(diffFixed);
                   return (
                     <>
-                      <Typography variant='h6'>{getStatusLabel('Fixed')}</Typography>
+                      <Typography variant='h6'>{getStatusLabel('Fixed', t)}</Typography>
                       <Typography variant='h3'>{reportCounts.Fixed}</Typography>
                       <Typography variant='body2' sx={{ color }}>
                         {Icon} {formatDiff(diffFixed)}
@@ -236,7 +246,7 @@ const ReportsStatistics = async ({
                   const { color, Icon } = getColorAndIcon(diffAgreed);
                   return (
                     <>
-                      <Typography variant='h6'>{getStatusLabel('Agreed')}</Typography>
+                      <Typography variant='h6'>{getStatusLabel('Agreed', t)}</Typography>
                       <Typography variant='h3'>
                         {reportCounts.Agreed}
                       </Typography>

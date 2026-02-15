@@ -109,7 +109,7 @@ export default function ReportSummaryList({
                                     </Typography>
                                 </Box>
                             </Stack>
-                            <Chip label={getStatusLabel(normalizedStatus)} size="small" sx={statusChipSx} />
+                            <Chip label={getStatusLabel(normalizedStatus, t)} size="small" sx={statusChipSx} />
                         </Button>
                     );
                 })}
@@ -178,7 +178,7 @@ export default function ReportSummaryList({
                             </Typography>
                         </Box>
                         <Chip
-                            label={getStatusLabel(normalizedStatus)}
+                            label={getStatusLabel(normalizedStatus, t)}
                             size="small"
                             sx={chipSx}
                         />

@@ -35,6 +35,7 @@ import { UI_RADIUS } from '@/config/uiTokens';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { getStatusColor } from '@/utils/statusColors';
 import { fetchPdfBlobUrl } from '@/utils/pdfBlobCache';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const isPdf = (url: string) => extractFileNameFromUrl(url, '').toLowerCase().endsWith('.pdf');
 
@@ -63,6 +64,7 @@ export default function DocumentReviewViewer({
     currentFilesOverride,
     previousFilesOverride,
 }: DocumentReviewViewerProps) {
+    const { t } = useI18n();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -311,7 +313,11 @@ export default function DocumentReviewViewer({
                                     </Typography>
                                     <Chip
                                         size="small"
-                                        label={issue.status === 'resolved' ? 'Устранено' : 'Открыто'}
+                                        label={
+                                            issue.status === 'resolved'
+                                                ? t('status.resolved', 'Устранено')
+                                                : t('status.open', 'Открыто')
+                                        }
                                         sx={
                                             chipColor === 'default'
                                                 ? undefined
@@ -437,7 +443,9 @@ export default function DocumentReviewViewer({
                             <Typography variant="h5" fontWeight={700} sx={{ flexGrow: 1 }}>
                                 {headerTitle}
                             </Typography>
-                            <Chip label={`Статус: ${getStatusLabel(review.status)}`} />
+                            <Chip
+                                label={`${t('tasks.fields.status', 'Статус')}: ${getStatusLabel(review.status, t)}`}
+                            />
                             <Chip label={`Версия ${review.currentVersion || 0}`} />
                             <Tooltip title="Замечания">
                                 <IconButton onClick={() => setIssuesDrawerOpen(true)}>

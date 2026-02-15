@@ -49,6 +49,7 @@ import { getStatusLabel, normalizeStatusTitle, STATUS_ORDER } from '@/utils/stat
 import { getOperatorLabel } from '@/app/utils/operators';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type AdminReport = {
     taskId: string;
@@ -143,6 +144,7 @@ const getReportHref = (report: AdminReport) => {
 };
 
 export default function ReportsAdmin() {
+    const { t } = useI18n();
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
     const headerBg = isDarkMode ? 'rgba(17,22,33,0.85)' : 'rgba(255,255,255,0.55)';
@@ -371,11 +373,16 @@ export default function ReportsAdmin() {
         if (filters.regionCode) chips.push({ key: 'regionCode', label: `Регион: ${regionLabel || filters.regionCode}` });
         if (filters.operatorCode) chips.push({ key: 'operatorCode', label: `Оператор: ${operatorLabel || filters.operatorCode}` });
         if (filters.author) chips.push({ key: 'author', label: `Автор: ${filters.author}` });
-        if (filters.status) chips.push({ key: 'status', label: `Статус: ${getStatusLabel(filters.status)}` });
+        if (filters.status) {
+            chips.push({
+                key: 'status',
+                label: `${t('tasks.fields.status', 'Статус')}: ${getStatusLabel(filters.status, t)}`,
+            });
+        }
         if (filters.createdFrom) chips.push({ key: 'createdFrom', label: `Создан от: ${format(filters.createdFrom, 'dd.MM.yyyy')}` });
         if (filters.createdTo) chips.push({ key: 'createdTo', label: `Создан до: ${format(filters.createdTo, 'dd.MM.yyyy')}` });
         return chips;
-    }, [filters, operatorOptions, orgOptions, projectOptions, regionOptions]);
+    }, [filters, operatorOptions, orgOptions, projectOptions, regionOptions, t]);
 
     const handleRemoveFilter = (key: keyof AdminReportFilters) => {
         setFilters((prev) => ({ ...prev, [key]: defaultFilters[key] }));
@@ -641,7 +648,7 @@ export default function ReportsAdmin() {
                                         </MenuItem>
                                         {filterOptions.statuses.map((status) => (
                                             <MenuItem key={status} value={status}>
-                                                {getStatusLabel(status)}
+                                                {getStatusLabel(status, t)}
                                             </MenuItem>
                                         ))}
                                     </Select>
@@ -849,7 +856,7 @@ export default function ReportsAdmin() {
                                                 <TableCell align="center">{formatDateRU(report.createdAt)}</TableCell>
                                                 <TableCell align="center">
                                                     <Chip
-                                                        label={getStatusLabel(status)}
+                                                        label={getStatusLabel(status, t)}
                                                         size="small"
                                                         sx={{
                                                             backgroundColor: statusColor,
@@ -963,7 +970,7 @@ export default function ReportsAdmin() {
                                                 <Typography>{base.baseId}</Typography>
                                             </Stack>
                                             <Chip
-                                                label={getStatusLabel(base.status)}
+                                                label={getStatusLabel(base.status, t)}
                                                 size="small"
                                                 sx={{
                                                     backgroundColor: color,

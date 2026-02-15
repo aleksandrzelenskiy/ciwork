@@ -372,7 +372,7 @@ export default function ReportListPage() {
                 <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
                   {report.baseStatuses.map((base) => {
                     const baseStatus = normalizeStatusTitle(base.status);
-                    const baseStatusLabel = getStatusLabel(baseStatus);
+                    const baseStatusLabel = getStatusLabel(baseStatus, t);
                     const baseStatusColor = getStatusColor(baseStatus);
                     const baseStatusChipSx =
                       baseStatusColor === 'default'

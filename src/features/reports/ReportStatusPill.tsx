@@ -1,6 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import { getStatusColor } from '@/utils/statusColors';
 import { getStatusLabel, normalizeStatusTitle } from '@/utils/statusLabels';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type ReportStatusPillProps = {
     status: string;
@@ -8,9 +9,10 @@ type ReportStatusPillProps = {
 };
 
 export default function ReportStatusPill({ status, label }: ReportStatusPillProps) {
+    const { t } = useI18n();
     const normalizedStatus = normalizeStatusTitle(status);
     const color = getStatusColor(normalizedStatus);
-    const resolvedLabel = label ?? getStatusLabel(normalizedStatus);
+    const resolvedLabel = label ?? getStatusLabel(normalizedStatus, t);
     return (
         <Box
             sx={{

@@ -91,12 +91,15 @@ type PhotoReportUploaderProps = {
 
 const getReadableSize = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(2)} МБ`;
 
-const getStatusLabel = (status: UploadStatus) => {
-    if (status === 'uploading') return 'Загрузка';
-    if (status === 'done') return 'Готово';
-    if (status === 'error') return 'Ошибка';
-    if (status === 'canceled') return 'Отменено';
-    return 'Готово к отправке';
+const getUploadStatusLabel = (
+    status: UploadStatus,
+    t: (key: string, fallback?: string) => string
+) => {
+    if (status === 'uploading') return t('reports.upload.status.uploading', 'Загрузка');
+    if (status === 'done') return t('reports.upload.status.done', 'Готово');
+    if (status === 'error') return t('reports.upload.status.error', 'Ошибка');
+    if (status === 'canceled') return t('reports.upload.status.canceled', 'Отменено');
+    return t('reports.upload.status.ready', 'Готово к отправке');
 };
 
 const MAX_PREVIEW_ITEMS = 12;
@@ -1408,7 +1411,7 @@ export default function PhotoReportUploader(props: PhotoReportUploaderProps) {
                                                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
                                                     <Chip
                                                         size="small"
-                                                        label={getStatusLabel(item.status)}
+                                                        label={getUploadStatusLabel(item.status, t)}
                                                         sx={{
                                                             borderRadius: 999,
                                                             fontWeight: 600,

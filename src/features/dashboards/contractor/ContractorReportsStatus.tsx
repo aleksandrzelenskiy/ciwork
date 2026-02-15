@@ -99,7 +99,7 @@ export default function ContractorReportsStatus() {
                 {REPORT_STATUSES.map((status) => (
                     <Chip
                         key={status}
-                        label={`${getStatusLabel(status)}: ${statusCounts[status]}`}
+                        label={`${getStatusLabel(status, t)}: ${statusCounts[status]}`}
                         sx={{
                             backgroundColor: getStatusColor(status),
                             color: theme.palette.common.white,

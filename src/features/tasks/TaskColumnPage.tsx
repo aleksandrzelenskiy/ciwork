@@ -180,7 +180,7 @@ function DraggableTask({
           {documentStatusHint ? (
             <Tooltip title={documentStatusHint}>
               <Chip
-                label={getStatusLabel(task.status)}
+                label={getStatusLabel(task.status, t)}
                 sx={{
                   backgroundColor: getStatusColor(task.status),
                   color: '#fff',
@@ -190,7 +190,7 @@ function DraggableTask({
             </Tooltip>
           ) : (
             <Chip
-              label={getStatusLabel(task.status)}
+              label={getStatusLabel(task.status, t)}
               sx={{
                 backgroundColor: getStatusColor(task.status),
                 color: '#fff',
@@ -228,7 +228,7 @@ function DroppableColumn({
   const headerBg = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.95)';
   const headerBorder = isDarkMode ? 'rgba(255,255,255,0.12)' : 'rgba(15,23,42,0.08)';
   const headerText = isDarkMode ? '#f8fafc' : '#0f172a';
-  const statusLabel = getStatusLabel(status);
+  const statusLabel = getStatusLabel(status, t);
 
   useEffect(() => {
     const element = ref.current;

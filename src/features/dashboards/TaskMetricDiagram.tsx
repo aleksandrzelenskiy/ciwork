@@ -247,7 +247,7 @@ export default function TaskMetricDiagram({
                     textDecoration: 'underline',
                   }}
                 >
-                  {`${getStatusLabel(data.name)} (${data.count})`}
+                  {`${getStatusLabel(data.name, t)} (${data.count})`}
                 </Link>
               ) : (
                 <Typography
@@ -258,7 +258,7 @@ export default function TaskMetricDiagram({
                     color: entry.color || theme.palette.text.primary,
                   }}
                 >
-                  {`${getStatusLabel(data.name)} (${data.count})`}
+                  {`${getStatusLabel(data.name, t)} (${data.count})`}
                 </Typography>
               )
             );
@@ -296,7 +296,7 @@ export default function TaskMetricDiagram({
             </Pie>
             <Tooltip
               formatter={(value: number) => `${value}`}
-              labelFormatter={(name) => getStatusLabel(name as string)}
+              labelFormatter={(name) => getStatusLabel(name as string, t)}
               contentStyle={{
                 backgroundColor: theme.palette.background.paper,
                 border: `1px solid ${theme.palette.divider}`,
@@ -308,7 +308,7 @@ export default function TaskMetricDiagram({
             <Legend
               payload={legendData.map((item) => ({
                 color: getStatusColor(item.name),
-                value: getStatusLabel(item.name),
+                value: getStatusLabel(item.name, t),
                 payload: { ...item, strokeDasharray: '' },
               }))}
               content={renderLegend}

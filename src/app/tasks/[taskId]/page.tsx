@@ -683,7 +683,7 @@ export default function TaskDetailPage() {
         if (typeof value === 'boolean') return value ? t('common.yes', 'Да') : t('common.no', 'Нет');
         if (typeof value === 'string' && dateKeys.has(key)) return formatDateTime(value);
         if (typeof value === 'string' && statusKeys.has(key)) {
-            const label = getStatusLabel(normalizeStatusTitle(value));
+            const label = getStatusLabel(normalizeStatusTitle(value), t);
             return label || value;
         }
         if (typeof value === 'string' && key === 'priority') {
@@ -1360,7 +1360,7 @@ export default function TaskDetailPage() {
                                 )}
                                 {task.status && (
                                     <Chip
-                                        label={getStatusLabel(task.status)}
+                                        label={getStatusLabel(task.status, t)}
                                         size="small"
                                         sx={{
                                             bgcolor: getStatusColor(normalizeStatusTitle(task.status)),
@@ -1693,7 +1693,7 @@ export default function TaskDetailPage() {
                                 {relatedTasks.map((related) => {
                                     const detailLabel = related.bsNumber ? `BS ${related.bsNumber}` : null;
                                     const statusLabel = related.status
-                                        ? getStatusLabel(normalizeStatusTitle(related.status))
+                                        ? getStatusLabel(normalizeStatusTitle(related.status), t)
                                         : undefined;
                                     const href = related.taskId
                                         ? `/tasks/${encodeURIComponent(related.taskId.toLowerCase())}`

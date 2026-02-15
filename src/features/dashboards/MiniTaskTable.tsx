@@ -266,7 +266,7 @@ export default function MiniTaskTable({
                   </TableCell>
                   <TableCell align='center'>
                     <Chip
-                      label={getStatusLabel(task.status)}
+                      label={getStatusLabel(task.status, t)}
                       sx={{
                         backgroundColor: getStatusColor(task.status),
                         color: theme.palette.common.white,

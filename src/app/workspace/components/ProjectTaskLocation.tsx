@@ -44,6 +44,7 @@ import {
     type OperatorSlug,
 } from '@/utils/operatorColors';
 import { CORE_OPERATORS } from '@/app/constants/operators';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type TaskLocation = {
     _id?: string;
@@ -181,6 +182,7 @@ type ProjectTaskLocationProps = {
 export default function ProjectTaskLocation({
     contactRole = 'executor',
 }: ProjectTaskLocationProps): React.ReactElement {
+    const { t } = useI18n();
     const [tasks, setTasks] = React.useState<TaskLocation[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
@@ -477,7 +479,7 @@ export default function ProjectTaskLocation({
                 ? `<div style="margin-bottom:4px;">Связанные БС: ${point.relatedNumbers}</div>`
                 : '';
             const statusLine = point.status
-                ? `<div style="margin-bottom:4px;">Статус: ${getStatusLabel(point.status)}</div>`
+                ? `<div style="margin-bottom:4px;">${t('tasks.fields.status', 'Статус')}: ${getStatusLabel(point.status, t)}</div>`
                 : '';
             const priorityLine = point.priority
                 ? `<div style="margin-bottom:4px;">Приоритет: ${getPriorityLabelRu(point.priority)}</div>`
@@ -518,7 +520,7 @@ export default function ProjectTaskLocation({
             }
         </div>`;
         },
-        [contactRole, orgSlug, projectSlug]
+        [contactRole, orgSlug, projectSlug, t]
     );
 
     const glassPaperSx = React.useMemo(() => {
@@ -575,8 +577,8 @@ export default function ProjectTaskLocation({
         [availableOperators, operatorFilter]
     );
     const statusLabel = availableStatuses.length
-        ? `Статусы · ${activeStatusCount}/${availableStatuses.length}`
-        : 'Статусы';
+        ? `${t('tasks.statuses', 'Статусы задач')} · ${activeStatusCount}/${availableStatuses.length}`
+        : t('tasks.statuses', 'Статусы задач');
     const priorityLabel = availablePriorities.length
         ? `Приоритет · ${activePriorityCount}/${availablePriorities.length}`
         : 'Приоритет';
@@ -684,7 +686,7 @@ export default function ProjectTaskLocation({
                                         return (
                                             <Chip
                                                 key={status}
-                                                label={getStatusLabel(status)}
+                                                label={getStatusLabel(status, t)}
                                                 onClick={() =>
                                                     setStatusFilter((prev) => ({
                                                         ...prev,

@@ -15,6 +15,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Link from 'next/link';
 import type { DocumentReviewClient } from '@/app/types/documentReviewTypes';
 import { getStatusLabel } from '@/utils/statusLabels';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const isPdf = (url: string) => url.toLowerCase().endsWith('.pdf');
 
@@ -23,6 +24,7 @@ type DocumentReviewTaskPanelProps = {
 };
 
 export default function DocumentReviewTaskPanel({ taskId }: DocumentReviewTaskPanelProps) {
+    const { t } = useI18n();
     const [review, setReview] = React.useState<DocumentReviewClient | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
@@ -71,7 +73,7 @@ export default function DocumentReviewTaskPanel({ taskId }: DocumentReviewTaskPa
         <Stack spacing={1.5}>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ md: 'center' }}>
                     <Typography variant="subtitle2" color="text.secondary">
-                        Статус: {getStatusLabel(review.status)}
+                        {t('tasks.fields.status', 'Статус')}: {getStatusLabel(review.status, t)}
                     </Typography>
                 <Chip size="small" label={`Версия ${review.currentVersion || 0}`} />
                 <Box sx={{ flexGrow: 1 }} />

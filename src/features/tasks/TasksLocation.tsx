@@ -28,6 +28,7 @@ import { getStatusColor } from '@/utils/statusColors';
 import { getPriorityIcon, getPriorityLabelRu } from '@/utils/priorityIcons';
 import { getStatusLabel } from '@/utils/statusLabels';
 import { withBasePath } from '@/utils/basePath';
+import { useI18n } from '@/i18n/I18nProvider';
 import {
     OPERATOR_CLUSTER_PRESETS,
     OPERATOR_COLORS,
@@ -128,6 +129,7 @@ const buildRelatedNumbers = (task: TaskLocation, pool: string[], currentIndex: n
 };
 
 export default function TasksLocation(): React.ReactElement {
+    const { t } = useI18n();
     const [tasks, setTasks] = React.useState<TaskLocation[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
@@ -319,7 +321,7 @@ export default function TasksLocation(): React.ReactElement {
             ? `<div style="margin-bottom:4px;">Связанные БС: ${point.relatedNumbers}</div>`
             : '';
         const statusLine = point.status
-            ? `<div style="margin-bottom:4px;">Статус: ${getStatusLabel(point.status)}</div>`
+            ? `<div style="margin-bottom:4px;">${t('tasks.fields.status', 'Статус')}: ${getStatusLabel(point.status, t)}</div>`
             : '';
         const priorityLine = point.priority
             ? `<div style="margin-bottom:4px;">Приоритет: ${getPriorityLabelRu(point.priority)}</div>`
@@ -337,7 +339,7 @@ export default function TasksLocation(): React.ReactElement {
                     : ''
             }
         </div>`;
-    }, []);
+    }, [t]);
 
     const glassPaperSx = React.useMemo(() => {
         const borderColor = alpha(isDark ? '#ffffff' : '#0f172a', isDark ? 0.12 : 0.08);
@@ -460,7 +462,7 @@ export default function TasksLocation(): React.ReactElement {
                             <Stack spacing={1}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                        Статусы
+                                        {t('tasks.statuses', 'Статусы задач')}
                                     </Typography>
                                     <Tooltip title="Сбросить фильтры">
                                         <IconButton size="small" onClick={resetFilters}>
@@ -474,7 +476,7 @@ export default function TasksLocation(): React.ReactElement {
                                         return (
                                             <Chip
                                                 key={status}
-                                                label={getStatusLabel(status)}
+                                                label={getStatusLabel(status, t)}
                                                 onClick={() =>
                                                     setStatusFilter((prev) => ({
                                                         ...prev,

@@ -36,6 +36,7 @@ import { getStatusLabel } from '@/utils/statusLabels';
 import DocumentReviewViewer from '@/features/documents/DocumentReviewViewer';
 import DocumentDiffViewer from '@/features/documents/DocumentDiffViewer';
 import { fetchPdfBlobUrl } from '@/utils/pdfBlobCache';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const isPdf = (url: string) => extractFileNameFromUrl(url, '').toLowerCase().endsWith('.pdf');
 const isPdfFile = (file: File) =>
@@ -114,6 +115,7 @@ function PdfThumbnail({ fileUrl, buildProxyUrl }: PdfThumbnailProps) {
 }
 
 export default function DocumentReviewPage() {
+    const { t } = useI18n();
     const { taskId } = useParams() as { taskId: string };
     const searchParams = useSearchParams();
     const token = searchParams?.get('token')?.trim() || '';
@@ -485,7 +487,9 @@ export default function DocumentReviewPage() {
                     <Typography variant="h5" fontWeight={700} sx={{ flexGrow: 1 }}>
                         {headerTitle}
                     </Typography>
-                    <Chip label={`Статус: ${getStatusLabel(review.status)}`} />
+                    <Chip
+                        label={`${t('tasks.fields.status', 'Статус')}: ${getStatusLabel(review.status, t)}`}
+                    />
                     <Chip label={`Версия ${review.currentVersion || 0}`} />
                     <Button
                         variant="outlined"

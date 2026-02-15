@@ -460,7 +460,7 @@ export default function TasksPage() {
                                 .filter((status): status is string => Boolean(status))
                                 .map((status) => (
                                     <MenuItem key={status} value={status}>
-                                        {getStatusLabel(status)}
+                                        {getStatusLabel(status, t)}
                                     </MenuItem>
                                 ))}
                         </Select>

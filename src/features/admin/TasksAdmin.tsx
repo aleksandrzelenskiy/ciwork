@@ -74,6 +74,7 @@ import { getStatusLabel, normalizeStatusTitle, STATUS_ORDER } from '@/utils/stat
 import { getOperatorLabel } from '@/app/utils/operators';
 import { RUSSIAN_REGIONS } from '@/app/utils/regions';
 import ProfileDialog from '@/features/profile/ProfileDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 type Priority = 'urgent' | 'high' | 'medium' | 'low';
 
@@ -435,7 +436,7 @@ function AdminTaskTable({
                                 <TableCell align="center">{formatDateRU(task.dueDate)}</TableCell>
                                 <TableCell align="center">
                                     <Chip
-                                        label={getStatusLabel(task.status)}
+                                        label={getStatusLabel(task.status, t)}
                                         size="small"
                                         sx={{
                                             backgroundColor: getStatusColor(task.status ?? ''),
@@ -636,7 +637,7 @@ function AdminTaskBoard({
                     }}
                 >
                     <Typography variant="h6" sx={{ mb: 2, textTransform: 'none' }}>
-                        {getStatusLabel(status)} ({grouped[status]?.length || 0})
+                        {getStatusLabel(status, t)} ({grouped[status]?.length || 0})
                     </Typography>
                     {(grouped[status] || []).map((task) => {
                         const taskHref = getTaskHref(task);
@@ -722,7 +723,7 @@ function AdminTaskBoard({
                                     }}
                                 >
                                     <Chip
-                                        label={getStatusLabel(status)}
+                                        label={getStatusLabel(status, t)}
                                         size="small"
                                         sx={{
                                             backgroundColor: getStatusColor(status),
@@ -863,6 +864,7 @@ function AdminTaskCalendar({ items }: { items: AdminTask[] }) {
 }
 
 export default function TasksAdmin() {
+    const { t } = useI18n();
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
     const headerBg = isDarkMode ? 'rgba(17,22,33,0.85)' : 'rgba(255,255,255,0.55)';
@@ -1129,12 +1131,12 @@ export default function TasksAdmin() {
         if (filters.regionCode) chips.push({ key: 'regionCode', label: `Регион: ${regionLabel || filters.regionCode}` });
         if (filters.operatorCode) chips.push({ key: 'operatorCode', label: `Оператор: ${operatorLabel || filters.operatorCode}` });
         if (filters.executor) chips.push({ key: 'executor', label: `Исполнитель: ${filters.executor}` });
-        if (filters.status) chips.push({ key: 'status', label: `Статус: ${getStatusLabel(filters.status)}` });
+        if (filters.status) chips.push({ key: 'status', label: `${t('tasks.fields.status', 'Статус')}: ${getStatusLabel(filters.status, t)}` });
         if (filters.priority) chips.push({ key: 'priority', label: `Приоритет: ${getPriorityLabelRu(filters.priority as Priority)}` });
         if (filters.dueFrom) chips.push({ key: 'dueFrom', label: `Срок от: ${format(filters.dueFrom, 'dd.MM.yyyy')}` });
         if (filters.dueTo) chips.push({ key: 'dueTo', label: `Срок до: ${format(filters.dueTo, 'dd.MM.yyyy')}` });
         return chips;
-    }, [filters, operatorOptions, orgOptions, projectOptions, regionOptions]);
+    }, [filters, operatorOptions, orgOptions, projectOptions, regionOptions, t]);
 
     const handleRemoveFilter = (key: keyof AdminTaskFilters) => {
         setFilters((prev) => ({ ...prev, [key]: defaultFilters[key] }));
@@ -1505,7 +1507,7 @@ export default function TasksAdmin() {
                                         </MenuItem>
                                         {filterOptions.statuses.map((status) => (
                                             <MenuItem key={status} value={status}>
-                                                {getStatusLabel(status)}
+                                                {getStatusLabel(status, t)}
                                             </MenuItem>
                                         ))}
                                     </Select>
