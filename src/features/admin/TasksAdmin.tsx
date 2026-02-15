@@ -297,6 +297,7 @@ function AdminTaskTable({
     onOpenProfile: (clerkUserId?: string | null) => void;
     onDelete: (task: AdminTask) => void;
 }) {
+    const { t } = useI18n();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const tableBg = isDark ? 'rgba(10,13,20,0.92)' : '#ffffff';
@@ -596,6 +597,7 @@ function AdminTaskBoard({
     items: AdminTask[];
     onOpenProfile: (clerkUserId?: string | null) => void;
 }) {
+    const { t } = useI18n();
     const theme = useTheme();
     const isDark = theme.palette.mode === 'dark';
     const columnBg = isDark ? 'rgba(10,13,20,0.9)' : 'rgba(255,255,255,0.94)';
