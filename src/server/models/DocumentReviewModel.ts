@@ -158,7 +158,7 @@ const DocumentReviewSchema = new Schema<DocumentReview>(
     {
         orgId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
         projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
-        taskId: { type: String, required: true, index: true },
+        taskId: { type: String, required: true },
         taskName: { type: String, default: '' },
         status: { type: String, default: 'Draft' },
         currentVersion: { type: Number, default: 0 },
