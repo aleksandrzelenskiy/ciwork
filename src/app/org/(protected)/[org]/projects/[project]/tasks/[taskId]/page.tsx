@@ -90,6 +90,7 @@ import Masonry from '@mui/lab/Masonry';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { getOrgPageStyles } from '@/app/org/(protected)/[org]/styles';
 import { extractFileNameFromUrl, isDocumentUrl } from '@/utils/taskFiles';
+import { dotsDateToInputDate } from '@/utils/orderDocumentParser';
 import { normalizeRelatedTasks } from '@/app/utils/relatedTasks';
 import type { RelatedTaskRef } from '@/app/types/taskTypes';
 import { buildBsAddressFromLocations } from '@/utils/bsLocation';
@@ -210,6 +211,12 @@ type NcwDefaults = {
     completionDate?: string | null;
     bsNumber?: string | null;
     address?: string | null;
+};
+
+type ParsedOrderFields = {
+    orderNumber?: string | null;
+    orderDate?: string | null; // dd.mm.yyyy
+    orderSignDate?: string | null; // dd.mm.yyyy
 };
 
 const TASK_SECTION_KEYS = [
@@ -366,6 +373,7 @@ export default function TaskDetailsPage() {
     const [orderSignDateInput, setOrderSignDateInput] = React.useState('');
     const [orderFile, setOrderFile] = React.useState<File | null>(null);
     const [orderDragActive, setOrderDragActive] = React.useState(false);
+    const [orderParsing, setOrderParsing] = React.useState(false);
     const [orderUploading, setOrderUploading] = React.useState(false);
     const [orderFormError, setOrderFormError] = React.useState<string | null>(null);
     const [ncwDialogOpen, setNcwDialogOpen] = React.useState(false);
@@ -410,6 +418,7 @@ export default function TaskDetailsPage() {
         sev: 'success' | 'error';
     }>({ open: false, message: '', sev: 'success' });
     const orderFileInputRef = React.useRef<HTMLInputElement | null>(null);
+    const orderParseRequestRef = React.useRef(0);
 
     const asText = (x: unknown): string => {
         if (x === null || typeof x === 'undefined') return '—';
@@ -1310,6 +1319,8 @@ export default function TaskDetailsPage() {
         prefillOrderFields();
         setOrderFormError(null);
         setOrderFile(null);
+        orderParseRequestRef.current += 1;
+        setOrderParsing(false);
         setSelectedDocumentType(null);
         setDocumentDialogOpen(true);
     };
@@ -1321,12 +1332,16 @@ export default function TaskDetailsPage() {
         setOrderFormError(null);
         setOrderFile(null);
         setOrderDragActive(false);
+        orderParseRequestRef.current += 1;
+        setOrderParsing(false);
     };
 
     const handleSelectOrderDocument = () => {
         prefillOrderFields();
         setOrderFormError(null);
         setOrderFile(null);
+        orderParseRequestRef.current += 1;
+        setOrderParsing(false);
         setSelectedDocumentType('order');
     };
 
@@ -1341,16 +1356,57 @@ export default function TaskDetailsPage() {
         return null;
     };
 
+    const parseOrderFieldsFromFile = React.useCallback(async (file: File) => {
+        const requestId = orderParseRequestRef.current + 1;
+        orderParseRequestRef.current = requestId;
+        setOrderParsing(true);
+        try {
+            const fd = new FormData();
+            fd.append('file', file, file.name);
+            const res = await fetch('/api/orders/parse', {
+                method: 'POST',
+                body: fd,
+            });
+            if (!res.ok) return;
+
+            const payload = (await res.json().catch(() => null)) as ParsedOrderFields | null;
+            if (!payload || orderParseRequestRef.current !== requestId) return;
+
+            if (typeof payload.orderNumber === 'string' && payload.orderNumber.trim()) {
+                setOrderNumberInput(payload.orderNumber.trim());
+            }
+
+            const parsedOrderDate = dotsDateToInputDate(payload.orderDate);
+            if (parsedOrderDate) {
+                setOrderDateInput(parsedOrderDate);
+            }
+
+            const parsedOrderSignDate = dotsDateToInputDate(payload.orderSignDate);
+            if (parsedOrderSignDate) {
+                setOrderSignDateInput(parsedOrderSignDate);
+            }
+        } catch (error) {
+            console.error('Order file parsing failed', error);
+        } finally {
+            if (orderParseRequestRef.current === requestId) {
+                setOrderParsing(false);
+            }
+        }
+    }, []);
+
     const handleOrderFileChange = (fileList: FileList | null) => {
         if (!fileList || fileList.length === 0) return;
         const file = fileList[0];
         const validationError = validateOrderFile(file);
         if (validationError) {
+            orderParseRequestRef.current += 1;
+            setOrderParsing(false);
             setOrderFormError(validationError);
             return;
         }
         setOrderFormError(null);
         setOrderFile(file);
+        void parseOrderFieldsFromFile(file);
     };
 
     const onOrderDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -3658,6 +3714,11 @@ export default function TaskDetailsPage() {
                                     {orderFile && (
                                         <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
                                             {t('task.documents.selectedFile', 'Выбран файл')}: {orderFile.name}
+                                        </Typography>
+                                    )}
+                                    {orderParsing && (
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t('task.order.parsing', 'Распознаем данные заказа...')}
                                         </Typography>
                                     )}
                                 </Stack>
