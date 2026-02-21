@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import pdfParse from 'pdf-parse';
+import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import { parseOrderDocumentData } from '@/utils/orderDocumentParser';
 
 export const runtime = 'nodejs';
@@ -44,4 +44,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-
