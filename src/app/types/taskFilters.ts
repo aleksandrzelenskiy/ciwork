@@ -3,6 +3,7 @@ export interface TaskFilters {
     executor?: string | null;
     status: string;
     priority: string;
+    orderPresence: '' | 'with' | 'without';
     dueFrom?: Date | null;
     dueTo?: Date | null;
 }
@@ -19,6 +20,7 @@ export const defaultTaskFilters: TaskFilters = {
     executor: null,
     status: '',
     priority: '',
+    orderPresence: '',
     dueFrom: null,
     dueTo: null,
 };

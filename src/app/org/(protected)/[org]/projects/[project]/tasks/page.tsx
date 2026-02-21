@@ -70,6 +70,10 @@ type Task = {
     priority?: Priority;
     executorName?: string;
     executorEmail?: string;
+    orderUrl?: string;
+    orderNumber?: string;
+    orderDate?: string;
+    orderSignDate?: string;
 };
 
 type OrgInfo = { _id: string; name: string; orgSlug: string; description?: string };
@@ -248,6 +252,16 @@ export default function ProjectTasksPage() {
         return items.filter((task) => {
             if (filters.status && task.status !== filters.status) return false;
             if (filters.priority && task.priority !== filters.priority) return false;
+            if (filters.orderPresence) {
+                const hasOrder = Boolean(
+                    task.orderNumber?.trim() ||
+                    task.orderUrl?.trim() ||
+                    task.orderDate ||
+                    task.orderSignDate
+                );
+                if (filters.orderPresence === 'with' && !hasOrder) return false;
+                if (filters.orderPresence === 'without' && hasOrder) return false;
+            }
             if (filters.executor) {
                 const label = getExecutorLabel(task);
                 if (!label || label !== filters.executor) {
@@ -419,12 +433,18 @@ export default function ProjectTasksPage() {
 
     const searchOpen = Boolean(searchAnchor);
     const hasActiveFilters = Boolean(
-        filters.executor || filters.status || filters.priority || filters.dueFrom || filters.dueTo
+        filters.executor ||
+        filters.status ||
+        filters.priority ||
+        filters.orderPresence ||
+        filters.dueFrom ||
+        filters.dueTo
     );
     const activeFilterCount =
         Number(Boolean(filters.executor)) +
         Number(Boolean(filters.status)) +
         Number(Boolean(filters.priority)) +
+        Number(Boolean(filters.orderPresence)) +
         Number(Boolean(filters.dueFrom)) +
         Number(Boolean(filters.dueTo));
     const getIconButtonSx = (
@@ -475,7 +495,7 @@ export default function ProjectTasksPage() {
     };
 
     const handleSelectFilterChange =
-        (key: 'status' | 'priority') => (event: SelectChangeEvent) => {
+        (key: 'status' | 'priority' | 'orderPresence') => (event: SelectChangeEvent) => {
             const value = event.target.value;
             setFilters((prev) => ({ ...prev, [key]: value }));
         };
@@ -507,6 +527,17 @@ export default function ProjectTasksPage() {
             chips.push({
                 key: 'priority',
                 label: `${t('tasks.filters.priority', 'Приоритет')}: ${getPriorityLabel(filters.priority, t)}`,
+            });
+        }
+        if (filters.orderPresence) {
+            chips.push({
+                key: 'orderPresence',
+                label: `${t('tasks.filters.orderPresence', 'Наличие заказа')}: ${t(
+                    filters.orderPresence === 'with'
+                        ? 'tasks.filters.orderPresence.with'
+                        : 'tasks.filters.orderPresence.without',
+                    filters.orderPresence === 'with' ? 'С заказом' : 'Без заказа'
+                )}`,
             });
         }
         if (filters.dueFrom) {
@@ -885,6 +916,24 @@ export default function ProjectTasksPage() {
                                                 {getPriorityLabel(priority, t)}
                                             </MenuItem>
                                         ))}
+                                    </Select>
+                                </FormControl>
+                                <FormControl fullWidth size="small">
+                                    <InputLabel>{t('tasks.filters.orderPresence', 'Наличие заказа')}</InputLabel>
+                                    <Select
+                                        label={t('tasks.filters.orderPresence', 'Наличие заказа')}
+                                        value={filters.orderPresence}
+                                        onChange={handleSelectFilterChange('orderPresence')}
+                                    >
+                                        <MenuItem value="">
+                                            <em>{t('common.all', 'Все')}</em>
+                                        </MenuItem>
+                                        <MenuItem value="with">
+                                            {t('tasks.filters.orderPresence.with', 'С заказом')}
+                                        </MenuItem>
+                                        <MenuItem value="without">
+                                            {t('tasks.filters.orderPresence.without', 'Без заказа')}
+                                        </MenuItem>
                                     </Select>
                                 </FormControl>
                                 <Stack direction="row" spacing={1}>
