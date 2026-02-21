@@ -29,6 +29,7 @@
     "@mui/x-date-pickers-pro": "^7.26.0",
     "@pbe/react-yandex-maps": "^1.2.5",
     "@react-pdf/renderer": "^4.3.0",
+    "@turf/turf": "^7.3.4",
     "@types/xlsx": "^0.0.35",
     "@types/yandex-maps": "^2.1.36",
     "adm-zip": "^0.5.16",

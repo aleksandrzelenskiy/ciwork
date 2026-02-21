@@ -17,6 +17,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { usePathname } from 'next/navigation';
 import HomeIcon from '@mui/icons-material/Home';
+import BuildCircleIcon from '@mui/icons-material/BuildCircle';
 import TaskIcon from '@mui/icons-material/Task';
 import PermMediaIcon from '@mui/icons-material/PermMedia';
 import PlaceIcon from '@mui/icons-material/Place';
@@ -71,6 +72,11 @@ type ManagerOrgLink = {
 
 const BASE_NAV_ITEMS: NavItem[] = [
     { label: 'ГЛАВНАЯ', labelKey: 'nav.home', path: '/', icon: <HomeIcon sx={{ fontSize: 20 }} /> },
+    {
+        label: 'ИНСТРУМЕНТЫ',
+        path: '/services',
+        icon: <BuildCircleIcon sx={{ fontSize: 20 }} />,
+    },
     // {
     //     label: 'ФОТООТЧЕТЫ',
     //     path: '/reports',
