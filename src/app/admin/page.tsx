@@ -3,8 +3,8 @@
 import * as React from 'react';
 import {
     Box,
-    Tab,
-    Tabs,
+    Button,
+    ButtonGroup,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useSearchParams } from 'next/navigation';
@@ -13,9 +13,19 @@ import UsersAdmin from '@/features/admin/UsersAdmin';
 import PlanConfigAdmin from '@/features/admin/PlanConfigAdmin';
 import TasksAdmin from '@/features/admin/TasksAdmin';
 import ReportsAdmin from '@/features/admin/ReportsAdmin';
+import ProjectsAdmin from '@/features/admin/ProjectsAdmin';
 import { UI_RADIUS } from '@/config/uiTokens';
 
-type AdminTab = 'organizations' | 'users' | 'plans' | 'tasks' | 'reports';
+type AdminTab = 'organizations' | 'users' | 'projects' | 'tasks' | 'reports' | 'plans';
+
+const TAB_ITEMS: Array<{ value: AdminTab; label: string }> = [
+    { value: 'organizations', label: 'ОРГАНИЗАЦИИ' },
+    { value: 'users', label: 'ПОЛЬЗОВАТЕЛИ' },
+    { value: 'projects', label: 'ПРОЕКТЫ' },
+    { value: 'tasks', label: 'ЗАДАЧИ' },
+    { value: 'reports', label: 'ОТЧЕТЫ' },
+    { value: 'plans', label: 'ТАРИФЫ' },
+];
 
 export default function AdminPage() {
     const theme = useTheme();
@@ -30,7 +40,14 @@ export default function AdminPage() {
     }, [safeParams]);
     const resolveTab = React.useCallback((): AdminTab | null => {
         const rawTab = safeParams.get('tab')?.trim().toLowerCase();
-        if (rawTab === 'organizations' || rawTab === 'users' || rawTab === 'plans' || rawTab === 'tasks' || rawTab === 'reports') {
+        if (
+            rawTab === 'organizations' ||
+            rawTab === 'users' ||
+            rawTab === 'projects' ||
+            rawTab === 'tasks' ||
+            rawTab === 'reports' ||
+            rawTab === 'plans'
+        ) {
             return rawTab;
         }
         if (focusUserId) {
@@ -40,9 +57,11 @@ export default function AdminPage() {
     }, [focusUserId, safeParams]);
     const isDarkMode = theme.palette.mode === 'dark';
     const [tab, setTab] = React.useState<AdminTab>(() => resolveTab() ?? 'organizations');
-    const tabBorderColor = isDarkMode ? 'rgba(148,163,184,0.3)' : 'rgba(15,23,42,0.16)';
-    const tabActiveBg = isDarkMode ? 'rgba(14,116,144,0.24)' : 'rgba(14,116,144,0.1)';
-    const tabInactiveColor = isDarkMode ? 'rgba(226,232,240,0.7)' : 'rgba(15,23,42,0.6)';
+    const activeBg = isDarkMode ? 'rgba(14,116,144,0.88)' : 'rgba(14,116,144,0.9)';
+    const inactiveBg = isDarkMode ? 'rgba(30,41,59,0.45)' : 'rgba(248,250,252,0.95)';
+    const activeColor = '#f8fafc';
+    const inactiveColor = isDarkMode ? 'rgba(226,232,240,0.85)' : 'rgba(15,23,42,0.75)';
+    const borderColor = isDarkMode ? 'rgba(148,163,184,0.28)' : 'rgba(15,23,42,0.16)';
 
     React.useEffect(() => {
         const nextTab = resolveTab();
@@ -53,105 +72,55 @@ export default function AdminPage() {
 
     return (
         <Box sx={{ px: { xs: 1, md: 2 }, py: { xs: 2, md: 3 } }}>
-            <Tabs
-                value={tab}
-                onChange={(_, newValue) => setTab(newValue as AdminTab)}
-                variant="scrollable"
-                scrollButtons="auto"
-                sx={{
-                    mb: 2,
-                    '& .MuiTabs-indicator': {
-                        display: 'none',
-                    },
-                }}
-            >
-                <Tab
-                    value="organizations"
-                    label="ОРГАНИЗАЦИИ"
+            <Box sx={{ mb: 2, overflowX: 'auto', pb: 0.5 }}>
+                <ButtonGroup
+                    variant="contained"
                     sx={{
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        borderRadius: UI_RADIUS.tab,
-                        minHeight: 0,
-                        px: 2.5,
-                        py: 1.2,
-                        mx: 0.5,
-                        color: tab === 'organizations' ? theme.palette.text.primary : tabInactiveColor,
-                        backgroundColor: tab === 'organizations' ? tabActiveBg : 'transparent',
-                        border: `1px solid ${tabBorderColor}`,
+                        minWidth: 'max-content',
+                        '& .MuiButton-root': {
+                            textTransform: 'uppercase',
+                            fontWeight: 700,
+                            borderRadius: UI_RADIUS.tab,
+                            px: 2.25,
+                            py: 1,
+                            borderColor,
+                            boxShadow: 'none',
+                            color: inactiveColor,
+                            backgroundColor: inactiveBg,
+                        },
+                        '& .MuiButton-root:hover': {
+                            boxShadow: 'none',
+                        },
                     }}
-                />
-                <Tab
-                    value="users"
-                    label="ПОЛЬЗОВАТЕЛИ"
-                    sx={{
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        borderRadius: UI_RADIUS.tab,
-                        minHeight: 0,
-                        px: 2.5,
-                        py: 1.2,
-                        mx: 0.5,
-                        color: tab === 'users' ? theme.palette.text.primary : tabInactiveColor,
-                        backgroundColor: tab === 'users' ? tabActiveBg : 'transparent',
-                        border: `1px solid ${tabBorderColor}`,
-                    }}
-                />
-                <Tab
-                    value="plans"
-                    label="ТАРИФЫ"
-                    sx={{
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        borderRadius: UI_RADIUS.tab,
-                        minHeight: 0,
-                        px: 2.5,
-                        py: 1.2,
-                        mx: 0.5,
-                        color: tab === 'plans' ? theme.palette.text.primary : tabInactiveColor,
-                        backgroundColor: tab === 'plans' ? tabActiveBg : 'transparent',
-                        border: `1px solid ${tabBorderColor}`,
-                    }}
-                />
-                <Tab
-                    value="tasks"
-                    label="ЗАДАЧИ"
-                    sx={{
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        borderRadius: UI_RADIUS.tab,
-                        minHeight: 0,
-                        px: 2.5,
-                        py: 1.2,
-                        mx: 0.5,
-                        color: tab === 'tasks' ? theme.palette.text.primary : tabInactiveColor,
-                        backgroundColor: tab === 'tasks' ? tabActiveBg : 'transparent',
-                        border: `1px solid ${tabBorderColor}`,
-                    }}
-                />
-                <Tab
-                    value="reports"
-                    label="ОТЧЕТЫ"
-                    sx={{
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                        borderRadius: UI_RADIUS.tab,
-                        minHeight: 0,
-                        px: 2.5,
-                        py: 1.2,
-                        mx: 0.5,
-                        color: tab === 'reports' ? theme.palette.text.primary : tabInactiveColor,
-                        backgroundColor: tab === 'reports' ? tabActiveBg : 'transparent',
-                        border: `1px solid ${tabBorderColor}`,
-                    }}
-                />
-            </Tabs>
+                >
+                    {TAB_ITEMS.map((item) => (
+                        <Button
+                            key={item.value}
+                            onClick={() => setTab(item.value)}
+                            sx={
+                                tab === item.value
+                                    ? {
+                                          backgroundColor: activeBg,
+                                          color: activeColor,
+                                          '&:hover': {
+                                              backgroundColor: activeBg,
+                                          },
+                                      }
+                                    : undefined
+                            }
+                        >
+                            {item.label}
+                        </Button>
+                    ))}
+                </ButtonGroup>
+            </Box>
 
             {tab === 'organizations' && <OrganizationsAdmin />}
             {tab === 'users' && <UsersAdmin focusUserId={focusUserId} />}
-            {tab === 'plans' && <PlanConfigAdmin />}
+            {tab === 'projects' && <ProjectsAdmin />}
             {tab === 'tasks' && <TasksAdmin />}
             {tab === 'reports' && <ReportsAdmin />}
+            {tab === 'plans' && <PlanConfigAdmin />}
         </Box>
     );
 }
