@@ -8,6 +8,7 @@ import MembershipModel from '@/server/models/MembershipModel';
 import ProjectModel from '@/server/models/ProjectModel';
 import BillingUsageModel from '@/server/models/BillingUsageModel';
 import TaskModel from '@/server/models/TaskModel';
+import UserModel from '@/server/models/UserModel';
 import { GetUserContext } from '@/server-actions/user-context';
 import { getBillingPeriod, resolveEffectivePlanLimits, resolveEffectiveStorageLimit } from '@/utils/billingLimits';
 import { getAllPlanConfigs } from '@/utils/planConfig';
@@ -23,6 +24,8 @@ type AdminOrganizationDTO = {
     name: string;
     orgSlug: string;
     ownerEmail?: string;
+    ownerName?: string;
+    ownerPhone?: string;
     plan: Plan;
     status: SubStatus;
     seats?: number;
@@ -99,7 +102,14 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
         Subscription.find({ orgId: { $in: orgIds } }).lean(),
         getAllPlanConfigs(),
     ]);
-    const [wallets, activeSeats, projects, usages, tasksByMonth] = await Promise.all([
+    const ownerEmails = Array.from(
+        new Set(
+            organizations
+                .map((org) => org.ownerEmail?.trim().toLowerCase())
+                .filter((email): email is string => Boolean(email))
+        )
+    );
+    const [wallets, activeSeats, projects, usages, tasksByMonth, owners] = await Promise.all([
         OrgWalletModel.find({ orgId: { $in: orgIds } }).lean(),
         MembershipModel.aggregate<{ _id: unknown; count: number }>([
             { $match: { orgId: { $in: orgIds }, status: 'active' } },
@@ -122,6 +132,10 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             },
             { $group: { _id: '$orgId', count: { $sum: 1 } } },
         ]),
+        UserModel.find(
+            { email: { $in: ownerEmails } },
+            { email: 1, name: 1, phone: 1 }
+        ).lean<{ email?: string; name?: string; phone?: string }[]>(),
     ]);
     const subscriptionMap = new Map<string, typeof subscriptions[number]>();
     subscriptions.forEach((subscription) => {
@@ -147,6 +161,18 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
         }
     });
     const tasksMonthMap = new Map(tasksByMonth.map((item) => [String(item._id), item.count]));
+    const ownerMap = new Map(
+        owners
+            .filter((user) => user.email)
+            .map((user) => [
+                String(user.email).trim().toLowerCase(),
+                {
+                    name: user.name?.trim() || '',
+                    phone: user.phone?.trim() || '',
+                    email: user.email?.trim() || '',
+                },
+            ])
+    );
 
     const result: AdminOrganizationDTO[] = organizations.map((org) => {
         const subscription = subscriptionMap.get(String(org._id));
@@ -156,6 +182,9 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
         const snapshotTasks = usage?.tasksUsed ?? 0;
         const tasksUsed = Math.max(snapshotTasks, monthTasks);
         const plan = (subscription?.plan as Plan) ?? 'basic';
+        const owner = org.ownerEmail
+            ? ownerMap.get(org.ownerEmail.trim().toLowerCase())
+            : undefined;
         const planConfig = planConfigMap.get(plan) ?? fallbackPlanConfig;
         const limits = planConfig
             ? resolveEffectivePlanLimits(plan, planConfig, {
@@ -178,6 +207,8 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             name: org.name,
             orgSlug: org.orgSlug,
             ownerEmail: org.ownerEmail,
+            ownerName: owner?.name || undefined,
+            ownerPhone: owner?.phone || undefined,
             plan,
             status: (subscription?.status as SubStatus) ?? 'inactive',
             seats: limits.seats ?? undefined,

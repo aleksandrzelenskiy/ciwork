@@ -13,6 +13,7 @@ import {
     Button,
     Stack,
     Typography,
+    Tooltip,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { UI_RADIUS } from '@/config/uiTokens';
@@ -42,7 +43,9 @@ export type OrganizationProfileData = {
 type OrganizationInfoData = {
     name: string;
     orgSlug: string;
+    ownerName?: string;
     ownerEmail?: string;
+    ownerPhone?: string;
     profile?: OrganizationProfileData;
 };
 
@@ -78,7 +81,33 @@ export default function OrganizationInfoDialog({
                             </Typography>
                         </Box>
                         <Typography variant="body2">
-                            <strong>Владелец:</strong> {organization.ownerEmail || '—'}
+                            <strong>Владелец:</strong>{' '}
+                            <Tooltip
+                                title={
+                                    <Stack spacing={0.25} sx={{ py: 0.5 }}>
+                                        <Typography variant="caption">
+                                            Email: {organization.ownerEmail || '—'}
+                                        </Typography>
+                                        <Typography variant="caption">
+                                            Телефон: {organization.ownerPhone || '—'}
+                                        </Typography>
+                                    </Stack>
+                                }
+                                arrow
+                                placement="top"
+                            >
+                                <Typography
+                                    component="span"
+                                    variant="body2"
+                                    sx={{
+                                        cursor: 'help',
+                                        borderBottom: '1px dashed',
+                                        borderColor: 'divider',
+                                    }}
+                                >
+                                    {organization.ownerName || '—'}
+                                </Typography>
+                            </Tooltip>
                         </Typography>
 
                         <Accordion

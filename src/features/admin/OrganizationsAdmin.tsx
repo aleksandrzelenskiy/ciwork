@@ -45,6 +45,8 @@ type OrganizationRow = {
     name: string;
     orgSlug: string;
     ownerEmail?: string;
+    ownerName?: string;
+    ownerPhone?: string;
     plan: Plan;
     status: SubStatus;
     seats?: number;
@@ -127,6 +129,17 @@ const formatUsage = (used?: number, limit?: number): string => {
     const safeUsed = Number.isFinite(used) ? used : 0;
     return typeof limit === 'number' ? `${safeUsed} / ${limit}` : `${safeUsed} / ∞`;
 };
+
+const renderOwnerTooltip = (org: OrganizationRow) => (
+    <Stack spacing={0.25} sx={{ py: 0.5 }}>
+        <Typography variant="caption">
+            Email: {org.ownerEmail || '—'}
+        </Typography>
+        <Typography variant="caption">
+            Телефон: {org.ownerPhone || '—'}
+        </Typography>
+    </Stack>
+);
 
 export default function OrganizationsAdmin() {
     const theme = useTheme();
@@ -509,14 +522,28 @@ export default function OrganizationsAdmin() {
                                                 >
                                                     {org.name || '—'}
                                                 </Typography>
-                                                <Typography variant="caption" color="text.secondary">
+                                                <Typography
+                                                    variant="caption"
+                                                    component="div"
+                                                    color="text.secondary"
+                                                >
                                                     {org.orgSlug}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
-                                                <Typography variant="body2">
-                                                    {org.ownerEmail || '—'}
-                                                </Typography>
+                                                <Tooltip title={renderOwnerTooltip(org)} arrow placement="top">
+                                                    <Typography
+                                                        component="span"
+                                                        variant="body2"
+                                                        sx={{
+                                                            cursor: 'help',
+                                                            borderBottom: '1px dashed',
+                                                            borderColor: 'divider',
+                                                        }}
+                                                    >
+                                                        {org.ownerName || '—'}
+                                                    </Typography>
+                                                </Tooltip>
                                             </TableCell>
                                             <TableCell>
                                                 <Tooltip title={renderPlanTooltip(org)} arrow placement="top">
@@ -711,7 +738,9 @@ export default function OrganizationsAdmin() {
                         ? {
                               name: infoOrg.name,
                               orgSlug: infoOrg.orgSlug,
+                              ownerName: infoOrg.ownerName,
                               ownerEmail: infoOrg.ownerEmail,
+                              ownerPhone: infoOrg.ownerPhone,
                               profile: infoOrg.companyProfile,
                           }
                         : null
