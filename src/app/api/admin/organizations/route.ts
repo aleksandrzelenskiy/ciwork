@@ -4,8 +4,12 @@ import dbConnect from '@/server/db/mongoose';
 import Organization from '@/server/models/OrganizationModel';
 import Subscription from '@/server/models/SubscriptionModel';
 import OrgWalletModel from '@/server/models/OrgWalletModel';
+import MembershipModel from '@/server/models/MembershipModel';
+import ProjectModel from '@/server/models/ProjectModel';
+import BillingUsageModel from '@/server/models/BillingUsageModel';
+import TaskModel from '@/server/models/TaskModel';
 import { GetUserContext } from '@/server-actions/user-context';
-import { resolveEffectivePlanLimits, resolveEffectiveStorageLimit } from '@/utils/billingLimits';
+import { getBillingPeriod, resolveEffectivePlanLimits, resolveEffectiveStorageLimit } from '@/utils/billingLimits';
 import { getAllPlanConfigs } from '@/utils/planConfig';
 
 export const runtime = 'nodejs';
@@ -34,6 +38,31 @@ type AdminOrganizationDTO = {
     note?: string;
     updatedAt?: string | null;
     createdAt?: string | null;
+    companyProfile?: {
+        plan?: Plan;
+        legalForm?: 'ООО' | 'ИП' | 'АО' | 'ЗАО';
+        organizationName?: string;
+        legalAddress?: string;
+        inn?: string;
+        kpp?: string;
+        ogrn?: string;
+        okpo?: string;
+        bik?: string;
+        bankName?: string;
+        correspondentAccount?: string;
+        settlementAccount?: string;
+        directorTitle?: string;
+        directorName?: string;
+        directorBasis?: string;
+        contacts?: string;
+    };
+    usage?: {
+        seatsUsed: number;
+        projectsUsed: number;
+        publicationsUsed: number;
+        tasksUsed: number;
+        period: string;
+    };
 };
 
 type ResponsePayload = {
@@ -58,14 +87,42 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
         name: 1,
         orgSlug: 1,
         ownerEmail: 1,
+        companyProfile: 1,
         createdAt: 1,
     }).lean();
     const orgIds = organizations.map((org) => org._id);
+    const now = new Date();
+    const billingPeriod = getBillingPeriod(now);
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
     const [subscriptions, planConfigs] = await Promise.all([
         Subscription.find({ orgId: { $in: orgIds } }).lean(),
         getAllPlanConfigs(),
     ]);
-    const wallets = await OrgWalletModel.find({ orgId: { $in: orgIds } }).lean();
+    const [wallets, activeSeats, projects, usages, tasksByMonth] = await Promise.all([
+        OrgWalletModel.find({ orgId: { $in: orgIds } }).lean(),
+        MembershipModel.aggregate<{ _id: unknown; count: number }>([
+            { $match: { orgId: { $in: orgIds }, status: 'active' } },
+            { $group: { _id: '$orgId', count: { $sum: 1 } } },
+        ]),
+        ProjectModel.aggregate<{ _id: unknown; count: number }>([
+            { $match: { orgId: { $in: orgIds } } },
+            { $group: { _id: '$orgId', count: { $sum: 1 } } },
+        ]),
+        BillingUsageModel.find({ orgId: { $in: orgIds }, period: billingPeriod }).lean(),
+        TaskModel.aggregate<{ _id: unknown; count: number }>([
+            {
+                $match: {
+                    orgId: { $in: orgIds },
+                    createdAt: {
+                        $gte: monthStart,
+                        $lt: monthEnd,
+                    },
+                },
+            },
+            { $group: { _id: '$orgId', count: { $sum: 1 } } },
+        ]),
+    ]);
     const subscriptionMap = new Map<string, typeof subscriptions[number]>();
     subscriptions.forEach((subscription) => {
         if (subscription.orgId) {
@@ -81,9 +138,23 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
         }
     });
 
+    const activeSeatsMap = new Map(activeSeats.map((item) => [String(item._id), item.count]));
+    const projectsMap = new Map(projects.map((item) => [String(item._id), item.count]));
+    const usageMap = new Map<string, typeof usages[number]>();
+    usages.forEach((usage) => {
+        if (usage.orgId) {
+            usageMap.set(String(usage.orgId), usage);
+        }
+    });
+    const tasksMonthMap = new Map(tasksByMonth.map((item) => [String(item._id), item.count]));
+
     const result: AdminOrganizationDTO[] = organizations.map((org) => {
         const subscription = subscriptionMap.get(String(org._id));
         const wallet = walletMap.get(String(org._id));
+        const usage = usageMap.get(String(org._id));
+        const monthTasks = tasksMonthMap.get(String(org._id)) ?? 0;
+        const snapshotTasks = usage?.tasksUsed ?? 0;
+        const tasksUsed = Math.max(snapshotTasks, monthTasks);
         const plan = (subscription?.plan as Plan) ?? 'basic';
         const planConfig = planConfigMap.get(plan) ?? fallbackPlanConfig;
         const limits = planConfig
@@ -122,6 +193,14 @@ export async function GET(): Promise<NextResponse<ResponsePayload>> {
             note: subscription?.note,
             updatedAt: toISOStringOrNull(subscription?.updatedAt ?? subscription?.createdAt ?? null),
             createdAt: toISOStringOrNull(org.createdAt ?? null),
+            companyProfile: org.companyProfile,
+            usage: {
+                seatsUsed: activeSeatsMap.get(String(org._id)) ?? 0,
+                projectsUsed: projectsMap.get(String(org._id)) ?? usage?.projectsUsed ?? 0,
+                publicationsUsed: usage?.publicationsUsed ?? 0,
+                tasksUsed,
+                period: billingPeriod,
+            },
         };
     });
 

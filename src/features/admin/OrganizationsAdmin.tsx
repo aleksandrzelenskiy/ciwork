@@ -35,6 +35,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { UI_RADIUS } from '@/config/uiTokens';
 import { withBasePath } from '@/utils/basePath';
+import OrganizationInfoDialog, { type OrganizationProfileData } from '@/features/admin/OrganizationInfoDialog';
 
 type Plan = 'basic' | 'pro' | 'business' | 'enterprise';
 type SubStatus = 'active' | 'trial' | 'suspended' | 'past_due' | 'inactive';
@@ -59,6 +60,14 @@ type OrganizationRow = {
     note?: string;
     updatedAt?: string | null;
     createdAt?: string | null;
+    companyProfile?: OrganizationProfileData;
+    usage?: {
+        seatsUsed: number;
+        projectsUsed: number;
+        publicationsUsed: number;
+        tasksUsed: number;
+        period: string;
+    };
 };
 
 type AdminSubscriptionPayload = {
@@ -114,6 +123,11 @@ const formatDate = (value?: string | null): string => {
     });
 };
 
+const formatUsage = (used?: number, limit?: number): string => {
+    const safeUsed = Number.isFinite(used) ? used : 0;
+    return typeof limit === 'number' ? `${safeUsed} / ${limit}` : `${safeUsed} / ∞`;
+};
+
 export default function OrganizationsAdmin() {
     const theme = useTheme();
     const isDarkMode = theme.palette.mode === 'dark';
@@ -146,6 +160,7 @@ export default function OrganizationsAdmin() {
     const [orgToDelete, setOrgToDelete] = React.useState<OrganizationRow | null>(null);
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [deleting, setDeleting] = React.useState(false);
+    const [infoOrg, setInfoOrg] = React.useState<OrganizationRow | null>(null);
 
     const fetchOrganizations = React.useCallback(async () => {
         setLoading(true);
@@ -323,6 +338,19 @@ export default function OrganizationsAdmin() {
         />
     );
 
+    const renderPlanTooltip = (org: OrganizationRow) => (
+        <Stack spacing={0.25} sx={{ py: 0.5 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                Лимиты тарифа {org.plan.toUpperCase()}
+            </Typography>
+            <Typography variant="caption">Рабочие места: {org.seats ?? '∞'}</Typography>
+            <Typography variant="caption">Проекты: {org.projectsLimit ?? '∞'}</Typography>
+            <Typography variant="caption">Публикации/мес: {org.publicTasksLimit ?? '∞'}</Typography>
+            <Typography variant="caption">Задачи/мес: {org.tasksMonthLimit ?? '∞'}</Typography>
+            <Typography variant="caption">Хранилище: {org.storageLimitGb ?? '∞'} GB</Typography>
+        </Stack>
+    );
+
     const orgCount = organizations.length;
 
     return (
@@ -464,7 +492,23 @@ export default function OrganizationsAdmin() {
                                             }}
                                         >
                                             <TableCell>
-                                                <Typography fontWeight={600}>{org.name || '—'}</Typography>
+                                                <Typography
+                                                    component="button"
+                                                    type="button"
+                                                    onClick={() => setInfoOrg(org)}
+                                                    sx={{
+                                                        p: 0,
+                                                        border: 0,
+                                                        background: 'transparent',
+                                                        cursor: 'pointer',
+                                                        fontWeight: 700,
+                                                        color: 'primary.main',
+                                                        textAlign: 'left',
+                                                        '&:hover': { textDecoration: 'underline' },
+                                                    }}
+                                                >
+                                                    {org.name || '—'}
+                                                </Typography>
                                                 <Typography variant="caption" color="text.secondary">
                                                     {org.orgSlug}
                                                 </Typography>
@@ -475,20 +519,34 @@ export default function OrganizationsAdmin() {
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
-                                                <Typography fontWeight={600}>{org.plan.toUpperCase()}</Typography>
+                                                <Tooltip title={renderPlanTooltip(org)} arrow placement="top">
+                                                    <Typography
+                                                        component="span"
+                                                        fontWeight={600}
+                                                        sx={{
+                                                            cursor: 'help',
+                                                            borderBottom: '1px dashed',
+                                                            borderColor: 'divider',
+                                                        }}
+                                                    >
+                                                        {org.plan.toUpperCase()}
+                                                    </Typography>
+                                                </Tooltip>
                                             </TableCell>
                                             <TableCell>{statusChip(org.status)}</TableCell>
                                             <TableCell>
                                                 <Stack spacing={0.25}>
                                                     <Typography variant="body2">
-                                                        Рабочие места: {org.seats ?? '—'}
+                                                        Рабочие места: {formatUsage(org.usage?.seatsUsed, org.seats)}
                                                     </Typography>
                                                     <Typography variant="body2">
-                                                        Проекты: {org.projectsLimit ?? '—'}
+                                                        Проекты: {formatUsage(org.usage?.projectsUsed, org.projectsLimit)}
                                                     </Typography>
                                                     <Typography variant="body2">
-                                                        Публикации: {org.publicTasksLimit ?? '—'} ·
-                                                        Задачи/мес: {org.tasksMonthLimit ?? '—'}
+                                                        Публикации: {formatUsage(org.usage?.publicationsUsed, org.publicTasksLimit)}
+                                                    </Typography>
+                                                    <Typography variant="body2">
+                                                        Задачи/мес: {formatUsage(org.usage?.tasksUsed, org.tasksMonthLimit)}
                                                     </Typography>
                                                 </Stack>
                                             </TableCell>
@@ -645,6 +703,21 @@ export default function OrganizationsAdmin() {
                     </Button>
                 </DialogActions>
             </Dialog>
+
+            <OrganizationInfoDialog
+                open={Boolean(infoOrg)}
+                organization={
+                    infoOrg
+                        ? {
+                              name: infoOrg.name,
+                              orgSlug: infoOrg.orgSlug,
+                              ownerEmail: infoOrg.ownerEmail,
+                              profile: infoOrg.companyProfile,
+                          }
+                        : null
+                }
+                onCloseAction={() => setInfoOrg(null)}
+            />
         </Box>
     );
 }
