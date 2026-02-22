@@ -62,6 +62,7 @@ import type { PriorityLevel, TaskType } from '@/app/types/taskTypes';
 import type { TaskApplication } from '@/app/types/application';
 import MarketLocations, { type MarketPublicTask } from '@/features/market/MarketLocations';
 import { REGION_MAP } from '@/app/utils/regions';
+import { OPERATORS, normalizeOperatorCode } from '@/app/utils/operators';
 import { UI_RADIUS } from '@/config/uiTokens';
 import { withBasePath } from '@/utils/basePath';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -88,6 +89,8 @@ type PublicTask = {
     publicDescription?: string;
     publicStatus?: PublicTaskStatus;
     visibility?: TaskVisibility;
+    authorEmail?: string;
+    authorName?: string;
     applicationCount?: number;
     project?: {
         name?: string;
@@ -162,6 +165,12 @@ function getAttachmentLabel(link: string) {
     }
 }
 
+function getOperatorName(value?: string | null) {
+    const normalized = normalizeOperatorCode(value);
+    if (!normalized) return value?.trim() || '';
+    return OPERATORS.find((operator) => operator.value === normalized)?.name || value?.trim() || '';
+}
+
 export default function MarketplacePage() {
     const { t, locale } = useI18n();
     const [tasks, setTasks] = useState<PublicTask[]>([]);
@@ -194,6 +203,8 @@ export default function MarketplacePage() {
         message: '',
         severity: 'success',
     });
+    const [questionDraft, setQuestionDraft] = useState('');
+    const [questionLoading, setQuestionLoading] = useState(false);
     const [userContext, setUserContext] = useState<UserContext | null>(null);
     const [contextError, setContextError] = useState<string | null>(null);
 
@@ -221,6 +232,8 @@ export default function MarketplacePage() {
         })),
         orgSlug: task.orgSlug,
         orgName: task.orgName,
+        authorEmail: task.authorEmail,
+        authorName: task.authorName,
         budget: task.budget ?? undefined,
         currency: task.currency,
         dueDate: task.dueDate,
@@ -488,6 +501,13 @@ export default function MarketplacePage() {
     }, [selectedTask]);
 
     useEffect(() => {
+        if (!detailsTask) {
+            setQuestionDraft('');
+            setQuestionLoading(false);
+        }
+    }, [detailsTask]);
+
+    useEffect(() => {
         if (filters.status && !availableStatuses.includes(filters.status)) {
             setFilters((prev) => ({ ...prev, status: '' }));
         }
@@ -598,6 +618,116 @@ export default function MarketplacePage() {
 
     const hasDetailsWorkItems = Boolean(detailsTask?.workItems && detailsTask.workItems.length > 0);
     const detailsBudget = getBudgetDisplay(detailsTask?.budget, detailsTask?.currency);
+
+    const handleOpenQuestionChat = (targetEmail?: string) => {
+        const cleanEmail = (targetEmail || '').trim();
+        if (!cleanEmail || typeof window === 'undefined') return;
+        window.dispatchEvent(
+            new CustomEvent('messenger:open', {
+                detail: { targetEmail: cleanEmail },
+            })
+        );
+    };
+
+    const handleSendQuestion = async () => {
+        if (!detailsTask?._id) return;
+        const text = questionDraft.trim();
+        if (!text) {
+            setSnack({
+                open: true,
+                message: t('market.details.questionEmpty', 'Введите текст вопроса'),
+                severity: 'error',
+            });
+            return;
+        }
+
+        const authorEmail = detailsTask.authorEmail?.trim();
+        if (!authorEmail) {
+            setSnack({
+                open: true,
+                message: t('market.details.questionNoAuthor', 'Невозможно отправить вопрос: не найден автор задачи'),
+                severity: 'error',
+            });
+            return;
+        }
+
+        setQuestionLoading(true);
+        try {
+            const createConversationRes = await fetch(withBasePath('/api/messenger/conversations'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'direct',
+                    targetEmail: authorEmail,
+                    title: t('market.details.questionChatTitle', 'Вопрос по задаче'),
+                }),
+            });
+
+            const conversationPayload = (await createConversationRes.json().catch(() => ({}))) as {
+                ok?: boolean;
+                error?: string;
+                conversation?: { id?: string };
+            };
+
+            const conversationId = conversationPayload.conversation?.id;
+            if (!createConversationRes.ok || !conversationPayload.ok || !conversationId) {
+                setSnack({
+                    open: true,
+                    message:
+                        conversationPayload.error ||
+                        t('market.details.questionConversationError', 'Не удалось открыть приватный диалог'),
+                    severity: 'error',
+                });
+                return;
+            }
+
+            const taskLabel = [detailsTask.taskName, detailsTask.bsNumber].filter(Boolean).join(' ').trim();
+            const textWithContext = taskLabel
+                ? `${t('market.details.questionPrefix', 'Вопрос по задаче')} «${taskLabel}»:\n${text}`
+                : text;
+
+            const sendMessageRes = await fetch(withBasePath('/api/messenger/messages'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    conversationId,
+                    text: textWithContext,
+                }),
+            });
+
+            const messagePayload = (await sendMessageRes.json().catch(() => ({}))) as {
+                ok?: boolean;
+                error?: string;
+            };
+
+            if (!sendMessageRes.ok || !messagePayload.ok) {
+                setSnack({
+                    open: true,
+                    message:
+                        messagePayload.error ||
+                        t('market.details.questionSendError', 'Не удалось отправить вопрос'),
+                    severity: 'error',
+                });
+                return;
+            }
+
+            setQuestionDraft('');
+            setSnack({
+                open: true,
+                message: t('market.details.questionSent', 'Вопрос отправлен автору в приватный чат'),
+                severity: 'success',
+            });
+            handleOpenQuestionChat(authorEmail);
+        } catch (e) {
+            setSnack({
+                open: true,
+                message: e instanceof Error ? e.message : t('market.details.questionSendError', 'Не удалось отправить вопрос'),
+                severity: 'error',
+            });
+        } finally {
+            setQuestionLoading(false);
+        }
+    };
 
     const isFiltersApplied =
         Boolean(filters.organization) ||
@@ -878,13 +1008,33 @@ export default function MarketplacePage() {
                                             onClick={() => setDetailsTask(task)}
                                         >
                                             <Stack spacing={2}>
-                                                <Stack spacing={0.25}>
-                                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                                <Stack spacing={0.35}>
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        fontWeight={700}
+                                                        sx={{ fontSize: { xs: '0.88rem', sm: '0.95rem' } }}
+                                                    >
                                                         {t('market.card.organization', 'Организация: {value}', {
                                                             value: task.orgName || task.orgSlug || task.orgId || '—',
                                                         })}
                                                     </Typography>
-                                                    <Typography variant="caption" color="text.secondary">
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        fontWeight={700}
+                                                        sx={{ fontSize: { xs: '0.88rem', sm: '0.95rem' } }}
+                                                    >
+                                                        {t('market.card.operator', 'Оператор: {value}', {
+                                                            value: getOperatorName(task.project?.operator) || '—',
+                                                        })}
+                                                    </Typography>
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                        fontWeight={700}
+                                                        sx={{ fontSize: { xs: '0.88rem', sm: '0.95rem' } }}
+                                                    >
                                                         {t('market.card.region', 'Регион: {value}', {
                                                             value: task.project?.regionCode || '—',
                                                         })}
@@ -973,13 +1123,17 @@ export default function MarketplacePage() {
                                                 >
                                                     <Button
                                                         variant="outlined"
+                                                        size="large"
                                                         startIcon={<InfoOutlinedIcon />}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setDetailsTask(task);
                                                         }}
                                                         sx={{
-                                                            borderRadius: UI_RADIUS.item,
+                                                            borderRadius: UI_RADIUS.compact,
+                                                            px: 3.5,
+                                                            py: 1.25,
+                                                            minWidth: { xs: '100%', sm: 180 },
                                                             textTransform: 'none',
                                                         }}
                                                     >
@@ -1013,6 +1167,7 @@ export default function MarketplacePage() {
                                                                 borderRadius: UI_RADIUS.compact,
                                                                 px: 3.5,
                                                                 py: 1.25,
+                                                                minWidth: { xs: '100%', sm: 180 },
                                                                 textTransform: 'none',
                                                             }}
                                                         >
@@ -1383,7 +1538,8 @@ export default function MarketplacePage() {
                                                 '—'}
                                         </Typography>
                                         <Typography variant="body1">
-                                            <strong>{t('market.details.operator', 'Оператор:')}</strong> {detailsTask?.project?.operator || '—'}
+                                            <strong>{t('market.details.operator', 'Оператор:')}</strong>{' '}
+                                            {getOperatorName(detailsTask?.project?.operator) || '—'}
                                         </Typography>
                                         <Typography variant="body1">
                                             <strong>{t('market.details.region', 'Регион:')}</strong> {detailsTask?.project?.regionCode || '—'}
@@ -1533,6 +1689,59 @@ export default function MarketplacePage() {
                                         </Stack>
                                     </CardItem>
                                 ) : null}
+
+                                <CardItem sx={{ minWidth: 0 }}>
+                                    <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+                                        {t('market.details.askQuestion', 'Задать вопрос')}
+                                    </Typography>
+                                    <Divider sx={{ mb: 1.5 }} />
+                                    <Stack spacing={1.25}>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {t(
+                                                'market.details.askQuestionHint',
+                                                'Вопрос увидит только автор задачи. Ответы других исполнителей вам недоступны.'
+                                            )}
+                                        </Typography>
+                                        <TextField
+                                            value={questionDraft}
+                                            onChange={(e) => setQuestionDraft(e.target.value)}
+                                            placeholder={t('market.details.askQuestionPlaceholder', 'Напишите вопрос по задаче')}
+                                            multiline
+                                            minRows={3}
+                                            fullWidth
+                                        />
+                                        <Stack
+                                            direction={{ xs: 'column', sm: 'row' }}
+                                            spacing={1}
+                                            justifyContent="flex-end"
+                                        >
+                                            <Button
+                                                variant="outlined"
+                                                disabled={!detailsTask?.authorEmail}
+                                                onClick={() => handleOpenQuestionChat(detailsTask?.authorEmail)}
+                                            >
+                                                {t('market.details.openChat', 'Открыть чат')}
+                                            </Button>
+                                            <Button
+                                                variant="contained"
+                                                disabled={questionLoading || !detailsTask?.authorEmail}
+                                                onClick={() => void handleSendQuestion()}
+                                            >
+                                                {questionLoading
+                                                    ? t('market.details.sendingQuestion', 'Отправляем…')
+                                                    : t('market.details.sendQuestion', 'Отправить вопрос')}
+                                            </Button>
+                                        </Stack>
+                                        {!detailsTask?.authorEmail && (
+                                            <Alert severity="warning">
+                                                {t(
+                                                    'market.details.askQuestionUnavailable',
+                                                    'У автора задачи не указан email, поэтому отправка вопроса недоступна.'
+                                                )}
+                                            </Alert>
+                                        )}
+                                    </Stack>
+                                </CardItem>
                             </Masonry>
 
                             <Stack

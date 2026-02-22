@@ -44,6 +44,8 @@ export type MarketPublicTask = {
     currency?: string;
     taskDescription?: string;
     publicDescription?: string;
+    authorEmail?: string;
+    authorName?: string;
     workItems?: { workType?: string; quantity?: number; unit?: string; note?: string }[];
     attachments?: string[];
     applicationCount?: number;
